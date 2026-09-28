@@ -17,6 +17,11 @@ export type CatalogErrorCode =
   | "IMAGE_NOT_FOUND"
   | "RELATIONSHIP_NOT_FOUND"
   | "INVALID_STATUS"
+  | "INVALID_QUERY"
+  | "INVALID_SORT"
+  | "INVALID_PAGE"
+  | "INVALID_CURSOR"
+  | "INVALID_PRICE_RANGE"
   | "CATALOG_DATABASE_ERROR";
 
 export class CatalogServiceError extends Error {
