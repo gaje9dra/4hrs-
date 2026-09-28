@@ -343,9 +343,11 @@ export async function searchCatalogProducts(
   const limit = clampLimit(options.limit);
   const offset = normalizeOffset(options.offset);
   const where = buildCatalogSearchWhere(options);
+  const sortBy = options.sortBy ?? "createdAt";
+  const sortDirection = options.sortDirection ?? "desc";
   const orderBy: Prisma.ProductOrderByWithRelationInput[] = [
-    { title: "asc" },
-    { id: "asc" },
+    { [CATALOG_SORT_FIELDS[sortBy]]: sortDirection },
+    { id: sortDirection },
   ];
 
   const [items, total] = await Promise.all([
