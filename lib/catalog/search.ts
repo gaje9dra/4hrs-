@@ -54,6 +54,12 @@ export type CatalogSearchResultItem = {
     displayName: string | null;
     size: string | null;
     color: string | null;
+    optionValues: Array<{
+      id: string;
+      displayName: string;
+      normalizedValue: string;
+      optionType: { id: string; name: string; normalizedName: string };
+    }>;
     effectivePrice: string;
     compareAtPrice: string | null;
     availability: CatalogAvailability;
@@ -157,6 +163,16 @@ function toSearchItem(
       displayName: variant.displayName,
       size: variant.size,
       color: variant.color,
+      optionValues: variant.optionValues.map(({ optionValue }) => ({
+        id: optionValue.id,
+        displayName: optionValue.displayName,
+        normalizedValue: optionValue.normalizedValue,
+        optionType: {
+          id: optionValue.optionType.id,
+          name: optionValue.optionType.name,
+          normalizedName: optionValue.optionType.normalizedName,
+        },
+      })),
       effectivePrice: effectivePrice.toString(),
       compareAtPrice: variant.compareAtPrice?.toString() ?? product.compareAtPrice?.toString() ?? null,
       availability,
