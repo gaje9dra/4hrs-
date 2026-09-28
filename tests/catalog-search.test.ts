@@ -328,16 +328,12 @@ test("database adapter keeps SKU search internal-only", async () => {
     },
   } as never;
 
-  const service = createCatalogSearchService({
-    provider: {
-      search: async (request) => {
-        return searchCatalogProducts(request as never, publicClient);
-      },
-    },
-    lookup,
-  });
-
-  await service.searchPublic({ query: "sku-123" });
+  await searchCatalogProducts({
+    query: "sku-123",
+    mode: "PUBLIC",
+    limit: 24,
+    offset: 0,
+  }, publicClient);
 
   await searchCatalogProducts({
     query: "sku-123",
@@ -350,5 +346,4 @@ test("database adapter keeps SKU search internal-only", async () => {
   const internalText = JSON.stringify(internalWhere);
   assert.doesNotMatch(publicText, /"sku"/);
   assert.match(internalText, /"sku"/);
-  void service;
 });
