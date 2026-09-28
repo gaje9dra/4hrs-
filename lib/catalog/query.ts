@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { CatalogServiceError } from "@/lib/catalog/errors";
 import * as repository from "@/lib/catalog/repository";
 import { getInventoryAvailability, type InventoryAvailability } from "@/lib/inventory/repository";
@@ -179,7 +180,7 @@ function normalizeQuery(query: CatalogQuery): CatalogAppliedQuery {
   const minPrice = normalizeMoney(query.minPrice, "minPrice");
   const maxPrice = normalizeMoney(query.maxPrice, "maxPrice");
 
-  if (minPrice !== undefined && maxPrice !== undefined) {
+  if (query.tagMode !== undefined && query.tagMode !== "AND" && query.tagMode !== "OR") {\n    throw new CatalogServiceError("INVALID_QUERY", "tagMode must be AND or OR.");\n  }\n\n  if (minPrice !== undefined && maxPrice !== undefined) {
     const min = Number(minPrice);
     const max = Number(maxPrice);
     if (min > max) {
@@ -241,7 +242,7 @@ function mapProduct(product: Awaited<ReturnType<QueryRepository["getPublishedPro
   });
 
   const cheapest = variants.reduce((current, variant) =>
-    current === null || Number(variant.effectivePrice) < Number(current.effectivePrice) ? variant : current,
+    current === null || new Prisma.Decimal(variant.effectivePrice).lt(new Prisma.Decimal(current.effectivePrice)) ? variant : current,
     null as CatalogVariantSummary | null,
   );
 
