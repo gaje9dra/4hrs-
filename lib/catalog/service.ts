@@ -725,11 +725,22 @@ export function createCatalogService(customRepository: Partial<CatalogRepository
       );
       issues.push(...optionCheck.issues);
       const siblings = await repo.getVariantsByProduct(existing.productId);
-      const siblingsWithOptions = await Promise.all(siblings.filter((item) => item.id !== id).map(async (item) => ({
-          productId: item.productId, id: item.id, sku: item.sku, size: item.size, color: item.color,
+      const siblingsWithOptions = await Promise.all(
+        siblings.filter((item) => item.id !== id).map(async (item) => ({
+          productId: item.productId,
+          id: item.id,
+          sku: item.sku,
+          size: item.size,
+          color: item.color,
           optionValueIds: (await repo.getVariantOptionValues(item.id)).map((value) => value.optionValueId),
-          displayName: item.displayName, price: item.price?.toString() ?? null, compareAtPrice: item.compareAtPrice?.toString() ?? null, status: item.status,
+          displayName: item.displayName,
+          price: item.price?.toString() ?? null,
+          compareAtPrice: item.compareAtPrice?.toString() ?? null,
+          status: item.status,
         })),
+      );
+      const duplicates = validateVariantUniqueness([
+        ...siblingsWithOptions,
         merged,
       ]);
       issues.push(...duplicates);
