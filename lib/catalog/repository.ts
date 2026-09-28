@@ -555,6 +555,12 @@ export async function updateOptionType(id: string, data: Prisma.VariantOptionTyp
 export async function createOptionValue(data: Prisma.VariantOptionValueCreateInput, client?: CatalogRepositoryClient) {
   return clientOrDefault(client).variantOptionValue.create({ data });
 }
+export async function getOptionValueByIdentity(optionTypeId: string, normalizedValue: string, client?: CatalogRepositoryClient) {
+  return clientOrDefault(client).variantOptionValue.findUnique({
+    where: { optionTypeId_normalizedValue: { optionTypeId, normalizedValue } },
+    include: { optionType: true },
+  });
+}
 export async function getOptionValueById(id: string, client?: CatalogRepositoryClient) {
   return clientOrDefault(client).variantOptionValue.findUnique({ where: { id }, include: { optionType: true } });
 }
