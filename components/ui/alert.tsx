@@ -12,8 +12,14 @@ const config: Record<AlertVariant, { icon: typeof Info; classes: string; title: 
 
 export function Alert({ variant = 'information', title, children, className = '' }: { variant?: AlertVariant; title?: string; children: ReactNode; className?: string }) {
   const { icon: Icon, classes, title: defaultTitle } = config[variant]
+  const isUrgent = variant === 'error' || variant === 'warning'
+
   return (
-    <div role="alert" className={`flex gap-4 border-2 border-border p-4 shadow-hard-sm lg:border-4 ${classes} ${className}`}>
+    <div
+      role={isUrgent ? 'alert' : 'status'}
+      aria-live={isUrgent ? 'assertive' : 'polite'}
+      className={`flex gap-4 border-2 border-border p-4 shadow-hard-sm lg:border-4 ${classes} ${className}`}
+    >
       <Icon className="mt-0.5 shrink-0" size={24} strokeWidth={3} aria-hidden="true" />
       <div>
         <p className="font-900 uppercase">{title ?? defaultTitle}</p>
