@@ -20,6 +20,11 @@ const product = {
   seoDescription: null,
 };
 
+const createProductInput = {
+  ...product,
+  price: "999.00",
+};
+
 test("service rejects invalid product before opening a transaction", async () => {
   let transactionOpened = false;
   const service = createCatalogService({
@@ -31,7 +36,7 @@ test("service rejects invalid product before opening a transaction", async () =>
 
   await assert.rejects(
     service.createProduct({
-      ...product,
+      ...createProductInput,
       title: " ",
     }),
     (error: unknown) =>
