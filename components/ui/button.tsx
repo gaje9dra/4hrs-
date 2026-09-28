@@ -57,10 +57,13 @@ export function Button({ variant = 'primary', loading = false, className = '', c
     )
   }
 
+  const buttonProps = props as ButtonProps
+  const { type = 'button', ...nativeButtonProps } = buttonProps
+
   return (
     <button
-      type="button"
-      {...props}
+      {...nativeButtonProps}
+      type={type}
       disabled={disabled || loading}
       className={classes}
       aria-busy={loading || undefined}
