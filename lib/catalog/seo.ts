@@ -3,9 +3,6 @@ import {
   validateCollection,
   validateProduct,
   normalizeSeoText,
-  type ProductInput,
-  type CategoryInput,
-  type CollectionInput,
 } from "@/lib/catalog/validation";
 import {
   categoryCanonicalUrl,
@@ -170,15 +167,29 @@ export function getCollectionSeoMetadata(collection: CollectionSeoEntity): Catal
   };
 }
 
+export type PublicCatalogSeoInput =
+  | { type: "product"; entity: ProductSeoEntity }
+  | { type: "category"; entity: CategorySeoEntity }
+  | { type: "collection"; entity: CollectionSeoEntity };
+
 export function getPublicCatalogSeoMetadata(
-  entity:
-    | ProductSeoEntity
-    | CategorySeoEntity
-    | CollectionSeoEntity,
+  input: PublicCatalogSeoInput,
 ): CatalogSeoMetadata | null {
-  if ("title" in entity) return getProductSeoMetadata(entity);
-  if ("name" in entity && "parentId" in entity) return getCategorySeoMetadata(entity);
-  return getCollectionSeoMetadata(entity);
+  if (input.type === "product") return getProductSeoMetadata(input.entity);
+  if (input.type === "category") return getCategorySeoMetadata(input.entity);
+  return getCollectionSeoMetadata(input.entity);
+}
+
+export function getPublicProductSeoMetadata(product: ProductSeoEntity): PublicCatalogSeoContract | null {
+  return toPublicCatalogSeoContract(getProductSeoMetadata(product));
+}
+
+export function getPublicCategorySeoMetadata(category: CategorySeoEntity): PublicCatalogSeoContract | null {
+  return toPublicCatalogSeoContract(getCategorySeoMetadata(category));
+}
+
+export function getPublicCollectionSeoMetadata(collection: CollectionSeoEntity): PublicCatalogSeoContract | null {
+  return toPublicCatalogSeoContract(getCollectionSeoMetadata(collection));
 }
 
 export type PublicCatalogSeoContract = {
