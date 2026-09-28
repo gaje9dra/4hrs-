@@ -18,7 +18,7 @@ export function FooterLegal({ group }: FooterLegalProps) {
               href={item.href}
               target={item.external ? '_blank' : undefined}
               rel={item.external ? 'noopener noreferrer' : undefined}
-              className="text-xs font-700 uppercase text-white/80 no-underline hover:bg-primary-yellow hover:text-foreground"
+              className="motion-link text-xs font-700 uppercase text-white/80 no-underline hover:bg-primary-yellow hover:text-foreground"
             >
               {item.label}
             </Link>
