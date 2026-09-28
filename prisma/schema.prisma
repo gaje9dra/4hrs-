@@ -48,6 +48,48 @@ model Product {
   @@index([createdAt])
 }
 
+
+enum InventoryAdjustmentReason {
+  INITIAL_STOCK
+  MANUAL_ADJUSTMENT
+  STOCK_RECEIPT
+  DAMAGED
+  LOST
+  RETURNED
+  CORRECTION
+}
+
+model Inventory {
+  id                  String      @id @default(uuid()) @db.Uuid
+  variantId           String      @unique @db.Uuid
+  trackingEnabled     Boolean     @default(true)
+  onHand              Int         @default(0)
+  reserved            Int         @default(0)
+  lowStockThreshold   Int         @default(0)
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+  variant             ProductVariant @relation(fields: [variantId], references: [id], onDelete: Restrict)
+  transactions        InventoryTransaction[]
+  @@index([trackingEnabled])
+}
+
+model InventoryTransaction {
+  id                String                   @id @default(uuid()) @db.Uuid
+  inventoryId       String                   @db.Uuid
+  quantityDelta     Int
+  previousOnHand    Int
+  resultingOnHand   Int
+  reason            InventoryAdjustmentReason
+  actorId           String?
+  source            String?
+  note              String?
+  reference         String?
+  createdAt         DateTime                 @default(now())
+  inventory         Inventory                @relation(fields: [inventoryId], references: [id], onDelete: Restrict)
+  @@index([inventoryId, createdAt])
+  @@index([reason, createdAt])
+}
+
 model ProductVariant {
   id             String               @id @default(uuid()) @db.Uuid
   productId      String               @db.Uuid
@@ -62,6 +104,7 @@ model ProductVariant {
   updatedAt      DateTime             @updatedAt
   product        Product              @relation(fields: [productId], references: [id], onDelete: Cascade)
   images         ProductImage[]
+  inventory      Inventory?
   @@index([productId])
   @@index([status])
   @@index([productId, size, color])
