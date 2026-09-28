@@ -89,7 +89,7 @@ export class DatabaseSearchAdapter implements CatalogSearchProvider {
             : "price";
 
     const sortDirection: CatalogSearchRepositoryOptions["sortDirection"] =
-      sort === "oldest" ? "asc" : "desc";
+      sort === "oldest" || sort === "title_asc" || sort === "price_asc" ? "asc" : "desc";
 
     return searchCatalogProducts({
       query: request.query,
