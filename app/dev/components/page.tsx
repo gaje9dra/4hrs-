@@ -26,6 +26,10 @@ import { Stack } from '@/components/layout/stack'
 import { Cluster } from '@/components/layout/cluster'
 import { Split } from '@/components/layout/split'
 import { Header } from '@/components/layout/header'
+import { Footer } from '@/components/layout/footer'
+import { AnnouncementBar } from '@/components/layout/announcement-bar'
+import { GlobalCTA } from '@/components/layout/global-cta'
+import { SectionDivider } from '@/components/layout/section-divider'
 
 export default function ComponentShowcase() {
   if (process.env.NODE_ENV !== 'development') notFound()
@@ -48,6 +52,25 @@ export default function ComponentShowcase() {
             <div className="border-t-2 border-border bg-white p-5">
               <p className="text-xs font-900 uppercase tracking-[.2em] text-primary-blue">Responsive verification</p>
               <p className="mt-2 max-w-2xl">Resize below 768px to verify the mobile trigger and drawer. The production header uses the shared navigation configuration and no business data.</p>
+            </div>
+          </div>
+        </section>
+
+        <section aria-labelledby="global-sections">
+          <h2 id="global-sections" className="mb-5 text-2xl font-900 uppercase">Global sections</h2>
+          <div className="space-y-8">
+            <div className="overflow-hidden border-4 border-border">
+              <AnnouncementBar message="Foundation announcement" href="/" linkLabel="View home" />
+            </div>
+            <SectionDivider accent="blue" />
+            <GlobalCTA
+              heading="A reusable final action"
+              description="Presentation-only CTA structure with configurable actions and geometry."
+              primaryAction={{ label: 'Go home', href: '/' }}
+              secondaryAction={{ label: 'Back to top', href: '#top' }}
+            />
+            <div className="overflow-hidden border-4 border-border">
+              <Footer />
             </div>
           </div>
         </section>
