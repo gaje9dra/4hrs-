@@ -89,7 +89,7 @@ export function MobileNav({ open, items, onClose, triggerRef }: MobileNavProps) 
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex h-11 w-11 shrink-0 items-center justify-center border-2 border-border bg-primary-yellow transition-transform duration-120 active:translate-x-px active:translate-y-px"
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center border-2 border-border bg-primary-yellow transition-transform duration-[120ms] active:translate-x-px active:translate-y-px"
             aria-label="Close navigation"
           >
             <X size={22} strokeWidth={2.5} aria-hidden="true" />
