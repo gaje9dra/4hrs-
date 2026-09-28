@@ -52,8 +52,22 @@ export const bauhausTokens = {
     desktop: '1025px',
   },
   motion: {
-    fast: '120ms',
-    standard: '200ms',
-    snap: '240ms',
+    duration: {
+      fast: '200ms',
+      standard: '300ms',
+    },
+    easing: {
+      interaction: 'ease-out',
+    },
+    distance: {
+      press: '2px',
+      lift: '4px',
+    },
+    scale: {
+      icon: '1.04',
+    },
+    focus: {
+      offset: '2px',
+    },
   },
 } as const
