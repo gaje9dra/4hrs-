@@ -7,6 +7,7 @@ type CommonProps = {
   loading?: boolean
   className?: string
   children?: ReactNode
+  disabled?: boolean
 }
 
 type ButtonProps = CommonProps & ButtonHTMLAttributes<HTMLButtonElement> & {
