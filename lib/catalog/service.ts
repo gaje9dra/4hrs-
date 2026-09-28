@@ -12,7 +12,6 @@ import {
   validateCategoryHierarchy,
   validateCollection,
   validateImage,
-  validateJunctionUniqueness,
   validateProduct,
   validatePublishingReadiness,
   validateTag,
@@ -115,6 +114,11 @@ function requireId(id: string, code: CatalogErrorCode, label: string): void {
   if (!id.trim()) throw new CatalogServiceError(code, label + " is required.");
 }
 
+function decimalValue(value: number | string | null | undefined): Prisma.Decimal | null | undefined {
+  if (value === null || value === undefined) return value;
+  return new Prisma.Decimal(String(value));
+}
+
 function normalizeProductInput(input: ProductInput): ProductInput {
   return {
     ...input,
@@ -162,32 +166,31 @@ export function createCatalogService(customRepository: Partial<CatalogRepository
       const productId = product.id ?? randomUUID();
       const variantIds = new Map<string, string>();
       variants.forEach((variant) => variantIds.set(variant.sku, variant.id ?? randomUUID()));
+      const normalizedVariants = variants.map((variant) => ({
+        ...variant,
+        id: variant.id ?? randomUUID(),
+      }));
       const normalizedImages = images.map((image) => ({
         ...image,
         productId: image.productId ?? (image.variantId ? null : productId),
         variantId: image.variantId ?? null,
       }));
 
-      const relationshipIssues = validateJunctionUniqueness(
-        [
-          ...(categoryIds ?? []).map((id) => ({ leftId: productId, rightId: id })),
-          ...(collectionIds ?? []).map((id) => ({ leftId: productId, rightId: id })),
-          ...(tagIds ?? []).map((id) => ({ leftId: productId, rightId: id })),
-        ],
-        "relationships",
+      const variantRelationshipIssues = validateImageRelationships(
+        productId,
+        normalizedImages,
+        normalizedVariants,
       );
-      if (relationshipIssues.length) validationError(relationshipIssues, "INVALID_PRODUCT");
-
-      const variantRelationshipIssues = normalizedImages.flatMap((image, index) => {
-        if (!image.variantId) return [];
-        const matching = variants.find((variant) => variant.id === image.variantId);
-        if (!matching || matching.productId !== productId) {
-          const bySku = variants.find((variant) => variant.id === image.variantId);
-          return [{ field: "images[" + index + "].variantId", code: "INVALID_IMAGE_VARIANT", message: "Variant-specific image must belong to the same Product." }];
-        }
-        return [];
-      });
       if (variantRelationshipIssues.length) validationError(variantRelationshipIssues, "INVALID_IMAGE_RELATIONSHIP");
+
+      if (product.status === "ACTIVE") {
+        const readiness = validatePublishingReadiness({
+          product,
+          variants: normalizedVariants,
+          images: normalizedImages,
+        });
+        if (readiness.length) validationError(readiness, "PRODUCT_NOT_PUBLISHABLE");
+      }
 
       try {
         return await repo.withTransaction(async (tx) => {
@@ -198,15 +201,15 @@ export function createCatalogService(customRepository: Partial<CatalogRepository
             description: product.description ?? null,
             shortDescription: product.shortDescription ?? null,
             status: product.status,
-            price: product.price,
-            compareAtPrice: product.compareAtPrice ?? null,
+            price: decimalValue(product.price)!,
+            compareAtPrice: decimalValue(product.compareAtPrice) ?? null,
             currency: product.currency,
             seoTitle: product.seoTitle ?? null,
             seoDescription: product.seoDescription ?? null,
           }, tx);
 
-          for (const variant of variants) {
-            const variantId = variant.id ?? variantIds.get(variant.sku)!;
+          for (const variant of normalizedVariants) {
+            const variantId = variant.id!;
             await repo.createVariant({
               id: variantId,
               product: { connect: { id: productId } },
@@ -214,8 +217,8 @@ export function createCatalogService(customRepository: Partial<CatalogRepository
               displayName: variant.displayName ?? null,
               size: variant.size ?? null,
               color: variant.color ?? null,
-              price: variant.price ?? null,
-              compareAtPrice: variant.compareAtPrice ?? null,
+              price: decimalValue(variant.price) ?? null,
+              compareAtPrice: decimalValue(variant.compareAtPrice) ?? null,
               status: variant.status,
             }, tx);
           }
@@ -295,14 +298,54 @@ export function createCatalogService(customRepository: Partial<CatalogRepository
 
       try {
         const updated = await repo.withTransaction(async (tx) => {
+          if (merged.status === "ACTIVE") {
+            const currentDetails = await repo.getProductDetails(input.id, tx);
+            if (!currentDetails) throw new CatalogServiceError("PRODUCT_NOT_FOUND", "Product was not found.");
+            const readiness = validatePublishingReadiness({
+              product: {
+                id: currentDetails.id,
+                title: merged.title,
+                slug: merged.slug,
+                description: merged.description,
+                shortDescription: merged.shortDescription,
+                status: merged.status,
+                price: String(merged.price),
+                compareAtPrice: merged.compareAtPrice,
+                currency: merged.currency,
+                seoTitle: merged.seoTitle,
+                seoDescription: merged.seoDescription,
+              },
+              variants: currentDetails.variants.map((variant) => ({
+                id: variant.id,
+                productId: variant.productId,
+                sku: variant.sku,
+                displayName: variant.displayName,
+                size: variant.size,
+                color: variant.color,
+                price: variant.price?.toString() ?? null,
+                compareAtPrice: variant.compareAtPrice?.toString() ?? null,
+                status: variant.status,
+              })),
+              images: currentDetails.images.map((image) => ({
+                productId: image.productId,
+                variantId: image.variantId,
+                url: image.url,
+                altText: image.altText,
+                sortOrder: image.sortOrder,
+                isPrimary: image.isPrimary,
+              })),
+            });
+            if (readiness.length) validationError(readiness, "PRODUCT_NOT_PUBLISHABLE");
+          }
+
           const result = await repo.updateProduct(input.id, {
             title: merged.title,
             slug: merged.slug,
             description: merged.description,
             shortDescription: merged.shortDescription,
             status: merged.status,
-            price: merged.price,
-            compareAtPrice: merged.compareAtPrice,
+            price: decimalValue(merged.price)!,
+            compareAtPrice: decimalValue(merged.compareAtPrice) ?? null,
             currency: merged.currency,
             seoTitle: merged.seoTitle,
             seoDescription: merged.seoDescription,
@@ -381,6 +424,43 @@ export function createCatalogService(customRepository: Partial<CatalogRepository
           if (!canTransitionProductStatus(latest.status, "ACTIVE")) {
             throw new CatalogServiceError("PRODUCT_NOT_PUBLISHABLE", "Product cannot transition to ACTIVE.");
           }
+          const latestDetails = await repo.getProductDetails(id, tx);
+          if (!latestDetails) throw new CatalogServiceError("PRODUCT_NOT_FOUND", "Product was not found.");
+          const readiness = validatePublishingReadiness({
+            product: {
+              id: latestDetails.id,
+              title: latestDetails.title,
+              slug: latestDetails.slug,
+              description: latestDetails.description,
+              shortDescription: latestDetails.shortDescription,
+              status: latestDetails.status,
+              price: latestDetails.price.toString(),
+              compareAtPrice: latestDetails.compareAtPrice?.toString() ?? null,
+              currency: latestDetails.currency,
+              seoTitle: latestDetails.seoTitle,
+              seoDescription: latestDetails.seoDescription,
+            },
+            variants: latestDetails.variants.map((variant) => ({
+              id: variant.id,
+              productId: variant.productId,
+              sku: variant.sku,
+              displayName: variant.displayName,
+              size: variant.size,
+              color: variant.color,
+              price: variant.price?.toString() ?? null,
+              compareAtPrice: variant.compareAtPrice?.toString() ?? null,
+              status: variant.status,
+            })),
+            images: latestDetails.images.map((image) => ({
+              productId: image.productId,
+              variantId: image.variantId,
+              url: image.url,
+              altText: image.altText,
+              sortOrder: image.sortOrder,
+              isPrimary: image.isPrimary,
+            })),
+          });
+          if (readiness.length) validationError(readiness, "PRODUCT_NOT_PUBLISHABLE");
           return repo.updateProduct(id, { status: "ACTIVE" }, tx);
         });
       } catch (error) {
@@ -423,8 +503,8 @@ export function createCatalogService(customRepository: Partial<CatalogRepository
           displayName: variant.displayName ?? null,
           size: variant.size ?? null,
           color: variant.color ?? null,
-          price: variant.price ?? null,
-          compareAtPrice: variant.compareAtPrice ?? null,
+          price: decimalValue(variant.price) ?? null,
+          compareAtPrice: decimalValue(variant.compareAtPrice) ?? null,
           status: variant.status,
         });
       } catch (error) { mapDatabaseError(error); }
@@ -465,8 +545,8 @@ export function createCatalogService(customRepository: Partial<CatalogRepository
           displayName: merged.displayName,
           size: merged.size,
           color: merged.color,
-          price: merged.price,
-          compareAtPrice: merged.compareAtPrice,
+          price: decimalValue(merged.price) ?? null,
+          compareAtPrice: decimalValue(merged.compareAtPrice) ?? null,
           status: merged.status,
         });
       } catch (error) { mapDatabaseError(error); }
