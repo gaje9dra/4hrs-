@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation'
+import Link from 'next/link'
 import { ChevronRight, Search, ShoppingBag } from 'lucide-react'
 import { Accordion, AccordionItem } from '@/components/ui/accordion'
 import { Alert } from '@/components/ui/alert'
@@ -343,8 +344,8 @@ export default function ComponentShowcase() {
               <div className="border-4 border-border bg-white p-6">
                 <p className="text-xs font-900 uppercase tracking-[.2em] text-primary-red">Link interaction</p>
                 <div className="mt-4 flex flex-wrap gap-3">
-                  <a href="/" className="motion-link border-2 border-border px-4 py-3 font-900 uppercase no-underline">Hover / focus / press</a>
-                  <a href="/" className="motion-link border-2 border-border px-4 py-3 font-900 uppercase no-underline">Accent behavior</a>
+                  <Link href="/" className="motion-link border-2 border-border px-4 py-3 font-900 uppercase no-underline">Hover / focus / press</Link>
+                  <Link href="/" className="motion-link border-2 border-border px-4 py-3 font-900 uppercase no-underline">Accent behavior</Link>
                 </div>
               </div>
 
