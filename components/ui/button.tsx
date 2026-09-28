@@ -1,6 +1,23 @@
-import type { ButtonHTMLAttributes } from 'react'
+import type { AnchorHTMLAttributes, ButtonHTMLAttributes, ReactNode } from 'react'
 
-const variants = {
+type ButtonVariant = 'primary' | 'secondary' | 'yellow' | 'outline' | 'ghost'
+
+type CommonProps = {
+  variant?: ButtonVariant
+  loading?: boolean
+  className?: string
+  children?: ReactNode
+}
+
+type ButtonProps = CommonProps & ButtonHTMLAttributes<HTMLButtonElement> & {
+  href?: undefined
+}
+
+type LinkButtonProps = CommonProps & AnchorHTMLAttributes<HTMLAnchorElement> & {
+  href: string
+}
+
+const variants: Record<ButtonVariant, string> = {
   primary: 'bg-primary-red text-white',
   secondary: 'bg-primary-blue text-white',
   yellow: 'bg-primary-yellow text-foreground',
@@ -8,15 +25,41 @@ const variants = {
   ghost: 'border-0 bg-transparent text-foreground shadow-none',
 }
 
-export function Button({
-  variant = 'primary',
-  className = '',
-  ...props
-}: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: keyof typeof variants }) {
+const baseClass =
+  'inline-flex min-h-12 items-center justify-center gap-2 rounded-square border-2 border-border px-5 py-3 text-sm font-700 uppercase tracking-widest transition-transform duration-200 ease-out hover:-translate-x-px hover:-translate-y-px focus-visible:outline-none active:translate-x-[2px] active:translate-y-[2px] active:shadow-none disabled:cursor-not-allowed disabled:bg-muted disabled:text-foreground disabled:shadow-none'
+
+export function Button({ variant = 'primary', loading = false, className = '', children, disabled, ...props }: ButtonProps | LinkButtonProps) {
+  const classes = `${baseClass} shadow-hard-sm ${variants[variant]} ${className}`
+  const content = loading ? 'Loading…' : children
+
+  if ('href' in props && props.href) {
+    const { href, ...linkProps } = props
+    return (
+      <a
+        href={href}
+        className={classes}
+        aria-disabled={loading || undefined}
+        tabIndex={loading ? -1 : undefined}
+        onClick={(event) => {
+          if (loading) event.preventDefault()
+          linkProps.onClick?.(event)
+        }}
+        {...linkProps}
+      >
+        {content}
+      </a>
+    )
+  }
+
   return (
     <button
-      className={`inline-flex min-h-12 items-center justify-center rounded-square border-2 border-border px-5 py-3 text-sm font-700 uppercase tracking-widest shadow-hard-sm transition-transform duration-200 ease-out active:translate-x-[2px] active:translate-y-[2px] active:shadow-none disabled:cursor-not-allowed disabled:bg-muted disabled:text-foreground disabled:shadow-none ${variants[variant]} ${className}`}
+      type="button"
       {...props}
-    />
+      disabled={disabled || loading}
+      className={classes}
+      aria-busy={loading || undefined}
+    >
+      {content}
+    </button>
   )
 }
