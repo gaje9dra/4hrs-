@@ -74,6 +74,59 @@ export default function ComponentShowcase() {
           </div>
         </section>
 
+        <section aria-labelledby="responsive-system">
+          <h2 id="responsive-system" className="mb-5 text-2xl font-900 uppercase">Responsive system</h2>
+          <div className="space-y-6">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {[
+                ['Mobile', '< 640px'],
+                ['Tablet', '640–1024px'],
+                ['Navigation', '≈ 768px'],
+                ['Desktop', '≥ 1025px'],
+              ].map(([label, value]) => (
+                <div key={label} className="border-2 border-border bg-white p-5 lg:border-4">
+                  <p className="text-xs font-900 uppercase tracking-[.2em] text-primary-blue">{label}</p>
+                  <p className="mt-2 text-xl font-900 uppercase">{value}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="border-4 border-border bg-primary-blue p-5 text-white sm:p-6 lg:p-8">
+              <p className="text-xs font-900 uppercase tracking-[.2em] text-primary-yellow">Responsive typography</p>
+              <p className="mt-3 text-4xl font-900 uppercase leading-[0.9] sm:text-6xl lg:text-8xl">Type scales, content wraps</p>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="border-2 border-border bg-white p-5 lg:border-4">
+                <p className="text-xs font-900 uppercase tracking-[.2em] text-primary-red">Touch targets</p>
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <Button>Tap action</Button>
+                  <IconButton label="Search"><Search size={20} strokeWidth={3} /></IconButton>
+                </div>
+              </div>
+              <div className="border-2 border-border bg-white p-5 lg:border-4">
+                <p className="text-xs font-900 uppercase tracking-[.2em] text-primary-red">Overflow containment</p>
+                <GeometricComposition className="mt-4 min-h-32 border-2 border-border" label="Contained responsive geometric composition">
+                  <GeometricLayer layer="back" className="-right-4 -top-4">
+                    <GeometricDecoration shape="circle" color="red" size="lg" />
+                  </GeometricLayer>
+                  <GeometricLayer layer="base" className="bottom-3 left-1/2">
+                    <GeometricDecoration shape="square" color="blue" size="md" rotation={45} />
+                  </GeometricLayer>
+                  <p className="relative z-20 max-w-xs p-4 text-sm font-700 uppercase">Decorative overflow stays contained.</p>
+                </GeometricComposition>
+              </div>
+            </div>
+
+            <div className="overflow-hidden border-4 border-border bg-primary-yellow">
+              <div className="w-full px-4 py-8 sm:px-6 lg:px-8">
+                <p className="text-xs font-900 uppercase tracking-[.2em]">Full-width section behavior</p>
+                <p className="mt-2 max-w-2xl text-lg font-700">The color block reaches the viewport edge while its inner content follows the shared spacing vocabulary.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <section aria-labelledby="layout-architecture" className="space-y-10">
           <div>
             <h2 id="layout-architecture" className="mb-3 text-2xl font-900 uppercase">Global layout architecture</h2>
