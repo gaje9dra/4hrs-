@@ -33,7 +33,7 @@ export function Header() {
             ref={triggerRef}
             type="button"
             onClick={() => setOpen((value) => !value)}
-            className="inline-flex h-11 w-11 shrink-0 items-center justify-center border-2 border-border bg-primary-yellow transition-[background-color,transform] duration-120 hover:bg-white active:translate-x-px active:translate-y-px md:hidden"
+            className="motion-press inline-flex h-11 w-11 shrink-0 items-center justify-center border-2 border-border bg-primary-yellow hover:bg-white md:hidden"
             aria-expanded={open}
             aria-controls="mobile-navigation-panel"
             aria-label={open ? 'Close navigation' : 'Open navigation'}
