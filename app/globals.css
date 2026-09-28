@@ -1,56 +1,135 @@
 @import 'tailwindcss';
 
 :root {
-  --background: #f0f0f0;
+  --background: #F0F0F0;
   --foreground: #121212;
-  --red: #d02020;
-  --blue: #1040c0;
-  --yellow: #f0c020;
+  --primary-red: #D02020;
+  --primary-blue: #1040C0;
+  --primary-yellow: #F0C020;
   --border: #121212;
-  --muted: #e0e0e0;
-  --white: #ffffff;
+  --muted: #E0E0E0;
+  --white: #FFFFFF;
+
+  --shadow-sm: 3px 3px 0 #121212;
+  --shadow-md: 6px 6px 0 #121212;
+  --shadow-lg: 8px 8px 0 #121212;
+
+  --radius-square: 0;
+  --radius-circle: 9999px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+
+  --container-content: 80rem;
+
+  --motion-fast: 120ms;
+  --motion-standard: 200ms;
+  --motion-snap: 240ms;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --color-red: var(--red);
-  --color-blue: var(--blue);
-  --color-yellow: var(--yellow);
+  --color-primary-red: var(--primary-red);
+  --color-primary-blue: var(--primary-blue);
+  --color-primary-yellow: var(--primary-yellow);
   --color-border: var(--border);
   --color-muted: var(--muted);
   --color-white: var(--white);
+
+  /* Backward-compatible aliases for the existing foundation. */
+  --color-red: var(--primary-red);
+  --color-blue: var(--primary-blue);
+  --color-yellow: var(--primary-yellow);
+
   --font-sans: var(--font-outfit);
+  --font-weight-400: 400;
   --font-weight-500: 500;
   --font-weight-700: 700;
   --font-weight-900: 900;
+
+  --shadow-hard-sm: var(--shadow-sm);
+  --shadow-hard-md: var(--shadow-md);
+  --shadow-hard-lg: var(--shadow-lg);
+
+  --radius-square: var(--radius-square);
+  --radius-circle: var(--radius-circle);
+
+  --breakpoint-mobile: 640px;
+  --breakpoint-tablet: 1024px;
+  --breakpoint-desktop: 1025px;
 }
 
-* { box-sizing: border-box; }
-html { scroll-behavior: smooth; }
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   margin: 0;
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-outfit), Arial, sans-serif;
+  font-weight: 500;
+  text-rendering: optimizeLegibility;
 }
-::selection { background: var(--yellow); color: var(--foreground); }
-:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
-button, a, input { -webkit-tap-highlight-color: transparent; }
+
+::selection {
+  background: var(--primary-yellow);
+  color: var(--foreground);
+}
+
+:focus-visible {
+  outline: 3px solid var(--primary-blue);
+  outline-offset: 3px;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
 
 .bauhaus-grid {
-  background-image:
-    linear-gradient(to right, rgba(18,18,18,.07) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(18,18,18,.07) 1px, transparent 1px);
-  background-size: 32px 32px;
+  background-color: var(--background);
 }
 
-.clip-triangle { clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+.clip-triangle {
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
 
-.marquee-track { animation: marquee 18s linear infinite; }
-@keyframes marquee { to { transform: translateX(-50%); } }
+.marquee-track {
+  animation: marquee 18s linear infinite;
+}
+
+@keyframes marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  html { scroll-behavior: auto; }
-  .marquee-track { animation: none; }
-  *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+  html {
+    scroll-behavior: auto;
+  }
+
+  .marquee-track {
+    animation: none;
+  }
+
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }
