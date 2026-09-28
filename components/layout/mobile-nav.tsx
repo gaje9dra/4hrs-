@@ -62,13 +62,9 @@ export function MobileNav({ open, items, onClose, triggerRef }: MobileNavProps) 
     return () => {
       document.removeEventListener('keydown', handleKeyDown)
       document.body.style.overflow = previousOverflow
+      triggerRef.current?.focus()
     }
-  }, [open, onClose])
-
-  useEffect(() => {
-    if (open) return
-    triggerRef.current?.focus()
-  }, [open, triggerRef])
+  }, [open, onClose, triggerRef])
 
   if (!open) return null
 
@@ -83,6 +79,7 @@ export function MobileNav({ open, items, onClose, triggerRef }: MobileNavProps) 
         onClick={onClose}
       />
       <aside
+        id="mobile-navigation-panel"
         ref={panelRef}
         className="absolute inset-y-0 right-0 flex w-full max-w-md flex-col border-l-4 border-border bg-background shadow-hard-lg"
         aria-label="Mobile navigation panel"
@@ -92,7 +89,7 @@ export function MobileNav({ open, items, onClose, triggerRef }: MobileNavProps) 
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex h-11 w-11 shrink-0 items-center justify-center border-2 border-border bg-primary-yellow no-underline transition-transform duration-120 active:translate-x-px active:translate-y-px"
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center border-2 border-border bg-primary-yellow transition-transform duration-120 active:translate-x-px active:translate-y-px"
             aria-label="Close navigation"
           >
             <X size={22} strokeWidth={2.5} aria-hidden="true" />
