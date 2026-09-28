@@ -72,7 +72,12 @@ function normalizeOption(value: string | null | undefined): string { return valu
 function variantOptionKey(variant: VariantInput): string { return normalizeOption(variant.size) + "\u0000" + normalizeOption(variant.color); }
 export function findDuplicateVariants(variants: VariantInput[]): number[][] { const groups = new Map<string, number[]>(); variants.forEach((variant, index) => { const indexes = groups.get(variantOptionKey(variant)) ?? []; indexes.push(index); groups.set(variantOptionKey(variant), indexes); }); return [...groups.values()].filter((indexes) => indexes.length > 1); }
 export function validateVariantUniqueness(variants: VariantInput[]): ValidationIssue[] { return findDuplicateVariants(variants).map((indexes) => issue("variants[" + indexes[1] + "]", "DUPLICATE_VARIANT", "Variant duplicates another variant using normalized size and color options.")); }
-export function validateVariantPricing(productPrice: number | string, variant: VariantInput): ValidationIssue[] {\n  const effectivePrice = variant.price === null || variant.price === undefined ? productPrice : variant.price;\n  if (variant.compareAtPrice === null || variant.compareAtPrice === undefined) return [];\n  return validatePricePair(effectivePrice, variant.compareAtPrice, "price", "compareAtPrice");\n}\n
+export function validateVariantPricing(productPrice: number | string, variant: VariantInput): ValidationIssue[] {
+  const effectivePrice = variant.price === null || variant.price === undefined ? productPrice : variant.price;
+  if (variant.compareAtPrice === null || variant.compareAtPrice === undefined) return [];
+  return validatePricePair(effectivePrice, variant.compareAtPrice, "price", "compareAtPrice");
+}
+
 export function validateImage(input: ImageInput): ValidationIssue[] {
   const issues: ValidationIssue[] = []; const hasProduct = Boolean(input.productId); const hasVariant = Boolean(input.variantId);
   if (hasProduct === hasVariant) issues.push(issue("ownership", "INVALID_IMAGE_OWNER", "Image must reference exactly one Product or ProductVariant."));
@@ -99,12 +104,13 @@ export function validateJunctionUniqueness(pairs: Array<{ leftId: string; rightI
 
 export function validatePublishingReadiness(input: PublishReadinessInput): ValidationIssue[] {
   const issues = [...validateProduct(input.product), ...validateVariantUniqueness(input.variants)];
-  input.variants.forEach((variant, index) => issues.push(...validateVariant(variant).map((item) => ({ ...item, field: "variants[" + index + "]." + item.field }))));
+  input.variants.forEach((variant, index) => {\n    issues.push(...validateVariant(variant).map((item) => ({ ...item, field: "variants[" + index + "]." + item.field })));\n    issues.push(...validateVariantPricing(input.product.price, variant).map((item) => ({ ...item, field: "variants[" + index + "]." + item.field })));\n  });
   const activeVariants = input.variants.filter((variant) => variant.status === "ACTIVE");
   if (input.requireVariant !== false && activeVariants.length === 0) issues.push(issue("variants", "VARIANT_REQUIRED", "At least one active ProductVariant is required for a sellable fashion product."));
   const productImages = input.images.filter((image) => input.product.id ? image.productId === input.product.id : Boolean(image.productId));
   if (input.requireProductImage !== false && productImages.length === 0) issues.push(issue("images", "PRODUCT_IMAGE_REQUIRED", "At least one product-level image is required for publishing."));
-  input.images.forEach((image, index) => issues.push(...validateImage(image).map((item) => ({ ...item, field: "images[" + index + "]." + item.field }))));\n  if (input.product.id) issues.push(...validateImageRelationships(input.product.id, input.images, input.variants));
+  input.images.forEach((image, index) => issues.push(...validateImage(image).map((item) => ({ ...item, field: "images[" + index + "]." + item.field }))));
+  if (input.product.id) issues.push(...validateImageRelationships(input.product.id, input.images, input.variants));
   issues.push(...validatePrimaryImages(input.images));
   return dedupeIssues(issues);
 }
