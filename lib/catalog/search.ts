@@ -311,6 +311,7 @@ export function createCatalogSearchService(options: {
     getCategoryBySlug: (slug: string) => Promise<unknown>;
     getCollectionBySlug: (slug: string) => Promise<unknown>;
     getTagBySlug: (slug: string) => Promise<unknown>;
+    listTags: () => Promise<Array<{ slug: string }>>;
   };
 } = {}) {
   const provider = options.provider ?? new DatabaseSearchAdapter();
@@ -318,6 +319,7 @@ export function createCatalogSearchService(options: {
     getCategoryBySlug: catalogRepository.getCategoryBySlug,
     getCollectionBySlug: catalogRepository.getCollectionBySlug,
     getTagBySlug: catalogRepository.getTagBySlug,
+    listTags: async () => catalogRepository.listTags(),
   };
 
   return {
@@ -331,9 +333,11 @@ export function createCatalogSearchService(options: {
         if (normalized.catalog.collection && !(await lookup.getCollectionBySlug(normalized.catalog.collection))) {
           throw new CatalogServiceError("COLLECTION_NOT_FOUND", "Collection was not found.");
         }
-        for (const tag of normalized.catalog.tags) {
-          if (!(await lookup.getTagBySlug(tag))) {
-            throw new CatalogServiceError("TAG_NOT_FOUND", "Tag was not found: " + tag + ".");
+        if (normalized.catalog.tags.length) {
+          const availableTags = new Set((await lookup.listTags()).map((tag) => tag.slug));
+          const missingTag = normalized.catalog.tags.find((tag) => !availableTags.has(tag));
+          if (missingTag) {
+            throw new CatalogServiceError("TAG_NOT_FOUND", "Tag was not found: " + missingTag + ".");
           }
         }
       }
