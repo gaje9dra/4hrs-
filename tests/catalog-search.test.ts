@@ -53,7 +53,6 @@ const product = {
 const lookup = {
   getCategoryBySlug: async () => ({ id: "category-1" }),
   getCollectionBySlug: async () => ({ id: "collection-1" }),
-  getTagBySlug: async () => ({ id: "tag-1" }),
   listTags: async () => [{ slug: "streetwear" }],
 };
 
@@ -236,7 +235,6 @@ test("missing public references are rejected using the existing catalog error ar
     lookup: {
       getCategoryBySlug: async () => null,
       getCollectionBySlug: async () => null,
-      getTagBySlug: async () => null,
       listTags: async () => [],
     },
   });
