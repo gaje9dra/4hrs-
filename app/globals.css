@@ -1,0 +1,53 @@
+@import 'tailwindcss';
+
+:root {
+  --background: #f0f0f0;
+  --foreground: #121212;
+  --red: #d02020;
+  --blue: #1040c0;
+  --yellow: #f0c020;
+  --border: #121212;
+  --muted: #e0e0e0;
+  --white: #ffffff;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-red: var(--red);
+  --color-blue: var(--blue);
+  --color-yellow: var(--yellow);
+  --color-border: var(--border);
+  --color-muted: var(--muted);
+  --color-white: var(--white);
+  --font-sans: var(--font-outfit);
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-outfit), Arial, sans-serif;
+}
+::selection { background: var(--yellow); color: var(--foreground); }
+:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
+button, a, input { -webkit-tap-highlight-color: transparent; }
+
+.bauhaus-grid {
+  background-image:
+    linear-gradient(to right, rgba(18,18,18,.07) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(18,18,18,.07) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+.clip-triangle { clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+
+.marquee-track { animation: marquee 18s linear infinite; }
+@keyframes marquee { to { transform: translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .marquee-track { animation: none; }
+  *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+}
