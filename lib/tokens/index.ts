@@ -36,9 +36,9 @@ export const bauhausTokens = {
     circle: '9999px',
   },
   shadows: {
-    small: '3px 3px 0 #121212',
-    medium: '6px 6px 0 #121212',
-    large: '8px 8px 0 #121212',
+    sm: '3px 3px 0 #121212',
+    md: '6px 6px 0 #121212',
+    lg: '8px 8px 0 #121212',
   },
   spacing: {
     scale: ['4px', '8px', '12px', '16px', '24px'],
