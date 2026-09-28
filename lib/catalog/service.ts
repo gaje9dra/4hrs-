@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { Prisma, type ProductStatus } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import {
   CatalogServiceError,
   type CatalogErrorCode,
@@ -12,7 +12,6 @@ import {
   validateCategoryHierarchy,
   validateCollection,
   validateImage,
-  validateImageRelationships,
   validateJunctionUniqueness,
   validateProduct,
   validatePublishingReadiness,
