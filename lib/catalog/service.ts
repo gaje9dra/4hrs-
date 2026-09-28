@@ -52,6 +52,7 @@ type CatalogRepository = {
   updateImage: typeof repository.updateImage;
   deleteImage: typeof repository.deleteImage;
   reorderImages: typeof repository.reorderImages;
+  updateProductImagesPrimaryState: typeof repository.updateProductImagesPrimaryState;
   createCategory: typeof repository.createCategory;
   getCategoryById: typeof repository.getCategoryById;
   getCategoryHierarchy: typeof repository.getCategoryHierarchy;
