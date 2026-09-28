@@ -113,11 +113,38 @@ export async function getProductDetails(id: string, client?: CatalogRepositoryCl
   });
 }
 
-export async function listPublishedProducts(options: Omit<CatalogListOptions, "filters"> = {}, client?: CatalogRepositoryClient) {
-  return listProducts({
-    ...options,
-    filters: { status: "ACTIVE" },
-  }, client, publishedProductWhere);
+export async function listPublishedProducts(
+  options: Omit<CatalogListOptions, "filters"> = {},
+  client?: CatalogRepositoryClient,
+) {
+  const repository = clientOrDefault(client);
+  const limit = clampLimit(options.limit);
+  const offset = normalizeOffset(options.offset);
+  const sortBy = options.sortBy ?? "createdAt";
+  const sortDirection = options.sortDirection ?? "desc";
+  const orderBy = { [CATALOG_SORT_FIELDS[sortBy]]: sortDirection } as Prisma.ProductOrderByWithRelationInput;
+  const [items, total] = await Promise.all([
+    repository.product.findMany({
+      where: publishedProductWhere,
+      orderBy,
+      skip: offset,
+      take: limit,
+      include: {
+        variants: { where: { status: "ACTIVE" }, orderBy: { createdAt: "asc" } },
+        images: {
+          where: {
+            OR: [
+              { productId: { not: null } },
+              { variant: { status: "ACTIVE" } },
+            ],
+          },
+          orderBy: { sortOrder: "asc" },
+        },
+      },
+    }),
+    repository.product.count({ where: publishedProductWhere }),
+  ]);
+  return { items, total, limit, offset, hasNextPage: offset + items.length < total };
 }
 
 export async function listProducts(
