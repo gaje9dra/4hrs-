@@ -10,6 +10,13 @@
   --muted: #E0E0E0;
   --white: #FFFFFF;
 
+  --border-mobile: 2px;
+  --border-desktop: 4px;
+  --display-size-mobile: 2.25rem;
+  --display-size-tablet: 3.75rem;
+  --display-size-desktop: 6rem;
+  --container-content: 80rem;
+
   --shadow-sm: 3px 3px 0 #121212;
   --shadow-md: 6px 6px 0 #121212;
   --shadow-lg: 8px 8px 0 #121212;
@@ -22,8 +29,6 @@
   --space-3: 12px;
   --space-4: 16px;
   --space-5: 24px;
-
-  --container-content: 80rem;
 
   --motion-fast: 120ms;
   --motion-standard: 200ms;
