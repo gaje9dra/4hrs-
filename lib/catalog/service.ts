@@ -20,7 +20,6 @@ import {
   validateVariant,
   validateVariantPricing,
   validateVariantUniqueness,
-  validateProductOptionAssignments,
   validateOptionType,
   validateOptionValue,
   normalizeOptionTypeName,
@@ -189,10 +188,7 @@ async function validateVariantOptionValues(
     }
     seenTypes.add(value.optionTypeId);
   }
-  issues.push(...validateProductOptionAssignments(ids.map((optionValueId, index) => ({
-    optionTypeId: index < ids.length ? Array.from(seenTypes)[Math.min(index, Math.max(0, seenTypes.size - 1))] ?? "" : "",
-    optionValueId,
-  }))));
+
 }
 
 
