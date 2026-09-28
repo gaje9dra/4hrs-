@@ -197,6 +197,22 @@ export async function deleteImage(id: string, client?: CatalogRepositoryClient) 
   return clientOrDefault(client).productImage.delete({ where: { id } });
 }
 
+export async function updateProductImagesPrimaryState(
+  productId: string,
+  exceptImageId: string | null,
+  client?: CatalogRepositoryClient,
+) {
+  const repository = clientOrDefault(client);
+  return repository.productImage.updateMany({
+    where: {
+      productId,
+      isPrimary: true,
+      ...(exceptImageId ? { id: { not: exceptImageId } } : {}),
+    },
+    data: { isPrimary: false },
+  });
+}
+
 export async function reorderImages(
   updates: Array<{ id: string; sortOrder: number }>,
   client?: CatalogRepositoryClient,
