@@ -67,7 +67,6 @@ export default function ComponentShowcase() {
               heading="A reusable final action"
               description="Presentation-only CTA structure with configurable actions and geometry."
               primaryAction={{ label: 'Go home', href: '/' }}
-              secondaryAction={{ label: 'Back to top', href: '#top' }}
             />
             <div className="overflow-hidden border-4 border-border">
               <Footer />
