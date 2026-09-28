@@ -1,3 +1,5 @@
+'use client'
+
 import { ChevronDown } from 'lucide-react'
 import type { SelectHTMLAttributes } from 'react'
 import { useFormField } from '@/components/ui/form-field'
