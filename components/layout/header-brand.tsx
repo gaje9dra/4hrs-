@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { GeometricMark } from '@/components/geometry/geometric-mark'
+import { GeometricMark } from '@/components/bauhaus/geometric-mark'
 
 export function HeaderBrand({ onNavigate }: { onNavigate?: () => void }) {
   return (
