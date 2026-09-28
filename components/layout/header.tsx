@@ -9,7 +9,7 @@ const links = ['Shop', 'New Arrivals', 'T-Shirts', 'Shirts', 'Pants', 'Shoes', '
 export function Header() {
   const [open, setOpen] = useState(false)
   return (
-    <header className="sticky top-0 z-50 border-b-4 border-border bg-background">
+    <header className="sticky top-0 z-50 border-b-2 border-border lg:border-b-4 bg-background">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 lg:px-8">
         <a href="#top" className="flex items-center gap-2" aria-label="4HRS home">
           <GeometricMark className="h-10 w-14 scale-90" />
