@@ -251,6 +251,117 @@ export async function queryPublishedCatalogProducts(
   return { items, total, limit, offset, hasNextPage: offset + items.length < total };
 }
 
+export type CatalogSearchMode = "PUBLIC" | "INTERNAL";
+
+export type CatalogSearchRepositoryOptions = CatalogQueryRepositoryOptions & {
+  query: string;
+  mode: CatalogSearchMode;
+};
+
+function buildCatalogSearchWhere(
+  options: CatalogSearchRepositoryOptions,
+): Prisma.ProductWhereInput {
+  const base =
+    options.mode === "PUBLIC"
+      ? buildPublicCatalogWhere(options.filters)
+      : buildInternalCatalogWhere(options.filters);
+
+  const query = options.query;
+  const searchableFields: Prisma.ProductWhereInput[] = [
+    { title: { contains: query, mode: "insensitive" } },
+    { shortDescription: { contains: query, mode: "insensitive" } },
+    { description: { contains: query, mode: "insensitive" } },
+    { slug: { contains: query, mode: "insensitive" } },
+    {
+      tags: {
+        some: { tag: { name: { contains: query, mode: "insensitive" } } },
+      },
+    },
+    {
+      categories: {
+        some: { category: { name: { contains: query, mode: "insensitive" } } },
+      },
+    },
+    {
+      collections: {
+        some: { collection: { name: { contains: query, mode: "insensitive" } } },
+      },
+    },
+    {
+      variants: {
+        some: {
+          OR: [
+            { displayName: { contains: query, mode: "insensitive" } },
+            { size: { contains: query, mode: "insensitive" } },
+            { color: { contains: query, mode: "insensitive" } },
+          ],
+        },
+      },
+    },
+  ];
+
+  if (options.mode === "INTERNAL") {
+    searchableFields.push(
+      { sku: { contains: query, mode: "insensitive" } },
+      { variants: { some: { sku: { contains: query, mode: "insensitive" } } } },
+    );
+  }
+
+  return { AND: [base, { OR: searchableFields }] };
+}
+
+function buildInternalCatalogWhere(
+  filters: CatalogQueryRepositoryFilters = {},
+): Prisma.ProductWhereInput {
+  const and: Prisma.ProductWhereInput[] = [];
+
+  if (filters.categorySlug) {
+    and.push({ categories: { some: { category: { slug: filters.categorySlug } } } });
+  }
+  if (filters.collectionSlug) {
+    and.push({ collections: { some: { collection: { slug: filters.collectionSlug } } } });
+  }
+  if (filters.tagSlugs?.length) {
+    const tagFilters = filters.tagSlugs.map((slug) => ({ tags: { some: { tag: { slug } } } }));
+    and.push(filters.tagMode === "OR" ? { OR: tagFilters } : { AND: tagFilters });
+  }
+
+  const priceWhere = buildEffectiveVariantPriceWhere(filters.minPrice, filters.maxPrice);
+  if (priceWhere) and.push(priceWhere);
+
+  const availabilityWhere = buildAvailabilityWhere(filters.inStock);
+  if (availabilityWhere) and.push(availabilityWhere);
+
+  return and.length ? { AND: and } : {};
+}
+
+export async function searchCatalogProducts(
+  options: CatalogSearchRepositoryOptions,
+  client?: CatalogRepositoryClient,
+): Promise<CatalogListResult<PublicCatalogProductRecord>> {
+  const repository = clientOrDefault(client);
+  const limit = clampLimit(options.limit);
+  const offset = normalizeOffset(options.offset);
+  const where = buildCatalogSearchWhere(options);
+  const orderBy: Prisma.ProductOrderByWithRelationInput[] = [
+    { title: "asc" },
+    { id: "asc" },
+  ];
+
+  const [items, total] = await Promise.all([
+    repository.product.findMany({
+      where,
+      orderBy,
+      skip: offset,
+      take: limit,
+      select: publicCatalogSelect,
+    }),
+    repository.product.count({ where }),
+  ]);
+
+  return { items, total, limit, offset, hasNextPage: offset + items.length < total };
+}
+
 export async function getPublishedProductBySlug(slug: string, client?: CatalogRepositoryClient) {
   return clientOrDefault(client).product.findFirst({
     where: { ...publishedProductWhere, slug },
