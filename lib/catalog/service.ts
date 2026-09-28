@@ -108,6 +108,7 @@ export type CreateProductInput = ProductInput & {
   categoryIds?: string[];
   collectionIds?: string[];
   tagIds?: string[];
+  optionTypeIds?: string[];
 };
 
 export type UpdateProductInput = Partial<Omit<ProductInput, "id">> & {
@@ -168,11 +169,12 @@ async function validateVariantOptionValues(
   repo: CatalogRepository,
   productId: string,
   optionValueIds: string[] | undefined,
+  allowedOptionTypeIds?: string[],
 ): Promise<{ optionValueIds: string[]; issues: { field: string; code: string; message: string }[] }> {
   const ids = [...new Set(optionValueIds ?? [])];
   if (!ids.length) return { optionValueIds: [], issues: [] };
-  const assigned = await repo.listProductOptionTypes(productId);
-  const assignedTypeIds = new Set(assigned.map((item) => item.optionTypeId));
+  const assigned = allowedOptionTypeIds ? [] : await repo.listProductOptionTypes(productId);
+  const assignedTypeIds = new Set(allowedOptionTypeIds ?? assigned.map((item) => item.optionTypeId));
   const seenTypes = new Set<string>();
   const issues: { field: string; code: string; message: string }[] = [];
   for (const [index, id] of ids.entries()) {
@@ -208,8 +210,14 @@ export function createCatalogService(customRepository: Partial<CatalogRepository
       const categoryIds = uniqueIds(input.categoryIds);
       const collectionIds = uniqueIds(input.collectionIds);
       const tagIds = uniqueIds(input.tagIds);
+      const optionTypeIds = uniqueIds(input.optionTypeIds);
 
       const productIssues = validateProduct(product);
+      const optionTypeRecords = await Promise.all((optionTypeIds ?? []).map((id) => repo.getOptionTypeById(id)));
+      const missingOptionTypeIssues = (optionTypeRecords ?? []).flatMap((record, index) =>
+        record ? [] : [{ field: "optionTypeIds[" + index + "]", code: "OPTION_TYPE_NOT_FOUND", message: "Product option type was not found." }],
+      );
+      if (missingOptionTypeIssues.length) validationError(missingOptionTypeIssues, "INVALID_VARIANT");
       const variantIssues = [
         ...variants.flatMap((variant, index) =>
           validateVariant(variant).map((item) => ({ ...item, field: "variants[" + index + "]." + item.field })),
@@ -232,7 +240,7 @@ export function createCatalogService(customRepository: Partial<CatalogRepository
         id: variant.id ?? randomUUID(),
       }));
       const variantOptionChecks = await Promise.all(
-        normalizedVariants.map((variant) => validateVariantOptionValues(repo, productId, variant.optionValueIds)),
+        normalizedVariants.map((variant) => validateVariantOptionValues(repo, productId, variant.optionValueIds, optionTypeIds)),
       );
       const variantOptionIssues = variantOptionChecks.flatMap((check, index) =>
         check.issues.map((item) => ({ ...item, field: "variants[" + index + "]." + item.field })),
@@ -283,6 +291,10 @@ export function createCatalogService(customRepository: Partial<CatalogRepository
             seoTitle: product.seoTitle ?? null,
             seoDescription: product.seoDescription ?? null,
           }, tx);
+
+          for (const [index, optionTypeId] of (optionTypeIds ?? []).entries()) {
+            await repo.assignProductOptionType(productId, optionTypeId, index, tx);
+          }
 
           for (const variant of normalizedVariants) {
             const variantId = variant.id!;
