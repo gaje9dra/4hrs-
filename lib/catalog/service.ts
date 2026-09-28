@@ -655,18 +655,20 @@ export function createCatalogService(customRepository: Partial<CatalogRepository
       if (existingVariants.some((item) => item.sku === variant.sku)) {
         throw new CatalogServiceError("DUPLICATE_SKU", "Product SKU already exists.");
       }
+      const existingVariantsWithOptions = await Promise.all(existingVariants.map(async (item) => ({
+        productId: item.productId,
+        id: item.id,
+        sku: item.sku,
+        displayName: item.displayName,
+        size: item.size,
+        color: item.color,
+        optionValueIds: (await repo.getVariantOptionValues(item.id)).map((value) => value.optionValueId),
+        price: item.price?.toString() ?? null,
+        compareAtPrice: item.compareAtPrice?.toString() ?? null,
+        status: item.status,
+      })));
       if (validateVariantUniqueness([
-        ...existingVariants.map((item) => ({
-          productId: item.productId,
-          id: item.id,
-          sku: item.sku,
-          displayName: item.displayName,
-          size: item.size,
-          color: item.color,
-          price: item.price?.toString() ?? null,
-          compareAtPrice: item.compareAtPrice?.toString() ?? null,
-          status: item.status,
-        })),
+        ...existingVariantsWithOptions,
         variant,
       ]).length) {
         issues.push({ field: "variant", code: "DUPLICATE_VARIANT", message: "Variant duplicates an existing size/color combination." });
@@ -723,9 +725,9 @@ export function createCatalogService(customRepository: Partial<CatalogRepository
       );
       issues.push(...optionCheck.issues);
       const siblings = await repo.getVariantsByProduct(existing.productId);
-      const duplicates = validateVariantUniqueness([
-        ...siblings.filter((item) => item.id !== id).map((item) => ({
+      const siblingsWithOptions = await Promise.all(siblings.filter((item) => item.id !== id).map(async (item) => ({
           productId: item.productId, id: item.id, sku: item.sku, size: item.size, color: item.color,
+          optionValueIds: (await repo.getVariantOptionValues(item.id)).map((value) => value.optionValueId),
           displayName: item.displayName, price: item.price?.toString() ?? null, compareAtPrice: item.compareAtPrice?.toString() ?? null, status: item.status,
         })),
         merged,
