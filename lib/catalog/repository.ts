@@ -166,7 +166,10 @@ export async function listProducts(
 
   const sortBy = options.sortBy ?? "createdAt";
   const sortDirection = options.sortDirection ?? "desc";
-  const orderBy = { [CATALOG_SORT_FIELDS[sortBy]]: sortDirection } as Prisma.ProductOrderByWithRelationInput;
+  const orderBy: Prisma.ProductOrderByWithRelationInput[] = [
+    { [CATALOG_SORT_FIELDS[sortBy]]: sortDirection },
+    { id: sortDirection },
+  ];
 
   const [items, total] = await Promise.all([
     repository.product.findMany({ where, orderBy, skip: offset, take: limit }),
