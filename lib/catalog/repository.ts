@@ -214,6 +214,22 @@ const publicCatalogSelect = {
       price: true,
       compareAtPrice: true,
       status: true,
+      optionValues: {
+        orderBy: { optionValue: { sortOrder: "asc" as const } },
+        select: {
+          optionValue: {
+            select: {
+              id: true,
+              displayName: true,
+              normalizedValue: true,
+              sortOrder: true,
+              hex: true,
+              swatch: true,
+              optionType: { select: { id: true, name: true, normalizedName: true, sortOrder: true } },
+            },
+          },
+        },
+      },
       inventory: {
         select: { trackingEnabled: true, onHand: true, reserved: true, lowStockThreshold: true },
       },
@@ -302,6 +318,8 @@ function buildCatalogSearchWhere(
             { displayName: { contains: query, mode: "insensitive" } },
             { size: { contains: query, mode: "insensitive" } },
             { color: { contains: query, mode: "insensitive" } },
+            { optionValues: { some: { optionValue: { displayName: { contains: query, mode: "insensitive" } } } } },
+            { optionValues: { some: { optionValue: { optionType: { name: { contains: query, mode: "insensitive" } } } } } },
           ],
         },
       },
