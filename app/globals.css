@@ -48,31 +48,23 @@
   --color-border: var(--border);
   --color-muted: var(--muted);
   --color-white: var(--white);
-
-  /* Backward-compatible aliases for the existing foundation. */
   --color-red: var(--primary-red);
   --color-blue: var(--primary-blue);
   --color-yellow: var(--primary-yellow);
-
   --font-sans: var(--font-outfit);
   --font-weight-400: 400;
   --font-weight-500: 500;
   --font-weight-700: 700;
   --font-weight-900: 900;
-
   --shadow-hard-sm: var(--shadow-sm);
   --shadow-hard-md: var(--shadow-md);
   --shadow-hard-lg: var(--shadow-lg);
-
   --radius-square: var(--radius-square);
   --radius-circle: var(--radius-circle);
-
   --breakpoint-mobile: 640px;
   --breakpoint-tablet: 1024px;
   --breakpoint-desktop: 1025px;
-  /* Keep Tailwind's lg utilities aligned with the foundation's desktop boundary. */
   --breakpoint-lg: 1025px;
-
   --ease-interaction: var(--motion-ease);
 }
 
@@ -89,9 +81,6 @@ html {
 
 body {
   overflow-x: clip;
-}
-
-body {
   margin: 0;
   background: var(--background);
   color: var(--foreground);
@@ -145,17 +134,9 @@ h6 {
   line-height: 1.1;
 }
 
-h4 {
-  font-size: 1.25rem;
-}
-
-h5 {
-  font-size: 1.125rem;
-}
-
-h6 {
-  font-size: 1rem;
-}
+h4 { font-size: 1.25rem; }
+h5 { font-size: 1.125rem; }
+h6 { font-size: 1rem; }
 
 p {
   margin: 0;
@@ -241,7 +222,8 @@ a:focus-visible,
 button:focus-visible,
 input:focus-visible,
 select:focus-visible,
-textarea:focus-visible {
+textarea:focus-visible,
+main:focus-visible {
   outline: 2px solid var(--primary-yellow);
   outline-offset: var(--motion-focus-offset);
   box-shadow: 0 0 0 2px var(--foreground);
@@ -298,9 +280,7 @@ label,
   line-height: 1.5;
 }
 
-.form-help {
-  color: var(--foreground);
-}
+.form-help { color: var(--foreground); }
 
 .form-error {
   color: var(--primary-red);
@@ -352,29 +332,17 @@ img {
 }
 
 @media (min-width: 640px) {
-  h1 {
-    font-size: 3.75rem;
-  }
-
-  h2 {
-    font-size: 2.75rem;
-  }
+  h1 { font-size: 3.75rem; }
+  h2 { font-size: 2.75rem; }
 }
 
 @media (min-width: 1025px) {
-  h1 {
-    font-size: 6rem;
-  }
-
-  h2 {
-    font-size: 3.75rem;
-  }
+  h1 { font-size: 6rem; }
+  h2 { font-size: 3.75rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
-  }
+  html { scroll-behavior: auto; }
 
   .marquee-track {
     animation: none;
