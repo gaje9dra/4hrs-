@@ -37,6 +37,8 @@ import {
   type ImageInput,
   type ProductInput,
   type VariantInput,
+  type VariantOptionTypeInput,
+  type VariantOptionValueInput,
   type TagInput,
 } from "@/lib/catalog/validation";
 
@@ -187,7 +189,10 @@ async function validateVariantOptionValues(
     }
     seenTypes.add(value.optionTypeId);
   }
-  return { optionValueIds: ids, issues };
+  issues.push(...validateProductOptionAssignments(ids.map((optionValueId, index) => ({
+    optionTypeId: index < ids.length ? Array.from(seenTypes)[Math.min(index, Math.max(0, seenTypes.size - 1))] ?? "" : "",
+    optionValueId,
+  }))));
 }
 
 
