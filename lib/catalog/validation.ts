@@ -104,7 +104,10 @@ export function validateJunctionUniqueness(pairs: Array<{ leftId: string; rightI
 
 export function validatePublishingReadiness(input: PublishReadinessInput): ValidationIssue[] {
   const issues = [...validateProduct(input.product), ...validateVariantUniqueness(input.variants)];
-  input.variants.forEach((variant, index) => {\n    issues.push(...validateVariant(variant).map((item) => ({ ...item, field: "variants[" + index + "]." + item.field })));\n    issues.push(...validateVariantPricing(input.product.price, variant).map((item) => ({ ...item, field: "variants[" + index + "]." + item.field })));\n  });
+  input.variants.forEach((variant, index) => {
+    issues.push(...validateVariant(variant).map((item) => ({ ...item, field: "variants[" + index + "]." + item.field })));
+    issues.push(...validateVariantPricing(input.product.price, variant).map((item) => ({ ...item, field: "variants[" + index + "]." + item.field })));
+  });
   const activeVariants = input.variants.filter((variant) => variant.status === "ACTIVE");
   if (input.requireVariant !== false && activeVariants.length === 0) issues.push(issue("variants", "VARIANT_REQUIRED", "At least one active ProductVariant is required for a sellable fashion product."));
   const productImages = input.images.filter((image) => input.product.id ? image.productId === input.product.id : Boolean(image.productId));
