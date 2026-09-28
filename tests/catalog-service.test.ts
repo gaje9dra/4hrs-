@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { Prisma } from "@prisma/client";
 import { createCatalogService } from "../lib/catalog/service.ts";
 import { CatalogServiceError } from "../lib/catalog/errors.ts";
 
@@ -10,7 +11,9 @@ const product = {
   description: null,
   shortDescription: null,
   status: "DRAFT" as const,
-  price: "999.00",
+  price: new Prisma.Decimal("999.00"),
+  createdAt: new Date("2026-01-01T00:00:00.000Z"),
+  updatedAt: new Date("2026-01-01T00:00:00.000Z"),
   compareAtPrice: null,
   currency: "INR",
   seoTitle: null,
@@ -60,6 +63,8 @@ test("service prevents duplicate SKU before persistence", async () => {
     price: null,
     compareAtPrice: null,
     status: "ACTIVE" as const,
+    createdAt: new Date("2026-01-01T00:00:00.000Z"),
+    updatedAt: new Date("2026-01-01T00:00:00.000Z"),
   };
 
   const service = createCatalogService({
