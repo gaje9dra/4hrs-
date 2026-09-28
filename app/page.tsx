@@ -1,7 +1,7 @@
 import { ArrowRight, Box, CreditCard, Truck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { Shape } from '@/components/geometry/geometric-mark'
+import { Shape } from '@/components/bauhaus/geometric-mark'
 
 const futureSystems = [
   { icon: Box, title: 'Fulfillment', body: 'Provider-neutral boundaries ready for Qikink, Printrove, Printful, Printify, manual fulfillment and own inventory.' },
