@@ -24,7 +24,7 @@ NEXT_PUBLIC_SITE_URL must be an absolute HTTP(S) URL. Canonical URL construction
 ## Slug strategy
 Slug normalization is centralized in lib/catalog/validation.ts.
 slugify trims/normalizes input, applies Unicode NFKD normalization, removes combining marks where applicable, lowercases, converts unsafe separators to hyphens, collapses repeated hyphens, removes leading/trailing hyphens, and produces a deterministic item-{hash} fallback when no usable ASCII slug characters remain.
-Canonical slugs use [a-z0-9]+(?:-[a-z0-9]+)* and are limited to 200 characters.
+Canonical slugs use [a-z0-9]+(?:-[a-z0-9]+)*. No separate slug-length scoring rule is introduced; the existing database TEXT representation and URL-safe validation remain the integrity boundary.
 Product, Category, and Collection service writes normalize slugs before validation/persistence. Blank slugs derive deterministically from the entity title/name.
 
 ## Slug uniqueness
