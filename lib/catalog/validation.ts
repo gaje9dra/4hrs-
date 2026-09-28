@@ -15,7 +15,10 @@ export type ProductInput = { id?: string; title: string; slug: string; descripti
 export type SeoMetadataInput = { seoTitle?: string | null; seoDescription?: string | null };
 export const SEO_TITLE_MAX_LENGTH = 200;
 export const SEO_DESCRIPTION_MAX_LENGTH = 500;
-export type VariantInput = { productId: string; id?: string; sku: string; displayName?: string | null; size?: string | null; color?: string | null; price?: number | string | null; compareAtPrice?: number | string | null; status: "ACTIVE" | "INACTIVE" };
+export type VariantOptionInput = { optionTypeId: string; optionValueId: string };
+export type VariantInput = { productId: string; id?: string; sku: string; displayName?: string | null; size?: string | null; color?: string | null; optionValueIds?: string[]; price?: number | string | null; compareAtPrice?: number | string | null; status: "ACTIVE" | "INACTIVE" };
+export type VariantOptionTypeInput = { id?: string; name: string; sortOrder?: number };
+export type VariantOptionValueInput = { id?: string; optionTypeId: string; displayName: string; normalizedValue: string; sortOrder?: number; hex?: string | null; swatch?: string | null };
 export type ImageInput = { productId?: string | null; variantId?: string | null; url: string; altText?: string | null; sortOrder: number; isPrimary: boolean };
 export type CategoryInput = { id?: string; name: string; slug: string; status: "ACTIVE" | "ARCHIVED"; parentId?: string | null; seoTitle?: string | null; seoDescription?: string | null };
 export type CollectionInput = { name: string; slug: string; status: "ACTIVE" | "ARCHIVED"; seoTitle?: string | null; seoDescription?: string | null };
@@ -71,7 +74,50 @@ function requireText(value: string, field: string, label: string, issues: Valida
 function dedupeIssues(issues: ValidationIssue[]): ValidationIssue[] { const seen = new Set<string>(); return issues.filter((item) => { const key = item.field + "\u0000" + item.code + "\u0000" + item.message; if (seen.has(key)) return false; seen.add(key); return true; }); }
 
 export function normalizeTitle(title: string): string { return normalizedText(title); }
-export function normalizeSku(sku: string): string { return sku.trim(); }
+export function normalizeSku(sku: string): string { return normalizedText(sku); }
+export function normalizeOptionTypeName(name: string): string { return normalizedText(name); }
+export function normalizeOptionIdentity(value: string): string { return slugify(value); }
+export function normalizeOptionDisplayValue(value: string): string { return normalizedText(value); }
+export function validateOptionType(input: VariantOptionTypeInput): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+  requireText(input.name, "name", "Option type name", issues);
+  const sortOrder = input.sortOrder ?? 0;
+  if (!Number.isInteger(sortOrder) || sortOrder < 0) issues.push(issue("sortOrder", "INVALID_SORT_ORDER", "Option type sort order must be a non-negative integer."));
+  return dedupeIssues(issues);
+}
+export function validateOptionValue(input: VariantOptionValueInput): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+  if (!input.optionTypeId.trim()) issues.push(issue("optionTypeId", "INVALID_OPTION_TYPE", "Option value must reference a valid option type."));
+  requireText(input.displayName, "displayName", "Option value display name", issues);
+  if (!input.normalizedValue.trim()) issues.push(issue("normalizedValue", "INVALID_NORMALIZED_VALUE", "Option value normalized identity is required."));
+  if (!SLUG_PATTERN.test(input.normalizedValue)) issues.push(issue("normalizedValue", "INVALID_NORMALIZED_VALUE", "Option value normalized identity must be lowercase and URL-safe."));
+  const sortOrder = input.sortOrder ?? 0;
+  if (!Number.isInteger(sortOrder) || sortOrder < 0) issues.push(issue("sortOrder", "INVALID_SORT_ORDER", "Option value sort order must be a non-negative integer."));
+  return dedupeIssues(issues);
+}
+export function validateProductOptionAssignments(assignments: VariantOptionInput[]): ValidationIssue[] {
+  const seenTypes = new Set<string>();
+  return assignments.flatMap((assignment, index) => {
+    const issues: ValidationIssue[] = [];
+    if (!assignment.optionTypeId.trim()) issues.push(issue("options[" + index + "].optionTypeId", "INVALID_OPTION_TYPE", "Option type is required."));
+    if (!assignment.optionValueId.trim()) issues.push(issue("options[" + index + "].optionValueId", "INVALID_OPTION_VALUE", "Option value is required."));
+    if (seenTypes.has(assignment.optionTypeId)) issues.push(issue("options[" + index + "]", "DUPLICATE_OPTION_TYPE", "A variant cannot contain two values from the same option type."));
+    seenTypes.add(assignment.optionTypeId);
+    return issues;
+  });
+}
+export function findDuplicateOptionCombinations(variants: Array<VariantInput & { optionValueIds?: string[] }>): number[][] {
+  const groups = new Map<string, number[]>();
+  variants.forEach((variant, index) => {
+    const values = [...new Set((variant.optionValueIds ?? []).map((value) => value.trim()).filter(Boolean))].sort();
+    const key = values.length ? values.join("\u0000") : variantOptionKey(variant);
+    const indexes = groups.get(key) ?? [];
+    indexes.push(index);
+    groups.set(key, indexes);
+  });
+  return [...groups.values()].filter((indexes) => indexes.length > 1);
+}
+
 export function normalizeTagName(name: string): string { return normalizedText(name); }
 export function normalizeTagSlug(slug: string): string { return slug.trim().toLowerCase(); }
 
@@ -114,7 +160,14 @@ export function validateVariant(input: VariantInput): ValidationIssue[] {
 function normalizeOption(value: string | null | undefined): string { return value === null || value === undefined ? "" : normalizedText(value).toLowerCase(); }
 function variantOptionKey(variant: VariantInput): string { return normalizeOption(variant.size) + "\u0000" + normalizeOption(variant.color); }
 export function findDuplicateVariants(variants: VariantInput[]): number[][] { const groups = new Map<string, number[]>(); variants.forEach((variant, index) => { const indexes = groups.get(variantOptionKey(variant)) ?? []; indexes.push(index); groups.set(variantOptionKey(variant), indexes); }); return [...groups.values()].filter((indexes) => indexes.length > 1); }
-export function validateVariantUniqueness(variants: VariantInput[]): ValidationIssue[] { return findDuplicateVariants(variants).map((indexes) => issue("variants[" + indexes[1] + "]", "DUPLICATE_VARIANT", "Variant duplicates another variant using normalized size and color options.")); }
+export function validateVariantUniqueness(variants: VariantInput[]): ValidationIssue[] {
+  const optionDuplicates = findDuplicateOptionCombinations(variants);
+  return optionDuplicates.map((indexes) => issue(
+    "variants[" + indexes[1] + "]",
+    "DUPLICATE_VARIANT",
+    "Variant duplicates another variant using the canonical option combination.",
+  ));
+}
 export function validateVariantPricing(productPrice: number | string, variant: VariantInput): ValidationIssue[] {
   const effectivePrice = variant.price === null || variant.price === undefined ? productPrice : variant.price;
   if (variant.compareAtPrice === null || variant.compareAtPrice === undefined) return [];
