@@ -139,3 +139,11 @@ Phase 1.7 establishes reusable global layout primitives under `components/layout
 Container alignment uses `max-w-7xl` as the standard content width. Full-width sections own backgrounds and structural dividers while constrained content nests inside Container. Narrow reading content and justified wide compositions use explicit container variants rather than page-specific max-widths.
 
 Responsive layout uses CSS Grid/Flexbox at the established 640px and 1024px boundaries. Decorative overflow must be locally contained; document-level accidental horizontal scrolling is suppressed.
+
+## Global header and navigation architecture
+
+Phase 1.8 keeps the global header under `components/layout`. The header consumes structured navigation configuration from `config/navigation.ts`, while desktop and mobile presentation are separated into focused components.
+
+Desktop navigation and mobile navigation share the same `NavigationItem` data model. Utility navigation is optional and only renders configured destinations, preventing non-functional search/account/wishlist/cart controls from appearing before those routes exist.
+
+The mobile navigation is client-side only because it owns menu state and focus/keyboard behavior. Static brand and navigation configuration remain independent of business services, databases, authentication, payments, fulfillment and shipping providers.
