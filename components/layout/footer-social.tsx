@@ -39,7 +39,7 @@ export function FooterSocial({ links }: FooterSocialProps) {
                 target={link.external ? '_blank' : undefined}
                 rel={link.external ? 'noopener noreferrer' : undefined}
                 aria-label={link.label}
-                className="inline-flex h-11 w-11 items-center justify-center border-2 border-white text-white no-underline transition-[background-color,color,border-color] duration-[120ms] hover:border-primary-yellow hover:bg-primary-yellow hover:text-foreground"
+                className="motion-icon inline-flex h-11 w-11 items-center justify-center border-2 border-white text-white no-underline hover:border-primary-yellow hover:bg-primary-yellow hover:text-foreground"
               >
                 <Icon size={20} strokeWidth={2.5} />
               </Link>
