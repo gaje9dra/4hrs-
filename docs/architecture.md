@@ -131,3 +131,11 @@ This prevents provider lock-in and keeps business logic independent of vendor AP
 ## Phase boundary
 
 Phase 1.2 establishes structure and boundaries only. It does not implement database schema/CRUD, product management, provider APIs, payment gateways, shipping, fulfillment, checkout, authentication, cart/wishlist, orders, admin dashboard or analytics.
+
+## Global layout architecture
+
+Phase 1.7 establishes reusable global layout primitives under `components/layout`: Container, Section, Grid, Split, Stack and Cluster. The root shell remains responsible for the global header, single main landmark, and footer. Layout primitives are server-compatible, mobile-first, and independent of business logic.
+
+Container alignment uses `max-w-7xl` as the standard content width. Full-width sections own backgrounds and structural dividers while constrained content nests inside Container. Narrow reading content and justified wide compositions use explicit container variants rather than page-specific max-widths.
+
+Responsive layout uses CSS Grid/Flexbox at the established 640px and 1024px boundaries. Decorative overflow must be locally contained; document-level accidental horizontal scrolling is suppressed.
