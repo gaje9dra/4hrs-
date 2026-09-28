@@ -7,7 +7,7 @@ const columns = [
 ]
 
 export function Footer() {
-  return <footer className="border-t-4 border-border bg-foreground text-white">
+  return <footer className="border-t-2 border-border lg:border-t-4 bg-foreground text-white">
     <div className="mx-auto max-w-7xl px-4 py-12 lg:px-8 lg:py-20">
       <div className="grid gap-12 lg:grid-cols-[1.3fr_2fr]">
         <div>
