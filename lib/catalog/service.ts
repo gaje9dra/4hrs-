@@ -20,6 +20,12 @@ import {
   validateVariant,
   validateVariantPricing,
   validateVariantUniqueness,
+  validateProductOptionAssignments,
+  validateOptionType,
+  validateOptionValue,
+  normalizeOptionTypeName,
+  normalizeOptionIdentity,
+  normalizeOptionDisplayValue,
   normalizeTagName,
   normalizeTagSlug,
   normalizeTitle,
@@ -49,6 +55,19 @@ type CatalogRepository = {
   getVariantsByProduct: typeof repository.getVariantsByProduct;
   updateVariant: typeof repository.updateVariant;
   deactivateVariant: typeof repository.deactivateVariant;
+  createOptionType: typeof repository.createOptionType;
+  getOptionTypeById: typeof repository.getOptionTypeById;
+  getOptionTypeByNormalizedName: typeof repository.getOptionTypeByNormalizedName;
+  updateOptionType: typeof repository.updateOptionType;
+  createOptionValue: typeof repository.createOptionValue;
+  getOptionValueById: typeof repository.getOptionValueById;
+  listOptionValues: typeof repository.listOptionValues;
+  updateOptionValue: typeof repository.updateOptionValue;
+  assignProductOptionType: typeof repository.assignProductOptionType;
+  removeProductOptionType: typeof repository.removeProductOptionType;
+  listProductOptionTypes: typeof repository.listProductOptionTypes;
+  replaceVariantOptionValues: typeof repository.replaceVariantOptionValues;
+  getVariantOptionValues: typeof repository.getVariantOptionValues;
   createImage: typeof repository.createImage;
   getImageById: typeof repository.getImageById;
   updateImage: typeof repository.updateImage;
@@ -136,8 +155,41 @@ function normalizeProductInput(input: ProductInput): ProductInput {
 }
 
 function normalizeVariantInput(input: VariantInput): VariantInput {
-  return { ...input, sku: normalizeSku(input.sku) };
+  return {
+    ...input,
+    sku: normalizeSku(input.sku),
+    optionValueIds: input.optionValueIds ? [...new Set(input.optionValueIds.map((value) => value.trim()).filter(Boolean))] : undefined,
+  };
 }
+
+async function validateVariantOptionValues(
+  repo: CatalogRepository,
+  productId: string,
+  optionValueIds: string[] | undefined,
+): Promise<{ optionValueIds: string[]; issues: { field: string; code: string; message: string }[] }> {
+  const ids = [...new Set(optionValueIds ?? [])];
+  if (!ids.length) return { optionValueIds: [], issues: [] };
+  const assigned = await repo.listProductOptionTypes(productId);
+  const assignedTypeIds = new Set(assigned.map((item) => item.optionTypeId));
+  const seenTypes = new Set<string>();
+  const issues: { field: string; code: string; message: string }[] = [];
+  for (const [index, id] of ids.entries()) {
+    const value = await repo.getOptionValueById(id);
+    if (!value) {
+      issues.push({ field: "optionValueIds[" + index + "]", code: "INVALID_OPTION_VALUE", message: "Variant references an unknown option value." });
+      continue;
+    }
+    if (!assignedTypeIds.has(value.optionTypeId)) {
+      issues.push({ field: "optionValueIds[" + index + "]", code: "OPTION_NOT_ASSIGNED", message: "Variant option value belongs to an option type not assigned to the Product." });
+    }
+    if (seenTypes.has(value.optionTypeId)) {
+      issues.push({ field: "optionValueIds[" + index + "]", code: "DUPLICATE_OPTION_TYPE", message: "A variant may contain only one value from each option type." });
+    }
+    seenTypes.add(value.optionTypeId);
+  }
+  return { optionValueIds: ids, issues };
+}
+
 
 function uniqueIds(ids: string[] | undefined): string[] | undefined {
   return ids ? [...new Set(ids)] : undefined;
@@ -493,11 +545,111 @@ export function createCatalogService(customRepository: Partial<CatalogRepository
       }
     },
 
+    async createOptionType(input: VariantOptionTypeInput) {
+      const normalizedName = normalizeOptionTypeName(input.name).toLowerCase();
+      const issues = validateOptionType(input);
+      if (issues.length) validationError(issues, "INVALID_VARIANT");
+      if (await repo.getOptionTypeByNormalizedName(normalizedName)) {
+        throw new CatalogServiceError("PRODUCT_ALREADY_EXISTS", "Option type already exists.");
+      }
+      try {
+        return await repo.createOptionType({
+          id: input.id ?? randomUUID(),
+          name: normalizeOptionTypeName(input.name),
+          normalizedName,
+          sortOrder: input.sortOrder ?? 0,
+        });
+      } catch (error) { mapDatabaseError(error); }
+    },
+
+    async updateOptionType(id: string, patch: Partial<Omit<VariantOptionTypeInput, "id">>) {
+      requireId(id, "VARIANT_NOT_FOUND", "Option type ID");
+      const existing = await repo.getOptionTypeById(id);
+      if (!existing) throw new CatalogServiceError("VARIANT_NOT_FOUND", "Option type was not found.");
+      const name = patch.name === undefined ? existing.name : normalizeOptionTypeName(patch.name);
+      const normalizedName = normalizeOptionTypeName(name).toLowerCase();
+      const issues = validateOptionType({ id, name, sortOrder: patch.sortOrder ?? existing.sortOrder });
+      if (issues.length) validationError(issues, "INVALID_VARIANT");
+      const duplicate = await repo.getOptionTypeByNormalizedName(normalizedName);
+      if (duplicate && duplicate.id !== id) throw new CatalogServiceError("PRODUCT_ALREADY_EXISTS", "Option type already exists.");
+      return repo.updateOptionType(id, { name, normalizedName, sortOrder: patch.sortOrder ?? existing.sortOrder });
+    },
+
+    async createOptionValue(input: VariantOptionValueInput) {
+      const normalizedValue = normalizeOptionIdentity(input.normalizedValue || input.displayName);
+      const displayName = normalizeOptionDisplayValue(input.displayName);
+      const issues = validateOptionValue({ ...input, displayName, normalizedValue });
+      if (issues.length) validationError(issues, "INVALID_VARIANT");
+      const optionType = await repo.getOptionTypeById(input.optionTypeId);
+      if (!optionType) throw new CatalogServiceError("VARIANT_NOT_FOUND", "Option type was not found.");
+      try {
+        return await repo.createOptionValue({
+          id: input.id ?? randomUUID(),
+          optionType: { connect: { id: input.optionTypeId } },
+          displayName,
+          normalizedValue,
+          sortOrder: input.sortOrder ?? 0,
+          hex: input.hex ?? null,
+          swatch: input.swatch ?? null,
+        });
+      } catch (error) { mapDatabaseError(error); }
+    },
+
+    async updateOptionValue(id: string, patch: Partial<Omit<VariantOptionValueInput, "id" | "optionTypeId">>) {
+      requireId(id, "VARIANT_NOT_FOUND", "Option value ID");
+      const existing = await repo.getOptionValueById(id);
+      if (!existing) throw new CatalogServiceError("VARIANT_NOT_FOUND", "Option value was not found.");
+      const displayName = patch.displayName === undefined ? existing.displayName : normalizeOptionDisplayValue(patch.displayName);
+      const normalizedValue = normalizeOptionIdentity(patch.normalizedValue ?? displayName);
+      const issues = validateOptionValue({
+        id,
+        optionTypeId: existing.optionTypeId,
+        displayName,
+        normalizedValue,
+        sortOrder: patch.sortOrder ?? existing.sortOrder,
+        hex: patch.hex === undefined ? existing.hex : patch.hex,
+        swatch: patch.swatch === undefined ? existing.swatch : patch.swatch,
+      });
+      if (issues.length) validationError(issues, "INVALID_VARIANT");
+      return repo.updateOptionValue(id, {
+        displayName,
+        normalizedValue,
+        sortOrder: patch.sortOrder ?? existing.sortOrder,
+        hex: patch.hex === undefined ? existing.hex : patch.hex,
+        swatch: patch.swatch === undefined ? existing.swatch : patch.swatch,
+      });
+    },
+
+    async assignProductOptionType(productId: string, optionTypeId: string, sortOrder = 0) {
+      await this.getProductById(productId);
+      const optionType = await repo.getOptionTypeById(optionTypeId);
+      if (!optionType) throw new CatalogServiceError("VARIANT_NOT_FOUND", "Option type was not found.");
+      if (!Number.isInteger(sortOrder) || sortOrder < 0) validationError([{ field: "sortOrder", code: "INVALID_SORT_ORDER", message: "Option order must be a non-negative integer." }], "INVALID_VARIANT");
+      return repo.assignProductOptionType(productId, optionTypeId, sortOrder);
+    },
+
+    async removeProductOptionType(productId: string, optionTypeId: string) {
+      await this.getProductById(productId);
+      const variants = await repo.getVariantsByProduct(productId);
+      const optionValues = await Promise.all(variants.map((variant) => repo.getVariantOptionValues(variant.id)));
+      if (optionValues.some((values) => values.some((value) => value.optionValue.optionTypeId === optionTypeId))) {
+        throw new CatalogServiceError("INVALID_VARIANT", "Cannot remove an option type that is used by an existing variant.");
+      }
+      return repo.removeProductOptionType(productId, optionTypeId);
+    },
+
+    async getProductOptionTypes(productId: string) {
+      await this.getProductById(productId);
+      return repo.listProductOptionTypes(productId);
+    },
+
     async createVariant(input: VariantInput) {
       const variant = normalizeVariantInput(input);
       const issues = validateVariant(variant);
       const product = await repo.getProductById(variant.productId);
       if (!product) throw new CatalogServiceError("PRODUCT_NOT_FOUND", "Product was not found.");
+      const optionCheck = await validateVariantOptionValues(repo, variant.productId, variant.optionValueIds);
+      issues.push(...optionCheck.issues);
       const existingVariants = await repo.getVariantsByProduct(variant.productId);
       if (existingVariants.some((item) => item.sku === variant.sku)) {
         throw new CatalogServiceError("DUPLICATE_SKU", "Product SKU already exists.");
@@ -521,7 +673,8 @@ export function createCatalogService(customRepository: Partial<CatalogRepository
       issues.push(...validateVariantPricing(product.price.toString(), variant));
       if (issues.length) validationError(issues, "INVALID_VARIANT");
       try {
-        return await repo.createVariant({
+        const created = await repo.withTransaction(async (tx) => {
+          const result = await repo.createVariant({
           id: variant.id ?? randomUUID(),
           product: { connect: { id: variant.productId } },
           sku: variant.sku,
@@ -531,7 +684,11 @@ export function createCatalogService(customRepository: Partial<CatalogRepository
           price: decimalValue(variant.price) ?? null,
           compareAtPrice: decimalValue(variant.compareAtPrice) ?? null,
           status: variant.status,
+        }, tx);
+          await repo.replaceVariantOptionValues(result.id, optionCheck.optionValueIds, tx);
+          return result;
         });
+        return created;
       } catch (error) { mapDatabaseError(error); }
     },
 
@@ -549,11 +706,21 @@ export function createCatalogService(customRepository: Partial<CatalogRepository
         price: patch.price === undefined ? existing.price?.toString() ?? null : patch.price,
         compareAtPrice: patch.compareAtPrice === undefined ? existing.compareAtPrice?.toString() ?? null : patch.compareAtPrice,
         status: patch.status ?? existing.status,
+        optionValueIds: patch.optionValueIds === undefined ? undefined : patch.optionValueIds,
       };
       const issues = validateVariant(merged);
       const product = await repo.getProductById(existing.productId);
       if (!product) throw new CatalogServiceError("PRODUCT_NOT_FOUND", "Parent Product was not found.");
       issues.push(...validateVariantPricing(product.price.toString(), merged));
+      const existingOptionValues = await repo.getVariantOptionValues(id);
+      const optionCheck = await validateVariantOptionValues(
+        repo,
+        existing.productId,
+        merged.optionValueIds === undefined
+          ? existingOptionValues.map((value) => value.optionValueId)
+          : merged.optionValueIds,
+      );
+      issues.push(...optionCheck.issues);
       const siblings = await repo.getVariantsByProduct(existing.productId);
       const duplicates = validateVariantUniqueness([
         ...siblings.filter((item) => item.id !== id).map((item) => ({
@@ -565,7 +732,8 @@ export function createCatalogService(customRepository: Partial<CatalogRepository
       issues.push(...duplicates);
       if (issues.length) validationError(issues, "INVALID_VARIANT");
       try {
-        return await repo.updateVariant(id, {
+        const updated = await repo.withTransaction(async (tx) => {
+          const result = await repo.updateVariant(id, {
           sku: merged.sku,
           displayName: merged.displayName,
           size: merged.size,
@@ -573,7 +741,11 @@ export function createCatalogService(customRepository: Partial<CatalogRepository
           price: decimalValue(merged.price) ?? null,
           compareAtPrice: decimalValue(merged.compareAtPrice) ?? null,
           status: merged.status,
+        }, tx);
+          await repo.replaceVariantOptionValues(id, optionCheck.optionValueIds, tx);
+          return result;
         });
+        return updated;
       } catch (error) { mapDatabaseError(error); }
     },
 
