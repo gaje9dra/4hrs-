@@ -7,10 +7,23 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum ProductStatus {\n  DRAFT\n  ACTIVE\n  ARCHIVED\n}
-enum ProductVariantStatus {\n  ACTIVE\n  INACTIVE\n}
-enum CategoryStatus {\n  ACTIVE\n  ARCHIVED\n}
-enum CollectionStatus {\n  ACTIVE\n  ARCHIVED\n}
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+enum ProductVariantStatus {
+  ACTIVE
+  INACTIVE
+}
+enum CategoryStatus {
+  ACTIVE
+  ARCHIVED
+}
+enum CollectionStatus {
+  ACTIVE
+  ARCHIVED
+}
 
 model Product {
   id               String        @id @default(uuid()) @db.Uuid
