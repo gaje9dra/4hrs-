@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Outfit } from 'next/font/google'
 import './globals.css'
 import { Header } from '@/components/layout/header'
+import { SkipLink } from '@/components/layout/skip-link'
 import { Footer } from '@/components/layout/footer'
 
 const outfit = Outfit({
@@ -20,8 +21,11 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en">
       <body className={`${outfit.variable} antialiased`}>
+        <SkipLink />
         <Header />
-        <main>{children}</main>
+        <main id="main-content" tabIndex={-1} className="outline-none">
+          {children}
+        </main>
         <Footer />
       </body>
     </html>
