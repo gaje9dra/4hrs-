@@ -11,8 +11,8 @@ export class CatalogValidationError extends Error {
   }
 }
 
-export type ProductInput = { title: string; slug: string; description?: string | null; shortDescription?: string | null; status: ProductStatus; price: number | string; compareAtPrice?: number | string | null; currency: string; seoTitle?: string | null; seoDescription?: string | null };
-export type VariantInput = { productId?: string; sku: string; displayName?: string | null; size?: string | null; color?: string | null; price?: number | string | null; compareAtPrice?: number | string | null; status: "ACTIVE" | "INACTIVE" };
+export type ProductInput = { id?: string; title: string; slug: string; description?: string | null; shortDescription?: string | null; status: ProductStatus; price: number | string; compareAtPrice?: number | string | null; currency: string; seoTitle?: string | null; seoDescription?: string | null };
+export type VariantInput = { productId: string; id?: string; sku: string; displayName?: string | null; size?: string | null; color?: string | null; price?: number | string | null; compareAtPrice?: number | string | null; status: "ACTIVE" | "INACTIVE" };
 export type ImageInput = { productId?: string | null; variantId?: string | null; url: string; altText?: string | null; sortOrder: number; isPrimary: boolean };
 export type CategoryInput = { id?: string; name: string; slug: string; status: "ACTIVE" | "ARCHIVED"; parentId?: string | null };
 export type CollectionInput = { name: string; slug: string; status: "ACTIVE" | "ARCHIVED" };
@@ -60,7 +60,7 @@ export function validateProduct(input: ProductInput): ValidationIssue[] {
 export function validateSku(sku: string): ValidationIssue[] { return normalizeSku(sku) ? [] : [issue("sku", "INVALID_SKU", "SKU must not be empty.")]; }
 
 export function validateVariant(input: VariantInput): ValidationIssue[] {
-  const issues: ValidationIssue[] = []; if (input.productId !== undefined && !input.productId.trim()) issues.push(issue("productId", "INVALID_PRODUCT", "Variant must reference a valid Product."));
+  const issues: ValidationIssue[] = []; if (!input.productId.trim()) issues.push(issue("productId", "INVALID_PRODUCT", "Variant must reference a valid Product."));
   issues.push(...validateSku(input.sku));
   if (input.price !== null && input.price !== undefined) issues.push(...validatePricePair(input.price, input.compareAtPrice));
   else if (input.compareAtPrice !== null && input.compareAtPrice !== undefined) issues.push(...validateMoney(input.compareAtPrice, "compareAtPrice"));
@@ -102,9 +102,9 @@ export function validatePublishingReadiness(input: PublishReadinessInput): Valid
   input.variants.forEach((variant, index) => issues.push(...validateVariant(variant).map((item) => ({ ...item, field: "variants[" + index + "]." + item.field }))));
   const activeVariants = input.variants.filter((variant) => variant.status === "ACTIVE");
   if (input.requireVariant !== false && activeVariants.length === 0) issues.push(issue("variants", "VARIANT_REQUIRED", "At least one active ProductVariant is required for a sellable fashion product."));
-  const productImages = input.images.filter((image) => Boolean(image.productId));
+  const productImages = input.images.filter((image) => input.product.id ? image.productId === input.product.id : Boolean(image.productId));
   if (input.requireProductImage !== false && productImages.length === 0) issues.push(issue("images", "PRODUCT_IMAGE_REQUIRED", "At least one product-level image is required for publishing."));
-  input.images.forEach((image, index) => issues.push(...validateImage(image).map((item) => ({ ...item, field: "images[" + index + "]." + item.field }))));
+  input.images.forEach((image, index) => issues.push(...validateImage(image).map((item) => ({ ...item, field: "images[" + index + "]." + item.field }))));\n  if (input.product.id) issues.push(...validateImageRelationships(input.product.id, input.images, input.variants));
   issues.push(...validatePrimaryImages(input.images));
   return dedupeIssues(issues);
 }
