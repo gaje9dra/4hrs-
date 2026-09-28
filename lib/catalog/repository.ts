@@ -626,6 +626,12 @@ export async function getVariantsByProduct(productId: string, client?: CatalogRe
   return clientOrDefault(client).productVariant.findMany({
     where: { productId },
     orderBy: { createdAt: "asc" },
+    include: {
+      optionValues: {
+        include: { optionValue: { include: { optionType: true } } },
+        orderBy: { optionValue: { sortOrder: "asc" } },
+      },
+    },
   });
 }
 
