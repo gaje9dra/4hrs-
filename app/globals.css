@@ -66,6 +66,8 @@
   --breakpoint-mobile: 640px;
   --breakpoint-tablet: 1024px;
   --breakpoint-desktop: 1025px;
+  /* Keep Tailwind's lg utilities aligned with the foundation's desktop boundary. */
+  --breakpoint-lg: 1025px;
 }
 
 *,
