@@ -324,7 +324,7 @@ export function createCatalogSearchService(options: {
     async search(input: CatalogSearchQuery): Promise<CatalogSearchResult> {
       const normalized = normalizeCatalogSearchQuery(input);
 
-      {
+      try {
         if (normalized.catalog.category && !(await lookup.getCategoryBySlug(normalized.catalog.category))) {
           throw new CatalogServiceError("CATEGORY_NOT_FOUND", "Category was not found.");
         }
@@ -338,9 +338,7 @@ export function createCatalogSearchService(options: {
             throw new CatalogServiceError("TAG_NOT_FOUND", "Tag was not found: " + missingTag + ".");
           }
         }
-      }
 
-      try {
         const result = await provider.search(normalized);
         return {
           items: result.items.map((item) => toSearchItem(item, normalized.mode)),
