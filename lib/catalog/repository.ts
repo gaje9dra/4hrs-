@@ -50,7 +50,15 @@ const productDetailsInclude = {
 } satisfies Prisma.ProductInclude;
 
 const productWithVariantsInclude = {
-  variants: { orderBy: { createdAt: "asc" as const } },
+  variants: {
+    orderBy: { createdAt: "asc" as const },
+    include: {
+      optionValues: {
+        include: { optionValue: { include: { optionType: true } } },
+        orderBy: { optionValue: { sortOrder: "asc" as const } },
+      },
+    },
+  },
 } satisfies Prisma.ProductInclude;
 
 const publishedProductWhere: Prisma.ProductWhereInput = {
@@ -512,6 +520,74 @@ export async function updateProduct(id: string, data: Prisma.ProductUpdateInput,
 
 export async function archiveProduct(id: string, client?: CatalogRepositoryClient) {
   return updateProduct(id, { status: "ARCHIVED" }, client);
+}
+
+export async function createOptionType(data: Prisma.VariantOptionTypeCreateInput, client?: CatalogRepositoryClient) {
+  return clientOrDefault(client).variantOptionType.create({ data });
+}
+export async function getOptionTypeById(id: string, client?: CatalogRepositoryClient) {
+  return clientOrDefault(client).variantOptionType.findUnique({ where: { id } });
+}
+export async function getOptionTypeByNormalizedName(normalizedName: string, client?: CatalogRepositoryClient) {
+  return clientOrDefault(client).variantOptionType.findUnique({ where: { normalizedName } });
+}
+export async function updateOptionType(id: string, data: Prisma.VariantOptionTypeUpdateInput, client?: CatalogRepositoryClient) {
+  return clientOrDefault(client).variantOptionType.update({ where: { id }, data });
+}
+export async function createOptionValue(data: Prisma.VariantOptionValueCreateInput, client?: CatalogRepositoryClient) {
+  return clientOrDefault(client).variantOptionValue.create({ data });
+}
+export async function getOptionValueById(id: string, client?: CatalogRepositoryClient) {
+  return clientOrDefault(client).variantOptionValue.findUnique({ where: { id }, include: { optionType: true } });
+}
+export async function listOptionValues(optionTypeId: string, client?: CatalogRepositoryClient) {
+  return clientOrDefault(client).variantOptionValue.findMany({
+    where: { optionTypeId },
+    orderBy: [{ sortOrder: "asc" }, { displayName: "asc" }, { id: "asc" }],
+  });
+}
+export async function updateOptionValue(id: string, data: Prisma.VariantOptionValueUpdateInput, client?: CatalogRepositoryClient) {
+  return clientOrDefault(client).variantOptionValue.update({ where: { id }, data });
+}
+export async function assignProductOptionType(productId: string, optionTypeId: string, sortOrder = 0, client?: CatalogRepositoryClient) {
+  return clientOrDefault(client).productOptionType.upsert({
+    where: { productId_optionTypeId: { productId, optionTypeId } },
+    create: { productId, optionTypeId, sortOrder },
+    update: { sortOrder },
+  });
+}
+export async function removeProductOptionType(productId: string, optionTypeId: string, client?: CatalogRepositoryClient) {
+  return clientOrDefault(client).productOptionType.delete({
+    where: { productId_optionTypeId: { productId, optionTypeId } },
+  });
+}
+export async function listProductOptionTypes(productId: string, client?: CatalogRepositoryClient) {
+  return clientOrDefault(client).productOptionType.findMany({
+    where: { productId },
+    include: { optionType: { include: { values: { orderBy: [{ sortOrder: "asc" }, { displayName: "asc" }, { id: "asc" }] } } } },
+    orderBy: [{ sortOrder: "asc" }, { optionType: { normalizedName: "asc" } }],
+  });
+}
+export async function replaceVariantOptionValues(
+  variantId: string,
+  optionValueIds: string[],
+  client?: CatalogRepositoryClient,
+) {
+  const repository = clientOrDefault(client);
+  await repository.productVariantOptionValue.deleteMany({ where: { variantId } });
+  if (optionValueIds.length) {
+    await repository.productVariantOptionValue.createMany({
+      data: [...new Set(optionValueIds)].map((optionValueId) => ({ variantId, optionValueId })),
+      skipDuplicates: true,
+    });
+  }
+}
+export async function getVariantOptionValues(variantId: string, client?: CatalogRepositoryClient) {
+  return clientOrDefault(client).productVariantOptionValue.findMany({
+    where: { variantId },
+    include: { optionValue: { include: { optionType: true } } },
+    orderBy: { optionValue: { sortOrder: "asc" } },
+  });
 }
 
 export async function createVariant(data: Prisma.ProductVariantCreateInput, client?: CatalogRepositoryClient) {
