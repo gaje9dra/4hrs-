@@ -15,6 +15,7 @@ import {
 } from "../lib/catalog/validation.ts";
 
 const baseProduct = {
+  id: "product-1",
   title: "Oversized Graphic T-Shirt",
   slug: "oversized-graphic-t-shirt",
   status: "DRAFT" as const,
@@ -54,9 +55,11 @@ test("enforces compare-at price relationship and money precision", () => {
   assert.ok(validateMoney("10.999", "price").some((item) => item.code === "INVALID_MONEY_PRECISION"));
 });
 
-test("accepts a variant and rejects an empty SKU", () => {
+test("requires a Product relationship and rejects an empty SKU", () => {
   assert.deepEqual(validateVariant(baseVariant), []);
+  assert.ok(validateVariant({ ...baseVariant, productId: "" }).some((item) => item.code === "INVALID_PRODUCT"));
   assert.ok(validateVariant({ ...baseVariant, sku: " " }).some((item) => item.code === "INVALID_SKU"));
+  assert.ok(validateVariant({ ...baseVariant, productId: "" }).some((item) => item.code === "INVALID_PRODUCT"));
 });
 
 test("detects duplicate variants by normalized size and color", () => {
@@ -118,6 +121,13 @@ test("publishing readiness requires an active variant and product-level image", 
     }],
   });
   assert.deepEqual(complete, []);
+
+  const invalidInheritedCompareAt = validatePublishingReadiness({
+    product: { ...baseProduct, price: "999.00" },
+    variants: [{ ...baseVariant, price: null, compareAtPrice: "899.00" }],
+    images: [{ productId: "product-1", url: "https://cdn.example.com/image.jpg", sortOrder: 0, isPrimary: true }],
+  });
+  assert.ok(invalidInheritedCompareAt.some((item) => item.code === "INVALID_COMPARE_AT_PRICE"));
 });
 
 test("effective variant price overrides inherited product price", () => {
