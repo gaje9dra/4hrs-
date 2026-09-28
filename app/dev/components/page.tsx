@@ -30,7 +30,7 @@ export default function ComponentShowcase() {
   if (process.env.NODE_ENV !== 'development') notFound()
 
   return (
-    <main className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background">
       <Section>
         <SectionHeading
           eyebrow="Development / UI system"
@@ -233,6 +233,6 @@ export default function ComponentShowcase() {
           </section>
         </div>
       </Section>
-    </main>
+    </div>
   )
 }
