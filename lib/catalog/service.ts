@@ -196,6 +196,8 @@ export function createCatalogService(customRepository: Partial<CatalogRepository
       );
       if (variantRelationshipIssues.length) validationError(variantRelationshipIssues, "INVALID_IMAGE_RELATIONSHIP");
 
+      const existingSlug = await repo.getProductBySlug(product.slug);
+      if (existingSlug) throw new CatalogServiceError("DUPLICATE_SLUG", "Catalog slug already exists.");
       if (product.status === "ACTIVE") {
         const readiness = validatePublishingReadiness({
           product,
@@ -311,6 +313,13 @@ export function createCatalogService(customRepository: Partial<CatalogRepository
         issues.push({ field: "slug", code: "SLUG_CHANGE_REQUIRES_REDIRECT", message: "Published Product slugs cannot change without a redirect strategy." });
       }
       if (issues.length) validationError(issues, "INVALID_PRODUCT");
+
+      if (merged.slug !== existing.slug) {
+        const slugOwner = await repo.getProductBySlug(merged.slug);
+        if (slugOwner && slugOwner.id !== existing.id) {
+          throw new CatalogServiceError("DUPLICATE_SLUG", "Catalog slug already exists.");
+        }
+      }
 
       try {
         const updated = await repo.withTransaction(async (tx) => {
@@ -665,6 +674,8 @@ export function createCatalogService(customRepository: Partial<CatalogRepository
       const normalizedInput = { ...input, name: normalizeTitle(input.name), slug: normalizeSlug(input.slug || input.name), seoTitle: normalizeSeoText(input.seoTitle), seoDescription: normalizeSeoText(input.seoDescription) };
       const issues = [...validateCategory(normalizedInput), ...validateCategoryHierarchy(input.id ?? "", input.parentId)];
       if (issues.length) validationError(issues, "INVALID_CATEGORY");
+      const existingSlug = await repo.getCategoryBySlug(normalizedInput.slug);
+      if (existingSlug) throw new CatalogServiceError("DUPLICATE_SLUG", "Catalog slug already exists.");
       if (input.parentId) {
         const parent = await repo.getCategoryById(input.parentId);
         if (!parent) throw new CatalogServiceError("CATEGORY_NOT_FOUND", "Parent category was not found.");
@@ -700,6 +711,10 @@ export function createCatalogService(customRepository: Partial<CatalogRepository
       }
 
       if (issues.length) validationError(issues, "INVALID_CATEGORY");
+      if (next.slug !== existing.slug) {
+        const slugOwner = await repo.getCategoryBySlug(next.slug);
+        if (slugOwner && slugOwner.id !== id) throw new CatalogServiceError("DUPLICATE_SLUG", "Catalog slug already exists.");
+      }
       if (next.parentId) {
         const parent = await repo.getCategoryById(next.parentId);
         if (!parent) throw new CatalogServiceError("CATEGORY_NOT_FOUND", "Parent category was not found.");
@@ -731,6 +746,8 @@ export function createCatalogService(customRepository: Partial<CatalogRepository
       const normalizedInput = { ...input, name: normalizeTitle(input.name), slug: normalizeSlug(input.slug || input.name), seoTitle: normalizeSeoText(input.seoTitle), seoDescription: normalizeSeoText(input.seoDescription) };
       const issues = validateCollection(normalizedInput);
       if (issues.length) validationError(issues, "INVALID_COLLECTION");
+      const existingSlug = await repo.getCollectionBySlug(normalizedInput.slug);
+      if (existingSlug) throw new CatalogServiceError("DUPLICATE_SLUG", "Catalog slug already exists.");
       try { return await repo.createCollection({ name: normalizedInput.name, slug: normalizedInput.slug, seoTitle: normalizedInput.seoTitle, seoDescription: normalizedInput.seoDescription, status: normalizedInput.status }); }
       catch (error) { mapDatabaseError(error); }
     },
@@ -740,6 +757,10 @@ export function createCatalogService(customRepository: Partial<CatalogRepository
       if (!existing) throw new CatalogServiceError("COLLECTION_NOT_FOUND", "Collection was not found.");
       const next = { name: normalizeTitle(patch.name ?? existing.name), slug: normalizeSlug(patch.slug ?? existing.slug), status: patch.status ?? existing.status, seoTitle: normalizeSeoText(patch.seoTitle === undefined ? existing.seoTitle : patch.seoTitle), seoDescription: normalizeSeoText(patch.seoDescription === undefined ? existing.seoDescription : patch.seoDescription) };
       const issues = validateCollection(next);
+      if (next.slug !== existing.slug) {
+        const slugOwner = await repo.getCollectionBySlug(next.slug);
+        if (slugOwner && slugOwner.id !== id) throw new CatalogServiceError("DUPLICATE_SLUG", "Catalog slug already exists.");
+      }
       if (existing.status === "ACTIVE" && next.slug !== existing.slug) {
         issues.push({ field: "slug", code: "SLUG_CHANGE_REQUIRES_REDIRECT", message: "Published Collection slugs cannot change without a redirect strategy." });
       }
