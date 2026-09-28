@@ -83,8 +83,8 @@ function buildListWhere(filters: CatalogListFilters = {}): Prisma.ProductWhereIn
 
   if (filters.minPrice !== undefined || filters.maxPrice !== undefined) {
     where.price = {
-      ...(filters.minPrice !== undefined ? { gte: filters.minPrice } : {}),
-      ...(filters.maxPrice !== undefined ? { lte: filters.maxPrice } : {}),
+      ...(filters.minPrice !== undefined ? { gte: new Prisma.Decimal(filters.minPrice) } : {}),
+      ...(filters.maxPrice !== undefined ? { lte: new Prisma.Decimal(filters.maxPrice) } : {}),
     };
   }
 
