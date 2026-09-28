@@ -25,7 +25,7 @@ export function AccordionItem({ title, children, defaultOpen = false, disabled =
           disabled={disabled}
           aria-expanded={open}
           aria-controls={panelId}
-          className="flex min-h-14 w-full items-center justify-between gap-4 px-4 py-4 text-left text-base font-900 uppercase transition-colors duration-200 hover:bg-muted focus-visible:outline-none disabled:cursor-not-allowed disabled:bg-muted"
+          className="motion-link flex min-h-14 w-full items-center justify-between gap-4 px-4 py-4 text-left text-base font-900 uppercase no-underline focus-visible:outline-none disabled:cursor-not-allowed disabled:bg-muted"
           onClick={() => setOpen((value) => !value)}
         >
           <span>{title}</span>
