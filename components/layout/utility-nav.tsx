@@ -27,7 +27,7 @@ export function UtilityNav({ items }: UtilityNavProps) {
             key={item.label}
             href={item.href}
             aria-label={item.label}
-            className="inline-flex h-11 w-11 items-center justify-center border-2 border-transparent no-underline transition-[background-color,border-color,transform] duration-[120ms] hover:border-border hover:bg-primary-yellow active:translate-x-px active:translate-y-px"
+            className="motion-icon inline-flex h-11 w-11 items-center justify-center border-2 border-transparent no-underline hover:border-border hover:bg-primary-yellow"
           >
             <Icon size={20} strokeWidth={2.5} aria-hidden="true" />
           </Link>
