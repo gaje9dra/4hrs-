@@ -1,6 +1,6 @@
 import type { CSSProperties, HTMLAttributes } from 'react'
 
-export type GeometricShapeName = 'circle' | 'square' | 'triangle' | 'bar'
+export type GeometricShapeName = 'circle' | 'square' | 'triangle' | 'diamond' | 'bar'
 export type GeometricColor = 'red' | 'blue' | 'yellow' | 'black' | 'white'
 export type GeometricSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl'
 export type GeometricRotation = 0 | 45 | 90 | -45 | -90
@@ -15,7 +15,7 @@ const rotations: Record<GeometricRotation, string> = {
   0: 'rotate-0', 45: 'rotate-45', 90: 'rotate-90', '-45': '-rotate-45', '-90': '-rotate-90',
 }
 const shapes: Record<GeometricShapeName, string> = {
-  circle: 'rounded-full', square: '', triangle: 'clip-triangle', bar: 'h-1 w-20',
+  circle: 'rounded-full', square: '', triangle: 'clip-triangle', diamond: 'rotate-45', bar: 'h-1 w-20',
 }
 
 export type GeometricShapeProps = Omit<HTMLAttributes<HTMLSpanElement>, 'color'> & {
