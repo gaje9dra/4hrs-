@@ -9,6 +9,8 @@ export function GeometricComposition({
   return (
     <div
       className={['relative isolate', overflow === 'hidden' ? 'overflow-hidden' : 'overflow-visible', className].join(' ')}
+      aria-hidden={label ? undefined : true}
+      role={label ? 'img' : undefined}
       aria-label={label}
     >
       {children}
@@ -19,5 +21,5 @@ export function GeometricComposition({
 export function GeometricLayer({
   children, className = '', layer = 'base',
 }: { children: ReactNode; className?: string; layer?: GeometricLayerName }) {
-  return <div className={['absolute pointer-events-none', layers[layer], className].join(' ')}>{children}</div>
+  return <div className={['absolute pointer-events-none', layers[layer], className].join(' ')} aria-hidden="true">{children}</div>
 }
