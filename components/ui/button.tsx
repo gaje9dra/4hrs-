@@ -15,7 +15,7 @@ export function Button({
 }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: keyof typeof variants }) {
   return (
     <button
-      className={`inline-flex min-h-12 items-center justify-center rounded-square border-2 border-border px-5 py-3 text-sm font-700 uppercase tracking-widest shadow-hard-sm transition-transform duration-200 ease-out active:translate-x-[2px] active:translate-y-[2px] active:shadow-none disabled:cursor-not-allowed disabled:opacity-50 ${variants[variant]} ${className}`}
+      className={`inline-flex min-h-12 items-center justify-center rounded-square border-2 border-border px-5 py-3 text-sm font-700 uppercase tracking-widest shadow-hard-sm transition-transform duration-200 ease-out active:translate-x-[2px] active:translate-y-[2px] active:shadow-none disabled:cursor-not-allowed disabled:bg-muted disabled:text-foreground disabled:shadow-none ${variants[variant]} ${className}`}
       {...props}
     />
   )
