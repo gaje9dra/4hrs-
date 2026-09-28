@@ -155,3 +155,24 @@ Phase 1.9 keeps the global Footer under `components/layout` and composes it from
 The phase also establishes presentation-only global sections under `components/layout`: AnnouncementBar, SectionDivider and GlobalCTA. These components accept content/actions as props and do not perform product, cart, authentication, payment, order, shipping, provider, database or CMS operations.
 
 Footer and global section components remain server-compatible. Optional external social links use explicit configuration and secure external-link attributes. Geometric decoration reuses the Phase 1.6 system rather than creating another visual primitive library.
+
+## Responsive system — Phase 1.10
+
+The responsive foundation is mobile-first and uses one breakpoint vocabulary:
+
+- Mobile: below 640px.
+- Tablet: 640px–1024px.
+- Desktop: 1025px and above.
+- Tailwind `sm` remains the 640px tablet boundary.
+- Tailwind `md` remains the approximately 768px navigation transition.
+- Tailwind `lg` is explicitly aligned to 1025px so desktop utilities match the design tokens.
+
+The shared `Container` uses `max-w-7xl` with `px-4 sm:px-6 lg:px-8`, keeping Header, main sections, Footer and global sections on the same horizontal alignment system.
+
+Responsive grids start at one column and progressively enhance through `sm` and `lg`. Flex clusters wrap by default. Form controls use full available width with minimum touch-friendly heights.
+
+Structural borders use the established 2px mobile / 4px desktop vocabulary where responsive scaling is meaningful. Hard shadows remain offset and scale down on mobile for buttons, cards and the mobile navigation drawer.
+
+The existing `overflow-x: clip` rule is retained as a documented containment safeguard from the layout foundation, not as a substitute for fixing component overflow. Geometric compositions and global CTA decorations explicitly contain decorative overflow, while content layouts use normal sizing and wrapping.
+
+Responsive behavior is CSS-driven. No viewport detection, resize listeners, duplicate mobile/desktop trees, or new client-side responsive state was introduced in Phase 1.10.
