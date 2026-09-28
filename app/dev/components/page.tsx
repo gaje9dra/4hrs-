@@ -7,6 +7,9 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Checkbox } from '@/components/ui/checkbox'
 import { Divider } from '@/components/ui/divider'
 import { GeometricDecoration } from '@/components/bauhaus/geometric-decoration'
+import { GeometricComposition, GeometricLayer } from '@/components/bauhaus/geometric-composition'
+import { CornerDecoration } from '@/components/bauhaus/corner-decoration'
+import { CornerAccent, EditorialComposition, HeroComposition, SectionAccent } from '@/components/bauhaus/geometric-presets'
 import { IconButton } from '@/components/ui/icon-button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -132,6 +135,39 @@ export default function ComponentShowcase() {
                 <p>No. It only owns presentation and local open/closed interaction state.</p>
               </AccordionItem>
             </Accordion>
+          </section>
+
+          <section aria-labelledby="geometry">
+            <h2 id="geometry" className="mb-5 text-2xl font-900 uppercase">Geometric system</h2>
+            <div className="grid gap-8">
+              <div className="grid grid-cols-2 gap-6 sm:grid-cols-5">
+                <div className="space-y-3"><GeometricDecoration shape="circle" color="red" size="lg" /><p className="text-xs font-700 uppercase">Circle</p></div>
+                <div className="space-y-3"><GeometricDecoration shape="square" color="blue" size="lg" /><p className="text-xs font-700 uppercase">Square</p></div>
+                <div className="space-y-3"><GeometricDecoration shape="triangle" color="yellow" size="lg" /><p className="text-xs font-700 uppercase">Triangle</p></div>
+                <div className="space-y-3"><GeometricDecoration shape="diamond" color="red" size="lg" /><p className="text-xs font-700 uppercase">Diamond</p></div>
+                <div className="space-y-3"><GeometricDecoration shape="line" color="blue" /><p className="text-xs font-700 uppercase">Bar</p></div>
+              </div>
+
+              <div className="grid gap-6 lg:grid-cols-2">
+                <GeometricComposition className="min-h-64 border-4 border-border bg-white" label="Decorative overlapping geometric composition">
+                  <GeometricLayer layer="back" className="right-4 top-4"><GeometricDecoration shape="circle" color="red" size="xl" /></GeometricLayer>
+                  <GeometricLayer layer="base" className="bottom-8 left-8"><GeometricDecoration shape="square" color="blue" size="lg" rotation={45} /></GeometricLayer>
+                  <GeometricLayer layer="front" className="bottom-8 right-1/3"><GeometricDecoration shape="triangle" color="yellow" size="md" rotation={-45} /></GeometricLayer>
+                  <div className="relative z-30 p-6"><p className="text-xs font-900 uppercase tracking-[.25em]">Controlled layers</p><p className="mt-3 max-w-sm text-lg font-700">Geometry stays behind content and never owns interaction.</p></div>
+                </GeometricComposition>
+
+                <div className="relative min-h-64 border-4 border-border bg-background p-6">
+                  <CornerDecoration placement="top-right" />
+                  <CornerDecoration placement="bottom-left" />
+                  <p className="relative z-10 max-w-sm text-lg font-700">Corner decorations remain pointer-transparent and outside the content flow.</p>
+                </div>
+              </div>
+
+              <div className="grid gap-8 overflow-hidden border-4 border-border bg-white p-6 md:grid-cols-2">
+                <div><p className="mb-4 text-xs font-900 uppercase tracking-[.25em]">Presets</p><CornerAccent placement="top-right" /><HeroComposition /><SectionAccent /></div>
+                <div><p className="mb-4 text-xs font-900 uppercase tracking-[.25em]">Editorial</p><EditorialComposition /></div>
+              </div>
+            </div>
           </section>
 
           <section aria-labelledby="states">
