@@ -307,6 +307,9 @@ export function createCatalogService(customRepository: Partial<CatalogRepository
       if (!canTransitionProductStatus(existing.status, merged.status)) {
         issues.push({ field: "status", code: "INVALID_STATUS_TRANSITION", message: "Product status transition is not allowed." });
       }
+      if (existing.status === "ACTIVE" && merged.slug !== existing.slug) {
+        issues.push({ field: "slug", code: "SLUG_CHANGE_REQUIRES_REDIRECT", message: "Published Product slugs cannot change without a redirect strategy." });
+      }
       if (issues.length) validationError(issues, "INVALID_PRODUCT");
 
       try {
@@ -692,6 +695,9 @@ export function createCatalogService(customRepository: Partial<CatalogRepository
         seoDescription: normalizeSeoText(patch.seoDescription === undefined ? existing.seoDescription : patch.seoDescription),
       };
       const issues = [...validateCategory(next), ...validateCategoryHierarchy(id, next.parentId)];
+      if (existing.status === "ACTIVE" && next.slug !== existing.slug) {
+        issues.push({ field: "slug", code: "SLUG_CHANGE_REQUIRES_REDIRECT", message: "Published Category slugs cannot change without a redirect strategy." });
+      }
 
       if (issues.length) validationError(issues, "INVALID_CATEGORY");
       if (next.parentId) {
@@ -734,6 +740,9 @@ export function createCatalogService(customRepository: Partial<CatalogRepository
       if (!existing) throw new CatalogServiceError("COLLECTION_NOT_FOUND", "Collection was not found.");
       const next = { name: normalizeTitle(patch.name ?? existing.name), slug: normalizeSlug(patch.slug ?? existing.slug), status: patch.status ?? existing.status, seoTitle: normalizeSeoText(patch.seoTitle === undefined ? existing.seoTitle : patch.seoTitle), seoDescription: normalizeSeoText(patch.seoDescription === undefined ? existing.seoDescription : patch.seoDescription) };
       const issues = validateCollection(next);
+      if (existing.status === "ACTIVE" && next.slug !== existing.slug) {
+        issues.push({ field: "slug", code: "SLUG_CHANGE_REQUIRES_REDIRECT", message: "Published Collection slugs cannot change without a redirect strategy." });
+      }
       if (issues.length) validationError(issues, "INVALID_COLLECTION");
       try { return await repo.updateCollection(id, { name: next.name, slug: next.slug, seoTitle: next.seoTitle, seoDescription: next.seoDescription, status: next.status }); }
       catch (error) { mapDatabaseError(error); }
