@@ -78,7 +78,7 @@ lib/auth is reserved for authentication/session infrastructure. Customer, admin 
 lib/notifications is reserved for notification orchestration. Email, WhatsApp, SMS and push channels must remain replaceable integrations.
 
 ### Shared UI
-components/ui remains the generic reusable UI layer. components/layout owns the global shell. components/bauhaus is the dedicated home for the project's distinctive visual-language components. The reusable Bauhaus primitive library is established in Phase 1.5 under components/ui and components/bauhaus; storefront-specific compositions remain deferred to later phases.
+components/ui remains the generic reusable UI layer. components/layout owns the global shell and reusable layout primitives. components/bauhaus is the dedicated home for the project's distinctive visual-language primitives and compositions. Storefront-specific compositions remain deferred to later phases.
 
 ## Dependency direction
 
