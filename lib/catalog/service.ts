@@ -560,7 +560,7 @@ export function createCatalogService(customRepository: Partial<CatalogRepository
       const issues = validateOptionType(input);
       if (issues.length) validationError(issues, "INVALID_VARIANT");
       if (await repo.getOptionTypeByNormalizedName(normalizedName)) {
-        throw new CatalogServiceError("PRODUCT_ALREADY_EXISTS", "Option type already exists.");
+        throw new CatalogServiceError("DUPLICATE_OPTION_TYPE", "Option type already exists.");
       }
       try {
         return await repo.createOptionType({
@@ -575,13 +575,13 @@ export function createCatalogService(customRepository: Partial<CatalogRepository
     async updateOptionType(id: string, patch: Partial<Omit<VariantOptionTypeInput, "id">>) {
       requireId(id, "VARIANT_NOT_FOUND", "Option type ID");
       const existing = await repo.getOptionTypeById(id);
-      if (!existing) throw new CatalogServiceError("VARIANT_NOT_FOUND", "Option type was not found.");
+      if (!existing) throw new CatalogServiceError("OPTION_TYPE_NOT_FOUND", "Option type was not found.");
       const name = patch.name === undefined ? existing.name : normalizeOptionTypeName(patch.name);
       const normalizedName = normalizeOptionTypeName(name).toLowerCase();
       const issues = validateOptionType({ id, name, sortOrder: patch.sortOrder ?? existing.sortOrder });
       if (issues.length) validationError(issues, "INVALID_VARIANT");
       const duplicate = await repo.getOptionTypeByNormalizedName(normalizedName);
-      if (duplicate && duplicate.id !== id) throw new CatalogServiceError("PRODUCT_ALREADY_EXISTS", "Option type already exists.");
+      if (duplicate && duplicate.id !== id) throw new CatalogServiceError("DUPLICATE_OPTION_TYPE", "Option type already exists.");
       return repo.updateOptionType(id, { name, normalizedName, sortOrder: patch.sortOrder ?? existing.sortOrder });
     },
 
@@ -591,7 +591,7 @@ export function createCatalogService(customRepository: Partial<CatalogRepository
       const issues = validateOptionValue({ ...input, displayName, normalizedValue });
       if (issues.length) validationError(issues, "INVALID_VARIANT");
       const optionType = await repo.getOptionTypeById(input.optionTypeId);
-      if (!optionType) throw new CatalogServiceError("VARIANT_NOT_FOUND", "Option type was not found.");
+      if (!optionType) throw new CatalogServiceError("OPTION_TYPE_NOT_FOUND", "Option type was not found.");
       try {
         return await repo.createOptionValue({
           id: input.id ?? randomUUID(),
@@ -608,7 +608,7 @@ export function createCatalogService(customRepository: Partial<CatalogRepository
     async updateOptionValue(id: string, patch: Partial<Omit<VariantOptionValueInput, "id" | "optionTypeId">>) {
       requireId(id, "VARIANT_NOT_FOUND", "Option value ID");
       const existing = await repo.getOptionValueById(id);
-      if (!existing) throw new CatalogServiceError("VARIANT_NOT_FOUND", "Option value was not found.");
+      if (!existing) throw new CatalogServiceError("OPTION_VALUE_NOT_FOUND", "Option value was not found.");
       const displayName = patch.displayName === undefined ? existing.displayName : normalizeOptionDisplayValue(patch.displayName);
       const normalizedValue = normalizeOptionIdentity(patch.normalizedValue ?? displayName);
       const issues = validateOptionValue({
@@ -633,7 +633,7 @@ export function createCatalogService(customRepository: Partial<CatalogRepository
     async assignProductOptionType(productId: string, optionTypeId: string, sortOrder = 0) {
       await this.getProductById(productId);
       const optionType = await repo.getOptionTypeById(optionTypeId);
-      if (!optionType) throw new CatalogServiceError("VARIANT_NOT_FOUND", "Option type was not found.");
+      if (!optionType) throw new CatalogServiceError("OPTION_TYPE_NOT_FOUND", "Option type was not found.");
       if (!Number.isInteger(sortOrder) || sortOrder < 0) validationError([{ field: "sortOrder", code: "INVALID_SORT_ORDER", message: "Option order must be a non-negative integer." }], "INVALID_VARIANT");
       return repo.assignProductOptionType(productId, optionTypeId, sortOrder);
     },
