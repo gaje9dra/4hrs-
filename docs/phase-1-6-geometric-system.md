@@ -26,3 +26,7 @@ Geometry is decorative by default with aria-hidden and pointer-events-none. It n
 
 ## Visual constraints
 No gradients, blur, glassmorphism, random blobs, arbitrary colors, soft floating shadows, or continuous animation are introduced.
+
+## Showcase
+
+The development component showcase demonstrates primitives, controlled rotations, layered overlap, corner placement, presets, and decorative accessibility behavior at responsive widths.
