@@ -307,26 +307,48 @@ test("database adapter composes public visibility and all search/filter predicat
 test("database adapter keeps SKU search internal-only", async () => {
   let publicWhere: unknown;
   let internalWhere: unknown;
-  const fakeClient = {
+
+  const publicClient = {
     product: {
       findMany: async (args: { where: unknown }) => {
-        if (!publicWhere) publicWhere = args.where;
-        else internalWhere = args.where;
+        publicWhere = args.where;
         return [];
       },
       count: async () => 0,
     },
   } as never;
 
+  const internalClient = {
+    product: {
+      findMany: async (args: { where: unknown }) => {
+        internalWhere = args.where;
+        return [];
+      },
+      count: async () => 0,
+    },
+  } as never;
+
+  const service = createCatalogSearchService({
+    provider: {
+      search: async (request) => {
+        return searchCatalogProducts(request as never, publicClient);
+      },
+    },
+    lookup,
+  });
+
+  await service.searchPublic({ query: "sku-123" });
+
   await searchCatalogProducts({
     query: "sku-123",
     mode: "INTERNAL",
     limit: 24,
     offset: 0,
-  }, fakeClient);
+  }, internalClient);
 
   const publicText = JSON.stringify(publicWhere);
   const internalText = JSON.stringify(internalWhere);
   assert.doesNotMatch(publicText, /"sku"/);
   assert.match(internalText, /"sku"/);
+  void service;
 });
