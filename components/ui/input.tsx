@@ -1,3 +1,5 @@
+'use client'
+
 import type { InputHTMLAttributes } from 'react'
 import { useFormField } from '@/components/ui/form-field'
 
