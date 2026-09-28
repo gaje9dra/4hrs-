@@ -230,6 +230,13 @@ export function createCatalogService(customRepository: Partial<CatalogRepository
         ...variant,
         id: variant.id ?? randomUUID(),
       }));
+      const variantOptionChecks = await Promise.all(
+        normalizedVariants.map((variant) => validateVariantOptionValues(repo, productId, variant.optionValueIds)),
+      );
+      const variantOptionIssues = variantOptionChecks.flatMap((check, index) =>
+        check.issues.map((item) => ({ ...item, field: "variants[" + index + "]." + item.field })),
+      );
+      if (variantOptionIssues.length) validationError(variantOptionIssues, "INVALID_VARIANT");
       const normalizedImages = images.map((image) => ({
         ...image,
         productId: image.productId ?? (image.variantId ? null : productId),
@@ -289,6 +296,8 @@ export function createCatalogService(customRepository: Partial<CatalogRepository
               compareAtPrice: decimalValue(variant.compareAtPrice) ?? null,
               status: variant.status,
             }, tx);
+            const optionCheck = variantOptionChecks[normalizedVariants.indexOf(variant)];
+            await repo.replaceVariantOptionValues(variantId, optionCheck.optionValueIds, tx);
           }
 
           for (const image of normalizedImages) {
