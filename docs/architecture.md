@@ -147,3 +147,11 @@ Phase 1.8 keeps the global header under `components/layout`. The header consumes
 Desktop navigation and mobile navigation share the same `NavigationItem` data model. Utility navigation is optional and only renders configured destinations, preventing non-functional search/account/wishlist/cart controls from appearing before those routes exist.
 
 The mobile navigation is client-side only because it owns menu state and focus/keyboard behavior. Static brand and navigation configuration remain independent of business services, databases, authentication, payments, fulfillment and shipping providers.
+
+## Global footer and section architecture
+
+Phase 1.9 keeps the global Footer under `components/layout` and composes it from focused brand, navigation, social, legal and copyright components. Footer destinations are configured through `config/footer.ts` and typed through `types/footer.ts`. The Footer uses the same global Container established in Phase 1.7, so header/footer content remains horizontally aligned.
+
+The phase also establishes presentation-only global sections under `components/layout`: AnnouncementBar, SectionDivider and GlobalCTA. These components accept content/actions as props and do not perform product, cart, authentication, payment, order, shipping, provider, database or CMS operations.
+
+Footer and global section components remain server-compatible. Optional external social links use explicit configuration and secure external-link attributes. Geometric decoration reuses the Phase 1.6 system rather than creating another visual primitive library.
