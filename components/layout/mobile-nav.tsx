@@ -109,7 +109,7 @@ export function MobileNav({ open, items, onClose, triggerRef }: MobileNavProps) 
                     'text-lg font-900 uppercase tracking-[0.06em]',
                     index % 3 === 0 ? 'text-primary-red' : '',
                     index % 3 === 1 ? 'text-primary-blue' : '',
-                    'hover:bg-primary-yellow hover:text-foreground',
+                    'motion-link hover:bg-primary-yellow hover:text-foreground',
                   ].join(' ')}
                 >
                   <span>{item.label}</span>
