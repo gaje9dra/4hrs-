@@ -19,7 +19,10 @@ export function Shape({
   className?: string
 }) {
   if (type === 'diamond') return <GeometricSquare size={size} color={color} rotation={45} className={className} />
-  if (type === 'line') return <span aria-hidden="true" className={`pointer-events-none inline-block h-1 w-20 bg-primary-${color} ${className}`} />
+  if (type === 'line') {
+    const colors = { red: 'bg-primary-red', blue: 'bg-primary-blue', yellow: 'bg-primary-yellow' }
+    return <span aria-hidden="true" className={`pointer-events-none inline-block h-1 w-20 ${colors[color]} ${className}`} />
+  }
   if (type === 'circle') return <GeometricCircle size={size} color={color} className={className} />
   if (type === 'triangle') return <GeometricTriangle size={size} color={color} className={className} />
   return <GeometricSquare size={size} color={color} className={className} />
