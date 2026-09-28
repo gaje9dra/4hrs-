@@ -1,5 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { CatalogServiceError } from "@/lib/catalog/errors";
+import { validateMoney } from "@/lib/catalog/validation";
+import * as catalogRepository from "@/lib/catalog/repository";
 import {
   type CatalogAppliedQuery,
   type CatalogAvailability,
@@ -8,7 +10,7 @@ import {
 } from "@/lib/catalog/query";
 import {
   type CatalogListResult,
-  type CatalogSearchMode,
+  type CatalogSearchMode as RepositoryCatalogSearchMode,
   type CatalogSearchRepositoryOptions,
   type PublicCatalogProductRecord,
   searchCatalogProducts,
@@ -17,7 +19,7 @@ import {
 export const CATALOG_SEARCH_QUERY_MIN = 1;
 export const CATALOG_SEARCH_QUERY_MAX = 100;
 
-export type CatalogSearchMode = CatalogSearchMode;
+export type CatalogSearchMode = RepositoryCatalogSearchMode;
 
 export type CatalogSearchQuery = CatalogQuery & {
   query: string;
@@ -87,7 +89,7 @@ export class DatabaseSearchAdapter implements CatalogSearchProvider {
             : "price";
 
     const sortDirection: CatalogSearchRepositoryOptions["sortDirection"] =
-      sort === "oldest" || sort === "title_desc" || sort === "price_desc" ? "asc" : "desc";
+      sort === "oldest" ? "asc" : "desc";
 
     return searchCatalogProducts({
       query: request.query,
@@ -296,24 +298,11 @@ function normalizeSlug(value: string, field: string): string {
 }
 
 function normalizeMoney(value: string | number, field: string): string {
-  if (typeof value === "number" && !Number.isFinite(value)) {
-    throw new CatalogServiceError("INVALID_QUERY", field + " must be a finite money value.");
+  const issues = validateMoney(value, field);
+  if (issues.length) {
+    throw new CatalogServiceError("INVALID_QUERY", issues[0].message);
   }
-  const text = String(value);
-  if (!/^\d+(?:\.\d{1,2})?$/.test(text) || Number(text) < 0) {
-    throw new CatalogServiceError("INVALID_QUERY", field + " must be a non-negative amount with up to two decimals.");
-  }
-  return text;
-}
-
-async function assertReferencedFilters(
-  request: NormalizedCatalogSearchQuery,
-  provider: DatabaseSearchAdapter,
-): Promise<void> {
-  // The database adapter intentionally does not own lookup policy. This hook is
-  // replaced by the search service's repository-backed validation below.
-  void request;
-  void provider;
+  return String(value);
 }
 
 export function createCatalogSearchService(options: {
@@ -325,20 +314,25 @@ export function createCatalogSearchService(options: {
   };
 } = {}) {
   const provider = options.provider ?? new DatabaseSearchAdapter();
+  const lookup = options.lookup ?? {
+    getCategoryBySlug: catalogRepository.getCategoryBySlug,
+    getCollectionBySlug: catalogRepository.getCollectionBySlug,
+    getTagBySlug: catalogRepository.getTagBySlug,
+  };
 
   return {
     async search(input: CatalogSearchQuery): Promise<CatalogSearchResult> {
       const normalized = normalizeCatalogSearchQuery(input);
 
-      if (options.lookup) {
-        if (normalized.catalog.category && !(await options.lookup.getCategoryBySlug(normalized.catalog.category))) {
+      {
+        if (normalized.catalog.category && !(await lookup.getCategoryBySlug(normalized.catalog.category))) {
           throw new CatalogServiceError("CATEGORY_NOT_FOUND", "Category was not found.");
         }
-        if (normalized.catalog.collection && !(await options.lookup.getCollectionBySlug(normalized.catalog.collection))) {
+        if (normalized.catalog.collection && !(await lookup.getCollectionBySlug(normalized.catalog.collection))) {
           throw new CatalogServiceError("COLLECTION_NOT_FOUND", "Collection was not found.");
         }
         for (const tag of normalized.catalog.tags) {
-          if (!(await options.lookup.getTagBySlug(tag))) {
+          if (!(await lookup.getTagBySlug(tag))) {
             throw new CatalogServiceError("TAG_NOT_FOUND", "Tag was not found: " + tag + ".");
           }
         }
