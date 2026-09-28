@@ -22,6 +22,7 @@ export function MobileNav({ open, items, onClose, triggerRef }: MobileNavProps) 
     if (!open) return
 
     const previousOverflow = document.body.style.overflow
+    const trigger = triggerRef.current
     document.body.style.overflow = 'hidden'
     firstLinkRef.current?.focus()
 
@@ -62,7 +63,7 @@ export function MobileNav({ open, items, onClose, triggerRef }: MobileNavProps) 
     return () => {
       document.removeEventListener('keydown', handleKeyDown)
       document.body.style.overflow = previousOverflow
-      triggerRef.current?.focus()
+      trigger?.focus()
     }
   }, [open, onClose, triggerRef])
 
