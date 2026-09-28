@@ -5,7 +5,7 @@ export function Radio({ className = '', ...props }: InputHTMLAttributes<HTMLInpu
     <input
       {...props}
       type="radio"
-      className={`h-5 w-5 appearance-none rounded-full border-2 border-border bg-white align-middle checked:border-[6px] checked:border-primary-blue focus-visible:outline-none disabled:cursor-not-allowed disabled:bg-muted ${className}`}
+      className={`h-5 w-5 appearance-none rounded-full border-2 border-border bg-white align-middle transition-[background-color,border-color,box-shadow] duration-(--motion-fast) ease-(--motion-ease) checked:border-[6px] checked:border-primary-blue hover:border-primary-blue focus-visible:outline-none disabled:cursor-not-allowed disabled:bg-muted ${className}`}
     />
   )
 }
