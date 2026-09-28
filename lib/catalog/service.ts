@@ -176,6 +176,12 @@ export function createCatalogService(customRepository: Partial<CatalogRepository
         productId: image.productId ?? (image.variantId ? null : productId),
         variantId: image.variantId ?? null,
       }));
+      const imageOwnershipIssues = normalizedImages.flatMap((image, index) =>
+        image.productId && image.productId !== productId
+          ? [{ field: "images[" + index + "].productId", code: "INVALID_IMAGE_PRODUCT", message: "Image must belong to the Product being created." }]
+          : [],
+      );
+      if (imageOwnershipIssues.length) validationError(imageOwnershipIssues, "INVALID_IMAGE_RELATIONSHIP");
 
       const variantRelationshipIssues = validateImageRelationships(
         productId,
