@@ -46,6 +46,7 @@ model Product {
   tags             ProductTag[]
   @@index([status])
   @@index([createdAt])
+  @@index([price])
 }
 
 
