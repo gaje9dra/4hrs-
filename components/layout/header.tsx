@@ -1,33 +1,54 @@
 'use client'
 
-import { useState } from 'react'
-import { Heart, Menu, Search, ShoppingBag, UserRound, X } from 'lucide-react'
-import { GeometricMark } from '@/components/geometry/geometric-mark'
-
-const links = ['Shop', 'New Arrivals', 'T-Shirts', 'Shirts', 'Pants', 'Shoes', 'Accessories']
+import { useCallback, useRef, useState } from 'react'
+import { Menu, X } from 'lucide-react'
+import { usePathname } from 'next/navigation'
+import { Container } from '@/components/layout/container'
+import { HeaderBrand } from '@/components/layout/header-brand'
+import { DesktopNav } from '@/components/layout/desktop-nav'
+import { MobileNav } from '@/components/layout/mobile-nav'
+import { UtilityNav } from '@/components/layout/utility-nav'
+import { storefrontNavigation, utilityNavigation } from '@/config/navigation'
 
 export function Header() {
   const [open, setOpen] = useState(false)
+  const pathname = usePathname()
+  const triggerRef = useRef<HTMLButtonElement>(null)
+
+  const closeMenu = useCallback(() => {
+    setOpen(false)
+  }, [])
+
   return (
-    <header className="sticky top-0 z-50 border-b-2 border-border lg:border-b-4 bg-background">
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 lg:px-8">
-        <a href="#top" className="flex items-center gap-2" aria-label="4HRS home">
-          <GeometricMark className="h-10 w-14 scale-90" />
-          <span className="text-2xl font-900 uppercase tracking-[-0.05em]">4HRS</span>
-        </a>
-        <nav className="hidden items-center gap-5 xl:flex" aria-label="Primary navigation">
-          {links.map((link) => <a key={link} href="#" className="text-xs font-700 uppercase tracking-widest transition-colors hover:text-primary-red">{link}</a>)}
-        </nav>
+    <header className="relative z-50 border-b-2 border-border bg-background lg:border-b-4">
+      <Container width="standard" className="flex min-h-16 items-center justify-between gap-3 py-3">
+        <HeaderBrand />
+
+        <DesktopNav items={storefrontNavigation} activeHref={pathname} />
+
         <div className="flex items-center gap-1">
-          {[Search, Heart, UserRound, ShoppingBag].map((Icon, i) => <button key={i} type="button" aria-label={['Search','Wishlist','Account','Cart'][i]} className="hidden h-10 w-10 items-center justify-center rounded-full border-2 border-transparent transition-colors hover:border-border hover:bg-primary-yellow md:flex"><Icon size={20} strokeWidth={2} /></button>)}
-          <button type="button" className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-border bg-primary-yellow md:hidden" onClick={() => setOpen((v) => !v)} aria-expanded={open} aria-controls="mobile-menu" aria-label={open ? 'Close navigation' : 'Open navigation'}>
-            {open ? <X size={22} /> : <Menu size={22} />}
+          <UtilityNav items={utilityNavigation} />
+
+          <button
+            ref={triggerRef}
+            type="button"
+            onClick={() => setOpen((value) => !value)}
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center border-2 border-border bg-primary-yellow transition-[background-color,transform] duration-120 hover:bg-white active:translate-x-px active:translate-y-px md:hidden"
+            aria-expanded={open}
+            aria-controls="mobile-navigation-panel"
+            aria-label={open ? 'Close navigation' : 'Open navigation'}
+          >
+            {open ? <X size={22} strokeWidth={2.5} aria-hidden="true" /> : <Menu size={22} strokeWidth={2.5} aria-hidden="true" />}
           </button>
         </div>
-      </div>
-      {open && <nav id="mobile-menu" className="border-t-4 border-border bg-white px-4 py-5 md:hidden" aria-label="Mobile navigation">
-        {links.map((link, i) => <a key={link} href="#" onClick={() => setOpen(false)} className={`flex items-center justify-between border-b-2 border-border py-4 text-lg font-900 uppercase ${i % 3 === 0 ? 'text-primary-red' : i % 3 === 1 ? 'text-primary-blue' : ''}`}>{link}<span aria-hidden="true">↗</span></a>)}
-      </nav>}
+      </Container>
+
+      <MobileNav
+        open={open}
+        items={storefrontNavigation}
+        onClose={closeMenu}
+        triggerRef={triggerRef}
+      />
     </header>
   )
 }
