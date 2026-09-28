@@ -27,7 +27,7 @@ export function FooterNav({ groups }: FooterNavProps) {
                     href={item.href}
                     target={item.external ? '_blank' : undefined}
                     rel={item.external ? 'noopener noreferrer' : undefined}
-                    className="inline-flex min-h-11 items-center text-sm font-700 uppercase text-white no-underline transition-[color,background-color] duration-[120ms] hover:bg-primary-yellow hover:text-foreground focus-visible:text-foreground"
+                    className="motion-link inline-flex min-h-11 items-center text-sm font-700 uppercase text-white no-underline hover:bg-primary-yellow hover:text-foreground focus-visible:text-foreground"
                   >
                     {item.label}
                   </Link>
