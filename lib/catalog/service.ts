@@ -191,9 +191,8 @@ async function validateVariantOptionValues(
     }
     seenTypes.add(value.optionTypeId);
   }
-
+  return { optionValueIds: ids, issues };
 }
-
 
 function uniqueIds(ids: string[] | undefined): string[] | undefined {
   return ids ? [...new Set(ids)] : undefined;
