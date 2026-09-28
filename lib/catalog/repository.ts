@@ -379,7 +379,7 @@ export async function listActiveCategories(client?: CatalogRepositoryClient) {
   return clientOrDefault(client).category.findMany({
     where: { status: "ACTIVE" },
     orderBy: [{ parentId: "asc" }, { name: "asc" }, { id: "asc" }],
-    select: { id: true, name: true, slug: true, description: true, parentId: true, status: true },
+    select: { id: true, name: true, slug: true, description: true, seoTitle: true, seoDescription: true, parentId: true, status: true },
   });
 }
 
@@ -399,7 +399,7 @@ export async function listActiveCollections(client?: CatalogRepositoryClient) {
   return clientOrDefault(client).collection.findMany({
     where: { status: "ACTIVE" },
     orderBy: [{ name: "asc" }, { id: "asc" }],
-    select: { id: true, name: true, slug: true, description: true, status: true },
+    select: { id: true, name: true, slug: true, description: true, seoTitle: true, seoDescription: true, status: true },
   });
 }
 
