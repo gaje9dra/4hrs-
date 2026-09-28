@@ -30,9 +30,13 @@
   --space-4: 16px;
   --space-5: 24px;
 
-  --motion-fast: 120ms;
-  --motion-standard: 200ms;
-  --motion-snap: 240ms;
+  --motion-fast: 200ms;
+  --motion-standard: 300ms;
+  --motion-ease: ease-out;
+  --motion-press-distance: 2px;
+  --motion-lift-distance: 4px;
+  --motion-icon-scale: 1.04;
+  --motion-focus-offset: 2px;
 }
 
 @theme inline {
@@ -68,6 +72,8 @@
   --breakpoint-desktop: 1025px;
   /* Keep Tailwind's lg utilities aligned with the foundation's desktop boundary. */
   --breakpoint-lg: 1025px;
+
+  --ease-interaction: var(--motion-ease);
 }
 
 *,
@@ -164,13 +170,71 @@ a {
   text-decoration-thickness: 2px;
   text-underline-offset: 3px;
   text-decoration-color: currentColor;
-  transition:
-    color var(--motion-fast) ease-out,
-    background-color var(--motion-fast) ease-out;
 }
 
-a:hover {
-  color: var(--primary-red);
+.motion-link {
+  transition:
+    color var(--motion-fast) var(--motion-ease),
+    background-color var(--motion-fast) var(--motion-ease),
+    text-decoration-color var(--motion-fast) var(--motion-ease),
+    transform var(--motion-fast) var(--motion-ease);
+}
+
+.motion-link:hover {
+  background-color: var(--primary-yellow);
+  color: var(--foreground);
+}
+
+.motion-link:active {
+  transform: translateY(1px);
+}
+
+.motion-press {
+  transition:
+    transform var(--motion-fast) var(--motion-ease),
+    box-shadow var(--motion-fast) var(--motion-ease),
+    background-color var(--motion-fast) var(--motion-ease);
+}
+
+.motion-press:hover {
+  transform: translate(-1px, -1px);
+}
+
+.motion-press:active {
+  transform: translate(var(--motion-press-distance), var(--motion-press-distance));
+  box-shadow: none;
+}
+
+.motion-lift {
+  transition:
+    transform var(--motion-fast) var(--motion-ease),
+    box-shadow var(--motion-fast) var(--motion-ease);
+}
+
+.motion-lift:hover {
+  transform: translateY(calc(var(--motion-lift-distance) * -1));
+}
+
+.motion-icon {
+  transition:
+    transform var(--motion-fast) var(--motion-ease),
+    background-color var(--motion-fast) var(--motion-ease),
+    color var(--motion-fast) var(--motion-ease),
+    border-color var(--motion-fast) var(--motion-ease);
+}
+
+.motion-icon:hover {
+  transform: scale(var(--motion-icon-scale));
+}
+
+.motion-icon:active {
+  transform: translate(var(--motion-press-distance), var(--motion-press-distance));
+}
+
+.motion-focus:focus-visible {
+  outline: 2px solid var(--primary-yellow);
+  outline-offset: var(--motion-focus-offset);
+  box-shadow: 0 0 0 2px var(--foreground);
 }
 
 a:focus-visible,
@@ -179,7 +243,7 @@ input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
   outline: 2px solid var(--primary-yellow);
-  outline-offset: 2px;
+  outline-offset: var(--motion-focus-offset);
   box-shadow: 0 0 0 2px var(--foreground);
 }
 
@@ -314,6 +378,22 @@ img {
 
   .marquee-track {
     animation: none;
+  }
+
+  .motion-link,
+  .motion-press,
+  .motion-lift,
+  .motion-icon {
+    transition-duration: 0.01ms !important;
+  }
+
+  .motion-link:active,
+  .motion-press:hover,
+  .motion-press:active,
+  .motion-lift:hover,
+  .motion-icon:hover,
+  .motion-icon:active {
+    transform: none !important;
   }
 
   *,
