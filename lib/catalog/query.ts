@@ -97,7 +97,6 @@ type QueryRepository = {
   getPublishedProductBySlug: typeof repository.getPublishedProductBySlug;
   getCategoryBySlug: typeof repository.getCategoryBySlug;
   listActiveCategories: typeof repository.listActiveCategories;
-  getCategoryTree: typeof repository.getCategoryTree;
   getCollectionBySlug: typeof repository.getCollectionBySlug;
   listActiveCollections: typeof repository.listActiveCollections;
   getTagBySlug: typeof repository.getTagBySlug;
@@ -109,7 +108,6 @@ const defaultRepository: QueryRepository = {
   getPublishedProductBySlug: repository.getPublishedProductBySlug,
   getCategoryBySlug: repository.getCategoryBySlug,
   listActiveCategories: repository.listActiveCategories,
-  getCategoryTree: repository.getCategoryTree,
   getCollectionBySlug: repository.getCollectionBySlug,
   listActiveCollections: repository.listActiveCollections,
   getTagBySlug: repository.getTagBySlug,
@@ -340,7 +338,19 @@ export function createCatalogQueryService(customRepository: Partial<QueryReposit
     },
 
     async getCategoryTree() {
-      return repo.getCategoryTree();
+      const categories = await repo.listActiveCategories();
+      const nodes = new Map(categories.map((category) => [category.id, { ...category, children: [] as Array<unknown> }]));
+      const roots: Array<(typeof nodes extends Map<string, infer V> ? V : never)> = [];
+      for (const category of categories) {
+        const node = nodes.get(category.id)!;
+        if (category.parentId && nodes.has(category.parentId)) {
+          const parent = nodes.get(category.parentId)!;
+          (parent.children as Array<typeof node>).push(node);
+        } else {
+          roots.push(node);
+        }
+      }
+      return roots;
     },
 
     async getCategoryBySlug(slug: string) {
