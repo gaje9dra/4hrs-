@@ -2,7 +2,7 @@ import type { GeometricShapeProps } from './geometric-shape'
 import { GeometricShape } from './geometric-shape'
 
 export type GeometricDecorationProps = Omit<GeometricShapeProps, 'shape'> & {
-  shape: 'circle' | 'square' | 'triangle' | 'line'
+  shape: 'circle' | 'square' | 'triangle' | 'diamond' | 'line'
 }
 
 export function GeometricDecoration({ shape, ...props }: GeometricDecorationProps) {
