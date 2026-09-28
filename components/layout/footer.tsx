@@ -1,25 +1,31 @@
-import { GeometricMark } from '@/components/geometry/geometric-mark'
-
-const columns = [
-  ['Shop', 'New arrivals', 'T-shirts', 'Shirts', 'Pants'],
-  ['Support', 'Contact', 'Shipping', 'Returns', 'FAQ'],
-  ['Policies', 'Privacy', 'Terms', 'Refunds', 'Cookies'],
-]
+import { Container } from '@/components/layout/container'
+import { FooterBrand } from '@/components/layout/footer-brand'
+import { FooterCopyright } from '@/components/layout/footer-copyright'
+import { FooterLegal } from '@/components/layout/footer-legal'
+import { FooterNav } from '@/components/layout/footer-nav'
+import { FooterSocial } from '@/components/layout/footer-social'
+import { footerLegalLinks, footerNavigationGroups, footerSocialLinks } from '@/config/footer'
 
 export function Footer() {
-  return <footer className="border-t-2 border-border lg:border-t-4 bg-foreground text-white">
-    <div className="mx-auto max-w-7xl px-4 py-12 lg:px-8 lg:py-20">
-      <div className="grid gap-12 lg:grid-cols-[1.3fr_2fr]">
-        <div>
-          <GeometricMark className="mb-5" />
-          <p className="max-w-sm text-3xl font-900 uppercase leading-none">Wear the idea.<br />Make it yours.</p>
-          <p className="mt-5 max-w-sm text-sm leading-6 text-white/70">A geometric fashion system built for bold pieces, clear choices and everyday movement.</p>
+  return (
+    <footer className="border-t-2 border-border bg-foreground text-white lg:border-t-4">
+      <Container className="py-12 sm:py-16 lg:py-20">
+        <div className="grid gap-12 lg:grid-cols-[1.1fr_1.9fr] lg:gap-20">
+          <FooterBrand />
+
+          <div className="grid gap-10 sm:grid-cols-2">
+            <FooterNav groups={footerNavigationGroups} />
+            <FooterSocial links={footerSocialLinks} />
+          </div>
         </div>
-        <div className="grid grid-cols-2 gap-8 sm:grid-cols-3">
-          {columns.map(([title, ...items]) => <div key={title}><h2 className="mb-4 text-xs font-900 uppercase tracking-[0.2em] text-yellow">{title}</h2><ul className="space-y-3">{items.map((item) => <li key={item}><a href="#" className="text-sm font-500 uppercase hover:text-yellow">{item}</a></li>)}</ul></div>)}
+
+        <div className="mt-12 border-t-2 border-white/30 pt-5 lg:mt-16">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <FooterCopyright />
+            <FooterLegal group={footerLegalLinks} />
+          </div>
         </div>
-      </div>
-      <div className="mt-12 border-t-2 border-white/30 pt-5 text-xs font-700 uppercase tracking-widest text-white/60">© 2026 4HRS. All rights reserved.</div>
-    </div>
-  </footer>
+      </Container>
+    </footer>
+  )
 }
