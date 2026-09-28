@@ -368,7 +368,13 @@ export async function replaceProductRelationships(
     ));
   }
 
-  if (operations.length > 0) await repository.$transaction(operations);
+  if (operations.length > 0) {
+    if (client) {
+      await Promise.all(operations);
+    } else {
+      await db.$transaction(operations);
+    }
+  }
 }
 
 export async function withTransaction<T>(
