@@ -153,7 +153,7 @@ export default function ComponentShowcase() {
                   <GeometricLayer layer="back" className="right-4 top-4"><GeometricDecoration shape="circle" color="red" size="xl" /></GeometricLayer>
                   <GeometricLayer layer="base" className="bottom-8 left-8"><GeometricDecoration shape="square" color="blue" size="lg" rotation={45} /></GeometricLayer>
                   <GeometricLayer layer="front" className="bottom-8 right-1/3"><GeometricDecoration shape="triangle" color="yellow" size="md" rotation={-45} /></GeometricLayer>
-                  <div className="relative z-30 p-6"><p className="text-xs font-900 uppercase tracking-[.25em]">Controlled layers</p><p className="mt-3 max-w-sm text-lg font-700">Geometry stays behind content and never owns interaction.</p></div>
+                  <div className="relative p-6"><p className="text-xs font-900 uppercase tracking-[.25em]">Controlled layers</p><p className="mt-3 max-w-sm text-lg font-700">Geometry stays behind content and never owns interaction.</p></div>
                 </GeometricComposition>
 
                 <div className="relative min-h-64 border-4 border-border bg-background p-6">
