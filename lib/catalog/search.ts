@@ -310,7 +310,6 @@ export function createCatalogSearchService(options: {
   lookup?: {
     getCategoryBySlug: (slug: string) => Promise<unknown>;
     getCollectionBySlug: (slug: string) => Promise<unknown>;
-    getTagBySlug: (slug: string) => Promise<unknown>;
     listTags: () => Promise<Array<{ slug: string }>>;
   };
 } = {}) {
@@ -318,7 +317,6 @@ export function createCatalogSearchService(options: {
   const lookup = options.lookup ?? {
     getCategoryBySlug: catalogRepository.getCategoryBySlug,
     getCollectionBySlug: catalogRepository.getCollectionBySlug,
-    getTagBySlug: catalogRepository.getTagBySlug,
     listTags: async () => catalogRepository.listTags(),
   };
 
