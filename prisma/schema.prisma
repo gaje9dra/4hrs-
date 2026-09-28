@@ -40,6 +40,7 @@ model Product {
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
   variants         ProductVariant[]
+  optionTypes      ProductOptionType[]
   images           ProductImage[]
   categories       ProductCategory[]
   collections      ProductCollection[]
@@ -91,6 +92,52 @@ model InventoryTransaction {
   @@index([reason, createdAt])
 }
 
+model VariantOptionType {
+  id          String        @id @default(uuid()) @db.Uuid
+  name        String
+  normalizedName String     @unique
+  sortOrder   Int           @default(0)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  values      VariantOptionValue[]
+  products    ProductOptionType[]
+}
+
+model VariantOptionValue {
+  id             String             @id @default(uuid()) @db.Uuid
+  optionTypeId   String             @db.Uuid
+  displayName    String
+  normalizedValue String
+  sortOrder     Int                @default(0)
+  hex            String?
+  swatch         String?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  optionType     VariantOptionType  @relation(fields: [optionTypeId], references: [id], onDelete: Restrict)
+  variants       ProductVariantOptionValue[]
+  @@unique([optionTypeId, normalizedValue])
+  @@index([optionTypeId, sortOrder])
+}
+
+model ProductOptionType {
+  productId    String            @db.Uuid
+  optionTypeId String            @db.Uuid
+  sortOrder    Int               @default(0)
+  product      Product           @relation(fields: [productId], references: [id], onDelete: Cascade)
+  optionType  VariantOptionType @relation(fields: [optionTypeId], references: [id], onDelete: Restrict)
+  @@id([productId, optionTypeId])
+  @@index([productId, sortOrder])
+}
+
+model ProductVariantOptionValue {
+  variantId     String             @db.Uuid
+  optionValueId String             @db.Uuid
+  variant       ProductVariant     @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  optionValue   VariantOptionValue @relation(fields: [optionValueId], references: [id], onDelete: Restrict)
+  @@id([variantId, optionValueId])
+  @@index([optionValueId])
+}
+
 model ProductVariant {
   id             String               @id @default(uuid()) @db.Uuid
   productId      String               @db.Uuid
@@ -106,6 +153,7 @@ model ProductVariant {
   product        Product              @relation(fields: [productId], references: [id], onDelete: Cascade)
   images         ProductImage[]
   inventory      Inventory?
+  optionValues   ProductVariantOptionValue[]
   @@index([productId])
   @@index([status])
   @@index([productId, size, color])
