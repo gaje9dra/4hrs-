@@ -16,17 +16,17 @@ export function Header() {
           <span className="text-2xl font-900 uppercase tracking-[-0.05em]">4HRS</span>
         </a>
         <nav className="hidden items-center gap-5 xl:flex" aria-label="Primary navigation">
-          {links.map((link) => <a key={link} href="#" className="text-xs font-700 uppercase tracking-widest transition-colors hover:text-red">{link}</a>)}
+          {links.map((link) => <a key={link} href="#" className="text-xs font-700 uppercase tracking-widest transition-colors hover:text-primary-red">{link}</a>)}
         </nav>
         <div className="flex items-center gap-1">
-          {[Search, Heart, UserRound, ShoppingBag].map((Icon, i) => <button key={i} type="button" aria-label={['Search','Wishlist','Account','Cart'][i]} className="hidden h-10 w-10 items-center justify-center rounded-full border-2 border-transparent transition-colors hover:border-border hover:bg-yellow md:flex"><Icon size={20} strokeWidth={2} /></button>)}
-          <button type="button" className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-border bg-yellow md:hidden" onClick={() => setOpen((v) => !v)} aria-expanded={open} aria-controls="mobile-menu" aria-label={open ? 'Close navigation' : 'Open navigation'}>
+          {[Search, Heart, UserRound, ShoppingBag].map((Icon, i) => <button key={i} type="button" aria-label={['Search','Wishlist','Account','Cart'][i]} className="hidden h-10 w-10 items-center justify-center rounded-full border-2 border-transparent transition-colors hover:border-border hover:bg-primary-yellow md:flex"><Icon size={20} strokeWidth={2} /></button>)}
+          <button type="button" className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-border bg-primary-yellow md:hidden" onClick={() => setOpen((v) => !v)} aria-expanded={open} aria-controls="mobile-menu" aria-label={open ? 'Close navigation' : 'Open navigation'}>
             {open ? <X size={22} /> : <Menu size={22} />}
           </button>
         </div>
       </div>
       {open && <nav id="mobile-menu" className="border-t-4 border-border bg-white px-4 py-5 md:hidden" aria-label="Mobile navigation">
-        {links.map((link, i) => <a key={link} href="#" onClick={() => setOpen(false)} className={`flex items-center justify-between border-b-2 border-border py-4 text-lg font-900 uppercase ${i % 3 === 0 ? 'text-red' : i % 3 === 1 ? 'text-blue' : ''}`}>{link}<span aria-hidden="true">↗</span></a>)}
+        {links.map((link, i) => <a key={link} href="#" onClick={() => setOpen(false)} className={`flex items-center justify-between border-b-2 border-border py-4 text-lg font-900 uppercase ${i % 3 === 0 ? 'text-primary-red' : i % 3 === 1 ? 'text-primary-blue' : ''}`}>{link}<span aria-hidden="true">↗</span></a>)}
       </nav>}
     </header>
   )
