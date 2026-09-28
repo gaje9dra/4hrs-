@@ -303,6 +303,12 @@ export async function getTagById(id: string, client?: CatalogRepositoryClient) {
   return clientOrDefault(client).tag.findUnique({ where: { id } });
 }
 
+export async function getTagByName(name: string, client?: CatalogRepositoryClient) {
+  return clientOrDefault(client).tag.findFirst({
+    where: { name: { equals: name, mode: "insensitive" } },
+  });
+}
+
 export async function updateTag(id: string, data: Prisma.TagUpdateInput, client?: CatalogRepositoryClient) {
   return clientOrDefault(client).tag.update({ where: { id }, data });
 }
