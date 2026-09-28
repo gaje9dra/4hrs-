@@ -1,3 +1,5 @@
+'use client'
+
 import type { TextareaHTMLAttributes } from 'react'
 import { useFormField } from '@/components/ui/form-field'
 
