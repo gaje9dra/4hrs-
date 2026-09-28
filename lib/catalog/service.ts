@@ -12,6 +12,8 @@ import {
   validateCategoryHierarchy,
   validateCollection,
   validateImage,
+  validateImageRelationships,
+  validateMoney,
   validateProduct,
   validatePublishingReadiness,
   validateTag,
@@ -164,8 +166,6 @@ export function createCatalogService(customRepository: Partial<CatalogRepository
       }
 
       const productId = product.id ?? randomUUID();
-      const variantIds = new Map<string, string>();
-      variants.forEach((variant) => variantIds.set(variant.sku, variant.id ?? randomUUID()));
       const normalizedVariants = variants.map((variant) => ({
         ...variant,
         id: variant.id ?? randomUUID(),
@@ -794,10 +794,12 @@ export function createCatalogService(customRepository: Partial<CatalogRepository
     },
 
     async listProducts(options: repository.CatalogListOptions = {}) {
+      validateListOptions(options);
       return repo.listProducts(options);
     },
 
     async listPublishedProducts(options: Omit<repository.CatalogListOptions, "filters"> = {}) {
+      validateListOptions(options);
       return repo.listPublishedProducts(options);
     },
 
@@ -837,6 +839,23 @@ function hasCycle(categoryId: string, parentById: ReadonlyMap<string, string | n
     current = parentById.get(current) ?? null;
   }
   return false;
+}
+
+function validateListOptions(options: repository.CatalogListOptions): void {
+  const issues = [];
+  const filters = options.filters;
+  if (filters?.minPrice !== undefined) issues.push(...validateMoney(filters.minPrice, "filters.minPrice"));
+  if (filters?.maxPrice !== undefined) issues.push(...validateMoney(filters.maxPrice, "filters.maxPrice"));
+  if (filters?.minPrice !== undefined && filters?.maxPrice !== undefined) {
+    try {
+      if (new Prisma.Decimal(filters.minPrice).gt(new Prisma.Decimal(filters.maxPrice))) {
+        issues.push({ field: "filters", code: "INVALID_PRICE_RANGE", message: "Minimum price must be less than or equal to maximum price." });
+      }
+    } catch {
+      // validateMoney above reports malformed decimal input.
+    }
+  }
+  if (issues.length) validationError(issues, "INVALID_PRODUCT");
 }
 
 function validatePrimaryProductImages(images: ImageInput[]) {
