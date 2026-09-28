@@ -318,6 +318,45 @@ export default function ComponentShowcase() {
               <Button className="focus-visible:ring-0"><ChevronRight size={18} /> Focus with keyboard</Button>
             </div>
           </section>
+
+          <section aria-labelledby="motion-system">
+            <h2 id="motion-system" className="mb-5 text-2xl font-900 uppercase">Animation / interaction system</h2>
+            <div className="grid gap-6 md:grid-cols-2">
+              <div className="border-4 border-border bg-white p-6">
+                <p className="text-xs font-900 uppercase tracking-[.2em] text-primary-blue">Motion tokens</p>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <div className="border-2 border-border p-4"><strong className="font-900">Fast</strong><p className="text-sm">200ms / ease-out</p></div>
+                  <div className="border-2 border-border p-4"><strong className="font-900">Standard</strong><p className="text-sm">300ms / ease-out</p></div>
+                  <div className="border-2 border-border p-4"><strong className="font-900">Press</strong><p className="text-sm">2px X/Y</p></div>
+                  <div className="border-2 border-border p-4"><strong className="font-900">Lift</strong><p className="text-sm">4px upward</p></div>
+                </div>
+              </div>
+
+              <div className="border-4 border-border bg-primary-yellow p-6">
+                <p className="text-xs font-900 uppercase tracking-[.2em]">Reduced motion</p>
+                <div className="mt-5 border-2 border-border bg-white p-4">
+                  <div className="h-8 w-24 border-2 border-border bg-primary-blue motion-safe:translate-x-16 motion-safe:transition-transform motion-safe:duration-300 motion-safe:ease-out motion-reduce:translate-x-0" aria-hidden="true" />
+                  <p className="mt-4 text-sm font-700 uppercase">Motion-safe moves; motion-reduce stays static.</p>
+                </div>
+              </div>
+
+              <div className="border-4 border-border bg-white p-6">
+                <p className="text-xs font-900 uppercase tracking-[.2em] text-primary-red">Link interaction</p>
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <a href="/" className="motion-link border-2 border-border px-4 py-3 font-900 uppercase no-underline">Hover / focus / press</a>
+                  <a href="/" className="motion-link border-2 border-border px-4 py-3 font-900 uppercase no-underline">Accent behavior</a>
+                </div>
+              </div>
+
+              <div className="border-4 border-border bg-white p-6">
+                <p className="text-xs font-900 uppercase tracking-[.2em] text-primary-red">Icon interaction</p>
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <IconButton label="Search interaction"><Search size={20} strokeWidth={3} /></IconButton>
+                  <IconButton label="Shopping bag interaction"><ShoppingBag size={20} strokeWidth={3} /></IconButton>
+                </div>
+              </div>
+            </div>
+          </section>
         </div>
       </Section>
     </div>
