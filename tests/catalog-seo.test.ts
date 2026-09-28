@@ -211,3 +211,64 @@ test("search and SEO use the same canonical product slug identity", () => {
   const searchResult = { id: "product-9", slug: "same-canonical-product" };
   assert.equal(productPath(searchResult), "/products/same-canonical-product");
 });
+
+test("published slug changes are rejected until a redirect strategy exists", async () => {
+  const { createCatalogService } = await import("../lib/catalog/service.ts");
+
+  const product = {
+    id: "product-10",
+    title: "Published Tee",
+    slug: "published-tee",
+    description: null,
+    shortDescription: null,
+    status: "ACTIVE" as const,
+    price: { toString: () => "999.00" },
+    compareAtPrice: null,
+    currency: "INR",
+    seoTitle: null,
+    seoDescription: null,
+  };
+
+  const service = createCatalogService({
+    getProductById: async () => product,
+    getProductBySlug: async () => null,
+  });
+
+  await assert.rejects(
+    service.updateProduct({
+      id: product.id,
+      slug: "renamed-published-tee",
+    }),
+    (error: unknown) =>
+      error instanceof Error &&
+      error.message.includes("Published Product slugs cannot change"),
+  );
+});
+
+test("application-level slug uniqueness is checked before category and collection writes", async () => {
+  const { createCatalogService } = await import("../lib/catalog/service.ts");
+
+  const categoryService = createCatalogService({
+    getCategoryBySlug: async () => ({ id: "other-category" }),
+  });
+  await assert.rejects(
+    categoryService.createCategory({
+      name: "T-Shirts",
+      slug: "t-shirts",
+      status: "ACTIVE",
+    }),
+    (error: unknown) => error instanceof Error && error.message.includes("Catalog slug already exists"),
+  );
+
+  const collectionService = createCatalogService({
+    getCollectionBySlug: async () => ({ id: "other-collection" }),
+  });
+  await assert.rejects(
+    collectionService.createCollection({
+      name: "New Arrivals",
+      slug: "new-arrivals",
+      status: "ACTIVE",
+    }),
+    (error: unknown) => error instanceof Error && error.message.includes("Catalog slug already exists"),
+  );
+});
