@@ -20,6 +20,11 @@ import { Select } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { FormField } from '@/components/ui/form-field'
+import { Container } from '@/components/layout/container'
+import { Grid } from '@/components/layout/grid'
+import { Stack } from '@/components/layout/stack'
+import { Cluster } from '@/components/layout/cluster'
+import { Split } from '@/components/layout/split'
 
 export default function ComponentShowcase() {
   if (process.env.NODE_ENV !== 'development') notFound()
@@ -34,6 +39,54 @@ export default function ComponentShowcase() {
         />
 
         <Divider className="my-10" />
+
+        <section aria-labelledby="layout-architecture" className="space-y-10">
+          <div>
+            <h2 id="layout-architecture" className="mb-3 text-2xl font-900 uppercase">Global layout architecture</h2>
+            <p className="max-w-2xl">Reusable layout primitives keep full-width structure separate from constrained content while preserving mobile-first reading order.</p>
+          </div>
+
+          <div className="border-4 border-border bg-white">
+            <Container>
+              <div className="py-8">
+                <p className="text-xs font-900 uppercase tracking-[.25em] text-primary-blue">Container / standard</p>
+                <p className="mt-2 text-lg font-700">Standard content alignment uses max-w-7xl.</p>
+              </div>
+            </Container>
+          </div>
+
+          <Section fullWidth background="bg-primary-yellow" divider>
+            <Stack gap="lg">
+              <div>
+                <p className="text-xs font-900 uppercase tracking-[.25em]">Full-width section</p>
+                <h3 className="mt-2">Color block + constrained content</h3>
+              </div>
+              <Grid columns={1} tabletColumns={2} desktopColumns={3}>
+                <div className="border-2 border-border bg-white p-5">Mobile: 1 column</div>
+                <div className="border-2 border-border bg-white p-5">Tablet: 2 columns</div>
+                <div className="border-2 border-border bg-white p-5">Desktop: 3 columns</div>
+              </Grid>
+            </Stack>
+          </Section>
+
+          <div className="border-4 border-border bg-background p-6">
+            <Cluster gap="md" justify="between">
+              <span className="font-900 uppercase">Cluster</span>
+              <Cluster gap="sm"><span className="border-2 border-border px-3 py-2 text-xs font-900 uppercase">One</span><span className="border-2 border-border px-3 py-2 text-xs font-900 uppercase">Two</span></Cluster>
+            </Cluster>
+          </div>
+
+          <div className="border-4 border-border bg-white p-6">
+            <Split>
+              <Stack gap="sm">
+                <p className="text-xs font-900 uppercase tracking-[.25em] text-primary-red">Split / content</p>
+                <h3>Intentional asymmetry</h3>
+                <p>Two-sided layouts use CSS Grid while preserving normal document order.</p>
+              </Stack>
+              <div className="min-h-40 bg-primary-blue p-6 text-white"><p className="text-xs font-900 uppercase tracking-[.25em] text-primary-yellow">Media placeholder</p></div>
+            </Split>
+          </div>
+        </section>
 
         <div className="grid gap-12">
           <section aria-labelledby="buttons">
