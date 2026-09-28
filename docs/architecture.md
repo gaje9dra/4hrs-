@@ -176,3 +176,26 @@ Structural borders use the established 2px mobile / 4px desktop vocabulary where
 The existing `overflow-x: clip` rule is retained as a documented containment safeguard from the layout foundation, not as a substitute for fixing component overflow. Geometric compositions and global CTA decorations explicitly contain decorative overflow, while content layouts use normal sizing and wrapping.
 
 Responsive behavior is CSS-driven. No viewport detection, resize listeners, duplicate mobile/desktop trees, or new client-side responsive state was introduced in Phase 1.10.
+## Animation & interaction system — Phase 1.11
+
+Motion is a shared presentation concern rather than component-specific business logic. The source of truth is `lib/tokens/index.ts` with matching CSS variables/utilities in `app/globals.css`.
+
+The interaction vocabulary is intentionally small:
+
+- 200ms fast interactions.
+- 300ms standard transitions.
+- ease-out easing.
+- 2px mechanical press.
+- 4px card lift.
+- 1.04 restrained icon scale.
+- strong 2px-offset focus treatment.
+
+Shared CSS utilities provide `motion-press`, `motion-lift`, `motion-link` and `motion-icon`. Components reuse these instead of creating independent timing/transform definitions.
+
+Animation is CSS-driven. No animation library, JavaScript animation loop, viewport listener, scroll listener or layout measurement was introduced.
+
+Reduced motion removes unnecessary transforms and minimizes transition duration while preserving functional state changes.
+
+Normal interaction effects use transform/opacity/color/background changes and do not change document layout. Accordion expansion is the intentional layout-changing interaction because content is being revealed.
+
+Decorative geometry remains static unless a future interaction has a concrete usability reason. Continuous spinning, pulsing, floating, bouncing and parallax are outside the interaction system.
