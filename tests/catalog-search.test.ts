@@ -3,7 +3,6 @@ import assert from "node:assert/strict";
 import { Prisma } from "@prisma/client";
 import { CatalogServiceError } from "../lib/catalog/errors.ts";
 import {
-  DatabaseSearchAdapter,
   createCatalogSearchService,
   type CatalogSearchProvider,
 } from "../lib/catalog/search.ts";
