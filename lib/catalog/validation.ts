@@ -72,7 +72,7 @@ function normalizeOption(value: string | null | undefined): string { return valu
 function variantOptionKey(variant: VariantInput): string { return normalizeOption(variant.size) + "\u0000" + normalizeOption(variant.color); }
 export function findDuplicateVariants(variants: VariantInput[]): number[][] { const groups = new Map<string, number[]>(); variants.forEach((variant, index) => { const indexes = groups.get(variantOptionKey(variant)) ?? []; indexes.push(index); groups.set(variantOptionKey(variant), indexes); }); return [...groups.values()].filter((indexes) => indexes.length > 1); }
 export function validateVariantUniqueness(variants: VariantInput[]): ValidationIssue[] { return findDuplicateVariants(variants).map((indexes) => issue("variants[" + indexes[1] + "]", "DUPLICATE_VARIANT", "Variant duplicates another variant using normalized size and color options.")); }
-
+export function validateVariantPricing(productPrice: number | string, variant: VariantInput): ValidationIssue[] {\n  const effectivePrice = variant.price === null || variant.price === undefined ? productPrice : variant.price;\n  if (variant.compareAtPrice === null || variant.compareAtPrice === undefined) return [];\n  return validatePricePair(effectivePrice, variant.compareAtPrice, "price", "compareAtPrice");\n}\n
 export function validateImage(input: ImageInput): ValidationIssue[] {
   const issues: ValidationIssue[] = []; const hasProduct = Boolean(input.productId); const hasVariant = Boolean(input.variantId);
   if (hasProduct === hasVariant) issues.push(issue("ownership", "INVALID_IMAGE_OWNER", "Image must reference exactly one Product or ProductVariant."));
