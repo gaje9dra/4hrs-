@@ -176,6 +176,7 @@ Structural borders use the established 2px mobile / 4px desktop vocabulary where
 The existing `overflow-x: clip` rule is retained as a documented containment safeguard from the layout foundation, not as a substitute for fixing component overflow. Geometric compositions and global CTA decorations explicitly contain decorative overflow, while content layouts use normal sizing and wrapping.
 
 Responsive behavior is CSS-driven. No viewport detection, resize listeners, duplicate mobile/desktop trees, or new client-side responsive state was introduced in Phase 1.10.
+
 ## Animation & interaction system — Phase 1.11
 
 Motion is a shared presentation concern rather than component-specific business logic. The source of truth is `lib/tokens/index.ts` with matching CSS variables/utilities in `app/globals.css`.
@@ -199,3 +200,24 @@ Reduced motion removes unnecessary transforms and minimizes transition duration 
 Normal interaction effects use transform/opacity/color/background changes and do not change document layout. Accordion expansion is the intentional layout-changing interaction because content is being revealed.
 
 Decorative geometry remains static unless a future interaction has a concrete usability reason. Continuous spinning, pulsing, floating, bouncing and parallax are outside the interaction system.
+
+## Accessibility foundation — Phase 1.12
+
+Accessibility is a reusable architecture concern rather than page-specific decoration.
+
+The root shell exposes one clear `header`, navigation regions, a focusable `main#main-content`, and `footer`. `SkipLink` provides keyboard users with a direct path past repeated navigation.
+
+The shared focus system remains centralized in `app/globals.css`: interactive controls use a high-contrast 2px yellow outline with a 2px offset and dark secondary ring. Components must not suppress that treatment with `outline: none` or `outline-none` unless an equivalent accessible treatment is supplied.
+
+Interactive controls use native HTML semantics. `Button` renders `button` for actions and `a` for navigation. `IconButton` requires a label. Lucide icons used only as decoration are marked `aria-hidden`, while navigation regions have explicit labels where multiple navigation landmarks exist.
+
+`FormField` provides a reusable context for description, error, invalid and required semantics. Shared `Input`, `Textarea`, `Select`, `Checkbox` and `Radio` controls consume that context and expose `aria-describedby`, `aria-invalid` and `aria-required` consistently. Required status is also visible as text. Validation errors remain textual and are not communicated through red color alone.
+
+Accordion triggers expose native button semantics plus `aria-expanded` and `aria-controls`; panels are associated with their triggers. Mobile navigation retains keyboard operation, Escape handling, initial focus, and focus restoration to the menu trigger.
+
+Decorative geometric compositions and decorative icons are removed from the accessibility tree. Meaningful images must supply content-derived alternative text when introduced. `VisuallyHidden` provides a reusable utility for assistive-technology-only text.
+
+The core Bauhaus color combinations were audited for contrast without changing the palette. Responsive touch targets remain at least 44px for primary controls, navigation links, icon buttons, and checkbox/radio controls. Reduced-motion behavior from Phase 1.11 remains intact.
+
+Phase 1.12 does not claim full WCAG conformance because runtime browser, assistive-technology, and automated accessibility testing were not available in the repository environment.
+
