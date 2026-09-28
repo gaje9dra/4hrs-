@@ -29,7 +29,7 @@ export function AccordionItem({ title, children, defaultOpen = false, disabled =
           onClick={() => setOpen((value) => !value)}
         >
           <span>{title}</span>
-          <ChevronDown className={`shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} size={22} strokeWidth={3} aria-hidden="true" />
+          <ChevronDown className={`shrink-0 transition-transform duration-(--motion-standard) ease-(--motion-ease) ${open ? 'rotate-180' : ''}`} size={22} strokeWidth={3} aria-hidden="true" />
         </button>
       </h3>
       <div id={panelId} role="region" aria-labelledby={buttonId} hidden={!open} className="border-t-2 border-border px-4 py-4">
