@@ -23,7 +23,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body className={`${outfit.variable} antialiased`}>
         <SkipLink />
         <Header />
-        <main id="main-content" tabIndex={-1} className="outline-none">
+        <main id="main-content" tabIndex={-1}>
           {children}
         </main>
         <Footer />
