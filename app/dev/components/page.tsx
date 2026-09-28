@@ -335,7 +335,7 @@ export default function ComponentShowcase() {
               <div className="border-4 border-border bg-primary-yellow p-6">
                 <p className="text-xs font-900 uppercase tracking-[.2em]">Reduced motion</p>
                 <div className="mt-5 border-2 border-border bg-white p-4">
-                  <div className="h-8 w-24 border-2 border-border bg-primary-blue motion-safe:translate-x-16 motion-safe:transition-transform motion-safe:duration-300 motion-safe:ease-out motion-reduce:translate-x-0" aria-hidden="true" />
+                  <div className="h-8 w-24 border-2 border-border bg-primary-blue motion-safe:translate-x-16 motion-safe:transition-transform motion-safe:duration-(--motion-standard) motion-safe:ease-out motion-reduce:translate-x-0" aria-hidden="true" />
                   <p className="mt-4 text-sm font-700 uppercase">Motion-safe moves; motion-reduce stays static.</p>
                 </div>
               </div>
