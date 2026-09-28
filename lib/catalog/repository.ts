@@ -91,6 +91,218 @@ function buildListWhere(filters: CatalogListFilters = {}): Prisma.ProductWhereIn
   return where;
 }
 
+
+
+export type CatalogQueryRepositoryFilters = {
+  categorySlug?: string;
+  collectionSlug?: string;
+  tagSlugs?: string[];
+  tagMode?: "AND" | "OR";
+  minPrice?: string;
+  maxPrice?: string;
+  inStock?: boolean;
+};
+
+export type CatalogQueryRepositoryOptions = {
+  filters?: CatalogQueryRepositoryFilters;
+  sortBy?: CatalogSortField;
+  sortDirection?: SortDirection;
+  limit: number;
+  offset: number;
+};
+
+function buildEffectiveVariantPriceWhere(
+  minPrice?: string,
+  maxPrice?: string,
+): Prisma.ProductWhereInput | undefined {
+  if (minPrice === undefined && maxPrice === undefined) return undefined;
+  const variantPrice = {
+    ...(minPrice !== undefined ? { gte: new Prisma.Decimal(minPrice) } : {}),
+    ...(maxPrice !== undefined ? { lte: new Prisma.Decimal(maxPrice) } : {}),
+  };
+  return {
+    OR: [
+      {
+        price: {
+          ...(minPrice !== undefined ? { gte: new Prisma.Decimal(minPrice) } : {}),
+          ...(maxPrice !== undefined ? { lte: new Prisma.Decimal(maxPrice) } : {}),
+        },
+        variants: { some: { status: "ACTIVE", price: null } },
+      },
+      { variants: { some: { status: "ACTIVE", price: variantPrice } } },
+    ],
+  };
+}
+
+function buildAvailabilityWhere(inStock?: boolean): Prisma.ProductWhereInput | undefined {
+  if (inStock !== true) return undefined;
+  return {
+    variants: {
+      some: {
+        status: "ACTIVE",
+        OR: [
+          { inventory: { is: null } },
+          { inventory: { is: { trackingEnabled: false } } },
+          {
+            inventory: {
+              is: {
+                trackingEnabled: true,
+                onHand: { gt: db.inventory.fields.reserved },
+              },
+            },
+          },
+        ],
+      },
+    },
+  };
+}
+
+function buildPublicCatalogWhere(filters: CatalogQueryRepositoryFilters = {}): Prisma.ProductWhereInput {
+  const and: Prisma.ProductWhereInput[] = [publishedProductWhere];
+
+  if (filters.categorySlug) {
+    and.push({ categories: { some: { category: { slug: filters.categorySlug, status: "ACTIVE" } } } });
+  }
+  if (filters.collectionSlug) {
+    and.push({ collections: { some: { collection: { slug: filters.collectionSlug, status: "ACTIVE" } } } });
+  }
+  if (filters.tagSlugs?.length) {
+    const tagFilters = filters.tagSlugs.map((slug) => ({ tags: { some: { tag: { slug } } } }));
+    and.push(filters.tagMode === "OR" ? { OR: tagFilters } : { AND: tagFilters });
+  }
+
+  const priceWhere = buildEffectiveVariantPriceWhere(filters.minPrice, filters.maxPrice);
+  if (priceWhere) and.push(priceWhere);
+  const availabilityWhere = buildAvailabilityWhere(filters.inStock);
+  if (availabilityWhere) and.push(availabilityWhere);
+
+  return { AND: and };
+}
+
+const publicCatalogSelect = {
+  id: true,
+  title: true,
+  slug: true,
+  price: true,
+  compareAtPrice: true,
+  currency: true,
+  status: true,
+  createdAt: true,
+  updatedAt: true,
+  images: {
+    where: { productId: { not: null } },
+    orderBy: [{ isPrimary: "desc" as const }, { sortOrder: "asc" as const }, { id: "asc" as const }],
+    select: { id: true, url: true, altText: true, sortOrder: true, isPrimary: true },
+  },
+  variants: {
+    where: { status: "ACTIVE" },
+    orderBy: [{ createdAt: "asc" as const }, { id: "asc" as const }],
+    select: {
+      id: true,
+      sku: true,
+      displayName: true,
+      size: true,
+      color: true,
+      price: true,
+      compareAtPrice: true,
+      status: true,
+      inventory: {
+        select: { trackingEnabled: true, onHand: true, reserved: true, lowStockThreshold: true },
+      },
+    },
+  },
+  categories: {
+    where: { category: { status: "ACTIVE" } },
+    select: { category: { select: { id: true, name: true, slug: true } } },
+  },
+  collections: {
+    where: { collection: { status: "ACTIVE" } },
+    select: { collection: { select: { id: true, name: true, slug: true } } },
+  },
+  tags: {
+    select: { tag: { select: { id: true, name: true, slug: true } } },
+  },
+} satisfies Prisma.ProductSelect;
+
+export type PublicCatalogProductRecord = Prisma.Result<
+  PrismaClient["product"],
+  { select: typeof publicCatalogSelect },
+  "findMany"
+>[number];
+
+export async function queryPublishedCatalogProducts(
+  options: CatalogQueryRepositoryOptions,
+  client?: CatalogRepositoryClient,
+): Promise<CatalogListResult<PublicCatalogProductRecord>> {
+  const repository = clientOrDefault(client);
+  const limit = clampLimit(options.limit);
+  const offset = normalizeOffset(options.offset);
+  const where = buildPublicCatalogWhere(options.filters);
+  const sortBy = options.sortBy ?? "createdAt";
+  const sortDirection = options.sortDirection ?? "desc";
+  const orderBy: Prisma.ProductOrderByWithRelationInput[] = [
+    { [CATALOG_SORT_FIELDS[sortBy]]: sortDirection },
+    { id: sortDirection },
+  ];
+
+  const [items, total] = await Promise.all([
+    repository.product.findMany({ where, orderBy, skip: offset, take: limit, select: publicCatalogSelect }),
+    repository.product.count({ where }),
+  ]);
+
+  return { items, total, limit, offset, hasNextPage: offset + items.length < total };
+}
+
+export async function getPublishedProductBySlug(slug: string, client?: CatalogRepositoryClient) {
+  return clientOrDefault(client).product.findFirst({
+    where: { ...publishedProductWhere, slug },
+    select: publicCatalogSelect,
+  });
+}
+
+export async function getCategoryBySlug(slug: string, client?: CatalogRepositoryClient) {
+  return clientOrDefault(client).category.findUnique({ where: { slug } });
+}
+
+export async function listActiveCategories(client?: CatalogRepositoryClient) {
+  return clientOrDefault(client).category.findMany({
+    where: { status: "ACTIVE" },
+    orderBy: [{ parentId: "asc" }, { name: "asc" }, { id: "asc" }],
+    select: { id: true, name: true, slug: true, description: true, parentId: true, status: true },
+  });
+}
+
+export async function getCategoryTree(client?: CatalogRepositoryClient) {
+  return clientOrDefault(client).category.findMany({
+    where: { status: "ACTIVE" },
+    orderBy: [{ parentId: "asc" }, { name: "asc" }, { id: "asc" }],
+    include: { children: { where: { status: "ACTIVE" }, orderBy: [{ name: "asc" }, { id: "asc" }] } },
+  });
+}
+
+export async function getCollectionBySlug(slug: string, client?: CatalogRepositoryClient) {
+  return clientOrDefault(client).collection.findUnique({ where: { slug } });
+}
+
+export async function listActiveCollections(client?: CatalogRepositoryClient) {
+  return clientOrDefault(client).collection.findMany({
+    where: { status: "ACTIVE" },
+    orderBy: [{ name: "asc" }, { id: "asc" }],
+    select: { id: true, name: true, slug: true, description: true, status: true },
+  });
+}
+
+export async function getTagBySlug(slug: string, client?: CatalogRepositoryClient) {
+  return clientOrDefault(client).tag.findUnique({ where: { slug } });
+}
+
+export async function listTags(client?: CatalogRepositoryClient) {
+  return clientOrDefault(client).tag.findMany({
+    orderBy: [{ name: "asc" }, { id: "asc" }],
+    select: { id: true, name: true, slug: true },
+  });
+}
+
 export async function getProductById(id: string, client?: CatalogRepositoryClient) {
   return clientOrDefault(client).product.findUnique({ where: { id } });
 }
