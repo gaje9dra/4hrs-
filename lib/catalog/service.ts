@@ -63,6 +63,7 @@ type CatalogRepository = {
   archiveCollection: typeof repository.archiveCollection;
   createTag: typeof repository.createTag;
   getTagById: typeof repository.getTagById;
+  getTagByName: typeof repository.getTagByName;
   updateTag: typeof repository.updateTag;
   deleteTag: typeof repository.deleteTag;
   attachCategory: typeof repository.attachCategory;
@@ -746,6 +747,8 @@ export function createCatalogService(customRepository: Partial<CatalogRepository
       const normalized = { name: normalizeTagName(input.name), slug: normalizeTagSlug(input.slug) };
       const issues = validateTag(normalized);
       if (issues.length) validationError(issues, "INVALID_TAG");
+      const duplicate = await repo.getTagByName(normalized.name);
+      if (duplicate) throw new CatalogServiceError("INVALID_TAG", "A logical tag with the same normalized name already exists.");
       try { return await repo.createTag({ name: normalized.name, slug: normalized.slug }); }
       catch (error) { mapDatabaseError(error); }
     },
@@ -756,6 +759,8 @@ export function createCatalogService(customRepository: Partial<CatalogRepository
       const next = { name: normalizeTagName(patch.name ?? existing.name), slug: normalizeTagSlug(patch.slug ?? existing.slug) };
       const issues = validateTag(next);
       if (issues.length) validationError(issues, "INVALID_TAG");
+      const duplicate = await repo.getTagByName(next.name);
+      if (duplicate && duplicate.id !== id) throw new CatalogServiceError("INVALID_TAG", "A logical tag with the same normalized name already exists.");
       try { return await repo.updateTag(id, next); } catch (error) { mapDatabaseError(error); }
     },
 
