@@ -62,6 +62,7 @@ type CatalogRepository = {
   updateOptionType: typeof repository.updateOptionType;
   createOptionValue: typeof repository.createOptionValue;
   getOptionValueById: typeof repository.getOptionValueById;
+  getOptionValueByIdentity: typeof repository.getOptionValueByIdentity;
   listOptionValues: typeof repository.listOptionValues;
   updateOptionValue: typeof repository.updateOptionValue;
   assignProductOptionType: typeof repository.assignProductOptionType;
@@ -592,6 +593,8 @@ export function createCatalogService(customRepository: Partial<CatalogRepository
       if (issues.length) validationError(issues, "INVALID_VARIANT");
       const optionType = await repo.getOptionTypeById(input.optionTypeId);
       if (!optionType) throw new CatalogServiceError("OPTION_TYPE_NOT_FOUND", "Option type was not found.");
+      const duplicate = await repo.getOptionValueByIdentity(input.optionTypeId, normalizedValue);
+      if (duplicate) throw new CatalogServiceError("DUPLICATE_OPTION_VALUE", "Option value already exists for this option type.");
       try {
         return await repo.createOptionValue({
           id: input.id ?? randomUUID(),
@@ -621,6 +624,8 @@ export function createCatalogService(customRepository: Partial<CatalogRepository
         swatch: patch.swatch === undefined ? existing.swatch : patch.swatch,
       });
       if (issues.length) validationError(issues, "INVALID_VARIANT");
+      const duplicate = await repo.getOptionValueByIdentity(existing.optionTypeId, normalizedValue);
+      if (duplicate && duplicate.id !== id) throw new CatalogServiceError("DUPLICATE_OPTION_VALUE", "Option value already exists for this option type.");
       return repo.updateOptionValue(id, {
         displayName,
         normalizedValue,
