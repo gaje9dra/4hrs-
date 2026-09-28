@@ -15,9 +15,8 @@ app/
 
 components/
   ui/              generic reusable UI
-  layout/          global shell/navigation
-  geometry/        existing geometric primitives
-  bauhaus/         future Bauhaus-specific compositions
+  layout/          global shell/navigation and reusable layout primitives
+  bauhaus/         Bauhaus geometry, compositions and presets
   shared/          cross-domain presentation components
 
 features/
