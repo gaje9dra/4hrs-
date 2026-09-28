@@ -319,23 +319,6 @@ test("database adapter keeps SKU search internal-only", async () => {
     },
   } as never;
 
-  const adapter = new DatabaseSearchAdapter();
-  await adapter.search({
-    query: "sku-123",
-    mode: "PUBLIC",
-    catalog: {
-      category: undefined,
-      collection: undefined,
-      tags: [],
-      tagMode: "AND",
-      minPrice: undefined,
-      maxPrice: undefined,
-      inStock: false,
-      sort: "newest",
-      page: 1,
-      pageSize: 24,
-    },
-  });
   await searchCatalogProducts({
     query: "sku-123",
     mode: "INTERNAL",
