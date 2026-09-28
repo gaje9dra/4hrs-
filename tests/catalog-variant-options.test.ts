@@ -65,6 +65,7 @@ test("option type and value creation remain inside CatalogService boundaries", a
       return data;
     },
     getOptionTypeById: async () => ({ id: "type-1", name: "Color", normalizedName: "color", sortOrder: 0 }),
+    getOptionValueByIdentity: async () => null,
     createOptionValue: async (data) => {
       calls.push("createOptionValue");
       return data;
