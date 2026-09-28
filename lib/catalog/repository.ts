@@ -224,11 +224,9 @@ const publicCatalogSelect = {
   },
 } satisfies Prisma.ProductSelect;
 
-export type PublicCatalogProductRecord = Prisma.Result<
-  PrismaClient["product"],
-  { select: typeof publicCatalogSelect },
-  "findMany"
->[number];
+export type PublicCatalogProductRecord = Prisma.ProductGetPayload<{
+  select: typeof publicCatalogSelect;
+}>;
 
 export async function queryPublishedCatalogProducts(
   options: CatalogQueryRepositoryOptions,
