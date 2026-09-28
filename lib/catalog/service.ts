@@ -659,7 +659,8 @@ export function createCatalogService(customRepository: Partial<CatalogRepository
     },
 
     async createCategory(input: CategoryInput) {
-      const issues = [...validateCategory(input), ...validateCategoryHierarchy(input.id ?? "", input.parentId)];
+      const normalizedInput = { ...input, name: normalizeTitle(input.name), slug: normalizeSlug(input.slug || input.name), seoTitle: normalizeSeoText(input.seoTitle), seoDescription: normalizeSeoText(input.seoDescription) };
+      const issues = [...validateCategory(normalizedInput), ...validateCategoryHierarchy(input.id ?? "", input.parentId)];
       if (issues.length) validationError(issues, "INVALID_CATEGORY");
       if (input.parentId) {
         const parent = await repo.getCategoryById(input.parentId);
@@ -668,11 +669,11 @@ export function createCatalogService(customRepository: Partial<CatalogRepository
       try {
         return await repo.createCategory({
           id: input.id ?? randomUUID(),
-          name: normalizeTitle(input.name),
-          slug: normalizeSlug(input.slug || input.name),
+          name: normalizedInput.name,
+          slug: normalizedInput.slug,
           status: input.status,
-          seoTitle: normalizeSeoText(input.seoTitle),
-          seoDescription: normalizeSeoText(input.seoDescription),
+          seoTitle: normalizedInput.seoTitle,
+          seoDescription: normalizedInput.seoDescription,
           parent: input.parentId ? { connect: { id: input.parentId } } : undefined,
         });
       } catch (error) { mapDatabaseError(error); }
@@ -683,14 +684,15 @@ export function createCatalogService(customRepository: Partial<CatalogRepository
       if (!existing) throw new CatalogServiceError("CATEGORY_NOT_FOUND", "Category was not found.");
       const next = {
         id,
-        name: patch.name ?? existing.name,
-        slug: patch.slug ?? existing.slug,
+        name: normalizeTitle(patch.name ?? existing.name),
+        slug: normalizeSlug(patch.slug ?? existing.slug),
         status: patch.status ?? existing.status,
         parentId: patch.parentId === undefined ? existing.parentId : patch.parentId,
-        seoTitle: patch.seoTitle === undefined ? existing.seoTitle : patch.seoTitle,
-        seoDescription: patch.seoDescription === undefined ? existing.seoDescription : patch.seoDescription,
+        seoTitle: normalizeSeoText(patch.seoTitle === undefined ? existing.seoTitle : patch.seoTitle),
+        seoDescription: normalizeSeoText(patch.seoDescription === undefined ? existing.seoDescription : patch.seoDescription),
       };
       const issues = [...validateCategory(next), ...validateCategoryHierarchy(id, next.parentId)];
+
       if (issues.length) validationError(issues, "INVALID_CATEGORY");
       if (next.parentId) {
         const parent = await repo.getCategoryById(next.parentId);
@@ -720,19 +722,20 @@ export function createCatalogService(customRepository: Partial<CatalogRepository
     async getCategoryHierarchy() { return repo.getCategoryHierarchy(); },
 
     async createCollection(input: CollectionInput) {
-      const issues = validateCollection(input);
+      const normalizedInput = { ...input, name: normalizeTitle(input.name), slug: normalizeSlug(input.slug || input.name), seoTitle: normalizeSeoText(input.seoTitle), seoDescription: normalizeSeoText(input.seoDescription) };
+      const issues = validateCollection(normalizedInput);
       if (issues.length) validationError(issues, "INVALID_COLLECTION");
-      try { return await repo.createCollection({ name: normalizeTitle(input.name), slug: normalizeSlug(input.slug || input.name), seoTitle: normalizeSeoText(input.seoTitle), seoDescription: normalizeSeoText(input.seoDescription), status: input.status }); }
+      try { return await repo.createCollection({ name: normalizedInput.name, slug: normalizedInput.slug, seoTitle: normalizedInput.seoTitle, seoDescription: normalizedInput.seoDescription, status: normalizedInput.status }); }
       catch (error) { mapDatabaseError(error); }
     },
 
     async updateCollection(id: string, patch: Partial<Omit<CollectionInput, "name" | "slug">> & { name?: string; slug?: string }) {
       const existing = await repo.getCollectionById(id);
       if (!existing) throw new CatalogServiceError("COLLECTION_NOT_FOUND", "Collection was not found.");
-      const next = { name: patch.name ?? existing.name, slug: patch.slug ?? existing.slug, status: patch.status ?? existing.status, seoTitle: patch.seoTitle === undefined ? existing.seoTitle : patch.seoTitle, seoDescription: patch.seoDescription === undefined ? existing.seoDescription : patch.seoDescription };
+      const next = { name: normalizeTitle(patch.name ?? existing.name), slug: normalizeSlug(patch.slug ?? existing.slug), status: patch.status ?? existing.status, seoTitle: normalizeSeoText(patch.seoTitle === undefined ? existing.seoTitle : patch.seoTitle), seoDescription: normalizeSeoText(patch.seoDescription === undefined ? existing.seoDescription : patch.seoDescription) };
       const issues = validateCollection(next);
       if (issues.length) validationError(issues, "INVALID_COLLECTION");
-      try { return await repo.updateCollection(id, { name: normalizeTitle(next.name), slug: normalizeSlug(next.slug || next.name), seoTitle: normalizeSeoText(next.seoTitle), seoDescription: normalizeSeoText(next.seoDescription), status: next.status }); }
+      try { return await repo.updateCollection(id, { name: next.name, slug: next.slug, seoTitle: next.seoTitle, seoDescription: next.seoDescription, status: next.status }); }
       catch (error) { mapDatabaseError(error); }
     },
 
