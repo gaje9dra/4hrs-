@@ -1,15 +1,24 @@
-import type { HTMLAttributes, ReactNode } from 'react'
+import type { CSSProperties, HTMLAttributes, ReactNode } from 'react'
 
 type VisuallyHiddenProps = HTMLAttributes<HTMLSpanElement> & {
   children: ReactNode
 }
 
-export function VisuallyHidden({ children, className = '', ...props }: VisuallyHiddenProps) {
+const visuallyHiddenStyle: CSSProperties = {
+  position: 'absolute',
+  width: '1px',
+  height: '1px',
+  padding: 0,
+  margin: '-1px',
+  overflow: 'hidden',
+  clip: 'rect(0, 0, 0, 0)',
+  whiteSpace: 'nowrap',
+  border: 0,
+}
+
+export function VisuallyHidden({ children, className = '', style, ...props }: VisuallyHiddenProps) {
   return (
-    <span
-      className={['absolute h-px w-px overflow-hidden whitespace-nowrap border-0 p-0', '[-clip:rect(0,0,0,0)]', className].filter(Boolean).join(' ')}
-      {...props}
-    >
+    <span className={className} style={{ ...visuallyHiddenStyle, ...style }} {...props}>
       {children}
     </span>
   )
