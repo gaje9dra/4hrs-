@@ -12,6 +12,9 @@ export class CatalogValidationError extends Error {
 }
 
 export type ProductInput = { id?: string; title: string; slug: string; description?: string | null; shortDescription?: string | null; status: ProductStatus; price: number | string; compareAtPrice?: number | string | null; currency: string; seoTitle?: string | null; seoDescription?: string | null };
+export type SeoMetadataInput = { seoTitle?: string | null; seoDescription?: string | null };
+export const SEO_TITLE_MAX_LENGTH = 200;
+export const SEO_DESCRIPTION_MAX_LENGTH = 500;
 export type VariantInput = { productId: string; id?: string; sku: string; displayName?: string | null; size?: string | null; color?: string | null; price?: number | string | null; compareAtPrice?: number | string | null; status: "ACTIVE" | "INACTIVE" };
 export type ImageInput = { productId?: string | null; variantId?: string | null; url: string; altText?: string | null; sortOrder: number; isPrimary: boolean };
 export type CategoryInput = { id?: string; name: string; slug: string; status: "ACTIVE" | "ARCHIVED"; parentId?: string | null };
@@ -21,6 +24,46 @@ export type PublishReadinessInput = { product: ProductInput; variants: VariantIn
 
 export const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 export const CURRENCY_PATTERN = /^[A-Z]{3}$/;
+
+export function slugify(value: string): string {
+  const normalized = value
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .replace(/-+/g, "-");
+  if (normalized) return normalized;
+  let hash = 2166136261;
+  for (const character of value.normalize("NFKC")) {
+    hash ^= character.codePointAt(0) ?? 0;
+    hash = Math.imul(hash, 16777619);
+  }
+  return "item-" + (hash >>> 0).toString(36);
+}
+
+export function normalizeSlug(slug: string): string {
+  return slugify(slug.trim());
+}
+
+export function normalizeSeoText(value: string | null | undefined): string | null {
+  if (value === null || value === undefined) return null;
+  const normalized = normalizedText(value);
+  return normalized || null;
+}
+
+export function validateSeoMetadata(input: SeoMetadataInput): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+  const seoTitle = normalizeSeoText(input.seoTitle);
+  const seoDescription = normalizeSeoText(input.seoDescription);
+  if (seoTitle && seoTitle.length > SEO_TITLE_MAX_LENGTH) {
+    issues.push(issue("seoTitle", "SEO_TITLE_TOO_LONG", "SEO title exceeds the maximum supported length."));
+  }
+  if (seoDescription && seoDescription.length > SEO_DESCRIPTION_MAX_LENGTH) {
+    issues.push(issue("seoDescription", "SEO_DESCRIPTION_TOO_LONG", "SEO description exceeds the maximum supported length."));
+  }
+  return issues;
+}
 
 function issue(field: string, code: string, message: string): ValidationIssue { return { field, code, message }; }
 function normalizedText(value: string): string { return value.trim().replace(/\s+/g, " "); }
@@ -53,7 +96,7 @@ export function validatePricePair(price: number | string, compareAtPrice: number
 }
 
 export function validateProduct(input: ProductInput): ValidationIssue[] {
-  const issues: ValidationIssue[] = []; requireText(input.title, "title", "Title", issues); issues.push(...validateSlug(input.slug)); issues.push(...validateCurrency(input.currency)); issues.push(...validatePricePair(input.price, input.compareAtPrice));
+  const issues: ValidationIssue[] = []; requireText(input.title, "title", "Title", issues); issues.push(...validateSlug(input.slug)); issues.push(...validateCurrency(input.currency)); issues.push(...validatePricePair(input.price, input.compareAtPrice)); issues.push(...validateSeoMetadata(input));
   if (!["DRAFT", "ACTIVE", "ARCHIVED"].includes(input.status)) issues.push(issue("status", "INVALID_STATUS", "Product status is invalid."));
   return dedupeIssues(issues);
 }
@@ -94,10 +137,10 @@ export function validatePrimaryImages(images: ImageInput[]): ValidationIssue[] {
   return productPrimaryCount > 1 ? [issue("images", "MULTIPLE_PRIMARY_IMAGES", "A Product may have at most one primary product-level image.")] : [];
 }
 
-export function validateCategory(input: CategoryInput): ValidationIssue[] { const issues: ValidationIssue[] = []; requireText(input.name, "name", "Category name", issues); issues.push(...validateSlug(input.slug)); return issues; }
+export function validateCategory(input: CategoryInput & SeoMetadataInput): ValidationIssue[] { const issues: ValidationIssue[] = []; requireText(input.name, "name", "Category name", issues); issues.push(...validateSlug(input.slug)); issues.push(...validateSeoMetadata(input)); return issues; }
 export function validateCategoryHierarchy(categoryId: string, parentId: string | null | undefined): ValidationIssue[] { return parentId === categoryId ? [issue("parentId", "SELF_PARENT", "Category cannot be its own parent.")] : []; }
 export function hasCategoryCycle(categoryId: string, parentById: ReadonlyMap<string, string | null>): boolean { const visited = new Set<string>(); let current: string | null | undefined = categoryId; while (current) { if (visited.has(current)) return true; visited.add(current); current = parentById.get(current) ?? null; } return false; }
-export function validateCollection(input: CollectionInput): ValidationIssue[] { const issues: ValidationIssue[] = []; requireText(input.name, "name", "Collection name", issues); issues.push(...validateSlug(input.slug)); return issues; }
+export function validateCollection(input: CollectionInput & SeoMetadataInput): ValidationIssue[] { const issues: ValidationIssue[] = []; requireText(input.name, "name", "Collection name", issues); issues.push(...validateSeoMetadata(input)); return issues; }
 export function validateTag(input: TagInput): ValidationIssue[] { const issues: ValidationIssue[] = []; requireText(input.name, "name", "Tag name", issues); issues.push(...validateSlug(normalizeTagSlug(input.slug))); return issues; }
 export function validateUniqueNormalizedTags(tags: TagInput[]): ValidationIssue[] { const seen = new Map<string, number>(); const issues: ValidationIssue[] = []; tags.forEach((tag, index) => { const key = normalizeTagName(tag.name).toLowerCase(); const previous = seen.get(key); if (previous !== undefined) issues.push(issue("tags[" + index + "]", "DUPLICATE_LOGICAL_TAG", "Tag duplicates tags[" + previous + "] after case/whitespace normalization.")); else seen.set(key, index); }); return issues; }
 export function validateJunctionUniqueness(pairs: Array<{ leftId: string; rightId: string }>, field: string): ValidationIssue[] { const seen = new Set<string>(); const issues: ValidationIssue[] = []; pairs.forEach((pair, index) => { const key = pair.leftId + "\u0000" + pair.rightId; if (seen.has(key)) issues.push(issue(field + "[" + index + "]", "DUPLICATE_RELATIONSHIP", "Duplicate catalog relationship.")); seen.add(key); }); return issues; }
