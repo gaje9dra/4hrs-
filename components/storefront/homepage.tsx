@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ProductCard } from "@/components/storefront/product-card";
 import { Container } from "@/components/layout/container";
-import { GeometricComposition, GeometricLayer } from "@/components/bauhaus/geometric-composition";
+import { GeometricLayer } from "@/components/bauhaus/geometric-composition";
 import { categoryPath, collectionPath } from "@/lib/catalog/routes";
 import type { StorefrontHomeData } from "@/lib/storefront/catalog";
 
@@ -44,10 +44,7 @@ function Hero({ data }: { data: StorefrontHomeData }) {
           </div>
         </div>
 
-        <GeometricComposition
-          className="min-h-[390px] border-2 border-t-0 border-border bg-background shadow-hard-lg lg:min-h-full lg:border-4 lg:border-l-0 lg:border-t-4"
-          label={visualProduct?.title ? "Featured fashion product composition" : "Decorative geometric fashion composition"}
-        >
+        <div className="relative isolate min-h-[390px] overflow-hidden border-2 border-t-0 border-border bg-background shadow-hard-lg lg:min-h-full lg:border-4 lg:border-l-0 lg:border-t-4">
           <GeometricLayer layer="back" className="right-[-4rem] top-[-4rem] h-48 w-48 rounded-full bg-primary-red sm:h-64 sm:w-64" />
           <GeometricLayer layer="back" className="bottom-[-3rem] left-[-3rem] h-44 w-44 bg-primary-yellow sm:h-60 sm:w-60" />
           {visualProduct?.image ? (
@@ -63,7 +60,7 @@ function Hero({ data }: { data: StorefrontHomeData }) {
             <GeometricLayer layer="base" className="left-1/2 top-1/2 h-40 w-40 -translate-x-1/2 -translate-y-1/2 rotate-12 bg-primary-blue clip-triangle sm:h-56 sm:w-56" />
           )}
           <GeometricLayer layer="front" className="bottom-6 right-6 h-16 w-28 border-4 border-border bg-white shadow-hard-sm sm:h-24 sm:w-40" />
-        </GeometricComposition>
+        </div>
       </Container>
     </section>
   );
