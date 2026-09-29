@@ -684,23 +684,27 @@ async function persistProduct(
       sortOrder: media.sortOrder ?? 0,
       isPrimary: media.isPrimary ?? false,
     }));
+    const desiredStatus = product.status;
     await service.createProduct({
       ...product,
       id: productId,
+      status: "DRAFT",
       categoryIds: [...new Set(categoryIdList)],
       collectionIds: [...new Set(collectionIdList)],
       tagIds: [...new Set(tagIdList)],
       variants,
       images,
     });
+    if (desiredStatus === "ACTIVE") await service.publishProduct(productId);
+    if (desiredStatus === "ARCHIVED") await service.archiveProduct(productId);
   } else {
+    const desiredStatus = product.status;
     await service.updateProduct({
       id: productId,
       title: product.title,
       slug: product.slug,
       description: product.description,
       shortDescription: product.shortDescription,
-      status: product.status,
       price: product.price,
       compareAtPrice: product.compareAtPrice,
       currency: product.currency,
@@ -710,6 +714,17 @@ async function persistProduct(
       collectionIds: [...new Set(collectionIdList)],
       tagIds: [...new Set(tagIdList)],
     });
+
+    const current = await service.getProductById(productId);
+    if (desiredStatus === "ACTIVE") {
+      if (current.status === "ARCHIVED") await service.restoreProduct(productId);
+      if ((await service.getProductById(productId)).status === "DRAFT") await service.publishProduct(productId);
+    } else if (desiredStatus === "DRAFT") {
+      if (current.status === "ACTIVE") await service.unpublishProduct(productId);
+      if (current.status === "ARCHIVED") await service.restoreProduct(productId);
+    } else if (desiredStatus === "ARCHIVED" && current.status !== "ARCHIVED") {
+      await service.archiveProduct(productId);
+    }
   }
 
   const memberships = product.collections ?? [];
