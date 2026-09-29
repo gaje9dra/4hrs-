@@ -2,6 +2,7 @@ import type { ProductStatus } from "@prisma/client";
 import { CatalogServiceError } from "@/lib/catalog/errors";
 import { validatePublishingReadiness, type ImageInput, type ProductInput, type VariantInput } from "@/lib/catalog/validation";
 import type { CatalogAuditContext } from "@/lib/catalog/audit";
+import { PRODUCT_LIFECYCLE_TRANSITIONS, canTransitionProductStatus } from "@/lib/catalog/lifecycle-rules";
 
 export type ProductLifecycleTransition = {
   from: ProductStatus;
@@ -9,18 +10,10 @@ export type ProductLifecycleTransition = {
   operation: "PUBLISH" | "UNPUBLISH" | "ARCHIVE" | "RESTORE";
 };
 
-export const PRODUCT_LIFECYCLE_TRANSITIONS: Readonly<Record<ProductStatus, readonly ProductStatus[]>> = {
-  DRAFT: ["DRAFT", "ACTIVE", "ARCHIVED"],
-  ACTIVE: ["ACTIVE", "DRAFT", "ARCHIVED"],
-  ARCHIVED: ["ARCHIVED", "DRAFT"],
-};
+export { PRODUCT_LIFECYCLE_TRANSITIONS, canTransitionProductStatus };
 
 export function isProductPublicStatus(status: ProductStatus): boolean {
   return status === "ACTIVE";
-}
-
-export function canTransitionProductStatus(from: ProductStatus, to: ProductStatus): boolean {
-  return PRODUCT_LIFECYCLE_TRANSITIONS[from].includes(to);
 }
 
 export function lifecycleOperationForTransition(from: ProductStatus, to: ProductStatus): ProductLifecycleTransition["operation"] | null {
