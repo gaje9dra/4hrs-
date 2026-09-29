@@ -11,7 +11,7 @@ export const CATALOG_SORT_FIELDS = {
   price: "price",
 } as const;
 
-export type CatalogSortField = keyof typeof CATALOG_SORT_FIELDS;
+export type CatalogSortField = keyof typeof CATALOG_SORT_FIELDS | "merchandising";
 export type SortDirection = "asc" | "desc";
 
 export type CatalogListFilters = {
@@ -270,6 +270,9 @@ export async function queryPublishedCatalogProducts(
   const where = buildPublicCatalogWhere(options.filters);
   const sortBy = options.sortBy ?? "createdAt";
   const sortDirection = options.sortDirection ?? "desc";
+  if (sortBy === "merchandising") {
+    return queryMerchandisedCatalogProducts(options, client);
+  }
   const orderBy: Prisma.ProductOrderByWithRelationInput[] = [
     { [CATALOG_SORT_FIELDS[sortBy]]: sortDirection },
     { id: sortDirection },
@@ -379,6 +382,9 @@ export async function searchCatalogProducts(
   const where = buildCatalogSearchWhere(options);
   const sortBy = options.sortBy ?? "createdAt";
   const sortDirection = options.sortDirection ?? "desc";
+  if (sortBy === "merchandising") {
+    return searchMerchandisedCatalogProducts(options, client);
+  }
   const orderBy: Prisma.ProductOrderByWithRelationInput[] = [
     { [CATALOG_SORT_FIELDS[sortBy]]: sortDirection },
     { id: sortDirection },
@@ -396,6 +402,147 @@ export async function searchCatalogProducts(
   ]);
 
   return { items, total, limit, offset, hasNextPage: offset + items.length < total };
+}
+
+export type MerchandisingContext = "collection" | "category";
+
+export type MerchandisingQueryOptions = CatalogQueryRepositoryOptions & {
+  context: MerchandisingContext;
+};
+
+function merchandisingContextSlug(options: CatalogQueryRepositoryOptions, context: MerchandisingContext): string {
+  const slug = context === "collection" ? options.filters?.collectionSlug : options.filters?.categorySlug;
+  if (!slug) throw new Error("Merchandising sorting requires a collection or category filter.");
+  return slug;
+}
+
+function buildMerchandisingProductWhere(
+  options: CatalogQueryRepositoryOptions,
+): Prisma.ProductWhereInput {
+  return buildPublicCatalogWhere(options.filters);
+}
+
+export async function queryMerchandisedCatalogProducts(
+  options: MerchandisingQueryOptions,
+  client?: CatalogRepositoryClient,
+): Promise<CatalogListResult<PublicCatalogProductRecord>> {
+  const repository = clientOrDefault(client);
+  const limit = clampLimit(options.limit);
+  const offset = normalizeOffset(options.offset);
+  const slug = merchandisingContextSlug(options, options.context);
+  const productWhere = buildMerchandisingProductWhere(options);
+  const relationWhere = options.context === "collection"
+    ? { collection: { slug, status: "ACTIVE" }, product: productWhere }
+    : { category: { slug, status: "ACTIVE" }, product: productWhere };
+
+  if (options.context === "collection") {
+    const [items, total] = await Promise.all([
+      repository.productCollection.findMany({
+        where: relationWhere,
+        orderBy: [
+          { isFeatured: "desc" },
+          { priority: "desc" },
+          { position: "asc" },
+          { product: { createdAt: "desc" } },
+          { product: { title: "asc" } },
+          { productId: "asc" },
+        ],
+        skip: offset,
+        take: limit,
+        select: { product: { select: publicCatalogListSelect } },
+      }),
+      repository.productCollection.count({ where: relationWhere }),
+    ]);
+    return {
+      items: items.map((item) => item.product),
+      total,
+      limit,
+      offset,
+      hasNextPage: offset + items.length < total,
+    };
+  }
+
+  const [items, total] = await Promise.all([
+    repository.productCategory.findMany({
+      where: relationWhere,
+      orderBy: [
+        { isFeatured: "desc" },
+        { priority: "desc" },
+        { position: "asc" },
+        { product: { createdAt: "desc" } },
+        { product: { title: "asc" } },
+        { productId: "asc" },
+      ],
+      skip: offset,
+      take: limit,
+      select: { product: { select: publicCatalogListSelect } },
+    }),
+    repository.productCategory.count({ where: relationWhere }),
+  ]);
+  return {
+    items: items.map((item) => item.product),
+    total,
+    limit,
+    offset,
+    hasNextPage: offset + items.length < total,
+  };
+}
+
+export async function searchMerchandisedCatalogProducts(
+  options: CatalogSearchRepositoryOptions,
+  client?: CatalogRepositoryClient,
+): Promise<CatalogListResult<PublicCatalogProductRecord>> {
+  const repository = clientOrDefault(client);
+  const limit = clampLimit(options.limit);
+  const offset = normalizeOffset(options.offset);
+  const filters = options.filters ?? {};
+  const context: MerchandisingContext | undefined = filters.collectionSlug ? "collection" : filters.categorySlug ? "category" : undefined;
+  if (!context) throw new Error("Merchandising sorting requires a collection or category filter.");
+  const slug = merchandisingContextSlug(options, context);
+  const productWhere = buildCatalogSearchWhere(options);
+  const relationWhere = context === "collection"
+    ? { collection: { slug, status: "ACTIVE" }, product: productWhere }
+    : { category: { slug, status: "ACTIVE" }, product: productWhere };
+
+  if (context === "collection") {
+    const [items, total] = await Promise.all([
+      repository.productCollection.findMany({
+        where: relationWhere,
+        orderBy: [
+          { isFeatured: "desc" },
+          { priority: "desc" },
+          { position: "asc" },
+          { product: { createdAt: "desc" } },
+          { product: { title: "asc" } },
+          { productId: "asc" },
+        ],
+        skip: offset,
+        take: limit,
+        select: { product: { select: publicCatalogListSelect } },
+      }),
+      repository.productCollection.count({ where: relationWhere }),
+    ]);
+    return { items: items.map((item) => item.product), total, limit, offset, hasNextPage: offset + items.length < total };
+  }
+
+  const [items, total] = await Promise.all([
+    repository.productCategory.findMany({
+      where: relationWhere,
+      orderBy: [
+        { isFeatured: "desc" },
+        { priority: "desc" },
+        { position: "asc" },
+        { product: { createdAt: "desc" } },
+        { product: { title: "asc" } },
+        { productId: "asc" },
+      ],
+      skip: offset,
+      take: limit,
+      select: { product: { select: publicCatalogListSelect } },
+    }),
+    repository.productCategory.count({ where: relationWhere }),
+  ]);
+  return { items: items.map((item) => item.product), total, limit, offset, hasNextPage: offset + items.length < total };
 }
 
 export async function getPublishedProductBySlug(slug: string, client?: CatalogRepositoryClient) {
@@ -783,9 +930,114 @@ export async function detachCategory(productId: string, categoryId: string, clie
   return clientOrDefault(client).productCategory.delete({ where: { productId_categoryId: { productId, categoryId } } });
 }
 
-export async function attachCollection(productId: string, collectionId: string, client?: CatalogRepositoryClient) {
-  return clientOrDefault(client).productCollection.create({ data: { productId, collectionId } });
+export async function attachCollection(
+  productId: string,
+  collectionId: string,
+  data: { position?: number; priority?: number; isFeatured?: boolean } = {},
+  client?: CatalogRepositoryClient,
+) {
+  return clientOrDefault(client).productCollection.create({
+    data: {
+      productId,
+      collectionId,
+      position: data.position ?? 0,
+      priority: data.priority ?? 0,
+      isFeatured: data.isFeatured ?? false,
+    },
+  });
 }
+
+export async function getProductCollection(productId: string, collectionId: string, client?: CatalogRepositoryClient) {
+  return clientOrDefault(client).productCollection.findUnique({
+    where: { productId_collectionId: { productId, collectionId } },
+  });
+}
+
+export async function updateProductCollection(
+  productId: string,
+  collectionId: string,
+  data: { position?: number; priority?: number; isFeatured?: boolean },
+  client?: CatalogRepositoryClient,
+) {
+  return clientOrDefault(client).productCollection.update({
+    where: { productId_collectionId: { productId, collectionId } },
+    data,
+  });
+}
+
+export async function listCollectionProducts(
+  collectionId: string,
+  client?: CatalogRepositoryClient,
+) {
+  return clientOrDefault(client).productCollection.findMany({
+    where: { collectionId },
+    orderBy: [
+      { isFeatured: "desc" },
+      { priority: "desc" },
+      { position: "asc" },
+      { product: { createdAt: "desc" } },
+      { product: { title: "asc" } },
+      { productId: "asc" },
+    ],
+    include: { product: true },
+  });
+}
+
+export async function listCategoryProducts(
+  categoryId: string,
+  client?: CatalogRepositoryClient,
+) {
+  return clientOrDefault(client).productCategory.findMany({
+    where: { categoryId },
+    orderBy: [
+      { isFeatured: "desc" },
+      { priority: "desc" },
+      { position: "asc" },
+      { product: { createdAt: "desc" } },
+      { product: { title: "asc" } },
+      { productId: "asc" },
+    ],
+    include: { product: true },
+  });
+}
+
+export async function reorderProductCollection(
+  collectionId: string,
+  updates: Array<{ productId: string; position: number; priority?: number; isFeatured?: boolean }>,
+  client?: CatalogRepositoryClient,
+) {
+  const repository = clientOrDefault(client);
+  return Promise.all(updates.map((update) =>
+    repository.productCollection.update({
+      where: { productId_collectionId: { productId: update.productId, collectionId } },
+      data: {
+        position: update.position,
+        ...(update.priority === undefined ? {} : { priority: update.priority }),
+        ...(update.isFeatured === undefined ? {} : { isFeatured: update.isFeatured }),
+      },
+    }),
+  ));
+}
+
+export async function reorderProductCategory(
+  categoryId: string,
+  updates: Array<{ productId: string; position: number; priority?: number; isFeatured?: boolean }>,
+  client?: CatalogRepositoryClient,
+) {
+  const repository = clientOrDefault(client);
+  return Promise.all(updates.map((update) =>
+    repository.productCategory.update({
+      where: { productId_categoryId: { productId: update.productId, categoryId } },
+      data: {
+        position: update.position,
+        ...(update.priority === undefined ? {} : { priority: update.priority }),
+        ...(update.isFeatured === undefined ? {} : { isFeatured: update.isFeatured }),
+      },
+    }),
+  ));
+}
+
+
 
 export async function detachCollection(productId: string, collectionId: string, client?: CatalogRepositoryClient) {
   return clientOrDefault(client).productCollection.delete({ where: { productId_collectionId: { productId, collectionId } } });
