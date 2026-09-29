@@ -137,6 +137,8 @@ test("effective variant price overrides inherited product price", () => {
 
 test("uses a deterministic Product lifecycle", () => {
   assert.equal(canTransitionProductStatus("DRAFT", "ACTIVE"), true);
+  assert.equal(canTransitionProductStatus("ACTIVE", "DRAFT"), true);
   assert.equal(canTransitionProductStatus("ACTIVE", "ARCHIVED"), true);
+  assert.equal(canTransitionProductStatus("ARCHIVED", "DRAFT"), true);
   assert.equal(canTransitionProductStatus("ARCHIVED", "ACTIVE"), false);
 });
