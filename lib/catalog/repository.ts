@@ -821,7 +821,7 @@ export async function listProducts(
   options: CatalogListOptions = {},
   client?: CatalogRepositoryClient,
   baseWhere?: Prisma.ProductWhereInput,
-): Promise<CatalogListResult<Awaited<ReturnType<typeof getProductById>>>> {
+): Promise<RepositoryCatalogListResult<Awaited<ReturnType<typeof getProductById>>>> {
   const repository = clientOrDefault(client);
   const limit = clampLimit(options.limit);
   const offset = normalizeOffset(options.offset);
