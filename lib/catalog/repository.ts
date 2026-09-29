@@ -80,7 +80,22 @@ const productWithVariantsInclude = {
 
 const publishedProductWhere: Prisma.ProductWhereInput = {
   status: "ACTIVE",
-  variants: { some: { status: "ACTIVE" } },
+  title: { not: "" },
+  slug: { not: "" },
+  currency: { not: "" },
+  price: { gte: new Prisma.Decimal(0) },
+  variants: {
+    some: {
+      status: "ACTIVE",
+      sku: { not: "" },
+    },
+  },
+  images: {
+    some: {
+      productId: { not: null },
+      mediaType: "IMAGE",
+    },
+  },
 };
 
 function clientOrDefault(client?: CatalogRepositoryClient): CatalogRepositoryClient {
