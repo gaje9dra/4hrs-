@@ -8,14 +8,14 @@ import { GeometricComposition, GeometricLayer } from "@/components/bauhaus/geome
 import { categoryPath, collectionPath } from "@/lib/catalog/routes";
 import type { StorefrontHomeData } from "@/lib/storefront/catalog";
 
-function SectionHeading({ eyebrow, title, body }: { eyebrow: string; title: string; body?: string | null }) {
+function SectionHeading({ id, eyebrow, title, body, inverse = false }: { id: string; eyebrow: string; title: string; body?: string | null; inverse?: boolean }) {
   return (
-    <header className="mb-10 grid gap-4 lg:grid-cols-[1fr_1.4fr] lg:items-end">
+    <header id={id} className="mb-10 grid gap-4 lg:grid-cols-[1fr_1.4fr] lg:items-end">
       <div>
-        <p className="text-xs font-900 uppercase tracking-[.25em] text-primary-blue">{eyebrow}</p>
-        <h2 className="mt-3 uppercase leading-[.92]">{title}</h2>
+        <p className={`text-xs font-900 uppercase tracking-[.25em] ${inverse ? "text-primary-yellow" : "text-primary-blue"}`}>{eyebrow}</p>
+        <h2 className={`mt-3 uppercase leading-[.92] ${inverse ? "text-white" : ""}`}>{title}</h2>
       </div>
-      {body ? <p className="max-w-2xl text-base leading-7 lg:text-lg">{body}</p> : null}
+      {body ? <p className={`max-w-2xl text-base leading-7 lg:text-lg ${inverse ? "text-white/90" : ""}`}>{body}</p> : null}
     </header>
   );
 }
@@ -73,9 +73,9 @@ function ProductDiscovery({ title, eyebrow, products }: { title: string; eyebrow
   if (!products.length) return null;
 
   return (
-    <section aria-labelledby={eyebrow + "-title"} className="border-b-2 border-border lg:border-b-4">
+    <section aria-labelledby={eyebrow + "-heading"} className="border-b-2 border-border lg:border-b-4">
       <Container className="py-14 sm:py-18 lg:py-24">
-        <SectionHeading eyebrow={eyebrow} title={title} />
+        <SectionHeading id={eyebrow + "-heading"} eyebrow={eyebrow} title={title} />
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {products.slice(0, 4).map((product) => <ProductCard key={product.id} product={product} />)}
         </div>
@@ -95,7 +95,7 @@ function CategoryDiscovery({ categories }: { categories: StorefrontHomeData["cat
   return (
     <section aria-labelledby="category-title" className="bg-primary-yellow border-b-2 border-border lg:border-b-4">
       <Container className="py-14 sm:py-18 lg:py-24">
-        <SectionHeading eyebrow="Discover / 02" title="Shop by category" body="Start with the product family that fits your wardrobe and explore the live catalog." />
+        <SectionHeading id="category-title" eyebrow="Discover / 02" title="Shop by category" body="Start with the product family that fits your wardrobe and explore the live catalog." />
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {categories.slice(0, 6).map((category, index) => (
             <Link
@@ -122,7 +122,7 @@ function CollectionDiscovery({ collections }: { collections: StorefrontHomeData[
   return (
     <section aria-labelledby="collection-title" className="border-b-2 border-border bg-primary-blue text-white lg:border-b-4">
       <Container className="py-14 sm:py-18 lg:py-24">
-        <SectionHeading eyebrow="Curated / 03" title="Collections" body="Browse the active editorial groups already defined in the canonical catalog." />
+        <SectionHeading id="collection-title" eyebrow="Curated / 03" title="Collections" body="Browse the active editorial groups already defined in the canonical catalog." inverse />
         <div className="grid gap-6 lg:grid-cols-3">
           {collections.slice(0, 3).map((collection, index) => (
             <Card key={collection.id} className="min-h-64 border-white bg-white text-foreground shadow-hard-lg">
