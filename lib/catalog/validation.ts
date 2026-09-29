@@ -1,4 +1,5 @@
 import type { ProductMediaType, ProductStatus } from "@prisma/client";
+import { canTransitionProductStatus } from "@/lib/catalog/lifecycle-rules";
 import {
   CATALOG_MEDIA_ALT_TEXT_MAX_LENGTH,
   CATALOG_MEDIA_STORAGE_REFERENCE_MAX_LENGTH,
@@ -342,8 +343,5 @@ export function validatePublishingReadiness(input: PublishReadinessInput): Valid
   return dedupeIssues(issues);
 }
 
-export function canTransitionProductStatus(from: ProductStatus, to: ProductStatus): boolean {
-  const allowed: Record<ProductStatus, readonly ProductStatus[]> = { DRAFT: ["DRAFT", "ACTIVE", "ARCHIVED"], ACTIVE: ["ACTIVE", "ARCHIVED"], ARCHIVED: ["ARCHIVED"] };
-  return allowed[from].includes(to);
-}
+export { canTransitionProductStatus };
 export function getEffectivePrice(productPrice: number | string, variantPrice?: number | string | null): number { const effective = variantPrice === null || variantPrice === undefined ? Number(productPrice) : Number(variantPrice); if (!Number.isFinite(effective) || effective < 0) throw new CatalogValidationError([issue("price", "INVALID_PRICE", "Effective price must be zero or greater.")]); return effective; }
