@@ -40,7 +40,7 @@ export function catalogBaseUrl(): string {
   try {
     url = new URL(raw);
   } catch {
-    throw new Error("NEXT_PUBLIC_SITE_URL must be an absolute HTTP(S) URL.");
+    throw new Error("NEXT_PUBLIC_SITE_URL must be an absolute HTTPS URL.");
   }
 
   if (url.protocol !== "http:" && url.protocol !== "https:") {
