@@ -161,6 +161,15 @@ export async function getStorefrontTags(): Promise<StorefrontTag[]> {
   return catalog.listTags();
 }
 
+export async function getStorefrontListingFilters() {
+  const [categories, collections, tags] = await Promise.all([
+    catalog.listActiveCategories(),
+    catalog.listActiveCollections(),
+    catalog.listTags(),
+  ]);
+  return { categories, collections, tags };
+}
+
 export async function getStorefrontCategoryProducts(slug: string, query: Omit<CatalogQuery, "category"> = {}) {
   return getStorefrontProducts({ ...query, category: slug, sort: query.sort ?? "merchandising" });
 }
