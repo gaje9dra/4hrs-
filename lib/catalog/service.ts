@@ -99,6 +99,9 @@ type CatalogRepository = {
   updateTag: typeof repository.updateTag;
   deleteTag: typeof repository.deleteTag;
   attachCategory: typeof repository.attachCategory;
+  getProductCategory: typeof repository.getProductCategory;
+  updateProductCategory: typeof repository.updateProductCategory;
+  reorderProductCategory: typeof repository.reorderProductCategory;
   detachCategory: typeof repository.detachCategory;
   attachCollection: typeof repository.attachCollection;
   getProductCollection: typeof repository.getProductCollection;
@@ -1173,11 +1176,53 @@ export function createCatalogService(customRepository: Partial<CatalogRepository
       try { return await repo.detachTag(productId, tagId); } catch (error) { mapDatabaseError(error); }
     },
 
-    async attachCategory(productId: string, categoryId: string) {
+    async attachCategory(
+      productId: string,
+      categoryId: string,
+      options: { position?: number; priority?: number; isFeatured?: boolean } = {},
+    ) {
+      const issues = validateMerchandisingMembership({ productId, categoryId, ...options });
+      if (issues.length) validationError(issues, "INVALID_CATEGORY");
       await this.getProductById(productId);
       const category = await repo.getCategoryById(categoryId);
       if (!category) throw new CatalogServiceError("CATEGORY_NOT_FOUND", "Category was not found.");
-      try { return await repo.attachCategory(productId, categoryId); } catch (error) { mapDatabaseError(error); }
+      const existing = await repo.getProductCategory(productId, categoryId);
+      if (existing) throw new CatalogServiceError("INVALID_CATEGORY", "Product is already assigned to this category.");
+      try { return await repo.attachCategory(productId, categoryId, options); } catch (error) { mapDatabaseError(error); }
+    },
+
+    async updateCategoryMembership(
+      productId: string,
+      categoryId: string,
+      patch: { position?: number; priority?: number; isFeatured?: boolean },
+    ) {
+      const existing = await repo.getProductCategory(productId, categoryId);
+      if (!existing) throw new CatalogServiceError("INVALID_CATEGORY", "Product is not assigned to this category.");
+      const issues = validateMerchandisingMembership({ productId, categoryId, ...patch });
+      if (issues.length) validationError(issues, "INVALID_CATEGORY");
+      try { return await repo.updateProductCategory(productId, categoryId, patch); } catch (error) { mapDatabaseError(error); }
+    },
+
+    async reorderCategoryProducts(
+      categoryId: string,
+      updates: Array<{ productId: string; position: number; priority?: number; isFeatured?: boolean }>,
+    ) {
+      const issues = validateMerchandisingReorder(updates);
+      if (issues.length) validationError(issues, "INVALID_CATEGORY");
+      const category = await repo.getCategoryById(categoryId);
+      if (!category) throw new CatalogServiceError("CATEGORY_NOT_FOUND", "Category was not found.");
+      const memberships = await Promise.all(updates.map((update) => repo.getProductCategory(update.productId, categoryId)));
+      memberships.forEach((membership, index) => {
+        if (!membership) issues.push({
+          field: "updates[" + index + "].productId",
+          code: "PRODUCT_NOT_IN_CATEGORY",
+          message: "Product is not assigned to this category.",
+        });
+      });
+      if (issues.length) validationError(issues, "INVALID_CATEGORY");
+      try {
+        return await repo.withTransaction((tx) => repo.reorderProductCategory(categoryId, updates, tx));
+      } catch (error) { mapDatabaseError(error); }
     },
 
     async detachCategory(productId: string, categoryId: string) {
