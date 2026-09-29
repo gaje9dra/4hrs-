@@ -200,7 +200,7 @@ const publicCatalogSelect = {
   images: {
     where: { productId: { not: null } },
     orderBy: [{ isPrimary: "desc" as const }, { sortOrder: "asc" as const }, { id: "asc" as const }],
-    select: { id: true, url: true, storageReference: true, mediaType: true, altText: true, sortOrder: true, isPrimary: true },
+    select: { id: true, url: true, mediaType: true, altText: true, sortOrder: true, isPrimary: true },
   },
   variants: {
     where: { status: "ACTIVE" },
