@@ -9,9 +9,8 @@ import { catalogQueryFromSearchParams, type StorefrontSearchParams } from "@/lib
 type Params = Promise<{ slug: string }>;
 
 async function loadCollection(slug: string) {
-  try {
-    return await getStorefrontCollection(slug);
-  } catch (error) {
+  try { return await getStorefrontCollection(slug); }
+  catch (error) {
     if (error instanceof CatalogServiceError && error.code === "COLLECTION_NOT_FOUND") notFound();
     throw error;
   }
@@ -23,9 +22,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     const seo = getPublicCollectionSeoMetadata(collection);
     if (!seo) return { robots: { index: false, follow: true } };
     return { title: seo.title, description: seo.description, alternates: { canonical: seo.canonicalUrl }, robots: seo.robots };
-  } catch {
-    return { robots: { index: false, follow: false } };
-  }
+  } catch { return { robots: { index: false, follow: false } }; }
 }
 
 export default async function CollectionPage({ params, searchParams }: { params: Params; searchParams: Promise<StorefrontSearchParams> }) {
@@ -47,6 +44,7 @@ export default async function CollectionPage({ params, searchParams }: { params:
       params={paramsObject}
       {...filters}
       fixedCollection={collection.slug}
+      breadcrumbs={[{ label: "Shop", href: "/shop" }, { label: collection.name }]}
     />
   );
 }
