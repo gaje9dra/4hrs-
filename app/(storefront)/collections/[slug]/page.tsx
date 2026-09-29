@@ -2,11 +2,9 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { CatalogServiceError } from "@/lib/catalog/errors";
 import { getPublicCollectionSeoMetadata } from "@/lib/catalog/seo";
-import { getStorefrontCollection, getStorefrontCollectionProducts } from "@/lib/storefront/catalog";
-import { Container } from "@/components/layout/container";
-import { ProductGrid } from "@/components/storefront/product-grid";
-import { CatalogPagination } from "@/components/storefront/catalog-pagination";
-import { buildCatalogHref, catalogQueryFromSearchParams, type StorefrontSearchParams } from "@/lib/storefront/query-params";
+import { getStorefrontCollection, getStorefrontCollectionProducts, getStorefrontListingFilters } from "@/lib/storefront/catalog";
+import { CatalogListing } from "@/components/storefront/catalog-listing";
+import { catalogQueryFromSearchParams, type StorefrontSearchParams } from "@/lib/storefront/query-params";
 
 type Params = Promise<{ slug: string }>;
 
@@ -32,24 +30,23 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 
 export default async function CollectionPage({ params, searchParams }: { params: Params; searchParams: Promise<StorefrontSearchParams> }) {
   const { slug } = await params;
-  const collection = await loadCollection(slug);
   const paramsObject = await searchParams;
-  const products = await getStorefrontCollectionProducts(slug, catalogQueryFromSearchParams(paramsObject));
+  const collection = await loadCollection(slug);
+  const [products, filters] = await Promise.all([
+    getStorefrontCollectionProducts(slug, catalogQueryFromSearchParams(paramsObject)),
+    getStorefrontListingFilters(),
+  ]);
 
   return (
-    <Container className="py-10 sm:py-14 lg:py-20">
-      <nav aria-label="Breadcrumb" className="mb-6 text-sm font-700 uppercase">
-        <a href="/shop" className="motion-link">Shop</a>
-        <span aria-hidden="true"> / </span>
-        <span aria-current="page">{collection.name}</span>
-      </nav>
-      <header className="mb-10">
-        <p className="text-xs font-900 uppercase tracking-[.25em] text-primary-blue">Collection</p>
-        <h1 className="mt-3 uppercase">{collection.name}</h1>
-        {collection.description ? <p className="mt-5 max-w-2xl text-lg">{collection.description}</p> : null}
-      </header>
-      <ProductGrid products={products.items} />
-      <CatalogPagination pagination={products.pagination} buildHref={(page) => buildCatalogHref("/collections/" + encodeURIComponent(collection.slug), paramsObject, page)} />
-    </Container>
+    <CatalogListing
+      pathname={"/collections/" + encodeURIComponent(collection.slug)}
+      title={collection.name}
+      eyebrow="Catalog / Collection"
+      description={collection.description}
+      products={products}
+      params={paramsObject}
+      {...filters}
+      fixedCollection={collection.slug}
+    />
   );
 }
