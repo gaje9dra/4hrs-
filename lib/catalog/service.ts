@@ -521,11 +521,25 @@ export function createCatalogService(
           }, tx);
 
           if (input.categoryIds || input.collectionIds || input.tagIds) {
+            const beforeRelationships = await repo.getProductDetails(input.id, tx);
             await repo.replaceProductRelationships(input.id, {
               categoryIds: uniqueIds(input.categoryIds),
               collectionIds: uniqueIds(input.collectionIds),
               tagIds: uniqueIds(input.tagIds),
             }, tx);
+            const afterRelationships = await repo.getProductDetails(input.id, tx);
+            const beforeCategories = new Set((beforeRelationships?.categories ?? []).map((item) => item.categoryId));
+            const afterCategories = new Set((afterRelationships?.categories ?? []).map((item) => item.categoryId));
+            const beforeCollections = new Set((beforeRelationships?.collections ?? []).map((item) => item.collectionId));
+            const afterCollections = new Set((afterRelationships?.collections ?? []).map((item) => item.collectionId));
+            const beforeTags = new Set((beforeRelationships?.tags ?? []).map((item) => item.tagId));
+            const afterTags = new Set((afterRelationships?.tags ?? []).map((item) => item.tagId));
+            for (const categoryId of afterCategories) if (!beforeCategories.has(categoryId)) await audit({ entityType: "PRODUCT_CATEGORY", entityId: input.id, operation: "RELATIONSHIP_ADD", metadata: { categoryId } }, tx);
+            for (const categoryId of beforeCategories) if (!afterCategories.has(categoryId)) await audit({ entityType: "PRODUCT_CATEGORY", entityId: input.id, operation: "RELATIONSHIP_REMOVE", metadata: { categoryId } }, tx);
+            for (const collectionId of afterCollections) if (!beforeCollections.has(collectionId)) await audit({ entityType: "PRODUCT_COLLECTION", entityId: input.id, operation: "RELATIONSHIP_ADD", metadata: { collectionId } }, tx);
+            for (const collectionId of beforeCollections) if (!afterCollections.has(collectionId)) await audit({ entityType: "PRODUCT_COLLECTION", entityId: input.id, operation: "RELATIONSHIP_REMOVE", metadata: { collectionId } }, tx);
+            for (const tagId of afterTags) if (!beforeTags.has(tagId)) await audit({ entityType: "PRODUCT_TAG", entityId: input.id, operation: "RELATIONSHIP_ADD", metadata: { tagId } }, tx);
+            for (const tagId of beforeTags) if (!afterTags.has(tagId)) await audit({ entityType: "PRODUCT_TAG", entityId: input.id, operation: "RELATIONSHIP_REMOVE", metadata: { tagId } }, tx);
           }
           await audit({
             entityType: "PRODUCT",
