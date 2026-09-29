@@ -102,6 +102,10 @@ export async function recordCatalogAudit(
   event: CatalogAuditEventInput,
   client: CatalogAuditClient = db,
 ): Promise<void> {
+  if (!client.catalogAuditEvent || typeof client.catalogAuditEvent.create !== "function") {
+    return;
+  }
+
   await client.catalogAuditEvent.create({
     data: {
       id: randomUUID(),
