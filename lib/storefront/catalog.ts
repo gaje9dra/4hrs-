@@ -1,5 +1,6 @@
 import { createCatalogQueryService, type CatalogAppliedQuery, type CatalogQuery, type PublishedProductDetailResult } from "@/lib/catalog/query";
 import { createCatalogSearchService, type CatalogSearchQuery } from "@/lib/catalog/search";
+import { productPath } from "@/lib/catalog/routes";
 
 const catalog = createCatalogQueryService();
 const search = createCatalogSearchService();
@@ -8,7 +9,6 @@ export type StorefrontProductCard = {
   id: string;
   title: string;
   slug: string;
-  href: string;
   image: { url: string; altText: string | null } | null;
   price: string;
   compareAtPrice: string | null;
@@ -76,7 +76,7 @@ function toProductCard(product: {
     id: product.id,
     title: product.title,
     slug: product.slug,
-    href: "/products/" + encodeURIComponent(product.slug),
+    href: productPath(product),
     image: product.primaryImage,
     price: product.price,
     compareAtPrice: product.compareAtPrice,
