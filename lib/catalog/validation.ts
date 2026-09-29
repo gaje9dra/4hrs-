@@ -206,7 +206,7 @@ export function validateImage(input: ImageInput): ValidationIssue[] {
 
   if (input.storageReference !== null && input.storageReference !== undefined) {
     const reference = input.storageReference.trim();
-    if (!reference || /[\\u0000-\\u001F\\u007F\\s]/.test(reference)) {
+    if (!reference || /[\u0000-\u001F\u007F\s]/.test(reference)) {
       issues.push(issue("storageReference", "INVALID_ASSET_REFERENCE", "Storage reference must be a non-empty safe value without whitespace or control characters."));
     } else if (reference.length > CATALOG_MEDIA_STORAGE_REFERENCE_MAX_LENGTH) {
       issues.push(issue("storageReference", "ASSET_REFERENCE_TOO_LONG", "Storage reference exceeds the maximum supported length."));
