@@ -1101,7 +1101,7 @@ export async function replaceProductRelationships(
       const existing = await tx.productCategory.findMany({ where: { productId } });
       const existingIds = new Set(existing.map((item) => item.categoryId));
       await tx.productCategory.deleteMany({
-        where: { productId, categoryId: { notIn: desired.length ? desired : ["00000000-0000-0000-0000-000000000000"] } },
+        where: desired.length ? { productId, categoryId: { notIn: desired } } : { productId },
       });
       await Promise.all(desired.filter((categoryId) => !existingIds.has(categoryId)).map((categoryId) =>
         tx.productCategory.create({ data: { productId, categoryId } }),
@@ -1113,7 +1113,7 @@ export async function replaceProductRelationships(
       const existing = await tx.productCollection.findMany({ where: { productId } });
       const existingIds = new Set(existing.map((item) => item.collectionId));
       await tx.productCollection.deleteMany({
-        where: { productId, collectionId: { notIn: desired.length ? desired : ["00000000-0000-0000-0000-000000000000"] } },
+        where: desired.length ? { productId, collectionId: { notIn: desired } } : { productId },
       });
       await Promise.all(desired.filter((collectionId) => !existingIds.has(collectionId)).map((collectionId) =>
         tx.productCollection.create({ data: { productId, collectionId } }),
@@ -1123,7 +1123,7 @@ export async function replaceProductRelationships(
     if (relationships.tagIds) {
       const desired = [...new Set(relationships.tagIds)];
       await tx.productTag.deleteMany({
-        where: { productId, tagId: { notIn: desired.length ? desired : ["00000000-0000-0000-0000-000000000000"] } },
+        where: desired.length ? { productId, tagId: { notIn: desired } } : { productId },
       });
       const existing = await tx.productTag.findMany({ where: { productId } });
       const existingIds = new Set(existing.map((item) => item.tagId));
