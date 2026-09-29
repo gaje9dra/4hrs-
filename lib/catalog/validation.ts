@@ -186,6 +186,9 @@ export function validateImage(input: ImageInput): ValidationIssue[] {
   if (hasProduct === hasVariant) {
     issues.push(issue("ownership", "INVALID_IMAGE_OWNER", "Image must reference exactly one Product or ProductVariant."));
   }
+  if (input.isPrimary && !hasProduct) {
+    issues.push(issue("isPrimary", "INVALID_PRIMARY_IMAGE_OWNER", "Only product-level media can be primary."));
+  }
 
   const url = input.url.trim();
   if (!url) {
