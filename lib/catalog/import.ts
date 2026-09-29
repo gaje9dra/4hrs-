@@ -701,6 +701,14 @@ async function resolveImportedOptionTypes(
     let optionType = optionTypeInput.id
       ? await repository.getOptionTypeById(optionTypeInput.id)
       : null;
+    if (optionType && optionType.normalizedName !== normalizedName) {
+      throw new CatalogImportError("Imported option type identity conflict.", [
+        issue("product", "CONFLICT", "Option type ID resolves to a different normalized identity.", {
+          field: "optionTypes",
+          recordReference: optionTypeInput.id,
+        }),
+      ]);
+    }
     if (!optionType) optionType = await repository.getOptionTypeByNormalizedName(normalizedName);
     if (!optionType) {
       optionType = await service.createOptionType({
@@ -714,6 +722,14 @@ async function resolveImportedOptionTypes(
     for (const valueInput of optionTypeInput.values ?? []) {
       const normalizedValue = normalizeOptionReference(valueInput.normalizedValue ?? valueInput.displayName);
       let value = valueInput.id ? await repository.getOptionValueById(valueInput.id) : null;
+      if (value && value.optionTypeId === optionType.id && value.normalizedValue !== normalizedValue) {
+        throw new CatalogImportError("Imported option value identity conflict.", [
+          issue("product", "CONFLICT", "Option value ID resolves to a different normalized identity.", {
+            field: "optionTypes",
+            recordReference: valueInput.id,
+          }),
+        ]);
+      }
       if (!value || value.optionTypeId !== optionType.id) {
         value = await repository.getOptionValueByIdentity(optionType.id, normalizedValue);
       }
