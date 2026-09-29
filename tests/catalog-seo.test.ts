@@ -226,6 +226,8 @@ test("published slug changes are rejected until a redirect strategy exists", asy
     currency: "INR",
     seoTitle: null,
     seoDescription: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
   };
 
   const service = createCatalogService({
@@ -248,7 +250,7 @@ test("application-level slug uniqueness is checked before category and collectio
   const { createCatalogService } = await import("../lib/catalog/service.ts");
 
   const categoryService = createCatalogService({
-    getCategoryBySlug: async () => ({ id: "other-category" }),
+    getCategoryBySlug: async () => ({ id: "other-category", name: "Other", slug: "other-category", description: null, seoTitle: null, seoDescription: null, parentId: null, status: "ACTIVE" as const, createdAt: new Date(), updatedAt: new Date() }),
   });
   await assert.rejects(
     categoryService.createCategory({
@@ -260,7 +262,7 @@ test("application-level slug uniqueness is checked before category and collectio
   );
 
   const collectionService = createCatalogService({
-    getCollectionBySlug: async () => ({ id: "other-collection" }),
+    getCollectionBySlug: async () => ({ id: "other-collection", name: "Other", slug: "other-collection", description: null, seoTitle: null, seoDescription: null, status: "ACTIVE" as const, createdAt: new Date(), updatedAt: new Date() }),
   });
   await assert.rejects(
     collectionService.createCollection({
