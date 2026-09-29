@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -16,13 +17,14 @@ export function ProductCard({ product }: { product: StorefrontProductCard }) {
   return (
     <Card className="overflow-hidden p-0">
       <Link href={productPath(product)} className="motion-link block no-underline">
-        <div className="aspect-[4/5] overflow-hidden border-b-2 border-border bg-white lg:border-b-4">
+        <div className="relative aspect-[4/5] overflow-hidden border-b-2 border-border bg-white lg:border-b-4">
           {product.image ? (
-            <img
+            <Image
               src={product.image.url}
               alt={product.image.altText ?? product.title}
-              className="h-full w-full object-cover"
-              loading="lazy"
+              fill
+              sizes="(max-width: 639px) 100vw, (max-width: 1024px) 50vw, 25vw"
+              className="object-cover"
             />
           ) : (
             <div className="flex h-full items-center justify-center bg-primary-yellow p-6 text-center text-sm font-900 uppercase">
