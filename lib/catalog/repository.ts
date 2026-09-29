@@ -200,7 +200,7 @@ const publicCatalogSelect = {
   images: {
     where: { productId: { not: null } },
     orderBy: [{ isPrimary: "desc" as const }, { sortOrder: "asc" as const }, { id: "asc" as const }],
-    select: { id: true, url: true, altText: true, sortOrder: true, isPrimary: true },
+    select: { id: true, url: true, storageReference: true, mediaType: true, altText: true, sortOrder: true, isPrimary: true },
   },
   variants: {
     where: { status: "ACTIVE" },
@@ -649,6 +649,27 @@ export async function createImage(data: Prisma.ProductImageCreateInput, client?:
 
 export async function getImageById(id: string, client?: CatalogRepositoryClient) {
   return clientOrDefault(client).productImage.findUnique({ where: { id } });
+}
+
+export async function listProductImages(productId: string, client?: CatalogRepositoryClient) {
+  return clientOrDefault(client).productImage.findMany({
+    where: { productId },
+    orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }, { id: "asc" }],
+  });
+}
+
+export async function listVariantImages(variantId: string, client?: CatalogRepositoryClient) {
+  return clientOrDefault(client).productImage.findMany({
+    where: { variantId },
+    orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+  });
+}
+
+export async function getPrimaryProductImage(productId: string, client?: CatalogRepositoryClient) {
+  return clientOrDefault(client).productImage.findFirst({
+    where: { productId, isPrimary: true },
+    orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+  });
 }
 
 export async function updateImage(id: string, data: Prisma.ProductImageUpdateInput, client?: CatalogRepositoryClient) {
