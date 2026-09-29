@@ -1059,14 +1059,18 @@ export function createCatalogService(
         if (!parent) throw new CatalogServiceError("CATEGORY_NOT_FOUND", "Parent category was not found.");
       }
       try {
-        return await repo.createCategory({
-          id: input.id ?? randomUUID(),
-          name: normalizedInput.name,
-          slug: normalizedInput.slug,
-          status: input.status,
-          seoTitle: normalizedInput.seoTitle,
-          seoDescription: normalizedInput.seoDescription,
-          parent: input.parentId ? { connect: { id: input.parentId } } : undefined,
+        return await repo.withTransaction(async (tx) => {
+          const created = await repo.createCategory({
+            id: input.id ?? randomUUID(),
+            name: normalizedInput.name,
+            slug: normalizedInput.slug,
+            status: input.status,
+            seoTitle: normalizedInput.seoTitle,
+            seoDescription: normalizedInput.seoDescription,
+            parent: input.parentId ? { connect: { id: input.parentId } } : undefined,
+          }, tx);
+          await audit({ entityType: "CATEGORY", entityId: created.id, operation: "CREATE", afterState: created }, tx);
+          return created;
         });
       } catch (error) { mapDatabaseError(error); }
     },
@@ -1126,7 +1130,13 @@ export function createCatalogService(
       if (issues.length) validationError(issues, "INVALID_COLLECTION");
       const existingSlug = await repo.getCollectionBySlug(normalizedInput.slug);
       if (existingSlug) throw new CatalogServiceError("DUPLICATE_SLUG", "Catalog slug already exists.");
-      try { return await repo.createCollection({ name: normalizedInput.name, slug: normalizedInput.slug, seoTitle: normalizedInput.seoTitle, seoDescription: normalizedInput.seoDescription, status: normalizedInput.status }); }
+      try {
+        return await repo.withTransaction(async (tx) => {
+          const created = await repo.createCollection({ name: normalizedInput.name, slug: normalizedInput.slug, seoTitle: normalizedInput.seoTitle, seoDescription: normalizedInput.seoDescription, status: normalizedInput.status }, tx);
+          await audit({ entityType: "COLLECTION", entityId: created.id, operation: "CREATE", afterState: created }, tx);
+          return created;
+        });
+      }
       catch (error) { mapDatabaseError(error); }
     },
 
@@ -1244,7 +1254,13 @@ export function createCatalogService(
       if (issues.length) validationError(issues, "INVALID_TAG");
       const duplicate = await repo.getTagByName(normalized.name);
       if (duplicate) throw new CatalogServiceError("INVALID_TAG", "A logical tag with the same normalized name already exists.");
-      try { return await repo.createTag({ name: normalized.name, slug: normalized.slug }); }
+      try {
+        return await repo.withTransaction(async (tx) => {
+          const created = await repo.createTag({ name: normalized.name, slug: normalized.slug }, tx);
+          await audit({ entityType: "TAG", entityId: created.id, operation: "CREATE", afterState: created }, tx);
+          return created;
+        });
+      }
       catch (error) { mapDatabaseError(error); }
     },
 
@@ -1256,13 +1272,25 @@ export function createCatalogService(
       if (issues.length) validationError(issues, "INVALID_TAG");
       const duplicate = await repo.getTagByName(next.name);
       if (duplicate && duplicate.id !== id) throw new CatalogServiceError("INVALID_TAG", "A logical tag with the same normalized name already exists.");
-      try { return await repo.updateTag(id, next); } catch (error) { mapDatabaseError(error); }
+      try {
+        return await repo.withTransaction(async (tx) => {
+          const updated = await repo.updateTag(id, next, tx);
+          await audit({ entityType: "TAG", entityId: id, operation: "UPDATE", changedFields: changedFields(existing as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>), beforeState: existing, afterState: updated }, tx);
+          return updated;
+        });
+      } catch (error) { mapDatabaseError(error); }
     },
 
     async deleteTag(id: string) {
       const existing = await repo.getTagById(id);
       if (!existing) throw new CatalogServiceError("TAG_NOT_FOUND", "Tag was not found.");
-      try { return await repo.deleteTag(id); } catch (error) { mapDatabaseError(error); }
+      try {
+        return await repo.withTransaction(async (tx) => {
+          const deleted = await repo.deleteTag(id, tx);
+          await audit({ entityType: "TAG", entityId: id, operation: "DELETE", beforeState: existing }, tx);
+          return deleted;
+        });
+      } catch (error) { mapDatabaseError(error); }
     },
 
     async getTag(id: string) {
