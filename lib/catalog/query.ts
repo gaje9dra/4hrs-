@@ -93,9 +93,68 @@ export type CatalogListResult = {
 
 export type PublishedProductResult = CatalogListItem;
 
+export type CatalogProductMedia = {
+  id: string;
+  url: string;
+  altText: string | null;
+  sortOrder: number;
+  isPrimary: boolean;
+  mediaType: "IMAGE";
+};
+
+export type CatalogProductOptionValue = {
+  id: string;
+  displayName: string;
+  normalizedValue: string;
+  hex: string | null;
+  swatch: string | null;
+};
+
+export type CatalogProductOption = {
+  id: string;
+  name: string;
+  normalizedName: string;
+  sortOrder: number;
+  values: CatalogProductOptionValue[];
+};
+
+export type CatalogProductVariant = {
+  id: string;
+  displayName: string | null;
+  size: string | null;
+  color: string | null;
+  price: string;
+  compareAtPrice: string | null;
+  availability: CatalogAvailability;
+  media: CatalogProductMedia[];
+  optionValues: Array<CatalogProductOptionValue & { optionType: { id: string; name: string; normalizedName: string } }>;
+};
+
+export type PublishedProductDetailResult = {
+  id: string;
+  title: string;
+  slug: string;
+  description: string | null;
+  shortDescription: string | null;
+  price: string;
+  compareAtPrice: string | null;
+  currency: string;
+  status: "ACTIVE";
+  seoTitle: string | null;
+  seoDescription: string | null;
+  media: CatalogProductMedia[];
+  variants: CatalogProductVariant[];
+  options: CatalogProductOption[];
+  categories: Array<{ id: string; name: string; slug: string; description: string | null; parentId: string | null }>;
+  collections: Array<{ id: string; name: string; slug: string; description: string | null }>;
+  tags: Array<{ id: string; name: string; slug: string }>;
+  availability: CatalogAvailability;
+};
+
 type QueryRepository = {
   queryPublishedCatalogProducts: typeof repository.queryPublishedCatalogProducts;
   getPublishedProductBySlug: typeof repository.getPublishedProductBySlug;
+  getPublishedProductDetailsBySlug: typeof repository.getPublishedProductDetailsBySlug;
   getCategoryBySlug: typeof repository.getCategoryBySlug;
   listActiveCategories: typeof repository.listActiveCategories;
   getCollectionBySlug: typeof repository.getCollectionBySlug;
@@ -107,6 +166,7 @@ type QueryRepository = {
 const defaultRepository: QueryRepository = {
   queryPublishedCatalogProducts: repository.queryPublishedCatalogProducts,
   getPublishedProductBySlug: repository.getPublishedProductBySlug,
+  getPublishedProductDetailsBySlug: repository.getPublishedProductDetailsBySlug,
   getCategoryBySlug: repository.getCategoryBySlug,
   listActiveCategories: repository.listActiveCategories,
   getCollectionBySlug: repository.getCollectionBySlug,
@@ -335,6 +395,71 @@ export function createCatalogQueryService(customRepository: Partial<QueryReposit
           hasNextPage: result.hasNextPage,
         },
         appliedQuery,
+      };
+    },
+
+    async getPublishedProductDetailsBySlug(slug: string): Promise<PublishedProductDetailResult> {
+      const normalizedSlug = normalizeSlug(slug, "slug");
+      const product = await repo.getPublishedProductDetailsBySlug(normalizedSlug);
+      if (!product) throw new CatalogServiceError("PRODUCT_NOT_FOUND", "Published product was not found.");
+
+      const variants = product.variants.map((variant) => {
+        const effectivePrice = variant.price ?? product.price;
+        return {
+          id: variant.id,
+          displayName: variant.displayName,
+          size: variant.size,
+          color: variant.color,
+          price: effectivePrice.toString(),
+          compareAtPrice: variant.compareAtPrice?.toString() ?? product.compareAtPrice?.toString() ?? null,
+          availability: availabilityFromVariant(variant),
+          media: variant.images,
+          optionValues: variant.optionValues.map(({ optionValue }) => ({
+            id: optionValue.id,
+            displayName: optionValue.displayName,
+            normalizedValue: optionValue.normalizedValue,
+            hex: optionValue.hex,
+            swatch: optionValue.swatch,
+            optionType: {
+              id: optionValue.optionType.id,
+              name: optionValue.optionType.name,
+              normalizedName: optionValue.optionType.normalizedName,
+            },
+          })),
+        };
+      });
+
+      const availableVariant = variants.find((variant) =>
+        variant.availability.state === "IN_STOCK" ||
+        variant.availability.state === "LOW_STOCK" ||
+        variant.availability.state === "UNTRACKED",
+      );
+
+      return {
+        id: product.id,
+        title: product.title,
+        slug: product.slug,
+        description: product.description,
+        shortDescription: product.shortDescription,
+        price: product.price.toString(),
+        compareAtPrice: product.compareAtPrice?.toString() ?? null,
+        currency: product.currency,
+        status: "ACTIVE",
+        seoTitle: product.seoTitle,
+        seoDescription: product.seoDescription,
+        media: product.images,
+        variants,
+        options: product.optionTypes.map(({ optionType, sortOrder }) => ({
+          id: optionType.id,
+          name: optionType.name,
+          normalizedName: optionType.normalizedName,
+          sortOrder,
+          values: optionType.values,
+        })),
+        categories: product.categories.map(({ category }) => category),
+        collections: product.collections.map(({ collection }) => collection),
+        tags: product.tags.map(({ tag }) => tag),
+        availability: availableVariant?.availability ?? { state: "OUT_OF_STOCK", availableQuantity: 0 },
       };
     },
 
