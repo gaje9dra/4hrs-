@@ -551,7 +551,13 @@ export function createCatalogService(
       if (!canTransitionProductStatus(existing.status, "ARCHIVED")) {
         throw new CatalogServiceError("INVALID_STATUS", "Product cannot be archived from its current status.");
       }
-      try { return await repo.archiveProduct(id); } catch (error) { mapDatabaseError(error); }
+      try {
+        return await repo.withTransaction(async (tx) => {
+          const updated = await repo.archiveProduct(id, tx);
+          await audit({ entityType: "PRODUCT", entityId: id, operation: "ARCHIVE", beforeState: existing, afterState: updated }, tx);
+          return updated;
+        });
+      } catch (error) { mapDatabaseError(error); }
     },
 
     async publishProduct(id: string) {
@@ -641,7 +647,16 @@ export function createCatalogService(
             })),
           });
           if (readiness.length) validationError(readiness, "PRODUCT_NOT_PUBLISHABLE");
-          return repo.updateProduct(id, { status: "ACTIVE" }, tx);
+          const updated = await repo.updateProduct(id, { status: "ACTIVE" }, tx);
+          await audit({
+            entityType: "PRODUCT",
+            entityId: id,
+            operation: "PUBLISH",
+            changedFields: ["status"],
+            beforeState: latest,
+            afterState: updated,
+          }, tx);
+          return updated;
         });
       } catch (error) {
         mapDatabaseError(error);
