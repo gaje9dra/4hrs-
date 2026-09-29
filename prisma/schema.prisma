@@ -27,6 +27,24 @@ enum CollectionStatus {
 enum ProductMediaType {
   IMAGE
 }
+enum CatalogImportEntityType {
+  PRODUCT
+  VARIANT
+}
+
+
+model CatalogImportIdentity {
+  id                String                  @id @default(uuid()) @db.Uuid
+  entityType        CatalogImportEntityType
+  namespace         String
+  externalReference String
+  canonicalId       String                  @db.Uuid
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+  @@unique([entityType, namespace, externalReference])
+  @@index([entityType, canonicalId])
+  @@index([namespace, externalReference])
+}
 
 model Product {
   id               String        @id @default(uuid()) @db.Uuid
