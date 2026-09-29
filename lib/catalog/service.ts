@@ -477,7 +477,10 @@ export function createCatalogService(
         );
       }
       if (existing.status === "ACTIVE" && merged.slug !== existing.slug) {
-        issues.push({ field: "slug", code: "SLUG_CHANGE_REQUIRES_REDIRECT", message: "Published Product slugs cannot change without a redirect strategy." });
+        throw new CatalogServiceError(
+          "INVALID_PRODUCT",
+          "Published Product slugs cannot change without a redirect strategy.",
+        );
       }
       if (issues.length) validationError(issues, "INVALID_PRODUCT");
 
