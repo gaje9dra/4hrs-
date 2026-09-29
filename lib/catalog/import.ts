@@ -775,7 +775,7 @@ async function persistProduct(
   const collectionIdList = (await Promise.all((product.collections ?? []).map((ref) => resolveCollection(ref, collectionIds)))).filter(Boolean) as string[];
   const tagIdList = (await Promise.all((product.tags ?? []).map((ref) => resolveTag(ref, tagIds)))).filter(Boolean) as string[];
 
-  let productId = plan.productId ?? product.id ?? randomUUID();
+  const productId = plan.productId ?? product.id ?? randomUUID();
   if (!plan.productId) {
     const variantIdByReference = new Map<string, string>();
     const variants = (product.variants ?? []).map((variant) => {
