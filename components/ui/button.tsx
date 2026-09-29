@@ -1,3 +1,5 @@
+"use client"
+
 import type { AnchorHTMLAttributes, ButtonHTMLAttributes, ReactNode } from 'react'
 
 type ButtonVariant = 'primary' | 'secondary' | 'yellow' | 'outline' | 'ghost'
