@@ -64,15 +64,38 @@ export type CatalogImportMedia = {
   variantId?: string;
 };
 
+export type CatalogImportOptionValue = {
+  id?: string;
+  displayName: string;
+  normalizedValue?: string;
+  sortOrder?: number;
+  hex?: string | null;
+  swatch?: string | null;
+};
+
+export type CatalogImportOptionType = {
+  id?: string;
+  name: string;
+  normalizedName?: string;
+  sortOrder?: number;
+  values?: CatalogImportOptionValue[];
+};
+
 export type CatalogImportVariant = Omit<VariantInput, "productId" | "id"> & {
   id?: string;
   externalReference?: string;
   optionValueIds?: string[];
+  optionValues?: Array<{
+    optionTypeNormalizedName: string;
+    normalizedValue: string;
+    displayName?: string;
+  }>;
 };
 
 export type CatalogImportProduct = Omit<ProductInput, "id"> & {
   id?: string;
   externalReference?: string;
+  optionTypes?: CatalogImportOptionType[];
   variants?: CatalogImportVariant[];
   images?: CatalogImportMedia[];
   categories?: Array<CatalogImportReference & { position?: number; priority?: number; isFeatured?: boolean }>;
@@ -174,6 +197,11 @@ function normalizeImportProduct(input: CatalogImportProduct): CatalogImportProdu
       size: variant.size?.trim() || null,
       color: variant.color?.trim() || null,
       optionValueIds: variant.optionValueIds ? [...new Set(variant.optionValueIds.map((id) => id.trim()).filter(Boolean))] : [],
+      optionValues: variant.optionValues?.map((value) => ({
+        optionTypeNormalizedName: value.optionTypeNormalizedName.trim().toLowerCase(),
+        normalizedValue: normalizeOptionReference(value.normalizedValue),
+        displayName: value.displayName?.trim() || undefined,
+      })),
     })),
     images: (input.images ?? []).map((media) => ({
       ...media,
@@ -653,6 +681,66 @@ async function planProducts(
     });
   }
   return plans;
+}
+
+async function resolveImportedOptionTypes(
+  product: CatalogImportProduct,
+  service: ReturnType<typeof createCatalogService>,
+): Promise<{
+  optionTypeIds: string[];
+  optionValueIdsByExportedId: Map<string, string>;
+  optionValueIdsByIdentity: Map<string, string>;
+}> {
+  const optionTypeIds: string[] = [];
+  const optionValueIdsByExportedId = new Map<string, string>();
+  const optionValueIdsByIdentity = new Map<string, string>();
+
+  for (const optionTypeInput of product.optionTypes ?? []) {
+    const normalizedName = normalizeOptionIdentity(optionTypeInput.normalizedName ?? optionTypeInput.name);
+    let optionType = optionTypeInput.id
+      ? await repository.getOptionTypeById(optionTypeInput.id)
+      : null;
+    if (!optionType) optionType = await repository.getOptionTypeByNormalizedName(normalizedName);
+    if (!optionType) {
+      optionType = await service.createOptionType({
+        id: optionTypeInput.id,
+        name: optionTypeInput.name,
+        sortOrder: optionTypeInput.sortOrder ?? 0,
+      });
+    }
+    optionTypeIds.push(optionType.id);
+
+    for (const valueInput of optionTypeInput.values ?? []) {
+      const normalizedValue = normalizeOptionReference(valueInput.normalizedValue ?? valueInput.displayName);
+      let value = valueInput.id ? await repository.getOptionValueById(valueInput.id) : null;
+      if (!value || value.optionTypeId !== optionType.id) {
+        value = await repository.getOptionValueByIdentity(optionType.id, normalizedValue);
+      }
+      if (!value) {
+        value = await service.createOptionValue({
+          id: valueInput.id,
+          optionTypeId: optionType.id,
+          displayName: valueInput.displayName,
+          normalizedValue,
+          sortOrder: valueInput.sortOrder ?? 0,
+          hex: valueInput.hex ?? null,
+          swatch: valueInput.swatch ?? null,
+        });
+      }
+      if (valueInput.id) optionValueIdsByExportedId.set(valueInput.id, value.id);
+      optionValueIdsByIdentity.set(optionValueIdentity(normalizedName, normalizedValue), value.id);
+    }
+  }
+
+  return { optionTypeIds: [...new Set(optionTypeIds)], optionValueIdsByExportedId, optionValueIdsByIdentity };
+}
+
+function normalizeOptionReference(value: string): string {
+  return value.trim().toLowerCase().replace(/\s+/g, "-");
+}
+
+function optionValueIdentity(optionTypeNormalizedName: string, normalizedValue: string): string {
+  return optionTypeNormalizedName + "\u0000" + normalizedValue;
 }
 
 async function persistProduct(
