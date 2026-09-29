@@ -1,4 +1,4 @@
-import { createCatalogQueryService, type CatalogQuery, type PublishedProductDetailResult } from "@/lib/catalog/query";
+import { createCatalogQueryService, type CatalogAppliedQuery, type CatalogQuery, type PublishedProductDetailResult } from "@/lib/catalog/query";
 import { createCatalogSearchService, type CatalogSearchQuery } from "@/lib/catalog/search";
 
 const catalog = createCatalogQueryService();
@@ -26,6 +26,7 @@ export type StorefrontCategory = {
   parentId: string | null;
   seoTitle: string | null;
   seoDescription: string | null;
+  status: "ACTIVE";
   breadcrumbs: Array<{ name: string; slug: string }>;
 };
 
@@ -36,6 +37,7 @@ export type StorefrontCollection = {
   description: string | null;
   seoTitle: string | null;
   seoDescription: string | null;
+  status: "ACTIVE";
 };
 
 export type StorefrontProductList = {
@@ -47,20 +49,8 @@ export type StorefrontProductList = {
     totalPages: number;
     hasNextPage: boolean;
   };
-  appliedQuery: ReturnType<typeof normalizePublicQuery>;
+  appliedQuery: CatalogAppliedQuery;
 };
-
-function normalizePublicQuery(query: CatalogQuery) {
-  return {
-    ...query,
-    page: query.page ?? 1,
-    pageSize: query.pageSize ?? 24,
-    sort: query.sort ?? "newest",
-    tags: query.tags ?? [],
-    tagMode: query.tagMode ?? "AND",
-    inStock: query.inStock ?? false,
-  };
-}
 
 function toProductCard(product: {
   id: string;
@@ -124,6 +114,7 @@ export async function getStorefrontCategory(slug: string): Promise<StorefrontCat
     parentId: category.parentId,
     seoTitle: category.seoTitle,
     seoDescription: category.seoDescription,
+    status: "ACTIVE",
     breadcrumbs: await buildCategoryBreadcrumbs(category),
   };
 }
@@ -137,6 +128,7 @@ export async function getStorefrontCollection(slug: string): Promise<StorefrontC
     description: collection.description,
     seoTitle: collection.seoTitle,
     seoDescription: collection.seoDescription,
+    status: "ACTIVE",
   };
 }
 
