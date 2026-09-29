@@ -5,7 +5,7 @@ import { createCatalogService } from "../lib/catalog/service.ts";
 import { CatalogServiceError } from "../lib/catalog/errors.ts";
 
 const product = {
-  id: "product-1",
+  id: "11111111-1111-4111-8111-111111111111",
   title: "Oversized Graphic T-Shirt",
   slug: "oversized-graphic-t-shirt",
   description: null,
@@ -59,8 +59,8 @@ test("service maps missing product reads to a domain error", async () => {
 
 test("service prevents duplicate SKU before persistence", async () => {
   const existingVariant = {
-    id: "variant-1",
-    productId: "product-1",
+    id: "22222222-2222-4222-8222-222222222222",
+    productId: "11111111-1111-4111-8111-111111111111",
     sku: "TSHIRT-BLK-M-001",
     displayName: null,
     size: "M",
@@ -80,7 +80,7 @@ test("service prevents duplicate SKU before persistence", async () => {
 
   await assert.rejects(
     service.createVariant({
-      productId: "product-1",
+      productId: "11111111-1111-4111-8111-111111111111",
       sku: "TSHIRT-BLK-M-001",
       size: "L",
       color: "Black",
@@ -93,8 +93,8 @@ test("service prevents duplicate SKU before persistence", async () => {
 
 test("service prevents duplicate normalized variant options", async () => {
   const existingVariant = {
-    id: "variant-1",
-    productId: "product-1",
+    id: "22222222-2222-4222-8222-222222222222",
+    productId: "11111111-1111-4111-8111-111111111111",
     sku: "TSHIRT-BLK-M-001",
     displayName: null,
     size: "M",
@@ -114,7 +114,7 @@ test("service prevents duplicate normalized variant options", async () => {
 
   await assert.rejects(
     service.createVariant({
-      productId: "product-1",
+      productId: "11111111-1111-4111-8111-111111111111",
       sku: "TSHIRT-BLK-M-002",
       size: " m ",
       color: " black ",
@@ -139,7 +139,7 @@ test("service rejects archived product publication", async () => {
   });
 
   await assert.rejects(
-    service.publishProduct("product-1"),
+    service.publishProduct("11111111-1111-4111-8111-111111111111"),
     (error: unknown) =>
       error instanceof CatalogServiceError && error.code === "INVALID_STATUS_TRANSITION",
   );
@@ -157,7 +157,7 @@ test("service reports deterministic publication readiness without mutating statu
     }),
   });
 
-  const result = await service.isPublishable("product-1");
+  const result = await service.isPublishable("11111111-1111-4111-8111-111111111111");
   assert.equal(result.publishable, false);
   assert.ok(result.issues.some((issue) => issue.code === "VARIANT_REQUIRED"));
   assert.ok(result.issues.some((issue) => issue.code === "PRODUCT_IMAGE_REQUIRED"));
@@ -171,7 +171,7 @@ test("service rejects direct Product status mutation outside lifecycle operation
 
   await assert.rejects(
     service.updateProduct({
-      id: "product-1",
+      id: "11111111-1111-4111-8111-111111111111",
       status: "ACTIVE",
     }),
     (error: unknown) =>
