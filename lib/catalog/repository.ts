@@ -464,11 +464,11 @@ export async function queryMerchandisedCatalogProducts(
   const offset = normalizeOffset(options.offset);
   const slug = merchandisingContextSlug(options, options.context);
   const productWhere = buildMerchandisingProductWhere(options);
-  const relationWhere = options.context === "collection"
-    ? { collection: { slug, status: "ACTIVE" }, product: productWhere }
-    : { category: { slug, status: "ACTIVE" }, product: productWhere };
-
   if (options.context === "collection") {
+    const relationWhere = {
+      collection: { slug, status: "ACTIVE" as const },
+      product: productWhere,
+    };
     const [items, total] = await Promise.all([
       repository.productCollection.findMany({
         where: relationWhere,
