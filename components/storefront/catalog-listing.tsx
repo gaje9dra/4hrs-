@@ -16,8 +16,8 @@ export function CatalogListing({
   description?: string | null;
   products: StorefrontProductList;
   params: StorefrontSearchParams;
-  categories: StorefrontCategory[];
-  collections: StorefrontCollection[];
+  categories: Array<Pick<StorefrontCategory, "id" | "name" | "slug">>;
+  collections: Array<Pick<StorefrontCollection, "id" | "name" | "slug">>;
   tags: StorefrontTag[];
   fixedCategory?: string;
   fixedCollection?: string;
