@@ -321,15 +321,18 @@ export function createCatalogService(
         if (readiness.length) validationError(readiness, "PRODUCT_NOT_PUBLISHABLE");
       }
 
+      const requestedStatus = product.status;
+      const persistedStatus = requestedStatus === "ACTIVE" || requestedStatus === "ARCHIVED" ? "DRAFT" : requestedStatus;
+
       try {
-        return await repo.withTransaction(async (tx) => {
+        const created = await repo.withTransaction(async (tx) => {
           const created = await repo.createProduct({
             id: productId,
             title: product.title,
             slug: product.slug,
             description: product.description ?? null,
             shortDescription: product.shortDescription ?? null,
-            status: product.status,
+            status: persistedStatus,
             price: decimalValue(product.price)!,
             compareAtPrice: decimalValue(product.compareAtPrice) ?? null,
             currency: product.currency,
@@ -401,6 +404,10 @@ export function createCatalogService(
 
           return created;
         });
+
+        if (requestedStatus === "ACTIVE") return lifecycle.publishProduct(productId);
+        if (requestedStatus === "ARCHIVED") return lifecycle.archiveProduct(productId);
+        return created;
       } catch (error) {
         mapDatabaseError(error);
       }
