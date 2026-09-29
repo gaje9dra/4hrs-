@@ -1,18 +1,14 @@
 'use client'
 
-import type { RefObject } from 'react'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { ChevronRight, X } from 'lucide-react'
+import { ChevronRight, Menu, X } from 'lucide-react'
+import { usePathname } from 'next/navigation'
 import type { NavigationItem } from '@/types/navigation'
 import { HeaderBrand } from '@/components/layout/header-brand'
 
 type MobileNavProps = {
-  open: boolean
   items: NavigationItem[]
-  onClose: () => void
-  triggerRef: RefObject<HTMLButtonElement | null>
-  activeHref?: string | null
 }
 
 function isActive(item: NavigationItem, pathname: string) {
@@ -25,10 +21,12 @@ function isActive(item: NavigationItem, pathname: string) {
   return item.children.some((child) => child.href === pathname)
 }
 
-export function MobileNav({ open, items, onClose, triggerRef, activeHref }: MobileNavProps) {
+export function MobileNav({ items }: MobileNavProps) {
+  const [open, setOpen] = useState(false)
+  const pathname = usePathname()
   const panelRef = useRef<HTMLElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
   const firstLinkRef = useRef<HTMLAnchorElement>(null)
-  const pathname = activeHref ?? '/'
 
   useEffect(() => {
     if (!open) return
@@ -41,7 +39,7 @@ export function MobileNav({ open, items, onClose, triggerRef, activeHref }: Mobi
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault()
-        onClose()
+        setOpen(false)
         return
       }
 
@@ -77,107 +75,121 @@ export function MobileNav({ open, items, onClose, triggerRef, activeHref }: Mobi
       document.body.style.overflow = previousOverflow
       trigger?.focus()
     }
-  }, [open, onClose, triggerRef])
-
-  if (!open) return null
+  }, [open])
 
   const visibleItems = items.filter((item) => !item.disabled && (item.href || item.children?.length))
 
   return (
-    <div className="fixed inset-0 z-40 md:hidden">
+    <>
       <button
+        ref={triggerRef}
         type="button"
-        className="absolute inset-0 bg-foreground/40"
-        aria-label="Close navigation"
-        onClick={onClose}
-      />
-      <aside
-        id="mobile-navigation-panel"
-        ref={panelRef}
-        className="absolute inset-y-0 right-0 flex w-full max-w-md flex-col border-l-4 border-border bg-background shadow-hard-md lg:shadow-hard-lg"
-        aria-label="Mobile navigation panel"
+        onClick={() => setOpen((value) => !value)}
+        className="motion-press inline-flex h-11 w-11 shrink-0 items-center justify-center border-2 border-border bg-primary-yellow hover:bg-white md:hidden"
+        aria-expanded={open}
+        aria-controls="mobile-navigation-panel"
+        aria-label={open ? 'Close navigation' : 'Open navigation'}
       >
-        <div className="flex min-h-16 items-center justify-between border-b-4 border-border px-4 py-3">
-          <HeaderBrand onNavigate={onClose} />
+        {open ? <X size={22} strokeWidth={2.5} aria-hidden="true" /> : <Menu size={22} strokeWidth={2.5} aria-hidden="true" />}
+      </button>
+
+      {open ? (
+        <div className="fixed inset-0 z-40 md:hidden">
           <button
             type="button"
-            onClick={onClose}
-            className="motion-press inline-flex h-11 w-11 shrink-0 items-center justify-center border-2 border-border bg-primary-yellow"
+            className="absolute inset-0 bg-foreground/40"
             aria-label="Close navigation"
+            onClick={() => setOpen(false)}
+          />
+          <aside
+            id="mobile-navigation-panel"
+            ref={panelRef}
+            className="absolute inset-y-0 right-0 flex w-full max-w-md flex-col border-l-4 border-border bg-background shadow-hard-md lg:shadow-hard-lg"
+            aria-label="Mobile navigation panel"
           >
-            <X size={22} strokeWidth={2.5} aria-hidden="true" />
-          </button>
+            <div className="flex min-h-16 items-center justify-between border-b-4 border-border px-4 py-3">
+              <HeaderBrand onNavigate={() => setOpen(false)} />
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="motion-press inline-flex h-11 w-11 shrink-0 items-center justify-center border-2 border-border bg-primary-yellow"
+                aria-label="Close navigation"
+              >
+                <X size={22} strokeWidth={2.5} aria-hidden="true" />
+              </button>
+            </div>
+
+            <nav className="overflow-y-auto px-4 py-5" aria-label="Mobile navigation">
+              <ul className="m-0 list-none p-0">
+                {visibleItems.map((item, index) => {
+                  const active = isActive(item, pathname)
+                  const children = item.children?.filter((child) => child.href && !child.disabled) ?? []
+
+                  return (
+                    <li key={item.label} className="border-b-2 border-border py-1">
+                      {item.href ? (
+                        <Link
+                          ref={index === 0 ? firstLinkRef : undefined}
+                          href={item.href}
+                          onClick={() => setOpen(false)}
+                          aria-current={active ? 'page' : undefined}
+                          className={[
+                            'flex min-h-14 items-center justify-between py-3 no-underline',
+                            'text-lg font-900 uppercase tracking-[0.06em]',
+                            index % 3 === 0 ? 'text-primary-red' : '',
+                            index % 3 === 1 ? 'text-primary-blue' : '',
+                            'motion-link hover:bg-primary-yellow hover:text-foreground',
+                            active ? 'bg-white text-foreground' : '',
+                          ].join(' ')}
+                        >
+                          <span>{item.label}</span>
+                          <ChevronRight size={22} strokeWidth={2.5} aria-hidden="true" />
+                        </Link>
+                      ) : (
+                        <div
+                          className={[
+                            'min-h-12 px-2 py-3 text-xs font-900 uppercase tracking-[0.2em]',
+                            active ? 'bg-white' : '',
+                          ].join(' ')}
+                          aria-current={active ? 'page' : undefined}
+                        >
+                          {item.label}
+                        </div>
+                      )}
+
+                      {children.length ? (
+                        <ul className="m-0 list-none border-l-4 border-border pl-3">
+                          {children.map((child) => {
+                            const childActive = child.href === pathname
+                            return (
+                              <li key={child.label}>
+                                <Link
+                                  ref={index === 0 && child === children[0] ? firstLinkRef : undefined}
+                                  href={child.href!}
+                                  onClick={() => setOpen(false)}
+                                  aria-current={childActive ? 'page' : undefined}
+                                  className={[
+                                    'flex min-h-12 items-center px-3 py-2 no-underline',
+                                    'text-sm font-700 uppercase tracking-[0.08em]',
+                                    'motion-link hover:bg-primary-yellow hover:text-foreground',
+                                    childActive ? 'bg-white text-foreground' : '',
+                                  ].join(' ')}
+                                >
+                                  {child.label}
+                                </Link>
+                              </li>
+                            )
+                          })}
+                        </ul>
+                      ) : null}
+                    </li>
+                  )
+                })}
+              </ul>
+            </nav>
+          </aside>
         </div>
-
-        <nav className="overflow-y-auto px-4 py-5" aria-label="Mobile navigation">
-          <ul className="m-0 list-none p-0">
-            {visibleItems.map((item, index) => {
-              const active = isActive(item, pathname)
-              const children = item.children?.filter((child) => child.href && !child.disabled) ?? []
-
-              return (
-                <li key={item.label} className="border-b-2 border-border py-1">
-                  {item.href ? (
-                    <Link
-                      ref={index === 0 ? firstLinkRef : undefined}
-                      href={item.href}
-                      onClick={onClose}
-                      aria-current={active ? 'page' : undefined}
-                      className={[
-                        'flex min-h-14 items-center justify-between py-3 no-underline',
-                        'text-lg font-900 uppercase tracking-[0.06em]',
-                        index % 3 === 0 ? 'text-primary-red' : '',
-                        index % 3 === 1 ? 'text-primary-blue' : '',
-                        'motion-link hover:bg-primary-yellow hover:text-foreground',
-                        active ? 'bg-white text-foreground' : '',
-                      ].join(' ')}
-                    >
-                      <span>{item.label}</span>
-                      <ChevronRight size={22} strokeWidth={2.5} aria-hidden="true" />
-                    </Link>
-                  ) : (
-                    <div
-                      className={[
-                        'min-h-12 px-2 py-3 text-xs font-900 uppercase tracking-[0.2em]',
-                        active ? 'bg-white' : '',
-                      ].join(' ')}
-                      aria-current={active ? 'page' : undefined}
-                    >
-                      {item.label}
-                    </div>
-                  )}
-
-                  {children.length ? (
-                    <ul className="m-0 list-none border-l-4 border-border pl-3">
-                      {children.map((child) => {
-                        const childActive = child.href === pathname
-                        return (
-                          <li key={child.label}>
-                            <Link
-                              ref={index === 0 && child === children[0] ? firstLinkRef : undefined}
-                              href={child.href!}
-                              onClick={onClose}
-                              aria-current={childActive ? 'page' : undefined}
-                              className={[
-                                'flex min-h-12 items-center px-3 py-2 no-underline',
-                                'text-sm font-700 uppercase tracking-[0.08em]',
-                                'motion-link hover:bg-primary-yellow hover:text-foreground',
-                                childActive ? 'bg-white text-foreground' : '',
-                              ].join(' ')}
-                            >
-                              {child.label}
-                            </Link>
-                          </li>
-                        )
-                      })}
-                    </ul>
-                  ) : null}
-                </li>
-              )
-            })}
-          </ul>
-        </nav>
-      </aside>
-    </div>
+      ) : null}
+    </>
   )
 }
