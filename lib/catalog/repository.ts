@@ -1255,8 +1255,6 @@ export async function replaceProductRelationships(
   relationships: { categoryIds?: string[]; collectionIds?: string[]; tagIds?: string[] },
   client?: CatalogRepositoryClient,
 ) {
-  const repository = clientOrDefault(client);
-
   const run = async (tx: CatalogRepositoryClient) => {
     if (relationships.categoryIds) {
       const desired = [...new Set(relationships.categoryIds)];
