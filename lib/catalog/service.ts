@@ -340,7 +340,13 @@ export function createCatalogService(
           }, tx);
 
           for (const [index, optionTypeId] of (optionTypeIds ?? []).entries()) {
-            await repo.assignProductOptionType(productId, optionTypeId, index, tx);
+            const relationship = await repo.assignProductOptionType(productId, optionTypeId, index, tx);
+            await audit({
+              entityType: "PRODUCT",
+              entityId: productId,
+              operation: "RELATIONSHIP_ADD",
+              metadata: { optionTypeId, sortOrder: index, relationship },
+            }, tx);
           }
 
           for (const variant of normalizedVariants) {
@@ -358,6 +364,14 @@ export function createCatalogService(
             }, tx);
             const optionCheck = variantOptionChecks[normalizedVariants.indexOf(variant)];
             await repo.replaceVariantOptionValues(variantId, optionCheck.optionValueIds, tx);
+            if (optionCheck.optionValueIds.length) {
+              await audit({
+                entityType: "VARIANT",
+                entityId: variantId,
+                operation: "RELATIONSHIP_ADD",
+                metadata: { optionValueIds: optionCheck.optionValueIds },
+              }, tx);
+            }
           }
 
           for (const image of normalizedImages) {
