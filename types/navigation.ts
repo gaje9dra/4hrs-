@@ -4,10 +4,11 @@ export type NavigationItem = {
   children?: NavigationItem[]
   external?: boolean
   disabled?: boolean
+  match?: "exact" | "section"
 }
 
 export type UtilityNavigationItem = {
   label: string
   href: string
-  icon: 'search' | 'account' | 'wishlist' | 'cart'
+  icon: "search" | "account" | "wishlist" | "cart"
 }
