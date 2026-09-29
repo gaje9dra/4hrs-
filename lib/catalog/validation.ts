@@ -1,4 +1,8 @@
-import type { ProductStatus } from "@prisma/client";
+import type { ProductMediaType, ProductStatus } from "@prisma/client";
+import {
+  CATALOG_MEDIA_ALT_TEXT_MAX_LENGTH,
+  CATALOG_MEDIA_STORAGE_REFERENCE_MAX_LENGTH,
+} from "@/lib/catalog/media";
 
 export type ValidationIssue = { field: string; code: string; message: string };
 
@@ -19,7 +23,7 @@ export type VariantOptionInput = { optionTypeId: string; optionValueId: string }
 export type VariantInput = { productId: string; id?: string; sku: string; displayName?: string | null; size?: string | null; color?: string | null; optionValueIds?: string[]; price?: number | string | null; compareAtPrice?: number | string | null; status: "ACTIVE" | "INACTIVE" };
 export type VariantOptionTypeInput = { id?: string; name: string; sortOrder?: number };
 export type VariantOptionValueInput = { id?: string; optionTypeId: string; displayName: string; normalizedValue?: string; sortOrder?: number; hex?: string | null; swatch?: string | null };
-export type ImageInput = { productId?: string | null; variantId?: string | null; url: string; altText?: string | null; sortOrder: number; isPrimary: boolean };
+export type ImageInput = { productId?: string | null; variantId?: string | null; url: string; storageReference?: string | null; mediaType?: ProductMediaType; altText?: string | null; sortOrder: number; isPrimary: boolean };
 export type CategoryInput = { id?: string; name: string; slug: string; status: "ACTIVE" | "ARCHIVED"; parentId?: string | null; seoTitle?: string | null; seoDescription?: string | null };
 export type CollectionInput = { name: string; slug: string; status: "ACTIVE" | "ARCHIVED"; seoTitle?: string | null; seoDescription?: string | null };
 export type TagInput = { name: string; slug: string };
@@ -78,6 +82,7 @@ export function normalizeSku(sku: string): string { return normalizedText(sku); 
 export function normalizeOptionTypeName(name: string): string { return normalizedText(name); }
 export function normalizeOptionIdentity(value: string): string { return slugify(value); }
 export function normalizeOptionDisplayValue(value: string): string { return normalizedText(value); }
+export function normalizeAltText(value: string | null | undefined): string | null { if (value === null || value === undefined) return null; const normalized = normalizedText(value); return normalized || null; }
 export function validateOptionType(input: VariantOptionTypeInput): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
   requireText(input.name, "name", "Option type name", issues);
@@ -175,11 +180,55 @@ export function validateVariantPricing(productPrice: number | string, variant: V
 }
 
 export function validateImage(input: ImageInput): ValidationIssue[] {
-  const issues: ValidationIssue[] = []; const hasProduct = Boolean(input.productId); const hasVariant = Boolean(input.variantId);
-  if (hasProduct === hasVariant) issues.push(issue("ownership", "INVALID_IMAGE_OWNER", "Image must reference exactly one Product or ProductVariant."));
-  if (!input.url.trim()) issues.push(issue("url", "INVALID_IMAGE_URL", "Image URL/storage reference is required.")); else { try { new URL(input.url); } catch { issues.push(issue("url", "INVALID_IMAGE_URL", "Image URL must be a valid absolute URL.")); } }
-  if (!Number.isInteger(input.sortOrder) || input.sortOrder < 0) issues.push(issue("sortOrder", "INVALID_SORT_ORDER", "Image sort order must be a non-negative integer."));
-  return issues;
+  const issues: ValidationIssue[] = [];
+  const hasProduct = Boolean(input.productId);
+  const hasVariant = Boolean(input.variantId);
+  if (hasProduct === hasVariant) {
+    issues.push(issue("ownership", "INVALID_IMAGE_OWNER", "Image must reference exactly one Product or ProductVariant."));
+  }
+
+  const url = input.url.trim();
+  if (!url) {
+    issues.push(issue("url", "INVALID_IMAGE_URL", "Image URL is required."));
+  } else {
+    try {
+      const parsed = new URL(url);
+      if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+        issues.push(issue("url", "INVALID_IMAGE_URL", "Image URL must use HTTP or HTTPS."));
+      }
+    } catch {
+      issues.push(issue("url", "INVALID_IMAGE_URL", "Image URL must be a valid absolute URL."));
+    }
+  }
+
+  if (input.storageReference !== null && input.storageReference !== undefined) {
+    const reference = input.storageReference.trim();
+    if (!reference || /[\\u0000-\\u001F\\u007F\\s]/.test(reference)) {
+      issues.push(issue("storageReference", "INVALID_ASSET_REFERENCE", "Storage reference must be a non-empty safe value without whitespace or control characters."));
+    } else if (reference.length > CATALOG_MEDIA_STORAGE_REFERENCE_MAX_LENGTH) {
+      issues.push(issue("storageReference", "ASSET_REFERENCE_TOO_LONG", "Storage reference exceeds the maximum supported length."));
+    }
+  }
+
+  const mediaType = input.mediaType ?? "IMAGE";
+  if (mediaType !== "IMAGE") {
+    issues.push(issue("mediaType", "UNSUPPORTED_MEDIA_TYPE", "Only image media is supported by the current catalog."));
+  }
+
+  if (input.altText !== null && input.altText !== undefined) {
+    const altText = normalizeAltText(input.altText);
+    if (altText && /[<>]/.test(altText)) {
+      issues.push(issue("altText", "INVALID_ALT_TEXT", "Alt text must not contain markup."));
+    }
+    if (altText && altText.length > CATALOG_MEDIA_ALT_TEXT_MAX_LENGTH) {
+      issues.push(issue("altText", "ALT_TEXT_TOO_LONG", "Alt text exceeds the maximum supported length."));
+    }
+  }
+
+  if (!Number.isInteger(input.sortOrder) || input.sortOrder < 0) {
+    issues.push(issue("sortOrder", "INVALID_SORT_ORDER", "Image sort order must be a non-negative integer."));
+  }
+  return dedupeIssues(issues);
 }
 export function validateImageRelationships(productId: string, images: ImageInput[], variants: Array<VariantInput & { id?: string }>): ValidationIssue[] {
   const variantIds = new Set(variants.filter((variant) => variant.productId === productId && variant.id).map((variant) => variant.id));
