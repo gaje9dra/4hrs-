@@ -87,7 +87,6 @@ const publishedProductWhere: Prisma.ProductWhereInput = {
   variants: {
     some: {
       status: "ACTIVE",
-      sku: { not: "" },
     },
   },
   images: {
