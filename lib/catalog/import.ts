@@ -415,11 +415,6 @@ async function ensureCategories(
 
     let existing = category.id ? await repository.getCategoryById(category.id).catch(() => null) : null;
     if (!existing && category.slug) existing = await repository.getCategoryBySlug(normalizeSlug(category.slug, "category"));
-    if (!existing && category.externalReference) {
-      const identity = await repository.getImportIdentity("PRODUCT", namespace, "category:" + category.externalReference);
-      if (identity) existing = await repository.getCategoryById(identity.canonicalId).catch(() => null);
-    }
-
     if (dryRun) {
       const id = existing?.id ?? category.id ?? randomUUID();
       for (const candidate of [key, category.id, category.slug, category.externalReference, category.name].filter(Boolean) as string[]) idsByKey.set(candidate, id);
@@ -641,18 +636,30 @@ async function persistProduct(
   const collectionIdList = (await Promise.all((product.collections ?? []).map((ref) => resolveCollection(ref, collectionIds)))).filter(Boolean) as string[];
   const tagIdList = (await Promise.all((product.tags ?? []).map((ref) => resolveTag(ref, tagIds)))).filter(Boolean) as string[];
 
-  let productId = plan.productId;
-  if (!productId) {
-    const created = await service.createProduct({
+  let productId = plan.productId ?? product.id ?? randomUUID();
+  if (!plan.productId) {
+    const variantIdByReference = new Map<string, string>();
+    const variants = (product.variants ?? []).map((variant) => {
+      const id = variant.id ?? randomUUID();
+      if (variant.externalReference) variantIdByReference.set(variant.externalReference, id);
+      return { ...variant, id, productId };
+    });
+    const images = (product.images ?? []).map((media) => ({
+      ...media,
+      productId: media.variantId || media.variantReference ? null : productId,
+      variantId: media.variantId ?? (media.variantReference ? variantIdByReference.get(media.variantReference) ?? null : null),
+      sortOrder: media.sortOrder ?? 0,
+      isPrimary: media.isPrimary ?? false,
+    }));
+    await service.createProduct({
       ...product,
-      id: undefined,
+      id: productId,
       categoryIds: [...new Set(categoryIdList)],
       collectionIds: [...new Set(collectionIdList)],
       tagIds: [...new Set(tagIdList)],
-      variants: (product.variants ?? []).map((variant) => ({ ...variant, productId: "" })),
-      images: [],
+      variants,
+      images,
     });
-    productId = created.id;
   } else {
     await service.updateProduct({
       id: productId,
