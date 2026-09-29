@@ -106,7 +106,7 @@ test("normalizes public query input and returns a stable catalog contract", asyn
       tagSlugs: ["streetwear"],
       tagMode: "AND",
       minPrice: "800.00",
-      maxPrice: "1000",
+      maxPrice: "1000.00",
       inStock: true,
     },
     sortBy: "price",
