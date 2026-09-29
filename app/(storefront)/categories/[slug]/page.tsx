@@ -50,7 +50,7 @@ export default async function CategoryPage({ params, searchParams }: { params: P
         {category.description ? <p className="mt-5 max-w-2xl text-lg">{category.description}</p> : null}
       </header>
       <ProductGrid products={products.items} />
-      <CatalogPagination pagination={products.pagination} buildHref={(page) => buildCatalogHref("/categories/" + encodeURIComponent(category.slug), {}, page)} />
+      <CatalogPagination pagination={products.pagination} buildHref={(page) => buildCatalogHref("/categories/" + encodeURIComponent(category.slug), paramsObject, page)} />
     </Container>
   );
 }
