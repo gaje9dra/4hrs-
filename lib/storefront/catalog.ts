@@ -140,6 +140,20 @@ export async function getStorefrontCollectionProducts(slug: string, query: Omit<
   return getStorefrontProducts({ ...query, collection: slug, sort: query.sort ?? "merchandising" });
 }
 
+export async function getStorefrontHomeCatalogData() {
+  const [products, categories, collections] = await Promise.all([
+    getStorefrontProducts({ pageSize: 8, sort: "newest" }),
+    catalog.listActiveCategories(),
+    catalog.listActiveCollections(),
+  ]);
+
+  return {
+    products,
+    categories: categories.map(({ id, name, slug, description }) => ({ id, name, slug, description })),
+    collections: collections.map(({ id, name, slug, description }) => ({ id, name, slug, description })),
+  };
+}
+
 export async function searchStorefrontProducts(query: CatalogSearchQuery) {
   const result = await search.searchPublic(query);
   return {
