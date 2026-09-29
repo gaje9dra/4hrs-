@@ -14,6 +14,7 @@ import {
   validateCollection,
   validateImage,
   validateImageRelationships,
+  validateImageAssetUniqueness,
   normalizeAltText,
   validateMoney,
   validateProduct,
@@ -233,6 +234,7 @@ export function createCatalogService(customRepository: Partial<CatalogRepository
           validateImage(image).map((item) => ({ ...item, field: "images[" + index + "]." + item.field })),
         ),
         ...validatePrimaryProductImages(images),
+        ...validateImageAssetUniqueness(images),
       ];
       if (productIssues.length || variantIssues.length || imageIssues.length) {
         validationError([...productIssues, ...variantIssues, ...imageIssues], "INVALID_PRODUCT");
@@ -254,6 +256,10 @@ export function createCatalogService(customRepository: Partial<CatalogRepository
         ...image,
         productId: image.productId ?? (image.variantId ? null : productId),
         variantId: image.variantId ?? null,
+        url: image.url.trim(),
+        storageReference: image.storageReference?.trim() || null,
+        mediaType: image.mediaType ?? "IMAGE",
+        altText: normalizeAltText(image.altText),
       }));
       const imageOwnershipIssues = normalizedImages.flatMap((image, index) =>
         image.productId && image.productId !== productId
@@ -818,6 +824,17 @@ export function createCatalogService(customRepository: Partial<CatalogRepository
         if (input.productId && variant.productId !== input.productId) issues.push({ field: "variantId", code: "INVALID_IMAGE_VARIANT", message: "Variant-specific image must belong to the same Product." });
       }
       if (issues.length) validationError(issues, "INVALID_IMAGE_RELATIONSHIP");
+      const ownerImages = input.productId
+        ? await repo.listProductImages(input.productId)
+        : await repo.listVariantImages(input.variantId!);
+      const normalizedUrl = input.url.trim();
+      const normalizedReference = input.storageReference?.trim() || null;
+      if (ownerImages.some((image) =>
+        (normalizedReference !== null && image.storageReference === normalizedReference) ||
+        image.url === normalizedUrl
+      )) {
+        throw new CatalogServiceError("INVALID_IMAGE_RELATIONSHIP", "The same media asset is already associated with this owner.");
+      }
       try {
         return await repo.withTransaction(async (tx) => {
           if (input.isPrimary && input.productId) {
@@ -852,6 +869,17 @@ export function createCatalogService(customRepository: Partial<CatalogRepository
       };
       const issues = validateImage(next);
       if (issues.length) validationError(issues, "INVALID_IMAGE_RELATIONSHIP");
+      const ownerImages = next.productId
+        ? await repo.listProductImages(next.productId)
+        : await repo.listVariantImages(next.variantId!);
+      const normalizedUrl = next.url.trim();
+      const normalizedReference = next.storageReference?.trim() || null;
+      if (ownerImages.some((image) =>
+        image.id !== id &&
+        ((normalizedReference !== null && image.storageReference === normalizedReference) || image.url === normalizedUrl)
+      )) {
+        throw new CatalogServiceError("INVALID_IMAGE_RELATIONSHIP", "The same media asset is already associated with this owner.");
+      }
       try {
         return await repo.withTransaction(async (tx) => {
           if (next.isPrimary && next.productId) await repo.updateProductImagesPrimaryState(next.productId, id, tx);
