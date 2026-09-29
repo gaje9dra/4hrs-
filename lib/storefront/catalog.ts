@@ -174,7 +174,7 @@ export async function getStorefrontHomeCatalogData(): Promise<StorefrontHomeData
     catalog.listActiveCollections(),
   ]);
 
-  const editorialCollection = collections[0]
+  const editorialCollection = collections[0]?.description
     ? {
         id: collections[0].id,
         name: collections[0].name,
