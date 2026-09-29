@@ -56,7 +56,6 @@ type CatalogRepository = {
   listPublishedProducts: typeof repository.listPublishedProducts;
   createProduct: typeof repository.createProduct;
   updateProduct: typeof repository.updateProduct;
-  archiveProduct: typeof repository.archiveProduct;
   transitionProductStatus: typeof repository.transitionProductStatus;
   createVariant: typeof repository.createVariant;
   getVariantById: typeof repository.getVariantById;
