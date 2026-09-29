@@ -1,8 +1,3 @@
-'use client'
-
-import { useCallback, useRef, useState } from 'react'
-import { Menu, X } from 'lucide-react'
-import { usePathname } from 'next/navigation'
 import { Container } from '@/components/layout/container'
 import { HeaderBrand } from '@/components/layout/header-brand'
 import { DesktopNav } from '@/components/layout/desktop-nav'
@@ -14,41 +9,13 @@ type HeaderProps = {
 }
 
 export function Header({ items }: HeaderProps) {
-  const [open, setOpen] = useState(false)
-  const pathname = usePathname()
-  const triggerRef = useRef<HTMLButtonElement>(null)
-
-  const closeMenu = useCallback(() => {
-    setOpen(false)
-  }, [])
-
   return (
     <header className="relative z-50 border-b-2 border-border bg-background lg:border-b-4">
       <Container width="standard" className="flex min-h-16 items-center justify-between gap-3 py-3">
         <HeaderBrand />
-
-        <DesktopNav items={items} activeHref={pathname} />
-
-        <button
-          ref={triggerRef}
-          type="button"
-          onClick={() => setOpen((value) => !value)}
-          className="motion-press inline-flex h-11 w-11 shrink-0 items-center justify-center border-2 border-border bg-primary-yellow hover:bg-white md:hidden"
-          aria-expanded={open}
-          aria-controls="mobile-navigation-panel"
-          aria-label={open ? 'Close navigation' : 'Open navigation'}
-        >
-          {open ? <X size={22} strokeWidth={2.5} aria-hidden="true" /> : <Menu size={22} strokeWidth={2.5} aria-hidden="true" />}
-        </button>
+        <DesktopNav items={items} />
+        <MobileNav items={items} />
       </Container>
-
-      <MobileNav
-        open={open}
-        items={items}
-        onClose={closeMenu}
-        triggerRef={triggerRef}
-        activeHref={pathname}
-      />
     </header>
   )
 }
