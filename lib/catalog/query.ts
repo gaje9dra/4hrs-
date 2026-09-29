@@ -123,6 +123,7 @@ const SORT_MAP: Record<CatalogSort, { sortBy: repository.CatalogSortField; sortD
   title_asc: { sortBy: "title", sortDirection: "asc" },
   title_desc: { sortBy: "title", sortDirection: "desc" },
   updated: { sortBy: "updatedAt", sortDirection: "desc" },
+  merchandising: { sortBy: "merchandising", sortDirection: "asc" },
 };
 
 function invalidQuery(message: string, cause?: unknown): never {
@@ -194,6 +195,12 @@ function normalizeQuery(query: CatalogQuery): CatalogAppliedQuery {
   const sort = query.sort ?? "newest";
   if (!(sort in SORT_MAP)) {
     throw new CatalogServiceError("INVALID_SORT", "Unsupported catalog sort.");
+  }
+  if (sort === "merchandising" && !category && !collection) {
+    throw new CatalogServiceError(
+      "INVALID_SORT",
+      "Merchandising sorting requires a category or collection filter.",
+    );
   }
 
   return {
