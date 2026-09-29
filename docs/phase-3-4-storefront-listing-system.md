@@ -231,4 +231,4 @@ Not implemented:
 
 NOT READY FOR PHASE 3.5
 
-Blocking issue: runtime validation required by the phase specification — lint, typecheck, tests, production build, browser smoke, responsive viewport checks, keyboard checks, and reduced-motion checks — has not been executed from this repository integration. The implementation is source-reviewed, but no runtime pass is claimed.
+Blocking issue: runtime validation required by the phase specification — lint, typecheck, tests, production build, browser smoke, responsive viewport checks, keyboard checks, and reduced-motion checks — has not been executed through the available GitHub integration. The Phase 3.4 implementation is present on `main` and has been source-reviewed, but no runtime pass is claimed.
