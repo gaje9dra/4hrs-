@@ -10,7 +10,6 @@ import {
 import * as repository from "@/lib/catalog/repository";
 import {
   CatalogValidationError,
-  canTransitionProductStatus,
   validateCategory,
   validateCategoryHierarchy,
   validateCollection,
