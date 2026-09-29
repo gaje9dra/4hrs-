@@ -49,7 +49,7 @@ export default async function CollectionPage({ params, searchParams }: { params:
         {collection.description ? <p className="mt-5 max-w-2xl text-lg">{collection.description}</p> : null}
       </header>
       <ProductGrid products={products.items} />
-      <CatalogPagination pagination={products.pagination} buildHref={(page) => buildCatalogHref("/collections/" + encodeURIComponent(collection.slug), {}, page)} />
+      <CatalogPagination pagination={products.pagination} buildHref={(page) => buildCatalogHref("/collections/" + encodeURIComponent(collection.slug), paramsObject, page)} />
     </Container>
   );
 }
