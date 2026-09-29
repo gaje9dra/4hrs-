@@ -626,6 +626,9 @@ export async function listPublishedProducts(
   const offset = normalizeOffset(options.offset);
   const sortBy = options.sortBy ?? "createdAt";
   const sortDirection = options.sortDirection ?? "desc";
+  if (sortBy === "merchandising") {
+    throw new Error("Merchandising sorting requires a category or collection query.");
+  }
   const orderBy: Prisma.ProductOrderByWithRelationInput[] = [
     { [CATALOG_SORT_FIELDS[sortBy]]: sortDirection },
     { id: sortDirection },
@@ -670,6 +673,9 @@ export async function listProducts(
 
   const sortBy = options.sortBy ?? "createdAt";
   const sortDirection = options.sortDirection ?? "desc";
+  if (sortBy === "merchandising") {
+    throw new Error("Merchandising sorting requires a category or collection query.");
+  }
   const orderBy: Prisma.ProductOrderByWithRelationInput[] = [
     { [CATALOG_SORT_FIELDS[sortBy]]: sortDirection },
     { id: sortDirection },
