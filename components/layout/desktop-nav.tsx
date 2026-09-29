@@ -8,8 +8,9 @@ type DesktopNavProps = {
 
 function isActive(item: NavigationItem, pathname: string) {
   if (item.match === 'section') {
-    return Boolean(item.href && pathname === item.href) ||
-      Boolean(item.children?.some((child) => child.href && pathname === child.href))
+    const exact = item.href === pathname
+    const prefix = item.activePrefixes?.some((value) => pathname.startsWith(value)) ?? false
+    return exact || prefix || Boolean(item.children?.some((child) => child.href === pathname))
   }
 
   if (item.match === 'exact' || !item.children?.length) return item.href === pathname
@@ -51,7 +52,7 @@ export function DesktopNav({ items, activeHref }: DesktopNavProps) {
                     'inline-flex min-h-11 items-center border-2 border-transparent px-3 py-2',
                     'text-xs font-700 uppercase tracking-[0.12em] outline-none',
                     'group-focus-within:border-border group-focus-within:bg-white',
-                    active ? 'border-border bg-white after:absolute after:bottom-[-2px] after:left-2 after:right-2 after:h-1 after:bg-primary-red' : '',
+                    active ? 'border-border bg-white' : '',
                   ].join(' ')}
                   aria-current={active ? 'page' : undefined}
                 >
