@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { toCatalogMediaDto, type CatalogMediaDto } from "@/lib/catalog/media";
 import { Prisma } from "@prisma/client";
 import { recordCatalogAudit, changedFields, type CatalogAuditContext, type CatalogAuditClient } from "@/lib/catalog/audit";
+import { createCatalogLifecycleService } from "@/lib/catalog/lifecycle";
 import {
   CatalogServiceError,
   type CatalogErrorCode,
@@ -57,6 +58,7 @@ type CatalogRepository = {
   createProduct: typeof repository.createProduct;
   updateProduct: typeof repository.updateProduct;
   archiveProduct: typeof repository.archiveProduct;
+  transitionProductStatus: typeof repository.transitionProductStatus;
   createVariant: typeof repository.createVariant;
   getVariantById: typeof repository.getVariantById;
   getVariantsByProduct: typeof repository.getVariantsByProduct;
@@ -239,6 +241,7 @@ export function createCatalogService(
     event: Omit<Parameters<typeof recordCatalogAudit>[0], keyof CatalogAuditContext>,
     client?: CatalogAuditClient,
   ) => recordCatalogAudit({ ...auditContext, ...event }, client);
+  const lifecycle = createCatalogLifecycleService(repo, audit, auditContext);
 
   const service = {
     async createProduct(input: CreateProductInput) {
@@ -450,8 +453,11 @@ export function createCatalogService(
       });
 
       const issues = validateProduct(merged);
-      if (!canTransitionProductStatus(existing.status, merged.status)) {
-        issues.push({ field: "status", code: "INVALID_STATUS_TRANSITION", message: "Product status transition is not allowed." });
+      if (merged.status !== existing.status) {
+        throw new CatalogServiceError(
+          "INVALID_STATUS_TRANSITION",
+          "Product status must be changed through the lifecycle service.",
+        );
       }
       if (existing.status === "ACTIVE" && merged.slug !== existing.slug) {
         issues.push({ field: "slug", code: "SLUG_CHANGE_REQUIRES_REDIRECT", message: "Published Product slugs cannot change without a redirect strategy." });
@@ -561,120 +567,19 @@ export function createCatalogService(
     },
 
     async archiveProduct(id: string) {
-      const existing = await this.getProductById(id);
-      if (!canTransitionProductStatus(existing.status, "ARCHIVED")) {
-        throw new CatalogServiceError("INVALID_STATUS", "Product cannot be archived from its current status.");
-      }
-      try {
-        return await repo.withTransaction(async (tx) => {
-          const updated = await repo.archiveProduct(id, tx);
-          await audit({ entityType: "PRODUCT", entityId: id, operation: "ARCHIVE", beforeState: existing, afterState: updated }, tx);
-          return updated;
-        });
-      } catch (error) { mapDatabaseError(error); }
+      return lifecycle.archiveProduct(id);
     },
 
     async publishProduct(id: string) {
-      const product = await this.getProductDetails(id);
-      if (product.status === "ARCHIVED") {
-        throw new CatalogServiceError("PRODUCT_NOT_PUBLISHABLE", "Archived products cannot be published.");
-      }
-      const variants = product.variants;
-      const images = product.images.map((image) => ({
-        productId: image.productId,
-        variantId: image.variantId,
-        url: image.url,
-        altText: image.altText,
-        sortOrder: image.sortOrder,
-        isPrimary: image.isPrimary,
-      }));
-      const readiness = validatePublishingReadiness({
-        product: {
-          id: product.id,
-          title: product.title,
-          slug: product.slug,
-          description: product.description,
-          shortDescription: product.shortDescription,
-          status: product.status,
-          price: product.price.toString(),
-          compareAtPrice: product.compareAtPrice?.toString() ?? null,
-          currency: product.currency,
-          seoTitle: product.seoTitle,
-          seoDescription: product.seoDescription,
-        },
-        variants: variants.map((variant) => ({
-          id: variant.id,
-          productId: variant.productId,
-          sku: variant.sku,
-          displayName: variant.displayName,
-          size: variant.size,
-          color: variant.color,
-          price: variant.price?.toString() ?? null,
-          compareAtPrice: variant.compareAtPrice?.toString() ?? null,
-          status: variant.status,
-        })),
-        images,
-      });
-      if (readiness.length) validationError(readiness, "PRODUCT_NOT_PUBLISHABLE");
+      return lifecycle.publishProduct(id);
+    },
 
-      try {
-        return await repo.withTransaction(async (tx) => {
-          const latest = await repo.getProductById(id, tx);
-          if (!latest) throw new CatalogServiceError("PRODUCT_NOT_FOUND", "Product was not found.");
-          if (!canTransitionProductStatus(latest.status, "ACTIVE")) {
-            throw new CatalogServiceError("PRODUCT_NOT_PUBLISHABLE", "Product cannot transition to ACTIVE.");
-          }
-          const latestDetails = await repo.getProductDetails(id, tx);
-          if (!latestDetails) throw new CatalogServiceError("PRODUCT_NOT_FOUND", "Product was not found.");
-          const readiness = validatePublishingReadiness({
-            product: {
-              id: latestDetails.id,
-              title: latestDetails.title,
-              slug: latestDetails.slug,
-              description: latestDetails.description,
-              shortDescription: latestDetails.shortDescription,
-              status: latestDetails.status,
-              price: latestDetails.price.toString(),
-              compareAtPrice: latestDetails.compareAtPrice?.toString() ?? null,
-              currency: latestDetails.currency,
-              seoTitle: latestDetails.seoTitle,
-              seoDescription: latestDetails.seoDescription,
-            },
-            variants: latestDetails.variants.map((variant) => ({
-              id: variant.id,
-              productId: variant.productId,
-              sku: variant.sku,
-              displayName: variant.displayName,
-              size: variant.size,
-              color: variant.color,
-              price: variant.price?.toString() ?? null,
-              compareAtPrice: variant.compareAtPrice?.toString() ?? null,
-              status: variant.status,
-            })),
-            images: latestDetails.images.map((image) => ({
-              productId: image.productId,
-              variantId: image.variantId,
-              url: image.url,
-              altText: image.altText,
-              sortOrder: image.sortOrder,
-              isPrimary: image.isPrimary,
-            })),
-          });
-          if (readiness.length) validationError(readiness, "PRODUCT_NOT_PUBLISHABLE");
-          const updated = await repo.updateProduct(id, { status: "ACTIVE" }, tx);
-          await audit({
-            entityType: "PRODUCT",
-            entityId: id,
-            operation: "PUBLISH",
-            changedFields: ["status"],
-            beforeState: latest,
-            afterState: updated,
-          }, tx);
-          return updated;
-        });
-      } catch (error) {
-        mapDatabaseError(error);
-      }
+    async unpublishProduct(id: string) {
+      return lifecycle.unpublishProduct(id);
+    },
+
+    async restoreProduct(id: string) {
+      return lifecycle.restoreProduct(id);
     },
 
     async createOptionType(input: VariantOptionTypeInput) {
@@ -1510,26 +1415,7 @@ export function createCatalogService(
     },
 
     async isPublishable(id: string) {
-      const product = await repo.getProductDetails(id);
-      if (!product) throw new CatalogServiceError("PRODUCT_NOT_FOUND", "Product was not found.");
-      const issues = validatePublishingReadiness({
-        product: {
-          id: product.id, title: product.title, slug: product.slug, description: product.description,
-          shortDescription: product.shortDescription, status: product.status, price: product.price.toString(),
-          compareAtPrice: product.compareAtPrice?.toString() ?? null, currency: product.currency,
-          seoTitle: product.seoTitle, seoDescription: product.seoDescription,
-        },
-        variants: product.variants.map((variant) => ({
-          id: variant.id, productId: variant.productId, sku: variant.sku, displayName: variant.displayName,
-          size: variant.size, color: variant.color, price: variant.price?.toString() ?? null,
-          compareAtPrice: variant.compareAtPrice?.toString() ?? null, status: variant.status,
-        })),
-        images: product.images.map((image) => ({
-          productId: image.productId, variantId: image.variantId, url: image.url,
-          altText: image.altText, sortOrder: image.sortOrder, isPrimary: image.isPrimary,
-        })),
-      });
-      return { publishable: issues.length === 0, issues };
+      return lifecycle.validatePublicationReadiness(id);
     },
   };
 
