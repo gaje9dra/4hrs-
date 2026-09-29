@@ -16,7 +16,17 @@ export type StorefrontProductCard = {
   availability: "IN_STOCK" | "LOW_STOCK" | "OUT_OF_STOCK" | "UNTRACKED";
 };
 
-export type StorefrontProductDetail = PublishedProductDetailResult;
+export type StorefrontAvailability = { state: "IN_STOCK" | "LOW_STOCK" | "OUT_OF_STOCK" | "UNTRACKED" };
+
+type PublicStorefrontVariant = Omit<PublishedProductDetailResult["variants"][number], "availability"> & {
+  availability: StorefrontAvailability;
+};
+
+export type StorefrontProductDetail = Omit<PublishedProductDetailResult, "availability" | "variants"> & {
+  availability: StorefrontAvailability;
+  variants: PublicStorefrontVariant[];
+};
+
 
 export type StorefrontCategory = {
   id: string;
@@ -85,7 +95,15 @@ export async function getStorefrontProducts(query: CatalogQuery = {}): Promise<S
 }
 
 export async function getStorefrontProduct(slug: string): Promise<StorefrontProductDetail> {
-  return catalog.getPublishedProductDetailsBySlug(slug);
+  const product = await catalog.getPublishedProductDetailsBySlug(slug);
+  return {
+    ...product,
+    availability: { state: product.availability.state },
+    variants: product.variants.map((variant) => ({
+      ...variant,
+      availability: { state: variant.availability.state },
+    })),
+  };
 }
 
 async function buildCategoryBreadcrumbs(category: Awaited<ReturnType<typeof catalog.getCategoryBySlug>>) {
@@ -154,11 +172,12 @@ export async function getStorefrontHomeCatalogData() {
   };
 }
 
-export async function searchStorefrontProducts(query: CatalogSearchQuery) {
+export async function searchStorefrontProducts(query: CatalogSearchQuery): Promise<StorefrontProductList> {
   const result = await search.searchPublic(query);
   return {
-    ...result,
     items: result.items.map(toProductCard),
+    pagination: result.pagination,
+    appliedQuery: result.appliedQuery.catalog,
   };
 }
 
