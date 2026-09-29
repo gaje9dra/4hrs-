@@ -108,7 +108,6 @@ test("SEO fallback derives metadata at runtime without duplicating generated val
   const metadata = getPublicCatalogSeoMetadata({
     type: "product",
     entity: {
-      id: "product-2",
       title: "Minimal Tee",
       slug: "minimal-tee",
       shortDescription: "Minimal everyday tee.",
