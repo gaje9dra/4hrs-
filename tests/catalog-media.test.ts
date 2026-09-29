@@ -41,6 +41,16 @@ test("media validation rejects unsafe URLs, unsupported media types, and malform
   assert.ok(issues.some((issue) => issue.code === "INVALID_SORT_ORDER"));
 });
 
+test("variant media cannot be marked as the canonical product primary", () => {
+  const issues = validateImage({
+    variantId: "variant-1",
+    url: "https://cdn.example.com/variant.webp",
+    sortOrder: 0,
+    isPrimary: true,
+  });
+  assert.ok(issues.some((issue) => issue.code === "INVALID_PRIMARY_IMAGE_OWNER"));
+});
+
 test("media validation requires exactly one canonical owner", () => {
   assert.ok(
     validateImage({
