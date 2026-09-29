@@ -8,7 +8,7 @@ import { buildCatalogHref, catalogQueryFromSearchParams, type StorefrontSearchPa
 export const metadata: Metadata = {
   title: "Search | 4HRS",
   description: "Search the public 4HRS catalog.",
-  robots: { index: false, follow: true },
+  robots: "noindex,follow",
 };
 
 export default async function SearchPage({ searchParams }: { searchParams: Promise<StorefrontSearchParams> }) {
