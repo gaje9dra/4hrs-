@@ -736,7 +736,7 @@ async function resolveImportedOptionTypes(
         value = await repository.getOptionValueByIdentity(optionType.id, normalizedValue);
       }
       if (!value) {
-        value = await service.createOptionValue({
+        const createdValue = await service.createOptionValue({
           id: valueInput.id,
           optionTypeId: optionType.id,
           displayName: valueInput.displayName,
@@ -745,6 +745,15 @@ async function resolveImportedOptionTypes(
           hex: valueInput.hex ?? null,
           swatch: valueInput.swatch ?? null,
         });
+        value = await repository.getOptionValueById(createdValue.id);
+      }
+      if (!value) {
+        throw new CatalogImportError("Imported option value could not be resolved after creation.", [
+          issue("product", "INVALID_OPTION_VALUE", "Option value could not be resolved after creation.", {
+            field: "optionTypes",
+            recordReference: valueInput.id,
+          }),
+        ]);
       }
       if (valueInput.id) optionValueIdsByExportedId.set(valueInput.id, value.id);
       optionValueIdsByIdentity.set(optionValueIdentity(normalizedName, normalizedValue), value.id);
