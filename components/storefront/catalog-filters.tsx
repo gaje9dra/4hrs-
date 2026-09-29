@@ -19,8 +19,8 @@ export function CatalogFilters({
 }: {
   pathname: string;
   appliedQuery: CatalogAppliedQuery;
-  categories: StorefrontCategory[];
-  collections: StorefrontCollection[];
+  categories: Array<Pick<StorefrontCategory, "id" | "name" | "slug">>;
+  collections: Array<Pick<StorefrontCollection, "id" | "name" | "slug">>;
   tags: StorefrontTag[];
   fixedCategory?: string;
   fixedCollection?: string;
