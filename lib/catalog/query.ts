@@ -14,7 +14,8 @@ export type CatalogSort =
   | "price_desc"
   | "title_asc"
   | "title_desc"
-  | "updated";
+  | "updated"
+  | "merchandising";
 
 export type CatalogQuery = {
   category?: string;
