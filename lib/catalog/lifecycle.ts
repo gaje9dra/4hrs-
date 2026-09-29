@@ -158,8 +158,9 @@ export function validateProductPublicationReadiness(product: CatalogLifecyclePro
 export function createCatalogLifecycleService(
   repository: CatalogLifecycleRepository,
   audit: CatalogLifecycleAudit,
-  _context: CatalogAuditContext = {},
+  context: CatalogAuditContext = {},
 ) {
+  void context;
   async function transitionProduct(productId: string, target: ProductStatus) {
     const initial = await repository.getProductById(productId);
     if (!initial) throw new CatalogServiceError("PRODUCT_NOT_FOUND", "Product was not found.");

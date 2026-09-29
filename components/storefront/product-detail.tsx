@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import type { StorefrontProductDetail } from "@/lib/storefront/catalog";
 import { Badge } from "@/components/ui/badge";
@@ -23,7 +24,7 @@ export function ProductDetail({ product }: { product: StorefrontProductDetail })
         <section aria-label="Product media" className="grid gap-5 sm:grid-cols-2">
           {product.media.map((media) => (
             <figure key={media.id} className="overflow-hidden border-2 border-border bg-white shadow-hard-md lg:border-4 lg:shadow-hard-lg">
-              <img src={media.url} alt={media.altText ?? product.title} className="aspect-[4/5] h-full w-full object-cover" />
+              <div className="relative aspect-[4/5]"><Image src={media.url} alt={media.altText ?? product.title} fill sizes="(max-width: 1023px) 100vw, 55vw" className="object-cover" /></div>
             </figure>
           ))}
           {!product.media.length ? (

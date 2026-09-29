@@ -7,10 +7,10 @@ import {
 } from "../lib/catalog/audit.ts";
 
 test("audit records are bounded and redact sensitive metadata", async () => {
-  let captured: any;
+  let captured: { changedFields: string[]; beforeState: Record<string, unknown>; afterState: Record<string, unknown>; metadata: Record<string, unknown> } | undefined;
   const client = {
     catalogAuditEvent: {
-      create: async ({ data }: any) => {
+      create: async ({ data }: { data: { changedFields: string[]; beforeState: Record<string, unknown>; afterState: Record<string, unknown>; metadata: Record<string, unknown> } }) => {
         captured = data;
         return data;
       },
@@ -26,6 +26,7 @@ test("audit records are bounded and redact sensitive metadata", async () => {
     metadata: { requestId: "req-1", authorization: "Bearer secret" },
   }, client);
 
+  assert.ok(captured);
   assert.deepEqual(captured.changedFields, []);
   assert.equal(captured.beforeState.password, undefined);
   assert.equal(captured.afterState.apiKey, undefined);
@@ -44,10 +45,10 @@ test("changedFields returns deterministic field names", () => {
 });
 
 test("audit source and correlation context are persisted", async () => {
-  let captured: any;
+  let captured: { source: string; actorType: string; correlationId: string } | undefined;
   const client = {
     catalogAuditEvent: {
-      create: async ({ data }: any) => {
+      create: async ({ data }: { data: { source: string; actorType: string; correlationId: string } }) => {
         captured = data;
         return data;
       },
@@ -64,6 +65,7 @@ test("audit source and correlation context are persisted", async () => {
     metadata: { namespace: "test" },
   }, client);
 
+  assert.ok(captured);
   assert.equal(captured.source, "IMPORT");
   assert.equal(captured.actorType, "IMPORT");
   assert.equal(captured.correlationId, "import:test");

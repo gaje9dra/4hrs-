@@ -51,7 +51,7 @@ test("CatalogService prevents duplicate collection membership and supports deter
       calls.push(data);
       return { productId: "product-1", collectionId: "collection-1", ...data };
     },
-  } as any);
+  } as unknown as Parameters<typeof createCatalogService>[0]);
 
   await assert.rejects(
     service.attachCollection("product-1", "collection-1", { position: 10 }),
@@ -83,7 +83,7 @@ test("CatalogService reorders a collection transactionally", async () => {
       transactionCalls.push({ updates, tx });
       return updates;
     },
-  } as any);
+  } as unknown as Parameters<typeof createCatalogService>[0]);
 
   const result = await service.reorderCollectionProducts("collection-1", [
     { productId: "product-1", position: 20 },
@@ -128,7 +128,7 @@ test("merchandising membership is provider-neutral", async () => {
     getCollectionById: async () => ({ id: "collection-1", status: "ACTIVE" }),
     getProductCollection: async () => null,
     attachCollection: async (_productId: string, _collectionId: string, data: Record<string, unknown>) => data,
-  } as any);
+  } as unknown as Parameters<typeof createCatalogService>[0]);
 
   const result = await service.attachCollection("product-1", "collection-1", {
     position: 10,
