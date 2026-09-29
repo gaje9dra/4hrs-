@@ -49,6 +49,23 @@ const productDetailsInclude = {
   tags: { include: { tag: true } },
 } satisfies Prisma.ProductInclude;
 
+const productExportInclude = {
+  variants: {
+    orderBy: [{ createdAt: "asc" as const }, { id: "asc" as const }],
+    include: {
+      optionValues: {
+        include: { optionValue: { include: { optionType: true } } },
+        orderBy: { optionValue: { sortOrder: "asc" as const } },
+      },
+    },
+  },
+  images: { orderBy: [{ sortOrder: "asc" as const }, { id: "asc" as const }] },
+  categories: { include: { category: true }, orderBy: [{ position: "asc" as const }, { categoryId: "asc" as const }] },
+  collections: { include: { collection: true }, orderBy: [{ isFeatured: "desc" as const }, { priority: "desc" as const }, { position: "asc" as const }, { collectionId: "asc" as const }] },
+  tags: { include: { tag: true }, orderBy: { tagId: "asc" as const } },
+  optionTypes: { include: { optionType: { include: { values: true } } }, orderBy: [{ sortOrder: "asc" as const }, { optionTypeId: "asc" as const }] },
+} satisfies Prisma.ProductInclude;
+
 const productWithVariantsInclude = {
   variants: {
     orderBy: { createdAt: "asc" as const },
@@ -592,6 +609,31 @@ export async function listTags(client?: CatalogRepositoryClient) {
   return clientOrDefault(client).tag.findMany({
     orderBy: [{ name: "asc" }, { id: "asc" }],
     select: { id: true, name: true, slug: true },
+  });
+}
+
+export async function listProductsForExport(
+  options: {
+    ids?: string[];
+    categoryId?: string;
+    collectionId?: string;
+    status?: "DRAFT" | "ACTIVE" | "ARCHIVED";
+    modifiedAfter?: Date;
+  } = {},
+  client?: CatalogRepositoryClient,
+) {
+  const repository = clientOrDefault(client);
+  const where: Prisma.ProductWhereInput = {
+    ...(options.ids?.length ? { id: { in: options.ids } } : {}),
+    ...(options.categoryId ? { categories: { some: { categoryId: options.categoryId } } } : {}),
+    ...(options.collectionId ? { collections: { some: { collectionId: options.collectionId } } } : {}),
+    ...(options.status ? { status: options.status } : {}),
+    ...(options.modifiedAfter ? { updatedAt: { gt: options.modifiedAfter } } : {}),
+  };
+  return repository.product.findMany({
+    where,
+    orderBy: [{ id: "asc" }],
+    include: productExportInclude,
   });
 }
 
