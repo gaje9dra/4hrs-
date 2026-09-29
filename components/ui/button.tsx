@@ -58,7 +58,8 @@ export function Button({ variant = 'primary', loading = false, className = '', c
   }
 
   const buttonProps = props as ButtonProps
-  const { type = 'button', ...nativeButtonProps } = buttonProps
+  const { type: requestedType, ...nativeButtonProps } = buttonProps
+  const type: ButtonHTMLAttributes<HTMLButtonElement>['type'] = requestedType ?? 'button'
 
   return (
     <button
