@@ -60,13 +60,13 @@ test("option type and value creation remain inside CatalogService boundaries", a
   const calls: string[] = [];
   const service = createCatalogService({
     getOptionTypeByNormalizedName: async () => null,
-    createOptionType: async (data) => {
+    createOptionType: async (data: { name: string; normalizedName: string; sortOrder: number }) => {
       calls.push("createOptionType");
       return data;
     },
     getOptionTypeById: async () => ({ id: "type-1", name: "Color", normalizedName: "color", sortOrder: 0 }),
     getOptionValueByIdentity: async () => null,
-    createOptionValue: async (data) => {
+    createOptionValue: async (data: { optionTypeId: string; displayName: string; normalizedValue: string; sortOrder: number; hex?: string | null; swatch?: string | null }) => {
       calls.push("createOptionValue");
       return data;
     },
@@ -89,7 +89,7 @@ test("product option assignments require existing canonical option types", async
   const service = createCatalogService({
     getProductById: async () => ({ id: "product-1" }),
     getOptionTypeById: async () => ({ id: "color", name: "Color" }),
-    assignProductOptionType: async (productId, optionTypeId, sortOrder) => ({ productId, optionTypeId, sortOrder }),
+    assignProductOptionType: async (productId: string, optionTypeId: string, sortOrder: number) => ({ productId, optionTypeId, sortOrder }),
   } as unknown as Parameters<typeof createCatalogService>[0]);
 
   const result = await service.assignProductOptionType("product-1", "color", 1);

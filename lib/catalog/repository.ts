@@ -303,7 +303,9 @@ export async function queryPublishedCatalogProducts(
   const sortBy = options.sortBy ?? "createdAt";
   const sortDirection = options.sortDirection ?? "desc";
   if (sortBy === "merchandising") {
-    return queryMerchandisedCatalogProducts(options, client);
+    const context: MerchandisingContext | undefined = options.filters?.collectionSlug ? "collection" : options.filters?.categorySlug ? "category" : undefined;
+    if (!context) throw new Error("Merchandising sorting requires a collection or category filter.");
+    return queryMerchandisedCatalogProducts({ ...options, context }, client);
   }
   const orderBy: Prisma.ProductOrderByWithRelationInput[] = [
     { [CATALOG_SORT_FIELDS[sortBy]]: sortDirection },

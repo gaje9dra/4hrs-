@@ -46,10 +46,12 @@ export type CatalogImportCategory = CategoryInput & {
 };
 
 export type CatalogImportCollection = CollectionInput & {
+  id?: string;
   externalReference?: string;
 };
 
 export type CatalogImportTag = TagInput & {
+  id?: string;
   externalReference?: string;
 };
 
@@ -219,7 +221,7 @@ function normalizeImportProduct(input: CatalogImportProduct): CatalogImportProdu
       ...ref,
       id: normalizeReference(ref.id),
       externalReference: normalizeReference(ref.externalReference),
-      slug: ref.slug ? normalizeSlug(ref.slug, "category") : undefined,
+      slug: ref.slug ? normalizeSlug(ref.slug) : undefined,
       name: ref.name?.trim(),
       position: ref.position ?? 0,
       priority: ref.priority ?? 0,
@@ -229,7 +231,7 @@ function normalizeImportProduct(input: CatalogImportProduct): CatalogImportProdu
       ...ref,
       id: normalizeReference(ref.id),
       externalReference: normalizeReference(ref.externalReference),
-      slug: ref.slug ? normalizeSlug(ref.slug, "collection") : undefined,
+      slug: ref.slug ? normalizeSlug(ref.slug) : undefined,
       name: ref.name?.trim(),
       position: ref.position ?? 0,
       priority: ref.priority ?? 0,
@@ -438,7 +440,7 @@ async function ensureCategories(
     }
 
     let existing = category.id ? await repository.getCategoryById(category.id).catch(() => null) : null;
-    if (!existing && category.slug) existing = await repository.getCategoryBySlug(normalizeSlug(category.slug, "category"));
+    if (!existing && category.slug) existing = await repository.getCategoryBySlug(normalizeSlug(category.slug));
     if (dryRun) {
       const id = existing?.id ?? category.id ?? randomUUID();
       for (const candidate of [key, category.id, category.slug, category.externalReference, category.name].filter(Boolean) as string[]) idsByKey.set(candidate, id);
@@ -485,7 +487,7 @@ async function ensureCollections(
       continue;
     }
     let existing = collection.id ? await repository.getCollectionById(collection.id).catch(() => null) : null;
-    if (!existing && collection.slug) existing = await repository.getCollectionBySlug(normalizeSlug(collection.slug, "collection"));
+    if (!existing && collection.slug) existing = await repository.getCollectionBySlug(normalizeSlug(collection.slug));
     if (dryRun) {
       const id = existing?.id ?? collection.id ?? randomUUID();
       for (const candidate of [key, collection.id, collection.slug, collection.externalReference, collection.name].filter(Boolean) as string[]) idsByKey.set(candidate, id);

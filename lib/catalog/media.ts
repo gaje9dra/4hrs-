@@ -1,6 +1,4 @@
-import type { ProductMediaType } from "@prisma/client";
-
-export type CatalogMediaType = ProductMediaType;
+export type CatalogMediaType = "IMAGE";
 
 export type CatalogMediaDto = {
   id: string;

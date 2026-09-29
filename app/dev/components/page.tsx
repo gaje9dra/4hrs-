@@ -31,6 +31,7 @@ import { Footer } from '@/components/layout/footer'
 import { AnnouncementBar } from '@/components/layout/announcement-bar'
 import { GlobalCTA } from '@/components/layout/global-cta'
 import { SectionDivider } from '@/components/layout/section-divider'
+import { footerNavigationGroups } from '@/config/footer'
 
 export default function ComponentShowcase() {
   if (process.env.NODE_ENV !== 'development') notFound()
@@ -49,7 +50,7 @@ export default function ComponentShowcase() {
         <section aria-labelledby="header-navigation">
           <h2 id="header-navigation" className="mb-5 text-2xl font-900 uppercase">Header / navigation</h2>
           <div className="overflow-hidden border-4 border-border bg-background">
-            <Header />
+            <Header items={[]} />
             <div className="border-t-2 border-border bg-white p-5">
               <p className="text-xs font-900 uppercase tracking-[.2em] text-primary-blue">Responsive verification</p>
               <p className="mt-2 max-w-2xl">Resize below 768px to verify the mobile trigger and drawer. The production header uses the shared navigation configuration and no business data.</p>
@@ -70,7 +71,7 @@ export default function ComponentShowcase() {
               primaryAction={{ label: 'Go home', href: '/' }}
             />
             <div className="overflow-hidden border-4 border-border">
-              <Footer />
+              <Footer navigationGroups={footerNavigationGroups} />
             </div>
           </div>
         </section>

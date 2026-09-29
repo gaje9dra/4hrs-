@@ -1,4 +1,4 @@
-import type { ProductMediaType, ProductStatus } from "@prisma/client";
+import type { ProductStatus } from "@prisma/client";
 import { canTransitionProductStatus } from "@/lib/catalog/lifecycle-rules";
 import {
   CATALOG_MEDIA_ALT_TEXT_MAX_LENGTH,
@@ -24,7 +24,7 @@ export type VariantOptionInput = { optionTypeId: string; optionValueId: string }
 export type VariantInput = { productId: string; id?: string; sku: string; displayName?: string | null; size?: string | null; color?: string | null; optionValueIds?: string[]; price?: number | string | null; compareAtPrice?: number | string | null; status: "ACTIVE" | "INACTIVE" };
 export type VariantOptionTypeInput = { id?: string; name: string; sortOrder?: number };
 export type VariantOptionValueInput = { id?: string; optionTypeId: string; displayName: string; normalizedValue?: string; sortOrder?: number; hex?: string | null; swatch?: string | null };
-export type ImageInput = { productId?: string | null; variantId?: string | null; url: string; storageReference?: string | null; mediaType?: ProductMediaType; altText?: string | null; sortOrder: number; isPrimary: boolean };
+export type ImageInput = { productId?: string | null; variantId?: string | null; url: string; storageReference?: string | null; mediaType?: "IMAGE"; altText?: string | null; sortOrder: number; isPrimary: boolean };
 export type CategoryInput = { id?: string; name: string; slug: string; status: "ACTIVE" | "ARCHIVED"; parentId?: string | null; seoTitle?: string | null; seoDescription?: string | null };
 export type CollectionInput = { name: string; slug: string; status: "ACTIVE" | "ARCHIVED"; seoTitle?: string | null; seoDescription?: string | null };
 export type MerchandisingMembershipInput = {
@@ -103,8 +103,9 @@ export function validateOptionValue(input: VariantOptionValueInput): ValidationI
   const issues: ValidationIssue[] = [];
   if (!input.optionTypeId.trim()) issues.push(issue("optionTypeId", "INVALID_OPTION_TYPE", "Option value must reference a valid option type."));
   requireText(input.displayName, "displayName", "Option value display name", issues);
-  if (!input.normalizedValue.trim()) issues.push(issue("normalizedValue", "INVALID_NORMALIZED_VALUE", "Option value normalized identity is required."));
-  if (!SLUG_PATTERN.test(input.normalizedValue)) issues.push(issue("normalizedValue", "INVALID_NORMALIZED_VALUE", "Option value normalized identity must be lowercase and URL-safe."));
+  const normalizedValue = input.normalizedValue?.trim() ?? "";
+  if (!normalizedValue) issues.push(issue("normalizedValue", "INVALID_NORMALIZED_VALUE", "Option value normalized identity is required."));
+  if (normalizedValue && !SLUG_PATTERN.test(normalizedValue)) issues.push(issue("normalizedValue", "INVALID_NORMALIZED_VALUE", "Option value normalized identity must be lowercase and URL-safe."));
   const sortOrder = input.sortOrder ?? 0;
   if (!Number.isInteger(sortOrder) || sortOrder < 0) issues.push(issue("sortOrder", "INVALID_SORT_ORDER", "Option value sort order must be a non-negative integer."));
   return dedupeIssues(issues);
