@@ -418,7 +418,7 @@ async function ensureCategories(
       return id;
     }
 
-    const service = createCatalogService();
+    const service = createCatalogService({}, { source: "IMPORT", actorType: "IMPORT" });
     let record;
     if (existing) {
       record = await service.updateCategory(existing.id, {
@@ -448,7 +448,7 @@ async function ensureCollections(
 ): Promise<{ idsByKey: Map<string, string>; issues: CatalogImportIssue[] }> {
   const idsByKey = new Map<string, string>();
   const issues: CatalogImportIssue[] = [];
-  const service = createCatalogService();
+  const service = createCatalogService({}, { source: "IMPORT", actorType: "IMPORT" });
   for (const [index, collection] of (payload.collections ?? []).entries()) {
     const key = collection.externalReference ?? collection.id ?? collection.slug;
     if (!key) {
@@ -476,7 +476,7 @@ async function ensureTags(
 ): Promise<{ idsByKey: Map<string, string>; issues: CatalogImportIssue[] }> {
   const idsByKey = new Map<string, string>();
   const issues: CatalogImportIssue[] = [];
-  const service = createCatalogService();
+  const service = createCatalogService({}, { source: "IMPORT", actorType: "IMPORT" });
   for (const [index, tag] of (payload.tags ?? []).entries()) {
     const key = tag.externalReference ?? tag.id ?? tag.slug ?? tag.name;
     if (!key) {
@@ -663,7 +663,7 @@ async function persistProduct(
   tagIds: Map<string, string>,
   namespace: string,
 ): Promise<void> {
-  const service = createCatalogService();
+  const service = createCatalogService({}, { source: "IMPORT", actorType: "IMPORT" });
   const resolvedCategories = (product.categories ?? []).map((ref) => resolveCategory(ref, categoryIds)).filter(Boolean) as Promise<string>[];
   const categoryIdList = (await Promise.all(resolvedCategories));
   const collectionIdList = (await Promise.all((product.collections ?? []).map((ref) => resolveCollection(ref, collectionIds)))).filter(Boolean) as string[];
