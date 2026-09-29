@@ -16,11 +16,13 @@ export const metadata: Metadata = {
 };
 
 export default async function HomePage() {
+  let data;
   try {
-    const data = await getStorefrontHomeCatalogData();
-    return <Homepage data={data} />;
+    data = await getStorefrontHomeCatalogData();
   } catch (error) {
     if (error instanceof CatalogServiceError) throw error;
-    throw new Error("Homepage catalog data could not be loaded.");
+    throw new Error("Homepage catalog data could not be loaded.", { cause: error });
   }
+
+  return <Homepage data={data} />;
 }
