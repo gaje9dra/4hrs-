@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { CatalogServiceError } from "@/lib/catalog/errors";
 import { createCatalogService } from "@/lib/catalog/service";
 import * as repository from "@/lib/catalog/repository";
@@ -36,7 +37,8 @@ export async function executeCatalogBulkOperations(
   options: { continueOnError?: boolean } = {},
 ): Promise<CatalogBulkResult> {
   const continueOnError = options.continueOnError ?? true;
-  const service = createCatalogService({}, { source: "BULK_OPERATION", actorType: "PROCESS" });
+  const correlationId = "bulk:" + randomUUID();
+  const service = createCatalogService({}, { source: "BULK_OPERATION", actorType: "PROCESS", correlationId });
   const results: CatalogBulkOperationResult[] = [];
 
   for (const [index, operation] of operations.entries()) {
