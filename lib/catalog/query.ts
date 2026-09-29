@@ -429,6 +429,13 @@ export function createCatalogQueryService(customRepository: Partial<QueryReposit
         };
       });
 
+      const cheapestVariant = variants.reduce(
+        (current, variant) =>
+          current === null || new Prisma.Decimal(variant.price).lt(new Prisma.Decimal(current.price))
+            ? variant
+            : current,
+        null as (typeof variants)[number] | null,
+      );
       const availableVariant = variants.find((variant) =>
         variant.availability.state === "IN_STOCK" ||
         variant.availability.state === "LOW_STOCK" ||
@@ -441,8 +448,8 @@ export function createCatalogQueryService(customRepository: Partial<QueryReposit
         slug: product.slug,
         description: product.description,
         shortDescription: product.shortDescription,
-        price: product.price.toString(),
-        compareAtPrice: product.compareAtPrice?.toString() ?? null,
+        price: cheapestVariant?.price ?? product.price.toString(),
+        compareAtPrice: cheapestVariant?.compareAtPrice ?? product.compareAtPrice?.toString() ?? null,
         currency: product.currency,
         status: "ACTIVE",
         seoTitle: product.seoTitle,
