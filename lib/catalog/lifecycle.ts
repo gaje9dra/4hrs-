@@ -50,7 +50,7 @@ export type CatalogLifecycleRepository = {
     status: ProductStatus;
     [key: string]: unknown;
   } | null>;
-  getProductDetails: (id: string, client?: CatalogRepositoryClient) => Promise<unknown>;
+  getProductDetails: (id: string, client?: CatalogRepositoryClient) => Promise<CatalogLifecycleProductDetails | null>;
   transitionProductStatus: (id: string, from: ProductStatus, to: ProductStatus, client?: CatalogRepositoryClient) => Promise<{
     id: string;
     status: ProductStatus;
@@ -59,20 +59,7 @@ export type CatalogLifecycleRepository = {
   withTransaction: <T>(callback: (transaction: CatalogRepositoryClient) => Promise<T>) => Promise<T>;
 };
 
-export type CatalogLifecycleAudit = (
-  event: {
-    entityType: "PRODUCT";
-    entityId: string;
-    operation: "PUBLISH" | "UNPUBLISH" | "ARCHIVE" | "RESTORE";
-    changedFields?: string[];
-    beforeState?: unknown;
-    afterState?: unknown;
-    metadata?: Record<string, unknown>;
-  },
-  client?: CatalogAuditClient,
-) => Promise<unknown>;
-
-function toReadinessInput(product: {
+type CatalogLifecycleProductDetails = {
   id: string;
   title: string;
   slug: string;
@@ -106,7 +93,22 @@ function toReadinessInput(product: {
     sortOrder: number;
     isPrimary: boolean;
   }>;
-}): {
+};
+
+export type CatalogLifecycleAudit = (
+  event: {
+    entityType: "PRODUCT";
+    entityId: string;
+    operation: "PUBLISH" | "UNPUBLISH" | "ARCHIVE" | "RESTORE";
+    changedFields?: string[];
+    beforeState?: unknown;
+    afterState?: unknown;
+    metadata?: Record<string, unknown>;
+  },
+  client?: CatalogAuditClient,
+) => Promise<unknown>;
+
+function toReadinessInput(product: CatalogLifecycleProductDetails){
   product: ProductInput;
   variants: VariantInput[];
   images: ImageInput[];
@@ -137,7 +139,7 @@ function toReadinessInput(product: {
       status: variant.status,
       optionValueIds: variant.optionValues?.map((item) => item.optionValueId) ?? undefined,
     })),
-    images: product.images.map((image: any) => ({
+    images: product.images.map((image) => ({
       productId: image.productId,
       variantId: image.variantId,
       url: image.url,
@@ -150,7 +152,7 @@ function toReadinessInput(product: {
   };
 }
 
-export function validateProductPublicationReadiness(product: any) {
+export function validateProductPublicationReadiness(product: CatalogLifecycleProductDetails) {
   const issues = validatePublishingReadiness(toReadinessInput(product));
   return issues;
 }
