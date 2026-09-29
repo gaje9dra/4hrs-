@@ -671,11 +671,15 @@ export function createCatalogService(
         throw new CatalogServiceError("DUPLICATE_OPTION_TYPE", "Option type already exists.");
       }
       try {
-        return await repo.createOptionType({
-          id: input.id ?? randomUUID(),
-          name: normalizeOptionTypeName(input.name),
-          normalizedName,
-          sortOrder: input.sortOrder ?? 0,
+        return await repo.withTransaction(async (tx) => {
+          const created = await repo.createOptionType({
+            id: input.id ?? randomUUID(),
+            name: normalizeOptionTypeName(input.name),
+            normalizedName,
+            sortOrder: input.sortOrder ?? 0,
+          }, tx);
+          await audit({ entityType: "OPTION_TYPE", entityId: created.id, operation: "CREATE", afterState: created }, tx);
+          return created;
         });
       } catch (error) { mapDatabaseError(error); }
     },
@@ -690,7 +694,11 @@ export function createCatalogService(
       if (issues.length) validationError(issues, "INVALID_VARIANT");
       const duplicate = await repo.getOptionTypeByNormalizedName(normalizedName);
       if (duplicate && duplicate.id !== id) throw new CatalogServiceError("DUPLICATE_OPTION_TYPE", "Option type already exists.");
-      return repo.updateOptionType(id, { name, normalizedName, sortOrder: patch.sortOrder ?? existing.sortOrder });
+      return repo.withTransaction(async (tx) => {
+        const updated = await repo.updateOptionType(id, { name, normalizedName, sortOrder: patch.sortOrder ?? existing.sortOrder }, tx);
+        await audit({ entityType: "OPTION_TYPE", entityId: id, operation: "UPDATE", changedFields: changedFields(existing as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>), beforeState: existing, afterState: updated }, tx);
+        return updated;
+      });
     },
 
     async createOptionValue(input: VariantOptionValueInput) {
@@ -703,14 +711,18 @@ export function createCatalogService(
       const duplicate = await repo.getOptionValueByIdentity(input.optionTypeId, normalizedValue);
       if (duplicate) throw new CatalogServiceError("DUPLICATE_OPTION_VALUE", "Option value already exists for this option type.");
       try {
-        return await repo.createOptionValue({
-          id: input.id ?? randomUUID(),
-          optionType: { connect: { id: input.optionTypeId } },
-          displayName,
-          normalizedValue,
-          sortOrder: input.sortOrder ?? 0,
-          hex: input.hex ?? null,
-          swatch: input.swatch ?? null,
+        return await repo.withTransaction(async (tx) => {
+          const created = await repo.createOptionValue({
+            id: input.id ?? randomUUID(),
+            optionType: { connect: { id: input.optionTypeId } },
+            displayName,
+            normalizedValue,
+            sortOrder: input.sortOrder ?? 0,
+            hex: input.hex ?? null,
+            swatch: input.swatch ?? null,
+          }, tx);
+          await audit({ entityType: "OPTION_VALUE", entityId: created.id, operation: "CREATE", afterState: created }, tx);
+          return created;
         });
       } catch (error) { mapDatabaseError(error); }
     },
@@ -733,12 +745,16 @@ export function createCatalogService(
       if (issues.length) validationError(issues, "INVALID_VARIANT");
       const duplicate = await repo.getOptionValueByIdentity(existing.optionTypeId, normalizedValue);
       if (duplicate && duplicate.id !== id) throw new CatalogServiceError("DUPLICATE_OPTION_VALUE", "Option value already exists for this option type.");
-      return repo.updateOptionValue(id, {
-        displayName,
-        normalizedValue,
-        sortOrder: patch.sortOrder ?? existing.sortOrder,
-        hex: patch.hex === undefined ? existing.hex : patch.hex,
-        swatch: patch.swatch === undefined ? existing.swatch : patch.swatch,
+      return repo.withTransaction(async (tx) => {
+        const updated = await repo.updateOptionValue(id, {
+          displayName,
+          normalizedValue,
+          sortOrder: patch.sortOrder ?? existing.sortOrder,
+          hex: patch.hex === undefined ? existing.hex : patch.hex,
+          swatch: patch.swatch === undefined ? existing.swatch : patch.swatch,
+        }, tx);
+        await audit({ entityType: "OPTION_VALUE", entityId: id, operation: "UPDATE", changedFields: changedFields(existing as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>), beforeState: existing, afterState: updated }, tx);
+        return updated;
       });
     },
 
@@ -747,7 +763,11 @@ export function createCatalogService(
       const optionType = await repo.getOptionTypeById(optionTypeId);
       if (!optionType) throw new CatalogServiceError("OPTION_TYPE_NOT_FOUND", "Option type was not found.");
       if (!Number.isInteger(sortOrder) || sortOrder < 0) validationError([{ field: "sortOrder", code: "INVALID_SORT_ORDER", message: "Option order must be a non-negative integer." }], "INVALID_VARIANT");
-      return repo.assignProductOptionType(productId, optionTypeId, sortOrder);
+      return repo.withTransaction(async (tx) => {
+        const result = await repo.assignProductOptionType(productId, optionTypeId, sortOrder, tx);
+        await audit({ entityType: "PRODUCT", entityId: productId, operation: "RELATIONSHIP_ADD", metadata: { optionTypeId, sortOrder } }, tx);
+        return result;
+      });
     },
 
     async removeProductOptionType(productId: string, optionTypeId: string) {
@@ -757,7 +777,11 @@ export function createCatalogService(
       if (optionValues.some((values) => values.some((value) => value.optionValue.optionTypeId === optionTypeId))) {
         throw new CatalogServiceError("INVALID_VARIANT", "Cannot remove an option type that is used by an existing variant.");
       }
-      return repo.removeProductOptionType(productId, optionTypeId);
+      return repo.withTransaction(async (tx) => {
+        const result = await repo.removeProductOptionType(productId, optionTypeId, tx);
+        await audit({ entityType: "PRODUCT", entityId: productId, operation: "RELATIONSHIP_REMOVE", metadata: { optionTypeId } }, tx);
+        return result;
+      });
     },
 
     async getProductOptionTypes(productId: string) {
