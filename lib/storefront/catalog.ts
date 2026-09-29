@@ -9,6 +9,7 @@ export type StorefrontProductCard = {
   id: string;
   title: string;
   slug: string;
+  href: string;
   image: { url: string; altText: string | null } | null;
   price: string;
   compareAtPrice: string | null;
