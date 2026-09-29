@@ -527,6 +527,17 @@ export function createCatalogService(
               tagIds: uniqueIds(input.tagIds),
             }, tx);
           }
+          await audit({
+            entityType: "PRODUCT",
+            entityId: input.id,
+            operation: "UPDATE",
+            changedFields: changedFields(existing as unknown as Record<string, unknown>, result as unknown as Record<string, unknown>),
+            beforeState: existing,
+            afterState: result,
+            metadata: {
+              relationshipReplacement: Boolean(input.categoryIds || input.collectionIds || input.tagIds),
+            },
+          }, tx);
           return result;
         });
         return updated;
