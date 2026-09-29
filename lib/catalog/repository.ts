@@ -584,6 +584,100 @@ export async function getPublishedProductBySlug(slug: string, client?: CatalogRe
   });
 }
 
+const publicProductDetailSelect = {
+  id: true,
+  title: true,
+  slug: true,
+  description: true,
+  shortDescription: true,
+  price: true,
+  compareAtPrice: true,
+  currency: true,
+  status: true,
+  seoTitle: true,
+  seoDescription: true,
+  images: {
+    where: { productId: { not: null } },
+    orderBy: [{ isPrimary: "desc" as const }, { sortOrder: "asc" as const }, { id: "asc" as const }],
+    select: { id: true, url: true, mediaType: true, altText: true, sortOrder: true, isPrimary: true },
+  },
+  variants: {
+    where: { status: "ACTIVE" },
+    orderBy: [{ createdAt: "asc" as const }, { id: "asc" as const }],
+    select: {
+      id: true,
+      displayName: true,
+      size: true,
+      color: true,
+      price: true,
+      compareAtPrice: true,
+      images: {
+        orderBy: [{ sortOrder: "asc" as const }, { id: "asc" as const }],
+        select: { id: true, url: true, mediaType: true, altText: true, sortOrder: true, isPrimary: true },
+      },
+      optionValues: {
+        orderBy: { optionValue: { sortOrder: "asc" as const } },
+        select: {
+          optionValue: {
+            select: {
+              id: true,
+              displayName: true,
+              normalizedValue: true,
+              hex: true,
+              swatch: true,
+              optionType: { select: { id: true, name: true, normalizedName: true, sortOrder: true } },
+            },
+          },
+        },
+      },
+      inventory: {
+        select: { trackingEnabled: true, onHand: true, reserved: true, lowStockThreshold: true },
+      },
+    },
+  },
+  optionTypes: {
+    orderBy: [{ sortOrder: "asc" as const }, { optionType: { normalizedName: "asc" as const } }],
+    select: {
+      sortOrder: true,
+      optionType: {
+        select: {
+          id: true,
+          name: true,
+          normalizedName: true,
+          sortOrder: true,
+          values: {
+            orderBy: [{ sortOrder: "asc" as const }, { displayName: "asc" as const }, { id: "asc" as const }],
+            select: { id: true, displayName: true, normalizedValue: true, hex: true, swatch: true, sortOrder: true },
+          },
+        },
+      },
+    },
+  },
+  categories: {
+    where: { category: { status: "ACTIVE" } },
+    select: { category: { select: { id: true, name: true, slug: true, description: true, parentId: true } } },
+  },
+  collections: {
+    where: { collection: { status: "ACTIVE" } },
+    orderBy: [{ isFeatured: "desc" as const }, { priority: "desc" as const }, { position: "asc" as const }, { collectionId: "asc" as const }],
+    select: { collection: { select: { id: true, name: true, slug: true, description: true } } },
+  },
+  tags: {
+    select: { tag: { select: { id: true, name: true, slug: true } } },
+  },
+} satisfies Prisma.ProductSelect;
+
+export type PublicCatalogProductDetailRecord = Prisma.ProductGetPayload<{
+  select: typeof publicProductDetailSelect;
+}>;
+
+export async function getPublishedProductDetailsBySlug(slug: string, client?: CatalogRepositoryClient) {
+  return clientOrDefault(client).product.findFirst({
+    where: { ...publishedProductWhere, slug },
+    select: publicProductDetailSelect,
+  });
+}
+
 export async function getCategoryBySlug(slug: string, client?: CatalogRepositoryClient) {
   return clientOrDefault(client).category.findUnique({ where: { slug } });
 }
