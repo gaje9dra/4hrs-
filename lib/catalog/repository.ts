@@ -495,6 +495,10 @@ export async function queryMerchandisedCatalogProducts(
     };
   }
 
+  const relationWhere = {
+    category: { slug, status: "ACTIVE" as const },
+    product: productWhere,
+  };
   const [items, total] = await Promise.all([
     repository.productCategory.findMany({
       where: relationWhere,
