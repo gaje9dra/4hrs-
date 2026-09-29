@@ -61,7 +61,7 @@ test("rejects unsupported lifecycle transitions with a domain error", () => {
 });
 
 test("repeated transitions are deterministic no-ops without audit duplication", async () => {
-  let product = { ...baseProduct, status: "ACTIVE" as const };
+  let product: typeof baseProduct & { status: "DRAFT" | "ACTIVE" | "ARCHIVED" } = { ...baseProduct, status: "ACTIVE" };
   const audits: unknown[] = [];
   const repository = {
     async getProductById() {
@@ -126,7 +126,7 @@ test("publication readiness blocks malformed products before the status transiti
 });
 
 test("restore returns archived products to DRAFT and records RESTORE", async () => {
-  let product = { ...baseProduct, status: "ARCHIVED" as const };
+  let product: typeof baseProduct & { status: "DRAFT" | "ACTIVE" | "ARCHIVED" } = { ...baseProduct, status: "ARCHIVED" };
   const audits: Array<{ operation: string }> = [];
   const repository = {
     async getProductById() {
