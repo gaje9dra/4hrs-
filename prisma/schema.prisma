@@ -72,6 +72,72 @@ model Product {
 }
 
 
+enum CatalogAuditEntityType {
+  PRODUCT
+  VARIANT
+  MEDIA
+  CATEGORY
+  COLLECTION
+  TAG
+  OPTION_TYPE
+  OPTION_VALUE
+  PRODUCT_CATEGORY
+  PRODUCT_COLLECTION
+  PRODUCT_TAG
+}
+
+enum CatalogAuditOperation {
+  CREATE
+  UPDATE
+  ARCHIVE
+  RESTORE
+  PUBLISH
+  UNPUBLISH
+  DELETE
+  RELATIONSHIP_ADD
+  RELATIONSHIP_REMOVE
+  REORDER
+  IMPORT
+  BULK_UPDATE
+}
+
+enum CatalogAuditSource {
+  MANUAL
+  IMPORT
+  BULK_OPERATION
+  SYSTEM
+  PROVIDER_SYNC
+}
+
+enum CatalogAuditActorType {
+  USER
+  PROCESS
+  IMPORT
+  PROVIDER
+}
+
+model CatalogAuditEvent {
+  id             String                   @id @default(uuid()) @db.Uuid
+  entityType     CatalogAuditEntityType
+  entityId       String                   @db.Uuid
+  operation      CatalogAuditOperation
+  source         CatalogAuditSource
+  actorType      CatalogAuditActorType?
+  actorId        String?
+  correlationId  String?
+  changedFields  String[]
+  beforeState    Json?
+  afterState     Json?
+  metadata       Json?
+  createdAt      DateTime                 @default(now())
+
+  @@index([entityType, entityId, createdAt])
+  @@index([createdAt])
+  @@index([source, operation, createdAt])
+  @@index([actorId, createdAt])
+  @@index([correlationId, createdAt])
+}
+
 enum InventoryAdjustmentReason {
   INITIAL_STOCK
   MANUAL_ADJUSTMENT
