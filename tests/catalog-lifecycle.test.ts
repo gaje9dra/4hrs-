@@ -14,7 +14,7 @@ const baseProduct = {
   slug: "oversized-graphic-t-shirt",
   description: null,
   shortDescription: null,
-  status: "DRAFT" as const,
+  status: "DRAFT" as "DRAFT" | "ACTIVE" | "ARCHIVED",
   price: { toString: () => "999.00" },
   compareAtPrice: null,
   currency: "INR",
