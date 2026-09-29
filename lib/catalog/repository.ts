@@ -248,6 +248,14 @@ const publicCatalogSelect = {
   },
 } satisfies Prisma.ProductSelect;
 
+const publicCatalogListSelect = {
+  ...publicCatalogSelect,
+  images: {
+    ...publicCatalogSelect.images,
+    take: 1,
+  },
+} satisfies Prisma.ProductSelect;
+
 export type PublicCatalogProductRecord = Prisma.ProductGetPayload<{
   select: typeof publicCatalogSelect;
 }>;
@@ -268,7 +276,7 @@ export async function queryPublishedCatalogProducts(
   ];
 
   const [items, total] = await Promise.all([
-    repository.product.findMany({ where, orderBy, skip: offset, take: limit, select: publicCatalogSelect }),
+    repository.product.findMany({ where, orderBy, skip: offset, take: limit, select: publicCatalogListSelect }),
     repository.product.count({ where }),
   ]);
 
@@ -382,7 +390,7 @@ export async function searchCatalogProducts(
       orderBy,
       skip: offset,
       take: limit,
-      select: publicCatalogSelect,
+      select: publicCatalogListSelect,
     }),
     repository.product.count({ where }),
   ]);
