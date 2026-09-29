@@ -1143,7 +1143,13 @@ export function createCatalogService(
         issues.push({ field: "slug", code: "SLUG_CHANGE_REQUIRES_REDIRECT", message: "Published Collection slugs cannot change without a redirect strategy." });
       }
       if (issues.length) validationError(issues, "INVALID_COLLECTION");
-      try { return await repo.updateCollection(id, { name: next.name, slug: next.slug, seoTitle: next.seoTitle, seoDescription: next.seoDescription, status: next.status }); }
+      try {
+        return await repo.withTransaction(async (tx) => {
+          const updated = await repo.updateCollection(id, { name: next.name, slug: next.slug, seoTitle: next.seoTitle, seoDescription: next.seoDescription, status: next.status }, tx);
+          await audit({ entityType: "COLLECTION", entityId: id, operation: "UPDATE", changedFields: changedFields(existing as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>), beforeState: existing, afterState: updated }, tx);
+          return updated;
+        });
+      }
       catch (error) { mapDatabaseError(error); }
     },
 
