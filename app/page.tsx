@@ -17,7 +17,7 @@ export default function Home() {
           <div className="mb-7 flex items-center gap-3 text-xs font-900 uppercase tracking-[0.25em]"><Shape type="circle" color="red" size="sm" /> Bauhaus / Fashion / 01</div>
           <h1 className="max-w-4xl uppercase leading-[.86] tracking-[-.055em]">Built for<br /><span className="text-primary-red">the bold.</span></h1>
           <p className="mt-8 max-w-xl text-lg font-500 leading-7 lg:text-xl">A modern fashion storefront foundation where geometry, color and commerce are designed as one system.</p>
-          <div className="mt-9 flex flex-wrap gap-4"><Button variant="primary">Explore the system <ArrowRight className="ml-2" size={18} aria-hidden="true" /></Button><Button variant="outline">View categories</Button></div>
+          <div className="mt-9 flex flex-wrap gap-4"><Button href="/shop" variant="primary">Explore the system <ArrowRight className="ml-2" size={18} aria-hidden="true" /></Button><Button href="/shop" variant="outline">View categories</Button></div>
         </div>
         <div className="relative min-h-[360px] lg:min-h-[520px]" aria-hidden="true">
           <div className="absolute right-2 top-2 h-48 w-48 rounded-full bg-primary-red sm:h-64 sm:w-64 lg:right-10 lg:top-0 lg:h-80 lg:w-80" />
