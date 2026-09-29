@@ -13,4 +13,6 @@ export * from "@/lib/catalog/import";
 export * from "@/lib/catalog/export";
 
 export * from "@/lib/catalog/bulk";
-\nexport * from "@/lib/catalog/audit";\n
+
+
+export * from "@/lib/catalog/audit";
