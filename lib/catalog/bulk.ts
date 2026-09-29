@@ -11,6 +11,8 @@ export type CatalogBulkOperation =
   | { type: "VALIDATE_PRODUCT"; product: ProductInput }
   | { type: "ARCHIVE_PRODUCT"; productId: string }
   | { type: "PUBLISH_PRODUCT"; productId: string }
+  | { type: "UNPUBLISH_PRODUCT"; productId: string }
+  | { type: "RESTORE_PRODUCT"; productId: string }
   | { type: "ASSIGN_CATEGORY"; productId: string; categoryId: string; position?: number; priority?: number; isFeatured?: boolean }
   | { type: "ASSIGN_COLLECTION"; productId: string; collectionId: string; position?: number; priority?: number; isFeatured?: boolean }
   | { type: "ASSIGN_TAG"; productId: string; tagId: string };
@@ -55,6 +57,14 @@ export async function executeCatalogBulkOperations(
           break;
         case "PUBLISH_PRODUCT":
           await service.publishProduct(operation.productId);
+          results.push({ index, type: operation.type, success: true, skipped: false, issues: [] });
+          break;
+        case "UNPUBLISH_PRODUCT":
+          await service.unpublishProduct(operation.productId);
+          results.push({ index, type: operation.type, success: true, skipped: false, issues: [] });
+          break;
+        case "RESTORE_PRODUCT":
+          await service.restoreProduct(operation.productId);
           results.push({ index, type: operation.type, success: true, skipped: false, issues: [] });
           break;
         case "ASSIGN_CATEGORY": {
