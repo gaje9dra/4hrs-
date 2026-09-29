@@ -9,7 +9,6 @@ import {
   normalizeTagName,
   normalizeTagSlug,
   normalizeTitle,
-  validateCategory,
   validateProduct,
   validateVariant,
   validateVariantUniqueness,
@@ -147,10 +146,6 @@ function issue(
     severity: options.severity ?? "ERROR",
     ...options,
   };
-}
-
-function text(value: unknown): string | undefined {
-  return typeof value === "string" ? value : undefined;
 }
 
 function normalizeReference(value: string | undefined): string | undefined {
