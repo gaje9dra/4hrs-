@@ -9,7 +9,7 @@ const read = (path: string) => readFileSync(resolve(root, path), "utf8");
 
 test("storefront route foundation exists", () => {
   for (const path of [
-    "app/page.tsx",
+    "app/(storefront)/page.tsx",
     "app/(storefront)/shop/page.tsx",
     "app/(storefront)/categories/[slug]/page.tsx",
     "app/(storefront)/collections/[slug]/page.tsx",
@@ -60,7 +60,7 @@ test("category and collection routes preserve canonical merchandising semantics"
 
 test("search is explicitly noindex and uses the public search adapter", () => {
   const source = read("app/(storefront)/search/page.tsx");
-  assert.match(source, /noindex/);
+  assert.match(source, /noindex|index:\s*false/);
   assert.match(source, /searchStorefrontProducts/);
   assert.match(read("lib/storefront/catalog.ts"), /search\.searchPublic/);
 });
@@ -69,8 +69,11 @@ test("public storefront DTO boundary excludes internal inventory and SKU fields"
   const source = read("lib/storefront/catalog.ts");
   assert.doesNotMatch(source, /onHand|reserved|audit|provider|sku/i);
   const detail = read("lib/catalog/query.ts");
-  assert.match(detail, /PublishedProductDetailResult/);
-  assert.doesNotMatch(detail.slice(detail.indexOf("export type PublishedProductDetailResult"), detail.indexOf("export function createCatalogQueryService")), /sku:/);
+  const typeStart = detail.indexOf("export type PublishedProductDetailResult");
+  const typeEnd = detail.indexOf("\n};", typeStart);
+  const detailType = detail.slice(typeStart, typeEnd + 3);
+  assert.match(detailType, /PublishedProductDetailResult/);
+  assert.doesNotMatch(detailType, /sku:/);
 });
 
 test("query parameters normalize pagination, tags and allowlisted sorting", () => {
