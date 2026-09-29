@@ -745,7 +745,9 @@ export function createCatalogService(
         displayName: item.displayName,
         size: item.size,
         color: item.color,
-        optionValueIds: (await repo.getVariantOptionValues(item.id)).map((value) => value.optionValueId),
+        optionValueIds: variant.optionValueIds.length
+          ? (await repo.getVariantOptionValues(item.id)).map((value) => value.optionValueId)
+          : [],
         price: item.price?.toString() ?? null,
         compareAtPrice: item.compareAtPrice?.toString() ?? null,
         status: item.status,
