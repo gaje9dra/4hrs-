@@ -195,4 +195,4 @@ Not implemented in Phase 3.3:
 ## Final readiness
 NOT READY FOR PHASE 3.4
 
-Blocking issue: required runtime lint, typecheck, test, production-build, and browser-smoke validation could not be executed successfully in the available environment. No runtime validation is being represented as passed.
+Blocking issue: the connected GitHub repository integration supports source and diff inspection but does not provide a project shell for dependency installation, npm command execution, or browser automation. Required runtime lint, typecheck, test, build, browser smoke, responsive viewport, keyboard, and reduced-motion checks therefore remain unverified. No runtime pass is claimed.
