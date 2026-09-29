@@ -36,7 +36,7 @@ export async function executeCatalogBulkOperations(
   options: { continueOnError?: boolean } = {},
 ): Promise<CatalogBulkResult> {
   const continueOnError = options.continueOnError ?? true;
-  const service = createCatalogService();
+  const service = createCatalogService({}, { source: "BULK_OPERATION", actorType: "PROCESS" });
   const results: CatalogBulkOperationResult[] = [];
 
   for (const [index, operation] of operations.entries()) {
