@@ -48,13 +48,11 @@ export type CatalogLifecycleRepository = {
   getProductById: (id: string, client?: CatalogRepositoryClient) => Promise<{
     id: string;
     status: ProductStatus;
-    [key: string]: unknown;
   } | null>;
   getProductDetails: (id: string, client?: CatalogRepositoryClient) => Promise<CatalogLifecycleProductDetails | null>;
   transitionProductStatus: (id: string, from: ProductStatus, to: ProductStatus, client?: CatalogRepositoryClient) => Promise<{
     id: string;
     status: ProductStatus;
-    [key: string]: unknown;
   } | null>;
   withTransaction: <T>(callback: (transaction: CatalogRepositoryClient) => Promise<T>) => Promise<T>;
 };
