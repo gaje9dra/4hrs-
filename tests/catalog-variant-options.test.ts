@@ -87,11 +87,11 @@ test("option type and value creation remain inside CatalogService boundaries", a
 
 test("product option assignments require existing canonical option types", async () => {
   const service = createCatalogService({
-    getProductById: async () => ({ id: "product-1" }),
+    getProductById: async () => ({ id: "11111111-1111-4111-8111-111111111111" }),
     getOptionTypeById: async () => ({ id: "color", name: "Color" }),
     assignProductOptionType: async (productId: string, optionTypeId: string, sortOrder: number) => ({ productId, optionTypeId, sortOrder }),
   } as unknown as Parameters<typeof createCatalogService>[0]);
 
-  const result = await service.assignProductOptionType("product-1", "color", 1);
-  assert.deepEqual(result, { productId: "product-1", optionTypeId: "color", sortOrder: 1 });
+  const result = await service.assignProductOptionType("11111111-1111-4111-8111-111111111111", "color", 1);
+  assert.deepEqual(result, { productId: "11111111-1111-4111-8111-111111111111", optionTypeId: "color", sortOrder: 1 });
 });
