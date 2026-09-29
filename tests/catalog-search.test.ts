@@ -294,6 +294,8 @@ test("database adapter composes public visibility and all search/filter predicat
 
   const where = JSON.stringify(captured.where);
   assert.match(where, /"status":"ACTIVE"/);
+  assert.match(where, /"productId":\{"not":null\}/);
+  assert.match(where, /"mediaType":"IMAGE"/);
   assert.match(where, /oversized/);
   assert.match(where, /t-shirts/);
   assert.match(where, /new-arrivals/);
