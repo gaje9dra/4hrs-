@@ -743,6 +743,21 @@ export async function archiveProduct(id: string, client?: CatalogRepositoryClien
   return updateProduct(id, { status: "ARCHIVED" }, client);
 }
 
+export async function transitionProductStatus(
+  id: string,
+  from: "DRAFT" | "ACTIVE" | "ARCHIVED",
+  to: "DRAFT" | "ACTIVE" | "ARCHIVED",
+  client?: CatalogRepositoryClient,
+) {
+  const repository = clientOrDefault(client);
+  const result = await repository.product.updateMany({
+    where: { id, status: from },
+    data: { status: to },
+  });
+  if (result.count !== 1) return null;
+  return repository.product.findUnique({ where: { id } });
+}
+
 export async function createOptionType(data: Prisma.VariantOptionTypeCreateInput, client?: CatalogRepositoryClient) {
   return clientOrDefault(client).variantOptionType.create({ data });
 }
