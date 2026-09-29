@@ -239,6 +239,38 @@ export function validatePrimaryImages(images: ImageInput[]): ValidationIssue[] {
   return productPrimaryCount > 1 ? [issue("images", "MULTIPLE_PRIMARY_IMAGES", "A Product may have at most one primary product-level image.")] : [];
 }
 
+export function validateImageAssetUniqueness(images: ImageInput[]): ValidationIssue[] {
+  const seenUrls = new Map<string, number>();
+  const seenReferences = new Map<string, number>();
+  const issues: ValidationIssue[] = [];
+
+  images.forEach((image, index) => {
+    const owner = image.productId
+      ? "product:" + image.productId
+      : "variant:" + (image.variantId ?? "");
+    const urlKey = owner + "\u0000" + image.url.trim();
+    const previousUrl = seenUrls.get(urlKey);
+    if (previousUrl !== undefined) {
+      issues.push(issue("images[" + index + "]", "DUPLICATE_MEDIA", "Media duplicates images[" + previousUrl + "] for the same owner."));
+    } else {
+      seenUrls.set(urlKey, index);
+    }
+
+    const reference = image.storageReference?.trim();
+    if (reference) {
+      const referenceKey = owner + "\u0000" + reference;
+      const previousReference = seenReferences.get(referenceKey);
+      if (previousReference !== undefined) {
+        issues.push(issue("images[" + index + "]", "DUPLICATE_MEDIA", "Media storage reference duplicates images[" + previousReference + "] for the same owner."));
+      } else {
+        seenReferences.set(referenceKey, index);
+      }
+    }
+  });
+
+  return dedupeIssues(issues);
+}
+
 export function validateCategory(input: CategoryInput & SeoMetadataInput): ValidationIssue[] { const issues: ValidationIssue[] = []; requireText(input.name, "name", "Category name", issues); issues.push(...validateSlug(input.slug)); issues.push(...validateSeoMetadata(input)); return issues; }
 export function validateCategoryHierarchy(categoryId: string, parentId: string | null | undefined): ValidationIssue[] { return parentId === categoryId ? [issue("parentId", "SELF_PARENT", "Category cannot be its own parent.")] : []; }
 export function hasCategoryCycle(categoryId: string, parentById: ReadonlyMap<string, string | null>): boolean { const visited = new Set<string>(); let current: string | null | undefined = categoryId; while (current) { if (visited.has(current)) return true; visited.add(current); current = parentById.get(current) ?? null; } return false; }
