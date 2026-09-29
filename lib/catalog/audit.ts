@@ -55,7 +55,7 @@ export type CatalogAuditPage = {
   nextCursor: string | null;
 };
 
-type AuditClient = PrismaClient | Prisma.TransactionClient;
+export type CatalogAuditClient = PrismaClient | Prisma.TransactionClient;
 
 const MAX_JSON_BYTES = 32768;
 const MAX_DEPTH = 6;
@@ -100,7 +100,7 @@ export function changedFields(before: Record<string, unknown> | null | undefined
 
 export async function recordCatalogAudit(
   event: CatalogAuditEventInput,
-  client: AuditClient = db,
+  client: CatalogAuditClient = db,
 ): Promise<void> {
   await client.catalogAuditEvent.create({
     data: {
