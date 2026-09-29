@@ -19,6 +19,7 @@ const product = {
       id: "image-1",
       url: "https://cdn.example.com/shirt.jpg",
       altText: "Oversized Graphic T-Shirt",
+      mediaType: "IMAGE" as const,
       sortOrder: 0,
       isPrimary: true,
     },
@@ -54,7 +55,7 @@ const queryRepository = {
     return product;
   },
   async getCategoryBySlug() {
-    return { id: "category-1", name: "T-Shirts", slug: "t-shirts", status: "ACTIVE" as const };
+    return { id: "category-1", name: "T-Shirts", slug: "t-shirts", description: null, seoTitle: null, seoDescription: null, parentId: null, status: "ACTIVE" as const, createdAt: new Date(), updatedAt: new Date() };
   },
   async listActiveCategories() {
     return [];
@@ -63,7 +64,7 @@ const queryRepository = {
     return [];
   },
   async getCollectionBySlug() {
-    return { id: "collection-1", name: "New Arrivals", slug: "new-arrivals", status: "ACTIVE" as const };
+    return { id: "collection-1", name: "New Arrivals", slug: "new-arrivals", description: null, seoTitle: null, seoDescription: null, status: "ACTIVE" as const, createdAt: new Date(), updatedAt: new Date() };
   },
   async listActiveCollections() {
     return [];
