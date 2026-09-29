@@ -8,11 +8,11 @@ Integrate the existing Phase 1 global shell into the Phase 3.1 customer storefro
 
 The existing root app/layout.tsx, Container, HeaderBrand, SkipLink, Footer, Bauhaus tokens, and established responsive/focus styles remain the shell foundation.
 
-The root layout now fetches storefront navigation data once and passes the resulting public navigation model to the client Header and server Footer.
+The root layout now fetches storefront navigation data once and passes the resulting public navigation model to the server-rendered Header and Footer; only interactive navigation subcomponents require client behavior.
 
 ## 3. Header architecture
 
-The Header remains a client component only because route-aware active state and the mobile menu require client behavior.
+The Header is server-rendered. Route-aware desktop state lives in DesktopNav and mobile menu state/focus behavior lives in MobileNav.
 
 The brand continues to use the existing HeaderBrand implementation and links to /.
 
@@ -94,8 +94,8 @@ Server:
 - brand and other presentational shell components
 
 Client:
-- Header, because it reads the current pathname and owns mobile-menu state
-- Mobile navigation, because it manages focus, Escape, and body interaction
+- Desktop navigation, because it reads the current pathname
+- Mobile navigation, because it owns menu state, pathname state, focus, Escape, and body interaction
 
 No catalog page was converted into a client application.
 
