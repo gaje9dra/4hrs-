@@ -10,7 +10,7 @@ import {
 } from "@/lib/catalog/query";
 import {
   type RepositoryCatalogListResult,
-  type CatalogSearchMode as RepositoryCatalogSearchMode,
+  type RepositoryCatalogSearchMode,
   type CatalogSearchRepositoryOptions,
   type PublicCatalogProductRecord,
   searchCatalogProducts,
