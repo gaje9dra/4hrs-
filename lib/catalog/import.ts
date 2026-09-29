@@ -823,6 +823,16 @@ async function persistProduct(
     }
   }
 
+  if (plan.productId && optionResolution.optionTypeIds.length) {
+    const assignedOptionTypes = await repository.listProductOptionTypes(productId);
+    const assignedIds = new Set(assignedOptionTypes.map((item) => item.optionTypeId));
+    for (const [index, optionTypeId] of optionResolution.optionTypeIds.entries()) {
+      if (!assignedIds.has(optionTypeId)) {
+        await service.assignProductOptionType(productId, optionTypeId, index);
+      }
+    }
+  }
+
   const memberships = product.collections ?? [];
   for (const membership of memberships) {
     const collectionId = await resolveCollection(membership, collectionIds);
