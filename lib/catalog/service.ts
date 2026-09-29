@@ -19,6 +19,8 @@ import {
   validateMoney,
   validateProduct,
   validatePublishingReadiness,
+  validateMerchandisingMembership,
+  validateMerchandisingReorder,
   validateTag,
   validateVariant,
   validateVariantPricing,
@@ -99,6 +101,11 @@ type CatalogRepository = {
   attachCategory: typeof repository.attachCategory;
   detachCategory: typeof repository.detachCategory;
   attachCollection: typeof repository.attachCollection;
+  getProductCollection: typeof repository.getProductCollection;
+  updateProductCollection: typeof repository.updateProductCollection;
+  reorderProductCollection: typeof repository.reorderProductCollection;
+  listCollectionProducts: typeof repository.listCollectionProducts;
+  listCategoryProducts: typeof repository.listCategoryProducts;
   detachCollection: typeof repository.detachCollection;
   attachTag: typeof repository.attachTag;
   detachTag: typeof repository.detachTag;
@@ -1063,11 +1070,59 @@ export function createCatalogService(customRepository: Partial<CatalogRepository
       return collection;
     },
 
-    async attachCollection(productId: string, collectionId: string) {
+    async attachCollection(
+      productId: string,
+      collectionId: string,
+      options: { position?: number; priority?: number; isFeatured?: boolean } = {},
+    ) {
+      const issues = validateMerchandisingMembership({ productId, collectionId, ...options });
+      if (issues.length) validationError(issues, "INVALID_COLLECTION");
       await this.getProductById(productId);
       const collection = await repo.getCollectionById(collectionId);
       if (!collection) throw new CatalogServiceError("COLLECTION_NOT_FOUND", "Collection was not found.");
-      try { return await repo.attachCollection(productId, collectionId); } catch (error) { mapDatabaseError(error); }
+      const existing = await repo.getProductCollection(productId, collectionId);
+      if (existing) throw new CatalogServiceError("INVALID_COLLECTION", "Product is already a member of this collection.");
+      try { return await repo.attachCollection(productId, collectionId, options); } catch (error) { mapDatabaseError(error); }
+    },
+
+    async updateCollectionMembership(
+      productId: string,
+      collectionId: string,
+      patch: { position?: number; priority?: number; isFeatured?: boolean },
+    ) {
+      const existing = await repo.getProductCollection(productId, collectionId);
+      if (!existing) throw new CatalogServiceError("INVALID_COLLECTION", "Product is not a member of this collection.");
+      const issues = validateMerchandisingMembership({ productId, collectionId, ...patch });
+      if (issues.length) validationError(issues, "INVALID_COLLECTION");
+      try { return await repo.updateProductCollection(productId, collectionId, patch); } catch (error) { mapDatabaseError(error); }
+    },
+
+    async reorderCollectionProducts(
+      collectionId: string,
+      updates: Array<{ productId: string; position: number; priority?: number; isFeatured?: boolean }>,
+    ) {
+      const issues = validateMerchandisingReorder(updates);
+      if (issues.length) validationError(issues, "INVALID_COLLECTION");
+      const collection = await repo.getCollectionById(collectionId);
+      if (!collection) throw new CatalogServiceError("COLLECTION_NOT_FOUND", "Collection was not found.");
+      const memberships = await Promise.all(updates.map((update) => repo.getProductCollection(update.productId, collectionId)));
+      memberships.forEach((membership, index) => {
+        if (!membership) issues.push({
+          field: "updates[" + index + "].productId",
+          code: "PRODUCT_NOT_IN_COLLECTION",
+          message: "Product is not a member of this collection.",
+        });
+      });
+      if (issues.length) validationError(issues, "INVALID_COLLECTION");
+      try {
+        return await repo.withTransaction((tx) => repo.reorderProductCollection(collectionId, updates, tx));
+      } catch (error) { mapDatabaseError(error); }
+    },
+
+    async listCollectionProducts(collectionId: string) {
+      const collection = await repo.getCollectionById(collectionId);
+      if (!collection) throw new CatalogServiceError("COLLECTION_NOT_FOUND", "Collection was not found.");
+      return repo.listCollectionProducts(collectionId);
     },
 
     async detachCollection(productId: string, collectionId: string) {
