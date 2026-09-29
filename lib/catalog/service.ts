@@ -118,6 +118,21 @@ type CatalogRepository = {
 
 const defaultRepository: CatalogRepository = repository;
 
+export type CatalogMerchandisingProduct = {
+  productId: string;
+  position: number;
+  priority: number;
+  isFeatured: boolean;
+  product: {
+    id: string;
+    title: string;
+    slug: string;
+    status: "DRAFT" | "ACTIVE" | "ARCHIVED";
+    createdAt: Date;
+    updatedAt: Date;
+  };
+};
+
 export type CreateProductInput = ProductInput & {
   variants?: VariantInput[];
   images?: ImageInput[];
@@ -1125,7 +1140,21 @@ export function createCatalogService(customRepository: Partial<CatalogRepository
     async listCollectionProducts(collectionId: string) {
       const collection = await repo.getCollectionById(collectionId);
       if (!collection) throw new CatalogServiceError("COLLECTION_NOT_FOUND", "Collection was not found.");
-      return repo.listCollectionProducts(collectionId);
+      const rows = await repo.listCollectionProducts(collectionId);
+      return rows.map((row) => ({
+        productId: row.productId,
+        position: row.position,
+        priority: row.priority,
+        isFeatured: row.isFeatured,
+        product: {
+          id: row.product.id,
+          title: row.product.title,
+          slug: row.product.slug,
+          status: row.product.status,
+          createdAt: row.product.createdAt,
+          updatedAt: row.product.updatedAt,
+        },
+      })) as CatalogMerchandisingProduct[];
     },
 
     async detachCollection(productId: string, collectionId: string) {
