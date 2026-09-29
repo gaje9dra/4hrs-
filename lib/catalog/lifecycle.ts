@@ -108,7 +108,7 @@ export type CatalogLifecycleAudit = (
   client?: CatalogAuditClient,
 ) => Promise<unknown>;
 
-function toReadinessInput(product: CatalogLifecycleProductDetails){
+function toReadinessInput(product: CatalogLifecycleProductDetails): {
   product: ProductInput;
   variants: VariantInput[];
   images: ImageInput[];
