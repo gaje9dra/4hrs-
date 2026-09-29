@@ -712,6 +712,13 @@ async function persistProduct(
   }
 
   const existingVariants = await repository.getVariantsByProduct(productId);
+  const variantIdByReference = new Map<string, string>();
+  for (const existingVariant of existingVariants) {
+    const matchingInput = (product.variants ?? []).find((candidate) =>
+      candidate.id === existingVariant.id || candidate.sku === existingVariant.sku,
+    );
+    if (matchingInput?.externalReference) variantIdByReference.set(matchingInput.externalReference, existingVariant.id);
+  }
   for (const rawVariant of product.variants ?? []) {
     const variant = { ...rawVariant, productId };
     let existing = rawVariant.id ? await repository.getVariantById(rawVariant.id) : null;
@@ -724,6 +731,7 @@ async function persistProduct(
     const saved = existing
       ? await service.updateVariant(existing.id, rawVariant)
       : await service.createVariant(variant);
+    if (rawVariant.externalReference) variantIdByReference.set(rawVariant.externalReference, saved.id);
     if (rawVariant.externalReference) {
       await repository.createImportIdentity({
         entityType: "VARIANT",
@@ -811,7 +819,7 @@ export function createCatalogImportService() {
       const categoryResult = await ensureCategories(normalized, false, normalized.namespace!);
       const collectionResult = await ensureCollections(normalized, false);
       const tagResult = await ensureTags(normalized, false);
-      const errors = [...categoryResult.issues, ...collectionResult.issues];
+      const errors = [...categoryResult.issues, ...collectionResult.issues, ...tagResult.issues];
       if (errors.length) return { ...summarizeResult(false, preview.records, errors), dryRun: false };
 
       const plans = await planProducts(normalized, normalized.namespace!, categoryResult.idsByKey, collectionResult.idsByKey, tagResult.idsByKey);
