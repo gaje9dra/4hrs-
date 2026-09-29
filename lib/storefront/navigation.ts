@@ -13,7 +13,12 @@ export async function getStorefrontNavigation(): Promise<NavigationItem[]> {
 
   return [
     { label: "Home", href: "/", match: "exact" },
-    { label: "Shop", href: "/shop", match: "section" },
+    {
+      label: "Shop",
+      href: "/shop",
+      match: "section",
+      activePrefixes: ["/shop", "/categories/", "/collections/", "/products/"],
+    },
     {
       label: "Categories",
       children: categories.map((category) => ({
@@ -38,15 +43,14 @@ export function storefrontNavigationToFooterGroups(items: NavigationItem[]): Foo
   const shop = items.find((item) => item.label === "Shop" && item.href);
   const categories = items.find((item) => item.label === "Categories");
   const collections = items.find((item) => item.label === "Collections");
+  const search = items.find((item) => item.label === "Search" && item.href);
 
   return [
     {
       label: "Shop",
       items: [
         ...(shop?.href ? [{ label: shop.label, href: shop.href }] : []),
-        ...(items.find((item) => item.label === "Search" && item.href)?.href
-          ? [{ label: "Search", href: items.find((item) => item.label === "Search" && item.href)!.href! }]
-          : []),
+        ...(search?.href ? [{ label: search.label, href: search.href }] : []),
       ],
     },
     {
