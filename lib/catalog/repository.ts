@@ -1146,6 +1146,30 @@ export async function withTransaction<T>(
   return db.$transaction(callback);
 }
 
+export async function getImportIdentity(
+  entityType: "PRODUCT" | "VARIANT",
+  namespace: string,
+  externalReference: string,
+  client?: CatalogRepositoryClient,
+) {
+  return clientOrDefault(client).catalogImportIdentity.findUnique({
+    where: { entityType_namespace_externalReference: { entityType, namespace, externalReference } },
+  });
+}
+
+export async function createImportIdentity(
+  data: {
+    entityType: "PRODUCT" | "VARIANT";
+    namespace: string;
+    externalReference: string;
+    canonicalId: string;
+  },
+  client?: CatalogRepositoryClient,
+) {
+  return clientOrDefault(client).catalogImportIdentity.create({ data });
+}
+
+
 export async function deleteProductImage(id: string, client?: CatalogRepositoryClient) {
   return deleteImage(id, client);
 }
