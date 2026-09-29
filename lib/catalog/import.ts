@@ -572,7 +572,8 @@ async function planProducts(
       else resolvedTags.push(id);
     }
 
-    const variants = (product.variants ?? []).map((variant) => ({ ...variant, productId: product.id ?? "" }));
+    const validationProductId = product.id ?? "import-preview-product";
+    const variants = (product.variants ?? []).map((variant) => ({ ...variant, productId: validationProductId }));
     issues.push(...variants.flatMap((variant, variantIndex) =>
       validateVariant(variant).map((item) => mapValidationIssue("variant", index, { ...item, field: "variants[" + variantIndex + "]." + item.field })),
     ));
