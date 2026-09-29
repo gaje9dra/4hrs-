@@ -922,8 +922,39 @@ export async function deleteTag(id: string, client?: CatalogRepositoryClient) {
   return clientOrDefault(client).tag.delete({ where: { id } });
 }
 
-export async function attachCategory(productId: string, categoryId: string, client?: CatalogRepositoryClient) {
-  return clientOrDefault(client).productCategory.create({ data: { productId, categoryId } });
+export async function attachCategory(
+  productId: string,
+  categoryId: string,
+  data: { position?: number; priority?: number; isFeatured?: boolean } = {},
+  client?: CatalogRepositoryClient,
+) {
+  return clientOrDefault(client).productCategory.create({
+    data: {
+      productId,
+      categoryId,
+      position: data.position ?? 0,
+      priority: data.priority ?? 0,
+      isFeatured: data.isFeatured ?? false,
+    },
+  });
+}
+
+export async function getProductCategory(productId: string, categoryId: string, client?: CatalogRepositoryClient) {
+  return clientOrDefault(client).productCategory.findUnique({
+    where: { productId_categoryId: { productId, categoryId } },
+  });
+}
+
+export async function updateProductCategory(
+  productId: string,
+  categoryId: string,
+  data: { position?: number; priority?: number; isFeatured?: boolean },
+  client?: CatalogRepositoryClient,
+) {
+  return clientOrDefault(client).productCategory.update({
+    where: { productId_categoryId: { productId, categoryId } },
+    data,
+  });
 }
 
 export async function detachCategory(productId: string, categoryId: string, client?: CatalogRepositoryClient) {
