@@ -8,7 +8,7 @@ import Link from "next/link";
 import { buildCatalogHref } from "@/lib/storefront/query-params";
 
 export function CatalogListing({
-  pathname, title, eyebrow, description, products, params, categories, collections, tags, fixedCategory, fixedCollection,
+  pathname, title, eyebrow, description, products, params, categories, collections, tags, fixedCategory, fixedCollection, breadcrumbs = [],
 }: {
   pathname: string;
   title: string;
@@ -21,6 +21,7 @@ export function CatalogListing({
   tags: StorefrontTag[];
   fixedCategory?: string;
   fixedCollection?: string;
+  breadcrumbs?: Array<{ label: string; href?: string }>;
 }) {
   const totalLabel = products.pagination.total === 1 ? "1 PRODUCT" : products.pagination.total + " PRODUCTS";
   const empty = products.items.length === 0;
