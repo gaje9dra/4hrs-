@@ -87,7 +87,7 @@ test("query parameters normalize pagination, tags and allowlisted sorting", () =
   });
   assert.equal(result.page, 3);
   assert.equal(result.pageSize, 48);
-  assert.deepEqual(result.tags, ["shirts", "summer", "shirts"]);
+  assert.deepEqual(result.tags, ["shirts", "summer"]);
   assert.equal(result.tagMode, "OR");
   assert.equal(result.sort, "price_asc");
   assert.equal(result.inStock, true);
