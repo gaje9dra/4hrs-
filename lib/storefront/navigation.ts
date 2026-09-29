@@ -1,3 +1,4 @@
+import type { FooterNavGroup } from "@/types/footer";
 import type { NavigationItem } from "@/types/navigation";
 import { createCatalogQueryService } from "@/lib/catalog/query";
 import { categoryPath, collectionPath } from "@/lib/catalog/routes";
@@ -31,4 +32,34 @@ export async function getStorefrontNavigation(): Promise<NavigationItem[]> {
     },
     { label: "Search", href: "/search", match: "section" },
   ];
+}
+
+export function storefrontNavigationToFooterGroups(items: NavigationItem[]): FooterNavGroup[] {
+  const shop = items.find((item) => item.label === "Shop" && item.href);
+  const categories = items.find((item) => item.label === "Categories");
+  const collections = items.find((item) => item.label === "Collections");
+
+  return [
+    {
+      label: "Shop",
+      items: [
+        ...(shop?.href ? [{ label: shop.label, href: shop.href }] : []),
+        ...(items.find((item) => item.label === "Search" && item.href)?.href
+          ? [{ label: "Search", href: items.find((item) => item.label === "Search" && item.href)!.href! }]
+          : []),
+      ],
+    },
+    {
+      label: "Categories",
+      items: (categories?.children ?? [])
+        .filter((item) => item.href && !item.disabled)
+        .map((item) => ({ label: item.label, href: item.href! })),
+    },
+    {
+      label: "Collections",
+      items: (collections?.children ?? [])
+        .filter((item) => item.href && !item.disabled)
+        .map((item) => ({ label: item.label, href: item.href! })),
+    },
+  ].filter((group) => group.items.length > 0);
 }
