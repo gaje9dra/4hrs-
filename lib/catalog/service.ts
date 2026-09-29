@@ -810,6 +810,10 @@ export function createCatalogService(
           status: variant.status,
         }, tx);
           await repo.replaceVariantOptionValues(result.id, optionCheck.optionValueIds, tx);
+          await audit({ entityType: "VARIANT", entityId: result.id, operation: "CREATE", afterState: result }, tx);
+          if (optionCheck.optionValueIds.length) {
+            await audit({ entityType: "VARIANT", entityId: result.id, operation: "RELATIONSHIP_ADD", metadata: { optionValueIds: optionCheck.optionValueIds } }, tx);
+          }
           return result;
         });
         return created;
@@ -878,6 +882,15 @@ export function createCatalogService(
           status: merged.status,
         }, tx);
           await repo.replaceVariantOptionValues(id, optionCheck.optionValueIds, tx);
+          await audit({
+            entityType: "VARIANT",
+            entityId: id,
+            operation: "UPDATE",
+            changedFields: changedFields(existing as unknown as Record<string, unknown>, result as unknown as Record<string, unknown>),
+            beforeState: existing,
+            afterState: result,
+            metadata: { optionValueIds: optionCheck.optionValueIds },
+          }, tx);
           return result;
         });
         return updated;
