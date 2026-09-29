@@ -100,7 +100,7 @@ test("CatalogService adds product media without coupling to storage providers", 
     listProductImages: async () => [],
     listVariantImages: async () => [],
     updateProductImagesPrimaryState: async () => ({ count: 0 }),
-    createImage: async (data) => {
+    createImage: async (data: { url: string; storageReference?: string | null; altText?: string | null; sortOrder: number; isPrimary: boolean }) => {
       calls.push("createImage");
       return {
         id: "image-1",
@@ -116,7 +116,7 @@ test("CatalogService adds product media without coupling to storage providers", 
         updatedAt: new Date(),
       };
     },
-    withTransaction: async (callback) => callback({} as never),
+    withTransaction: async (callback: (tx: never) => Promise<unknown>) => callback({} as never),
   } as unknown as Parameters<typeof createCatalogService>[0]);
 
   const result = await service.addImage({
