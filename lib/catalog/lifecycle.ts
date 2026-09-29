@@ -1,7 +1,8 @@
 import type { ProductStatus } from "@prisma/client";
 import { CatalogServiceError } from "@/lib/catalog/errors";
 import { validatePublishingReadiness, type ImageInput, type ProductInput, type VariantInput } from "@/lib/catalog/validation";
-import type { CatalogAuditContext } from "@/lib/catalog/audit";
+import type { CatalogAuditContext, CatalogAuditClient } from "@/lib/catalog/audit";
+import type { CatalogRepositoryClient } from "@/lib/catalog/repository";
 import { PRODUCT_LIFECYCLE_TRANSITIONS, canTransitionProductStatus } from "@/lib/catalog/lifecycle-rules";
 
 export type ProductLifecycleTransition = {
@@ -44,10 +45,18 @@ export function assertProductLifecycleTransition(from: ProductStatus, to: Produc
 }
 
 export type CatalogLifecycleRepository = {
-  getProductById: (id: string, client?: unknown) => Promise<any>;
-  getProductDetails: (id: string, client?: unknown) => Promise<any>;
-  transitionProductStatus: (id: string, from: ProductStatus, to: ProductStatus, client?: unknown) => Promise<any>;
-  withTransaction: <T>(callback: (transaction: unknown) => Promise<T>) => Promise<T>;
+  getProductById: (id: string, client?: CatalogRepositoryClient) => Promise<{
+    id: string;
+    status: ProductStatus;
+    [key: string]: unknown;
+  } | null>;
+  getProductDetails: (id: string, client?: CatalogRepositoryClient) => Promise<unknown>;
+  transitionProductStatus: (id: string, from: ProductStatus, to: ProductStatus, client?: CatalogRepositoryClient) => Promise<{
+    id: string;
+    status: ProductStatus;
+    [key: string]: unknown;
+  } | null>;
+  withTransaction: <T>(callback: (transaction: CatalogRepositoryClient) => Promise<T>) => Promise<T>;
 };
 
 export type CatalogLifecycleAudit = (
@@ -60,10 +69,44 @@ export type CatalogLifecycleAudit = (
     afterState?: unknown;
     metadata?: Record<string, unknown>;
   },
-  client?: unknown,
+  client?: CatalogAuditClient,
 ) => Promise<unknown>;
 
-function toReadinessInput(product: any): {
+function toReadinessInput(product: {
+  id: string;
+  title: string;
+  slug: string;
+  description: string | null;
+  shortDescription: string | null;
+  status: ProductStatus;
+  price: { toString(): string };
+  compareAtPrice: { toString(): string } | null;
+  currency: string;
+  seoTitle: string | null;
+  seoDescription: string | null;
+  variants: Array<{
+    id: string;
+    productId: string;
+    sku: string;
+    displayName: string | null;
+    size: string | null;
+    color: string | null;
+    price: { toString(): string } | null;
+    compareAtPrice: { toString(): string } | null;
+    status: "ACTIVE" | "INACTIVE";
+    optionValues?: Array<{ optionValueId: string }>;
+  }>;
+  images: Array<{
+    productId: string | null;
+    variantId: string | null;
+    url: string;
+    storageReference?: string | null;
+    mediaType?: "IMAGE";
+    altText: string | null;
+    sortOrder: number;
+    isPrimary: boolean;
+  }>;
+}): {
   product: ProductInput;
   variants: VariantInput[];
   images: ImageInput[];
@@ -82,7 +125,7 @@ function toReadinessInput(product: any): {
       seoTitle: product.seoTitle,
       seoDescription: product.seoDescription,
     },
-    variants: product.variants.map((variant: any) => ({
+    variants: product.variants.map((variant) => ({
       id: variant.id,
       productId: variant.productId,
       sku: variant.sku,
@@ -92,7 +135,7 @@ function toReadinessInput(product: any): {
       price: variant.price?.toString() ?? null,
       compareAtPrice: variant.compareAtPrice?.toString() ?? null,
       status: variant.status,
-      optionValueIds: variant.optionValues?.map((item: any) => item.optionValueId) ?? undefined,
+      optionValueIds: variant.optionValues?.map((item) => item.optionValueId) ?? undefined,
     })),
     images: product.images.map((image: any) => ({
       productId: image.productId,
