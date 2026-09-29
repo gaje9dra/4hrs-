@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { CatalogServiceError } from "@/lib/catalog/errors";
 import { getPublicCategorySeoMetadata } from "@/lib/catalog/seo";
+import { categoryPath } from "@/lib/catalog/routes";
 import { getStorefrontCategory, getStorefrontCategoryProducts, getStorefrontListingFilters } from "@/lib/storefront/catalog";
 import { CatalogListing } from "@/components/storefront/catalog-listing";
 import { catalogQueryFromSearchParams, type StorefrontSearchParams } from "@/lib/storefront/query-params";
@@ -9,9 +10,8 @@ import { catalogQueryFromSearchParams, type StorefrontSearchParams } from "@/lib
 type Params = Promise<{ slug: string }>;
 
 async function loadCategory(slug: string) {
-  try {
-    return await getStorefrontCategory(slug);
-  } catch (error) {
+  try { return await getStorefrontCategory(slug); }
+  catch (error) {
     if (error instanceof CatalogServiceError && error.code === "CATEGORY_NOT_FOUND") notFound();
     throw error;
   }
@@ -23,9 +23,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     const seo = getPublicCategorySeoMetadata(category);
     if (!seo) return { robots: { index: false, follow: true } };
     return { title: seo.title, description: seo.description, alternates: { canonical: seo.canonicalUrl }, robots: seo.robots };
-  } catch {
-    return { robots: { index: false, follow: false } };
-  }
+  } catch { return { robots: { index: false, follow: false } }; }
 }
 
 export default async function CategoryPage({ params, searchParams }: { params: Params; searchParams: Promise<StorefrontSearchParams> }) {
@@ -47,6 +45,13 @@ export default async function CategoryPage({ params, searchParams }: { params: P
       params={paramsObject}
       {...filters}
       fixedCategory={category.slug}
+      breadcrumbs={[
+        { label: "Shop", href: "/shop" },
+        ...category.breadcrumbs.map((item, index) => ({
+          label: item.name,
+          href: index === category.breadcrumbs.length - 1 ? undefined : categoryPath(item),
+        })),
+      ]}
     />
   );
 }
