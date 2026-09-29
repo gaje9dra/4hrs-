@@ -448,7 +448,7 @@ async function ensureCollections(
 ): Promise<{ idsByKey: Map<string, string>; issues: CatalogImportIssue[] }> {
   const idsByKey = new Map<string, string>();
   const issues: CatalogImportIssue[] = [];
-  const service = createCatalogService({}, { source: "IMPORT", actorType: "IMPORT", correlationId: "import:" + namespace });
+  const service = createCatalogService({}, { source: "IMPORT", actorType: "IMPORT" });
   for (const [index, collection] of (payload.collections ?? []).entries()) {
     const key = collection.externalReference ?? collection.id ?? collection.slug;
     if (!key) {
@@ -476,7 +476,7 @@ async function ensureTags(
 ): Promise<{ idsByKey: Map<string, string>; issues: CatalogImportIssue[] }> {
   const idsByKey = new Map<string, string>();
   const issues: CatalogImportIssue[] = [];
-  const service = createCatalogService({}, { source: "IMPORT", actorType: "IMPORT", correlationId: "import:" + namespace });
+  const service = createCatalogService({}, { source: "IMPORT", actorType: "IMPORT" });
   for (const [index, tag] of (payload.tags ?? []).entries()) {
     const key = tag.externalReference ?? tag.id ?? tag.slug ?? tag.name;
     if (!key) {
