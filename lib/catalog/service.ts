@@ -361,8 +361,8 @@ export function createCatalogService(customRepository: Partial<CatalogRepository
             }, tx);
           }
 
-          for (const categoryId of categoryIds ?? []) await repo.attachCategory(productId, categoryId, tx);
-          for (const collectionId of collectionIds ?? []) await repo.attachCollection(productId, collectionId, tx);
+          for (const categoryId of categoryIds ?? []) await repo.attachCategory(productId, categoryId, {}, tx);
+          for (const collectionId of collectionIds ?? []) await repo.attachCollection(productId, collectionId, {}, tx);
           for (const tagId of tagIds ?? []) await repo.attachTag(productId, tagId, tx);
 
           return created;
