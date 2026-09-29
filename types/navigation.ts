@@ -5,6 +5,7 @@ export type NavigationItem = {
   external?: boolean
   disabled?: boolean
   match?: "exact" | "section"
+  activePrefixes?: string[]
 }
 
 export type UtilityNavigationItem = {
