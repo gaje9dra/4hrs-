@@ -1,5 +1,6 @@
 import { CatalogServiceError } from "@/lib/catalog/errors";
 import { createCatalogService } from "@/lib/catalog/service";
+import * as repository from "@/lib/catalog/repository";
 import {
   validateProduct,
   type ProductInput,
@@ -54,40 +55,42 @@ export async function executeCatalogBulkOperations(
           await service.publishProduct(operation.productId);
           results.push({ index, type: operation.type, success: true, skipped: false, issues: [] });
           break;
-        case "ASSIGN_CATEGORY":
-          await service.updateCategoryMembership(operation.productId, operation.categoryId, {
-            position: operation.position,
-            priority: operation.priority,
-            isFeatured: operation.isFeatured,
-          }).catch(async (error) => {
-            if (error instanceof CatalogServiceError && error.code === "INVALID_CATEGORY") {
-              return service.attachCategory(operation.productId, operation.categoryId, {
-                position: operation.position,
-                priority: operation.priority,
-                isFeatured: operation.isFeatured,
-              });
-            }
-            throw error;
-          });
+        case "ASSIGN_CATEGORY": {
+          const existing = await repository.getProductCategory(operation.productId, operation.categoryId);
+          if (existing) {
+            await service.updateCategoryMembership(operation.productId, operation.categoryId, {
+              position: operation.position,
+              priority: operation.priority,
+              isFeatured: operation.isFeatured,
+            });
+          } else {
+            await service.attachCategory(operation.productId, operation.categoryId, {
+              position: operation.position,
+              priority: operation.priority,
+              isFeatured: operation.isFeatured,
+            });
+          }
           results.push({ index, type: operation.type, success: true, skipped: false, issues: [] });
           break;
-        case "ASSIGN_COLLECTION":
-          await service.updateCollectionMembership(operation.productId, operation.collectionId, {
-            position: operation.position,
-            priority: operation.priority,
-            isFeatured: operation.isFeatured,
-          }).catch(async (error) => {
-            if (error instanceof CatalogServiceError && error.code === "INVALID_COLLECTION") {
-              return service.attachCollection(operation.productId, operation.collectionId, {
-                position: operation.position,
-                priority: operation.priority,
-                isFeatured: operation.isFeatured,
-              });
-            }
-            throw error;
-          });
+        }
+        case "ASSIGN_COLLECTION": {
+          const existing = await repository.getProductCollection(operation.productId, operation.collectionId);
+          if (existing) {
+            await service.updateCollectionMembership(operation.productId, operation.collectionId, {
+              position: operation.position,
+              priority: operation.priority,
+              isFeatured: operation.isFeatured,
+            });
+          } else {
+            await service.attachCollection(operation.productId, operation.collectionId, {
+              position: operation.position,
+              priority: operation.priority,
+              isFeatured: operation.isFeatured,
+            });
+          }
           results.push({ index, type: operation.type, success: true, skipped: false, issues: [] });
           break;
+        }
         case "ASSIGN_TAG":
           await service.attachTag(operation.productId, operation.tagId);
           results.push({ index, type: operation.type, success: true, skipped: false, issues: [] });
