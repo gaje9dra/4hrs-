@@ -1,9 +1,11 @@
+'use client'
+
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import type { NavigationItem } from '@/types/navigation'
 
 type DesktopNavProps = {
   items: NavigationItem[]
-  activeHref?: string | null
 }
 
 function isActive(item: NavigationItem, pathname: string) {
@@ -17,8 +19,8 @@ function isActive(item: NavigationItem, pathname: string) {
   return item.children.some((child) => child.href === pathname)
 }
 
-export function DesktopNav({ items, activeHref }: DesktopNavProps) {
-  const pathname = activeHref ?? '/'
+export function DesktopNav({ items }: DesktopNavProps) {
+  const pathname = usePathname()
   const visibleItems = items.filter((item) => !item.disabled && (item.href || item.children?.length))
 
   if (visibleItems.length === 0) return null
