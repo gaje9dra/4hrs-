@@ -30,6 +30,11 @@ export type CatalogExportVariant = {
   compareAtPrice: string | null;
   status: string;
   optionValueIds: string[];
+  optionValues: Array<{
+    optionTypeNormalizedName: string;
+    normalizedValue: string;
+    displayName: string;
+  }>;
 };
 
 export type CatalogExportProduct = {
@@ -112,6 +117,11 @@ function mapProduct(product: Awaited<ReturnType<typeof repository.listProductsFo
       compareAtPrice: variant.compareAtPrice?.toString() ?? null,
       status: variant.status,
       optionValueIds: variant.optionValues.map((item) => item.optionValueId),
+      optionValues: variant.optionValues.map((item) => ({
+        optionTypeNormalizedName: item.optionValue.optionType.normalizedName,
+        normalizedValue: item.optionValue.normalizedValue,
+        displayName: item.optionValue.displayName,
+      })),
     })),
     media: product.images.map((image) => ({
       id: image.id,
