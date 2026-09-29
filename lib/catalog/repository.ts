@@ -1088,33 +1088,49 @@ export async function replaceProductRelationships(
   client?: CatalogRepositoryClient,
 ) {
   const repository = clientOrDefault(client);
-  const operations: Prisma.PrismaPromise<unknown>[] = [];
 
-  if (relationships.categoryIds) {
-    operations.push(repository.productCategory.deleteMany({ where: { productId } }));
-    operations.push(...[...new Set(relationships.categoryIds)].map((categoryId) =>
-      repository.productCategory.create({ data: { productId, categoryId } }),
-    ));
-  }
-  if (relationships.collectionIds) {
-    operations.push(repository.productCollection.deleteMany({ where: { productId } }));
-    operations.push(...[...new Set(relationships.collectionIds)].map((collectionId) =>
-      repository.productCollection.create({ data: { productId, collectionId } }),
-    ));
-  }
-  if (relationships.tagIds) {
-    operations.push(repository.productTag.deleteMany({ where: { productId } }));
-    operations.push(...[...new Set(relationships.tagIds)].map((tagId) =>
-      repository.productTag.create({ data: { productId, tagId } }),
-    ));
-  }
-
-  if (operations.length > 0) {
-    if (client) {
-      await Promise.all(operations);
-    } else {
-      await db.$transaction(operations);
+  const run = async (tx: CatalogRepositoryClient) => {
+    if (relationships.categoryIds) {
+      const desired = [...new Set(relationships.categoryIds)];
+      const existing = await tx.productCategory.findMany({ where: { productId } });
+      const existingIds = new Set(existing.map((item) => item.categoryId));
+      await tx.productCategory.deleteMany({
+        where: { productId, categoryId: { notIn: desired.length ? desired : ["00000000-0000-0000-0000-000000000000"] } },
+      });
+      await Promise.all(desired.filter((categoryId) => !existingIds.has(categoryId)).map((categoryId) =>
+        tx.productCategory.create({ data: { productId, categoryId } }),
+      ));
     }
+
+    if (relationships.collectionIds) {
+      const desired = [...new Set(relationships.collectionIds)];
+      const existing = await tx.productCollection.findMany({ where: { productId } });
+      const existingIds = new Set(existing.map((item) => item.collectionId));
+      await tx.productCollection.deleteMany({
+        where: { productId, collectionId: { notIn: desired.length ? desired : ["00000000-0000-0000-0000-000000000000"] } },
+      });
+      await Promise.all(desired.filter((collectionId) => !existingIds.has(collectionId)).map((collectionId) =>
+        tx.productCollection.create({ data: { productId, collectionId } }),
+      ));
+    }
+
+    if (relationships.tagIds) {
+      const desired = [...new Set(relationships.tagIds)];
+      await tx.productTag.deleteMany({
+        where: { productId, tagId: { notIn: desired.length ? desired : ["00000000-0000-0000-0000-000000000000"] } },
+      });
+      const existing = await tx.productTag.findMany({ where: { productId } });
+      const existingIds = new Set(existing.map((item) => item.tagId));
+      await Promise.all(desired.filter((tagId) => !existingIds.has(tagId)).map((tagId) =>
+        tx.productTag.create({ data: { productId, tagId } }),
+      ));
+    }
+  };
+
+  if (client) {
+    await run(client);
+  } else {
+    await db.$transaction(run);
   }
 }
 
