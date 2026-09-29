@@ -752,6 +752,7 @@ async function persistProduct(
   namespace: string,
 ): Promise<void> {
   const service = createCatalogService({}, { source: "IMPORT", actorType: "IMPORT", correlationId: "import:" + namespace });
+  const optionResolution = await resolveImportedOptionTypes(product, service);
   const resolvedCategories = (product.categories ?? []).map((ref) => resolveCategory(ref, categoryIds)).filter(Boolean) as Promise<string>[];
   const categoryIdList = (await Promise.all(resolvedCategories));
   const collectionIdList = (await Promise.all((product.collections ?? []).map((ref) => resolveCollection(ref, collectionIds)))).filter(Boolean) as string[];
@@ -763,7 +764,12 @@ async function persistProduct(
     const variants = (product.variants ?? []).map((variant) => {
       const id = variant.id ?? randomUUID();
       if (variant.externalReference) variantIdByReference.set(variant.externalReference, id);
-      return { ...variant, id, productId };
+      return {
+        ...variant,
+        id,
+        productId,
+        optionValueIds: resolveImportedVariantOptionValueIds(variant, optionResolution),
+      };
     });
     const images = (product.images ?? []).map((media) => ({
       ...media,
@@ -780,6 +786,7 @@ async function persistProduct(
       categoryIds: [...new Set(categoryIdList)],
       collectionIds: [...new Set(collectionIdList)],
       tagIds: [...new Set(tagIdList)],
+      optionTypeIds: optionResolution.optionTypeIds,
       variants,
       images,
     });
@@ -864,9 +871,13 @@ async function persistProduct(
     }
     if (!existing) existing = existingVariants.find((item) => item.sku === rawVariant.sku) ?? null;
 
+    const resolvedVariant = {
+      ...rawVariant,
+      optionValueIds: resolveImportedVariantOptionValueIds(rawVariant, optionResolution),
+    };
     const saved = existing
-      ? await service.updateVariant(existing.id, rawVariant)
-      : await service.createVariant(variant);
+      ? await service.updateVariant(existing.id, resolvedVariant)
+      : await service.createVariant({ ...variant, optionValueIds: resolvedVariant.optionValueIds });
     if (rawVariant.externalReference) variantIdByReference.set(rawVariant.externalReference, saved.id);
     if (rawVariant.externalReference) {
       await repository.createImportIdentity({
@@ -927,6 +938,35 @@ async function persistProduct(
       ]);
     }
   }
+}
+
+function resolveImportedVariantOptionValueIds(
+  variant: CatalogImportVariant,
+  resolution: {
+    optionValueIdsByExportedId: Map<string, string>;
+    optionValueIdsByIdentity: Map<string, string>;
+  },
+): string[] {
+  if (variant.optionValues?.length) {
+    return variant.optionValues.map((value) => {
+      const normalizedType = value.optionTypeNormalizedName.trim().toLowerCase();
+      const normalizedValue = normalizeOptionReference(value.normalizedValue);
+      const resolved = resolution.optionValueIdsByIdentity.get(
+        optionValueIdentity(normalizedType, normalizedValue),
+      );
+      if (!resolved) {
+        throw new CatalogImportError("Imported variant references an unknown option value.", [
+          issue("variant", "MISSING_REFERENCE", "Variant option value could not be resolved.", {
+            field: "optionValues",
+            recordReference: normalizedType + ":" + normalizedValue,
+          }),
+        ]);
+      }
+      return resolved;
+    });
+  }
+
+  return (variant.optionValueIds ?? []).map((id) => resolution.optionValueIdsByExportedId.get(id) ?? id);
 }
 
 export function createCatalogImportService() {
