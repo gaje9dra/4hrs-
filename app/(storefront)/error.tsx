@@ -2,7 +2,7 @@
 
 import { CatalogErrorState } from "@/components/storefront/catalog-error";
 
-export default function StorefrontError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+export default function StorefrontError({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {
     console.error(error);
   }, [error]);
