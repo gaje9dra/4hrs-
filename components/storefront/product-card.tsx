@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import type { StorefrontProductCard } from "@/lib/storefront/catalog";
 import { productPath } from "@/lib/catalog/routes";
+import { formatCatalogMoney } from "@/lib/storefront/money";
 
 const availabilityLabel: Record<StorefrontProductCard["availability"], string> = {
   IN_STOCK: "In stock",
@@ -37,10 +38,10 @@ export function ProductCard({ product }: { product: StorefrontProductCard }) {
             </Badge>
           </div>
           <div className="flex flex-wrap items-baseline gap-2">
-            <span className="text-lg font-900">{product.currency} {product.price}</span>
+            <span className="text-lg font-900">{formatCatalogMoney(product.price, product.currency)}</span>
             {product.compareAtPrice ? (
               <span className="text-sm line-through" aria-label="Compare-at price">
-                {product.currency} {product.compareAtPrice}
+                {formatCatalogMoney(product.compareAtPrice, product.currency)}
               </span>
             ) : null}
           </div>
