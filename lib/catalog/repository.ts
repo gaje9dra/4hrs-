@@ -373,7 +373,6 @@ function buildCatalogSearchWhere(
 
   if (options.mode === "INTERNAL") {
     searchableFields.push(
-      { sku: { contains: query, mode: "insensitive" } },
       { variants: { some: { sku: { contains: query, mode: "insensitive" } } } },
     );
   }
