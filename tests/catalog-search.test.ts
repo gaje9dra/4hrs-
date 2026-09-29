@@ -23,6 +23,7 @@ const product = {
       id: "image-1",
       url: "https://cdn.example.com/shirt.jpg",
       altText: "Oversized Graphic T-Shirt",
+      mediaType: "IMAGE" as const,
       sortOrder: 0,
       isPrimary: true,
     },
