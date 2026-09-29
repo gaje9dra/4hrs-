@@ -5,6 +5,7 @@ import { CatalogPagination } from "@/components/storefront/catalog-pagination";
 import { CatalogFilters } from "@/components/storefront/catalog-filters";
 import type { StorefrontCategory, StorefrontCollection, StorefrontProductList, StorefrontTag } from "@/lib/storefront/catalog";
 import type { StorefrontSearchParams } from "@/lib/storefront/query-params";
+import Link from "next/link";
 import { buildCatalogHref } from "@/lib/storefront/query-params";
 
 export function CatalogListing({
@@ -27,6 +28,16 @@ export function CatalogListing({
 
   return (
     <Container className="py-10 sm:py-14 lg:py-20">
+      {breadcrumbs.length ? (
+        <nav aria-label="Breadcrumb" className="mb-6 text-sm font-700 uppercase">
+          {breadcrumbs.map((item, index) => (
+            <span key={item.href ?? item.label}>
+              {index > 0 ? <span aria-hidden="true"> / </span> : null}
+              {item.href ? <Link href={item.href} className="motion-link">{item.label}</Link> : <span aria-current="page">{item.label}</span>}
+            </span>
+          ))}
+        </nav>
+      ) : null}
       <header className="mb-8 grid gap-5 lg:grid-cols-[1fr_1.5fr] lg:items-end">
         <div>
           <p className="text-xs font-900 uppercase tracking-[.25em] text-primary-red">{eyebrow}</p>
