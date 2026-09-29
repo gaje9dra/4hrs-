@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { toCatalogMediaDto, type CatalogMediaDto } from "@/lib/catalog/media";
 import { Prisma } from "@prisma/client";
+import { recordCatalogAudit, changedFields, type CatalogAuditContext } from "@/lib/catalog/audit";
 import {
   CatalogServiceError,
   type CatalogErrorCode,
@@ -229,8 +230,13 @@ function uniqueIds(ids: string[] | undefined): string[] | undefined {
   return ids ? [...new Set(ids)] : undefined;
 }
 
-export function createCatalogService(customRepository: Partial<CatalogRepository> = {}) {
+export function createCatalogService(
+  customRepository: Partial<CatalogRepository> = {},
+  auditContext: CatalogAuditContext = {},
+) {
   const repo: CatalogRepository = { ...defaultRepository, ...customRepository };
+  const audit = (event: Omit<Parameters<typeof recordCatalogAudit>[0], keyof CatalogAuditContext>) =>
+    recordCatalogAudit({ ...auditContext, ...event });
 
   const service = {
     async createProduct(input: CreateProductInput) {
