@@ -86,16 +86,18 @@ export class DatabaseSearchAdapter implements CatalogSearchProvider {
   async search(request: NormalizedCatalogSearchQuery) {
     const sort: CatalogSort = request.catalog.sort;
     const sortBy: CatalogSearchRepositoryOptions["sortBy"] =
-      sort === "newest" || sort === "oldest"
-        ? "createdAt"
-        : sort === "updated"
-          ? "updatedAt"
-          : sort === "title_asc" || sort === "title_desc"
-            ? "title"
-            : "price";
+      sort === "merchandising"
+        ? "merchandising"
+        : sort === "newest" || sort === "oldest"
+          ? "createdAt"
+          : sort === "updated"
+            ? "updatedAt"
+            : sort === "title_asc" || sort === "title_desc"
+              ? "title"
+              : "price";
 
     const sortDirection: CatalogSearchRepositoryOptions["sortDirection"] =
-      sort === "oldest" || sort === "title_asc" || sort === "price_asc" ? "asc" : "desc";
+      sort === "merchandising" || sort === "oldest" || sort === "title_asc" || sort === "price_asc" ? "asc" : "desc";
 
     return searchCatalogProducts({
       query: request.query,
@@ -276,8 +278,11 @@ function normalizeCatalogQuery(input: CatalogQuery): CatalogAppliedQuery {
   }
 
   const sort = input.sort ?? "newest";
-  if (!["newest", "oldest", "price_asc", "price_desc", "title_asc", "title_desc", "updated"].includes(sort)) {
+  if (!["newest", "oldest", "price_asc", "price_desc", "title_asc", "title_desc", "updated", "merchandising"].includes(sort)) {
     throw new CatalogServiceError("INVALID_SORT", "Unsupported catalog sort.");
+  }
+  if (sort === "merchandising" && !category && !collection) {
+    throw new CatalogServiceError("INVALID_SORT", "Merchandising sorting requires a category or collection filter.");
   }
 
   const page = input.page ?? 1;
