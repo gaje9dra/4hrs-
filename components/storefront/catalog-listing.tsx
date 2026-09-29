@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Container } from "@/components/layout/container";
 import { ProductGrid } from "@/components/storefront/product-grid";
 import { CatalogPagination } from "@/components/storefront/catalog-pagination";
