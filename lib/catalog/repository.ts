@@ -754,10 +754,6 @@ export async function updateProduct(id: string, data: Prisma.ProductUpdateInput,
   return clientOrDefault(client).product.update({ where: { id }, data });
 }
 
-export async function archiveProduct(id: string, client?: CatalogRepositoryClient) {
-  return updateProduct(id, { status: "ARCHIVED" }, client);
-}
-
 export async function transitionProductStatus(
   id: string,
   from: "DRAFT" | "ACTIVE" | "ARCHIVED",
