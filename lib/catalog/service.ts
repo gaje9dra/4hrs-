@@ -517,7 +517,6 @@ export function createCatalogService(
             slug: merged.slug,
             description: merged.description,
             shortDescription: merged.shortDescription,
-            status: merged.status,
             price: decimalValue(merged.price)!,
             compareAtPrice: decimalValue(merged.compareAtPrice) ?? null,
             currency: merged.currency,
