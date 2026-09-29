@@ -139,7 +139,7 @@ test("service rejects archived product publication", async () => {
   await assert.rejects(
     service.publishProduct("product-1"),
     (error: unknown) =>
-      error instanceof CatalogServiceError && error.code === "PRODUCT_NOT_PUBLISHABLE",
+      error instanceof CatalogServiceError && error.code === "INVALID_STATUS_TRANSITION",
   );
 });
 
