@@ -72,7 +72,7 @@ const queryRepository = {
     return [];
   },
   async getTagBySlug() {
-    return { id: "tag-1", name: "Streetwear", slug: "streetwear" };
+    return { id: "tag-1", name: "Streetwear", slug: "streetwear", createdAt: new Date(), updatedAt: new Date() };
   },
   async listTags() {
     return [];
