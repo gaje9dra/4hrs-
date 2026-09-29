@@ -357,7 +357,7 @@ export function createCatalogService(
           }
 
           for (const image of normalizedImages) {
-            await repo.createImage({
+            const createdImage = await repo.createImage({
               product: image.productId ? { connect: { id: image.productId } } : undefined,
               variant: image.variantId ? { connect: { id: image.variantId } } : undefined,
               url: image.url.trim(),
@@ -367,6 +367,7 @@ export function createCatalogService(
               sortOrder: image.sortOrder,
               isPrimary: image.isPrimary,
             }, tx);
+            await audit({ entityType: "MEDIA", entityId: createdImage.id, operation: "CREATE", afterState: createdImage }, tx);
           }
 
           for (const categoryId of categoryIds ?? []) {
