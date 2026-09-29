@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect } from "react";
 import { CatalogErrorState } from "@/components/storefront/catalog-error";
 
 export default function StorefrontError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
