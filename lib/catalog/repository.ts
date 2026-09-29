@@ -537,11 +537,11 @@ export async function searchMerchandisedCatalogProducts(
   if (!context) throw new Error("Merchandising sorting requires a collection or category filter.");
   const slug = merchandisingContextSlug(options, context);
   const productWhere = buildCatalogSearchWhere(options);
-  const relationWhere = context === "collection"
-    ? { collection: { slug, status: "ACTIVE" }, product: productWhere }
-    : { category: { slug, status: "ACTIVE" }, product: productWhere };
-
   if (context === "collection") {
+    const relationWhere = {
+      collection: { slug, status: "ACTIVE" as const },
+      product: productWhere,
+    };
     const [items, total] = await Promise.all([
       repository.productCollection.findMany({
         where: relationWhere,
