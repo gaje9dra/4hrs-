@@ -15,7 +15,7 @@ const sortOptions: Array<{ value: CatalogSort; label: string }> = [
 const contextualSort = [...sortOptions, { value: "merchandising" as const, label: "Curated order" }];
 
 export function CatalogFilters({
-  pathname, appliedQuery, categories, collections, tags, fixedCategory, fixedCollection,
+  pathname, appliedQuery, categories, collections, tags, fixedCategory, fixedCollection, preservedParams = {},
 }: {
   pathname: string;
   appliedQuery: CatalogAppliedQuery;
@@ -24,12 +24,15 @@ export function CatalogFilters({
   tags: StorefrontTag[];
   fixedCategory?: string;
   fixedCollection?: string;
+  preservedParams?: { q?: string | string[] };
 }) {
   const options = fixedCategory || fixedCollection ? contextualSort : sortOptions;
-  const clearHref = pathname;
+  const preservedQuery = preservedParams.q ? (Array.isArray(preservedParams.q) ? preservedParams.q[0] : preservedParams.q) : undefined;
+  const clearHref = preservedQuery ? pathname + "?q=" + encodeURIComponent(preservedQuery) : pathname;
 
   return (
     <form method="get" action={pathname} className="border-4 border-border bg-white p-5 shadow-hard-md lg:p-6">
+      {preservedQuery ? <input type="hidden" name="q" value={preservedQuery} /> : null}
       <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
         <div className="grid flex-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {!fixedCategory ? (
