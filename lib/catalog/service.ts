@@ -936,7 +936,7 @@ export function createCatalogService(
           if (input.isPrimary && input.productId) {
             await repo.updateProductImagesPrimaryState(input.productId, null, tx);
           }
-          return repo.createImage({
+          const created = await repo.createImage({
             product: input.productId ? { connect: { id: input.productId } } : undefined,
             variant: input.variantId ? { connect: { id: input.variantId } } : undefined,
             url: input.url.trim(),
@@ -946,6 +946,8 @@ export function createCatalogService(
             sortOrder: input.sortOrder,
             isPrimary: input.isPrimary,
           }, tx);
+          await audit({ entityType: "MEDIA", entityId: created.id, operation: "CREATE", afterState: created }, tx);
+          return created;
         });
       } catch (error) { mapDatabaseError(error); }
     },
@@ -979,7 +981,7 @@ export function createCatalogService(
       try {
         return await repo.withTransaction(async (tx) => {
           if (next.isPrimary && next.productId) await repo.updateProductImagesPrimaryState(next.productId, id, tx);
-          return repo.updateImage(id, {
+          const updated = await repo.updateImage(id, {
             url: next.url.trim(),
             storageReference: next.storageReference?.trim() || null,
             mediaType: next.mediaType,
@@ -987,6 +989,8 @@ export function createCatalogService(
             sortOrder: next.sortOrder,
             isPrimary: next.isPrimary,
           }, tx);
+          await audit({ entityType: "MEDIA", entityId: id, operation: "UPDATE", changedFields: changedFields(existing as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>), beforeState: existing, afterState: updated }, tx);
+          return updated;
         });
       } catch (error) { mapDatabaseError(error); }
     },
@@ -1007,8 +1011,16 @@ export function createCatalogService(
         issues.push({ field: "updates", code: "INVALID_IMAGE_RELATIONSHIP", message: "Images from different Products or variants cannot be reordered together." });
       }
       if (issues.length) validationError(issues, "INVALID_IMAGE_RELATIONSHIP");
-      try { return await repo.withTransaction((tx) => repo.reorderImages(updates, tx)); }
-      catch (error) { mapDatabaseError(error); }
+      try {
+        return await repo.withTransaction(async (tx) => {
+          const updated = await repo.reorderImages(updates, tx);
+          for (const item of updates) {
+            const image = images.find((candidate) => candidate?.id === item.id);
+            if (image) await audit({ entityType: "MEDIA", entityId: item.id, operation: "REORDER", changedFields: ["sortOrder"], beforeState: { sortOrder: image.sortOrder }, afterState: { sortOrder: item.sortOrder } }, tx);
+          }
+          return updated;
+        });
+      } catch (error) { mapDatabaseError(error); }
     },
 
     async getProductMedia(productId: string): Promise<CatalogMediaDto[]> {
@@ -1033,7 +1045,13 @@ export function createCatalogService(
     async removeImage(id: string) {
       const existing = await repo.getImageById(id);
       if (!existing) throw new CatalogServiceError("IMAGE_NOT_FOUND", "Image was not found.");
-      try { return await repo.deleteImage(id); } catch (error) { mapDatabaseError(error); }
+      try {
+        return await repo.withTransaction(async (tx) => {
+          const deleted = await repo.deleteImage(id, tx);
+          await audit({ entityType: "MEDIA", entityId: id, operation: "DELETE", beforeState: existing }, tx);
+          return deleted;
+        });
+      } catch (error) { mapDatabaseError(error); }
     },
 
     async assignPrimaryImage(id: string) {
@@ -1043,7 +1061,9 @@ export function createCatalogService(
       try {
         return await repo.withTransaction(async (tx) => {
           await repo.updateProductImagesPrimaryState(image.productId!, id, tx);
-          return repo.updateImage(id, { isPrimary: true }, tx);
+          const updated = await repo.updateImage(id, { isPrimary: true }, tx);
+          await audit({ entityType: "MEDIA", entityId: id, operation: "UPDATE", changedFields: ["isPrimary"], beforeState: image, afterState: updated }, tx);
+          return updated;
         });
       } catch (error) { mapDatabaseError(error); }
     },
