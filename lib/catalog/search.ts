@@ -175,8 +175,8 @@ function toSearchItem(
           normalizedName: optionValue.optionType.normalizedName,
         },
       })),
-      effectivePrice: effectivePrice.toString(),
-      compareAtPrice: variant.compareAtPrice?.toString() ?? product.compareAtPrice?.toString() ?? null,
+      effectivePrice: formatMoney(effectivePrice)!,
+      compareAtPrice: formatMoney(variant.compareAtPrice) ?? formatMoney(product.compareAtPrice),
       availability,
     };
   });
@@ -207,8 +207,8 @@ function toSearchItem(
           altText: product.images[0].altText,
         }
       : null,
-    price: price?.effectivePrice ?? product.price.toString(),
-    compareAtPrice: price?.compareAtPrice ?? product.compareAtPrice?.toString() ?? null,
+    price: price?.effectivePrice ?? formatMoney(product.price)!,
+    compareAtPrice: price?.compareAtPrice ?? formatMoney(product.compareAtPrice),
     currency: product.currency,
     availability: availableVariant?.availability ?? { state: "OUT_OF_STOCK", availableQuantity: 0 },
     categories: product.categories.map(({ category }) => category),
@@ -319,7 +319,12 @@ function normalizeMoney(value: string | number, field: string): string {
   if (issues.length) {
     throw new CatalogServiceError("INVALID_QUERY", issues[0].message);
   }
-  return String(value);
+  return new Prisma.Decimal(String(value)).toFixed(2);
+}
+
+function formatMoney(value: Prisma.Decimal | string | number | null | undefined): string | null {
+  if (value === null || value === undefined) return null;
+  return new Prisma.Decimal(String(value)).toFixed(2);
 }
 
 export function createCatalogSearchService(options: {
