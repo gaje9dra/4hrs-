@@ -33,7 +33,7 @@ StorefrontHomeData contains only homepage-safe data:
 Product data is the existing StorefrontProductCard DTO. Internal SKU, inventory quantities, audit data, provider metadata, and credentials are not exposed.
 
 ## 5. Product discovery strategy
-Featured discovery is sourced from the first active canonical collection returned by the existing catalog service and ordered through the existing merchandising query contract. No artificial score is introduced.
+Featured discovery is sourced from the first active canonical collection with a usable editorial description returned by the existing catalog service and ordered through the existing merchandising query contract. No artificial score is introduced.
 
 New arrivals use the existing newest catalog sort. Featured product IDs are removed from the new-arrival set so the two sections do not intentionally duplicate the same products.
 
