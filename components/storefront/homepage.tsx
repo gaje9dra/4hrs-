@@ -66,13 +66,13 @@ function Hero({ data }: { data: StorefrontHomeData }) {
   );
 }
 
-function ProductDiscovery({ title, eyebrow, products }: { title: string; eyebrow: string; products: StorefrontHomeData["newArrivals"] }) {
+function ProductDiscovery({ id, title, eyebrow, products }: { id: string; title: string; eyebrow: string; products: StorefrontHomeData["newArrivals"] }) {
   if (!products.length) return null;
 
   return (
-    <section aria-labelledby={eyebrow + "-heading"} className="border-b-2 border-border lg:border-b-4">
+    <section aria-labelledby={id} className="border-b-2 border-border lg:border-b-4">
       <Container className="py-14 sm:py-18 lg:py-24">
-        <SectionHeading id={eyebrow + "-heading"} eyebrow={eyebrow} title={title} />
+        <SectionHeading id={id} eyebrow={eyebrow} title={title} />
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {products.slice(0, 4).map((product) => <ProductCard key={product.id} product={product} />)}
         </div>
@@ -194,9 +194,9 @@ export function Homepage({ data }: { data: StorefrontHomeData }) {
   return (
     <div className="overflow-hidden">
       <Hero data={data} />
-      <ProductDiscovery eyebrow="Discovery / 01" title="Featured" products={data.featuredProducts} />
+      <ProductDiscovery id="featured-products-heading" eyebrow="Discovery / 01" title="Featured" products={data.featuredProducts} />
       <CategoryDiscovery categories={data.categories} />
-      <ProductDiscovery eyebrow="New arrivals / 03" title="New arrivals" products={data.newArrivals} />
+      <ProductDiscovery id="new-arrivals-heading" eyebrow="New arrivals / 03" title="New arrivals" products={data.newArrivals} />
       <CollectionDiscovery collections={data.collections} />
       <EditorialBlock collection={data.editorialCollection} />
       <FinalCta />
