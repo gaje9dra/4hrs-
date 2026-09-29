@@ -26,6 +26,14 @@ export type VariantOptionValueInput = { id?: string; optionTypeId: string; displ
 export type ImageInput = { productId?: string | null; variantId?: string | null; url: string; storageReference?: string | null; mediaType?: ProductMediaType; altText?: string | null; sortOrder: number; isPrimary: boolean };
 export type CategoryInput = { id?: string; name: string; slug: string; status: "ACTIVE" | "ARCHIVED"; parentId?: string | null; seoTitle?: string | null; seoDescription?: string | null };
 export type CollectionInput = { name: string; slug: string; status: "ACTIVE" | "ARCHIVED"; seoTitle?: string | null; seoDescription?: string | null };
+export type MerchandisingMembershipInput = {
+  productId: string;
+  collectionId?: string;
+  categoryId?: string;
+  position?: number;
+  priority?: number;
+  isFeatured?: boolean;
+};
 export type TagInput = { name: string; slug: string };
 export type PublishReadinessInput = { product: ProductInput; variants: VariantInput[]; images: ImageInput[]; requireVariant?: boolean; requireProductImage?: boolean };
 
@@ -144,6 +152,42 @@ export function validatePricePair(price: number | string, compareAtPrice: number
     if (Number.isFinite(selling) && Number.isFinite(compareAt) && compareAt < selling) issues.push(issue(compareField, "INVALID_COMPARE_AT_PRICE", "Compare-at price must be greater than or equal to selling price."));
   }
   return issues;
+}
+
+export function validateMerchandisingMembership(input: MerchandisingMembershipInput): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+  if (!input.productId.trim()) issues.push(issue("productId", "INVALID_PRODUCT", "Product is required."));
+  if (!input.collectionId && !input.categoryId) issues.push(issue("owner", "INVALID_MERCHANDISING_OWNER", "A collection or category is required."));
+  if (input.collectionId && input.categoryId) issues.push(issue("owner", "INVALID_MERCHANDISING_OWNER", "A membership cannot target both a collection and category."));
+  if (input.collectionId !== undefined && !input.collectionId.trim()) issues.push(issue("collectionId", "INVALID_COLLECTION", "Collection is required."));
+  if (input.categoryId !== undefined && !input.categoryId.trim()) issues.push(issue("categoryId", "INVALID_CATEGORY", "Category is required."));
+  const position = input.position ?? 0;
+  const priority = input.priority ?? 0;
+  if (!Number.isInteger(position) || position < 0) issues.push(issue("position", "INVALID_POSITION", "Merchandising position must be a non-negative integer."));
+  if (!Number.isInteger(priority)) issues.push(issue("priority", "INVALID_PRIORITY", "Merchandising priority must be an integer."));
+  if (typeof input.isFeatured !== "undefined" && typeof input.isFeatured !== "boolean") {
+    issues.push(issue("isFeatured", "INVALID_FEATURED", "Featured state must be boolean."));
+  }
+  return dedupeIssues(issues);
+}
+
+export function validateMerchandisingReorder(
+  updates: Array<{ productId: string; position: number; priority?: number; isFeatured?: boolean }>,
+): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+  const seenProducts = new Set<string>();
+  updates.forEach((update, index) => {
+    if (!update.productId.trim()) issues.push(issue("updates[" + index + "].productId", "INVALID_PRODUCT", "Product is required."));
+    if (seenProducts.has(update.productId)) issues.push(issue("updates[" + index + "].productId", "DUPLICATE_PRODUCT", "A product may appear only once in a reorder request."));
+    seenProducts.add(update.productId);
+    if (!Number.isInteger(update.position) || update.position < 0) {
+      issues.push(issue("updates[" + index + "].position", "INVALID_POSITION", "Merchandising position must be a non-negative integer."));
+    }
+    if (update.priority !== undefined && !Number.isInteger(update.priority)) {
+      issues.push(issue("updates[" + index + "].priority", "INVALID_PRIORITY", "Merchandising priority must be an integer."));
+    }
+  });
+  return dedupeIssues(issues);
 }
 
 export function validateProduct(input: ProductInput): ValidationIssue[] {
