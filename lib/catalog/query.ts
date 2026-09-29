@@ -211,7 +211,12 @@ function normalizeMoney(value: string | number | undefined, field: string): stri
   if (value === undefined) return undefined;
   const issues = validateMoney(value, field);
   if (issues.length) invalidQuery(issues[0].message);
-  return String(value);
+  return new Prisma.Decimal(String(value)).toFixed(2);
+}
+
+function formatMoney(value: Prisma.Decimal | string | number | null | undefined): string | null {
+  if (value === null || value === undefined) return null;
+  return new Prisma.Decimal(String(value)).toFixed(2);
 }
 
 function normalizePage(value: number | undefined): number {
@@ -305,8 +310,8 @@ function mapProduct(product: Awaited<ReturnType<QueryRepository["getPublishedPro
       displayName: variant.displayName,
       size: variant.size,
       color: variant.color,
-      effectivePrice: effectivePrice.toString(),
-      compareAtPrice: variant.compareAtPrice?.toString() ?? product.compareAtPrice?.toString() ?? null,
+      effectivePrice: formatMoney(effectivePrice)!,
+      compareAtPrice: formatMoney(variant.compareAtPrice) ?? formatMoney(product.compareAtPrice),
       availability,
     };
   });
@@ -331,8 +336,8 @@ function mapProduct(product: Awaited<ReturnType<QueryRepository["getPublishedPro
     primaryImage: product.images[0]
       ? { id: product.images[0].id, url: product.images[0].url, altText: product.images[0].altText }
       : null,
-    price: cheapest?.effectivePrice ?? product.price.toString(),
-    compareAtPrice: cheapest?.compareAtPrice ?? product.compareAtPrice?.toString() ?? null,
+    price: cheapest?.effectivePrice ?? formatMoney(product.price)!,
+    compareAtPrice: cheapest?.compareAtPrice ?? formatMoney(product.compareAtPrice),
     currency: product.currency,
     status: "ACTIVE",
     variants,
@@ -410,8 +415,8 @@ export function createCatalogQueryService(customRepository: Partial<QueryReposit
           displayName: variant.displayName,
           size: variant.size,
           color: variant.color,
-          price: effectivePrice.toString(),
-          compareAtPrice: variant.compareAtPrice?.toString() ?? product.compareAtPrice?.toString() ?? null,
+          price: formatMoney(effectivePrice)!,
+          compareAtPrice: formatMoney(variant.compareAtPrice) ?? formatMoney(product.compareAtPrice),
           availability: availabilityFromVariant(variant),
           media: variant.images,
           optionValues: variant.optionValues.map(({ optionValue }) => ({
@@ -448,8 +453,8 @@ export function createCatalogQueryService(customRepository: Partial<QueryReposit
         slug: product.slug,
         description: product.description,
         shortDescription: product.shortDescription,
-        price: cheapestVariant?.price ?? product.price.toString(),
-        compareAtPrice: cheapestVariant?.compareAtPrice ?? product.compareAtPrice?.toString() ?? null,
+        price: cheapestVariant?.price ?? formatMoney(product.price)!,
+        compareAtPrice: cheapestVariant?.compareAtPrice ?? formatMoney(product.compareAtPrice),
         currency: product.currency,
         status: "ACTIVE",
         seoTitle: product.seoTitle,
