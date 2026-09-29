@@ -226,19 +226,25 @@ model Tag {
 model ProductCategory {
   productId  String @db.Uuid
   categoryId String @db.Uuid
+  position   Int    @default(0)
+  priority   Int    @default(0)
+  isFeatured Boolean @default(false)
   product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   category   Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   @@id([productId, categoryId])
-  @@index([categoryId])
+  @@index([categoryId, isFeatured, priority, position])
 }
 
 model ProductCollection {
   productId    String @db.Uuid
   collectionId String @db.Uuid
+  position     Int     @default(0)
+  priority     Int     @default(0)
+  isFeatured   Boolean @default(false)
   product      Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
   collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   @@id([productId, collectionId])
-  @@index([collectionId])
+  @@index([collectionId, isFeatured, priority, position])
 }
 
 model ProductTag {
