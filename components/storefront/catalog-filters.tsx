@@ -26,11 +26,7 @@ export function CatalogFilters({
   fixedCollection?: string;
 }) {
   const options = fixedCategory || fixedCollection ? contextualSort : sortOptions;
-  const clearHref = appliedQuery.sort !== "newest" && appliedQuery.sort !== "merchandising"
-    ? pathname + "?sort=" + appliedQuery.sort
-    : appliedQuery.sort === "merchandising"
-      ? pathname + "?sort=merchandising"
-      : pathname;
+  const clearHref = pathname;
 
   return (
     <form method="get" action={pathname} className="border-4 border-border bg-white p-5 shadow-hard-md lg:p-6">
