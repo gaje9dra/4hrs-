@@ -33,7 +33,7 @@ StorefrontHomeData contains only homepage-safe data:
 Product data is the existing StorefrontProductCard DTO. Internal SKU, inventory quantities, audit data, provider metadata, and credentials are not exposed.
 
 ## 5. Product discovery strategy
-Featured discovery is sourced from the first active canonical collection returned by the existing catalog service and ordered through the existing merchandising query contract. No artificial score is introduced.
+Featured discovery is sourced from the first active canonical collection with a usable editorial description returned by the existing catalog service and ordered through the existing merchandising query contract. No artificial score is introduced.
 
 New arrivals use the existing newest catalog sort. Featured product IDs are removed from the new-arrival set so the two sections do not intentionally duplicate the same products.
 
@@ -158,7 +158,7 @@ No runtime pass is claimed.
 ## 19. Known limitations / blockers
 The implementation is source-reviewed, but runtime validation remains unverified because the project dependencies/runtime are not available for reliable local execution in this environment.
 
-This blocks the final readiness gate because the phase specification requires lint, typecheck, tests, production build, and browser smoke validation before READY FOR PHASE 3.4.
+This blocks the final readiness gate because the phase specification requires lint, typecheck, tests, production build, and browser smoke validation before readiness can be declared.
 
 ## 20. Deferred functionality
 Not implemented in Phase 3.3:
@@ -195,4 +195,4 @@ Not implemented in Phase 3.3:
 ## Final readiness
 NOT READY FOR PHASE 3.4
 
-Blocking issue: required runtime lint, typecheck, test, production-build, and browser-smoke validation could not be executed successfully in the available environment. No runtime validation is being represented as passed.
+Blocking issue: the connected GitHub repository integration supports source and diff inspection but does not provide a project shell for dependency installation, npm command execution, or browser automation. Required runtime lint, typecheck, test, build, browser smoke, responsive viewport, keyboard, and reduced-motion checks therefore remain unverified. No runtime pass is claimed.

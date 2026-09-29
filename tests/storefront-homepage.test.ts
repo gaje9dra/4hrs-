@@ -60,3 +60,12 @@ test("product card uses canonical money representation without UI arithmetic", (
   assert.match(money, /amount.trim()/);
   assert.doesNotMatch(money, /parseFloat|parseInt|Number\(/);
 });
+
+test("homepage imagery uses the framework image component", () => {
+  const homepage = read("components/storefront/homepage.tsx");
+  const card = read("components/storefront/product-card.tsx");
+  assert.match(homepage, /import Image from "next\/image"/);
+  assert.match(homepage, /<Image[\s\S]*priority/);
+  assert.match(card, /import Image from "next\/image"/);
+  assert.match(card, /<Image[\s\S]*fill/);
+});

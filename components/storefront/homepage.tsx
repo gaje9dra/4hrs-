@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Compass, Layers3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -7,18 +8,7 @@ import { Container } from "@/components/layout/container";
 import { GeometricLayer } from "@/components/bauhaus/geometric-composition";
 import { categoryPath, collectionPath } from "@/lib/catalog/routes";
 import type { StorefrontHomeData } from "@/lib/storefront/catalog";
-
-function SectionHeading({ id, eyebrow, title, body, inverse = false }: { id: string; eyebrow: string; title: string; body?: string | null; inverse?: boolean }) {
-  return (
-    <header id={id} className="mb-10 grid gap-4 lg:grid-cols-[1fr_1.4fr] lg:items-end">
-      <div>
-        <p className={`text-xs font-900 uppercase tracking-[.25em] ${inverse ? "text-primary-yellow" : "text-primary-blue"}`}>{eyebrow}</p>
-        <h2 className={`mt-3 uppercase leading-[.92] ${inverse ? "text-white" : ""}`}>{title}</h2>
-      </div>
-      {body ? <p className={`max-w-2xl text-base leading-7 lg:text-lg ${inverse ? "text-white/90" : ""}`}>{body}</p> : null}
-    </header>
-  );
-}
+import { SectionHeading as SharedSectionHeading } from "@/components/ui/section-heading";
 
 function Hero({ data }: { data: StorefrontHomeData }) {
   const visualProduct = data.featuredProducts[0] ?? data.newArrivals[0];
@@ -49,11 +39,13 @@ function Hero({ data }: { data: StorefrontHomeData }) {
           <GeometricLayer layer="back" className="bottom-[-3rem] left-[-3rem] h-44 w-44 bg-primary-yellow sm:h-60 sm:w-60" />
           {visualProduct?.image ? (
             <div className="absolute inset-10 z-10 overflow-hidden border-4 border-border bg-white shadow-hard-md sm:inset-14 lg:inset-16">
-              <img
+              <Image
                 src={visualProduct.image.url}
                 alt={visualProduct.image.altText ?? visualProduct.title}
-                className="h-full w-full object-cover"
-                fetchPriority="high"
+                fill
+                priority
+                sizes="(max-width: 639px) calc(100vw - 5rem), (max-width: 1024px) 80vw, 42vw"
+                className="object-cover"
               />
             </div>
           ) : (
@@ -72,7 +64,7 @@ function ProductDiscovery({ id, title, eyebrow, products }: { id: string; title:
   return (
     <section aria-labelledby={id} className="border-b-2 border-border lg:border-b-4">
       <Container className="py-14 sm:py-18 lg:py-24">
-        <SectionHeading id={id} eyebrow={eyebrow} title={title} />
+        <SharedSectionHeading eyebrow={eyebrow} title={title} className="mb-10" />
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {products.slice(0, 4).map((product) => <ProductCard key={product.id} product={product} />)}
         </div>
@@ -92,7 +84,7 @@ function CategoryDiscovery({ categories }: { categories: StorefrontHomeData["cat
   return (
     <section aria-labelledby="category-title" className="bg-primary-yellow border-b-2 border-border lg:border-b-4">
       <Container className="py-14 sm:py-18 lg:py-24">
-        <SectionHeading id="category-title" eyebrow="Discover / 02" title="Shop by category" body="Start with the product family that fits your wardrobe and explore the live catalog." />
+        <SharedSectionHeading eyebrow="Discover / 02" title="Shop by category" description="Start with the product family that fits your wardrobe and explore the live catalog." className="mb-10" />
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {categories.slice(0, 6).map((category, index) => (
             <Link
@@ -119,7 +111,7 @@ function CollectionDiscovery({ collections }: { collections: StorefrontHomeData[
   return (
     <section aria-labelledby="collection-title" className="border-b-2 border-border bg-primary-blue text-white lg:border-b-4">
       <Container className="py-14 sm:py-18 lg:py-24">
-        <SectionHeading id="collection-title" eyebrow="Curated / 03" title="Collections" body="Browse the active editorial groups already defined in the canonical catalog." inverse />
+        <SharedSectionHeading eyebrow="Curated / 03" title="Collections" description="Browse the active editorial groups already defined in the canonical catalog." className="mb-10 [&_h2]:text-white [&_p]:text-white/90" />
         <div className="grid gap-6 lg:grid-cols-3">
           {collections.slice(0, 3).map((collection, index) => (
             <Card key={collection.id} className="min-h-64 border-white bg-white text-foreground shadow-hard-lg">
