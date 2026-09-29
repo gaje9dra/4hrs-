@@ -6,6 +6,7 @@ import {
   createCatalogLifecycleService,
 } from "../lib/catalog/lifecycle.ts";
 import { CatalogServiceError } from "../lib/catalog/errors.ts";
+import type { CatalogRepositoryClient } from "../lib/catalog/repository.ts";
 
 const baseProduct = {
   id: "product-1",
@@ -74,8 +75,8 @@ test("repeated transitions are deterministic no-ops without audit duplication", 
       product = { ...product, status: to };
       return product;
     },
-    async withTransaction<T>(callback: (tx: unknown) => Promise<T>) {
-      return callback({});
+    async withTransaction<T>(callback: (tx: CatalogRepositoryClient) => Promise<T>) {
+      return callback({} as CatalogRepositoryClient);
     },
   };
   const lifecycle = createCatalogLifecycleService(
@@ -107,8 +108,8 @@ test("publication readiness blocks malformed products before the status transiti
       transitionCalls += 1;
       return null;
     },
-    async withTransaction<T>(callback: (tx: unknown) => Promise<T>) {
-      return callback({});
+    async withTransaction<T>(callback: (tx: CatalogRepositoryClient) => Promise<T>) {
+      return callback({} as CatalogRepositoryClient);
     },
   };
   const lifecycle = createCatalogLifecycleService(repository, async (event) => audits.push(event));
@@ -139,8 +140,8 @@ test("restore returns archived products to DRAFT and records RESTORE", async () 
       product = { ...product, status: to };
       return product;
     },
-    async withTransaction<T>(callback: (tx: unknown) => Promise<T>) {
-      return callback({});
+    async withTransaction<T>(callback: (tx: CatalogRepositoryClient) => Promise<T>) {
+      return callback({} as CatalogRepositoryClient);
     },
   };
   const lifecycle = createCatalogLifecycleService(repository, async (event) => audits.push({ operation: event.operation }));
