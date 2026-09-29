@@ -51,6 +51,12 @@ export type StorefrontCollection = {
   status: "ACTIVE";
 };
 
+export type StorefrontTag = {
+  id: string;
+  name: string;
+  slug: string;
+};
+
 export type StorefrontProductList = {
   items: StorefrontProductCard[];
   pagination: {
@@ -149,6 +155,10 @@ export async function getStorefrontCollection(slug: string): Promise<StorefrontC
     seoDescription: collection.seoDescription,
     status: "ACTIVE",
   };
+}
+
+export async function getStorefrontTags(): Promise<StorefrontTag[]> {
+  return catalog.listTags();
 }
 
 export async function getStorefrontCategoryProducts(slug: string, query: Omit<CatalogQuery, "category"> = {}) {
