@@ -97,7 +97,9 @@ Route parameters are normalized/validated by canonical catalog query services be
 
 ## Testing
 
-Added storefront contracts and route foundations. Runtime validation remains dependent on an executable repository environment.
+Added `tests/storefront-architecture.test.ts` covering route existence, public visibility predicates, route/data-boundary separation, DTO safety, search noindex behavior, merchandising integration, query-parameter parsing, SEO helper usage, and safe error/not-found boundaries.
+
+Runtime validation remains dependent on an executable repository environment.
 
 Required validation:
 - lint
@@ -110,3 +112,10 @@ Required validation:
 ## Phase 3.1 scope exclusions
 
 No cart, wishlist, customer authentication/accounts, checkout, addresses, payments, orders, fulfillment, shipping/tracking, provider APIs/webhooks, admin catalog UI, product creation/editing UI, external search engine, recommendation engine, coupon/discount system, or analytics dashboard is implemented.
+
+
+## Validation status
+
+Static repository validation completed for the Phase 3.1 source changes. Runtime lint, TypeScript typecheck, tests, production build, Prisma/database integration tests, and browser smoke tests could not be executed in the available environment because the repository cannot be cloned from GitHub due to unavailable GitHub DNS/network resolution. No runtime pass is claimed.
+
+The Phase 3.1 readiness gate therefore remains blocked on runtime validation.
