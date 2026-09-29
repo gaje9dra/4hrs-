@@ -553,6 +553,43 @@ async function planProducts(
     const issues: CatalogImportIssue[] = [];
     issues.push(...validateProduct(product).map((item) => mapValidationIssue("product", index, item)));
 
+    const seenCategoryRefs = new Set<string>();
+    for (const [relationshipIndex, ref] of (product.categories ?? []).entries()) {
+      const relationshipKey = ref.id ?? ref.externalReference ?? ref.slug ?? ref.name;
+      if (relationshipKey && seenCategoryRefs.has(relationshipKey)) {
+        issues.push(issue("product", "CONFLICT", "Duplicate category relationship in import payload.", {
+          recordIndex: index,
+          field: "categories[" + relationshipIndex + "]",
+          recordReference: relationshipKey,
+        }));
+      }
+      if (relationshipKey) seenCategoryRefs.add(relationshipKey);
+    }
+    const seenCollectionRefs = new Set<string>();
+    for (const [relationshipIndex, ref] of (product.collections ?? []).entries()) {
+      const relationshipKey = ref.id ?? ref.externalReference ?? ref.slug ?? ref.name;
+      if (relationshipKey && seenCollectionRefs.has(relationshipKey)) {
+        issues.push(issue("product", "CONFLICT", "Duplicate collection relationship in import payload.", {
+          recordIndex: index,
+          field: "collections[" + relationshipIndex + "]",
+          recordReference: relationshipKey,
+        }));
+      }
+      if (relationshipKey) seenCollectionRefs.add(relationshipKey);
+    }
+    const seenTagRefs = new Set<string>();
+    for (const [relationshipIndex, ref] of (product.tags ?? []).entries()) {
+      const relationshipKey = ref.id ?? ref.externalReference ?? ref.slug ?? ref.name;
+      if (relationshipKey && seenTagRefs.has(relationshipKey)) {
+        issues.push(issue("product", "CONFLICT", "Duplicate tag relationship in import payload.", {
+          recordIndex: index,
+          field: "tags[" + relationshipIndex + "]",
+          recordReference: relationshipKey,
+        }));
+      }
+      if (relationshipKey) seenTagRefs.add(relationshipKey);
+    }
+
     const resolvedCategories: string[] = [];
     for (const ref of product.categories ?? []) {
       const id = await resolveCategory(ref, categoryIds);
