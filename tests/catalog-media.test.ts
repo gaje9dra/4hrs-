@@ -117,7 +117,7 @@ test("CatalogService adds product media without coupling to storage providers", 
       };
     },
     withTransaction: async (callback) => callback({} as never),
-  } as any);
+  } as unknown as Parameters<typeof createCatalogService>[0]);
 
   const result = await service.addImage({
     productId: "product-1",
@@ -138,7 +138,7 @@ test("CatalogService prevents cross-product variant media association", async ()
   const service = createCatalogService({
     getProductById: async () => ({ id: "product-1" }),
     getVariantById: async () => ({ id: "variant-1", productId: "product-2" }),
-  } as any);
+  } as unknown as Parameters<typeof createCatalogService>[0]);
 
   await assert.rejects(
     service.addImage({
@@ -175,7 +175,7 @@ test("CatalogService exposes ordered product and variant media DTOs", async () =
     listProductImages: async () => [image],
     listVariantImages: async () => [{ ...image, productId: null, variantId: "variant-1", isPrimary: false }],
     getPrimaryProductImage: async () => image,
-  } as any);
+  } as unknown as Parameters<typeof createCatalogService>[0]);
 
   assert.deepEqual(await service.getProductMedia("product-1"), [image]);
   assert.deepEqual(await service.getVariantMedia("variant-1"), [{ ...image, productId: null, variantId: "variant-1", isPrimary: false }]);
