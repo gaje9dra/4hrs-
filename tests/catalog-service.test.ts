@@ -128,6 +128,7 @@ test("service prevents duplicate normalized variant options", async () => {
 test("service rejects archived product publication", async () => {
   const archived = { ...product, status: "ARCHIVED" as const };
   const service = createCatalogService({
+    getProductById: async () => archived,
     getProductDetails: async () => ({
       ...archived,
       variants: [],
