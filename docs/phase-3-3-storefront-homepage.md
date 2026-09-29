@@ -158,7 +158,7 @@ No runtime pass is claimed.
 ## 19. Known limitations / blockers
 The implementation is source-reviewed, but runtime validation remains unverified because the project dependencies/runtime are not available for reliable local execution in this environment.
 
-This blocks the final readiness gate because the phase specification requires lint, typecheck, tests, production build, and browser smoke validation before READY FOR PHASE 3.4.
+This blocks the final readiness gate because the phase specification requires lint, typecheck, tests, production build, and browser smoke validation before readiness can be declared.
 
 ## 20. Deferred functionality
 Not implemented in Phase 3.3:
