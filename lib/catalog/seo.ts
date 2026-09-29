@@ -74,7 +74,6 @@ export function getProductIndexability(product: ProductSeoEntity): CatalogIndexa
   }
 
   const issues = validateProduct({
-    id: product.id,
     title: product.title,
     slug: product.slug,
     description: product.description,
