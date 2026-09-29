@@ -6,6 +6,7 @@ import {
   normalizeAltText,
   normalizeSlug,
   normalizeSku,
+  normalizeOptionIdentity,
   normalizeTagName,
   normalizeTagSlug,
   normalizeTitle,
