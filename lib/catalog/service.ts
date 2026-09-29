@@ -924,7 +924,13 @@ export function createCatalogService(
     async deactivateVariant(id: string) {
       const existing = await repo.getVariantById(id);
       if (!existing) throw new CatalogServiceError("VARIANT_NOT_FOUND", "Variant was not found.");
-      try { return await repo.deactivateVariant(id); } catch (error) { mapDatabaseError(error); }
+      try {
+        return await repo.withTransaction(async (tx) => {
+          const updated = await repo.deactivateVariant(id, tx);
+          await audit({ entityType: "VARIANT", entityId: id, operation: "ARCHIVE", beforeState: existing, afterState: updated }, tx);
+          return updated;
+        });
+      } catch (error) { mapDatabaseError(error); }
     },
 
     async getVariantsForProduct(productId: string) {
@@ -1157,7 +1163,13 @@ export function createCatalogService(
     async archiveCategory(id: string) {
       const existing = await repo.getCategoryById(id);
       if (!existing) throw new CatalogServiceError("CATEGORY_NOT_FOUND", "Category was not found.");
-      try { return await repo.archiveCategory(id); } catch (error) { mapDatabaseError(error); }
+      try {
+        return await repo.withTransaction(async (tx) => {
+          const updated = await repo.archiveCategory(id, tx);
+          await audit({ entityType: "CATEGORY", entityId: id, operation: "ARCHIVE", beforeState: existing, afterState: updated }, tx);
+          return updated;
+        });
+      } catch (error) { mapDatabaseError(error); }
     },
 
     async getCategory(id: string) {
@@ -1210,7 +1222,13 @@ export function createCatalogService(
     async archiveCollection(id: string) {
       const existing = await repo.getCollectionById(id);
       if (!existing) throw new CatalogServiceError("COLLECTION_NOT_FOUND", "Collection was not found.");
-      try { return await repo.archiveCollection(id); } catch (error) { mapDatabaseError(error); }
+      try {
+        return await repo.withTransaction(async (tx) => {
+          const updated = await repo.archiveCollection(id, tx);
+          await audit({ entityType: "COLLECTION", entityId: id, operation: "ARCHIVE", beforeState: existing, afterState: updated }, tx);
+          return updated;
+        });
+      } catch (error) { mapDatabaseError(error); }
     },
 
     async getCollection(id: string) {
