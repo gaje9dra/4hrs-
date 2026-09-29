@@ -8,9 +8,14 @@ import { HeaderBrand } from '@/components/layout/header-brand'
 import { DesktopNav } from '@/components/layout/desktop-nav'
 import { MobileNav } from '@/components/layout/mobile-nav'
 import { UtilityNav } from '@/components/layout/utility-nav'
-import { storefrontNavigation, utilityNavigation } from '@/config/navigation'
+import { utilityNavigation } from '@/config/navigation'
+import type { NavigationItem } from '@/types/navigation'
 
-export function Header() {
+type HeaderProps = {
+  items: NavigationItem[]
+}
+
+export function Header({ items }: HeaderProps) {
   const [open, setOpen] = useState(false)
   const pathname = usePathname()
   const triggerRef = useRef<HTMLButtonElement>(null)
@@ -24,7 +29,7 @@ export function Header() {
       <Container width="standard" className="flex min-h-16 items-center justify-between gap-3 py-3">
         <HeaderBrand />
 
-        <DesktopNav items={storefrontNavigation} activeHref={pathname} />
+        <DesktopNav items={items} activeHref={pathname} />
 
         <div className="flex items-center gap-1">
           <UtilityNav items={utilityNavigation} />
@@ -45,9 +50,10 @@ export function Header() {
 
       <MobileNav
         open={open}
-        items={storefrontNavigation}
+        items={items}
         onClose={closeMenu}
         triggerRef={triggerRef}
+        activeHref={pathname}
       />
     </header>
   )
