@@ -159,17 +159,45 @@ export async function getStorefrontCollectionProducts(slug: string, query: Omit<
   return getStorefrontProducts({ ...query, collection: slug, sort: query.sort ?? "merchandising" });
 }
 
-export async function getStorefrontHomeCatalogData() {
-  const [products, categories, collections] = await Promise.all([
+export type StorefrontHomeData = {
+  featuredProducts: StorefrontProductCard[];
+  newArrivals: StorefrontProductCard[];
+  categories: Array<{ id: string; name: string; slug: string; description: string | null }>;
+  collections: Array<{ id: string; name: string; slug: string; description: string | null }>;
+  editorialCollection: { id: string; name: string; slug: string; description: string | null } | null;
+};
+
+export async function getStorefrontHomeCatalogData(): Promise<StorefrontHomeData> {
+  const [newArrivalResult, categories, collections] = await Promise.all([
     getStorefrontProducts({ pageSize: 8, sort: "newest" }),
     catalog.listActiveCategories(),
     catalog.listActiveCollections(),
   ]);
 
+  const editorialCollection = collections[0]
+    ? {
+        id: collections[0].id,
+        name: collections[0].name,
+        slug: collections[0].slug,
+        description: collections[0].description,
+      }
+    : null;
+
+  const featuredResult = editorialCollection
+    ? await getStorefrontCollectionProducts(editorialCollection.slug, {
+        pageSize: 4,
+        sort: "merchandising",
+      })
+    : null;
+
+  const featuredIds = new Set(featuredResult?.items.map((product) => product.id) ?? []);
+
   return {
-    products,
-    categories: categories.map(({ id, name, slug, description }) => ({ id, name, slug, description })),
-    collections: collections.map(({ id, name, slug, description }) => ({ id, name, slug, description })),
+    featuredProducts: featuredResult?.items ?? [],
+    newArrivals: newArrivalResult.items.filter((product) => !featuredIds.has(product.id)).slice(0, 4),
+    categories: categories.slice(0, 6).map(({ id, name, slug, description }) => ({ id, name, slug, description })),
+    collections: collections.slice(0, 3).map(({ id, name, slug, description }) => ({ id, name, slug, description })),
+    editorialCollection,
   };
 }
 
