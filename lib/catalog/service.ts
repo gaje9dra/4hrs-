@@ -1073,6 +1073,9 @@ export function createCatalogService(
       if (next.parentId) {
         const parent = await repo.getCategoryById(next.parentId);
         if (!parent) throw new CatalogServiceError("CATEGORY_NOT_FOUND", "Parent category was not found.");
+        if (next.status === "ACTIVE" && parent.status !== "ACTIVE") {
+          throw new CatalogServiceError("INVALID_CATEGORY", "An active category cannot use an archived parent.");
+        }
         const hierarchy = await repo.getCategoryHierarchy();
         const parentById = new Map(hierarchy.map((category) => [category.id, category.parentId]));
         parentById.set(id, next.parentId);
@@ -1104,6 +1107,10 @@ export function createCatalogService(
     async archiveCategory(id: string) {
       const existing = await repo.getCategoryById(id);
       if (!existing) throw new CatalogServiceError("CATEGORY_NOT_FOUND", "Category was not found.");
+      const hierarchy = await repo.getCategoryHierarchy();
+      if (hierarchy.some((category) => category.parentId === id && category.status === "ACTIVE")) {
+        throw new CatalogServiceError("INVALID_CATEGORY", "Cannot archive a category while it has active child categories.");
+      }
       try {
         return await repo.withTransaction(async (tx) => {
           const updated = await repo.archiveCategory(id, tx);
