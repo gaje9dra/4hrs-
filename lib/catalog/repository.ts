@@ -562,6 +562,10 @@ export async function searchMerchandisedCatalogProducts(
     return { items: items.map((item) => item.product), total, limit, offset, hasNextPage: offset + items.length < total };
   }
 
+  const relationWhere = {
+    category: { slug, status: "ACTIVE" as const },
+    product: productWhere,
+  };
   const [items, total] = await Promise.all([
     repository.productCategory.findMany({
       where: relationWhere,
