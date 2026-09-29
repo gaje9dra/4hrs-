@@ -16,6 +16,7 @@ const product = {
   compareAtPrice: new Prisma.Decimal("1299.00"),
   currency: "INR",
   status: "ACTIVE" as const,
+      optionValues: [],
   createdAt: new Date("2026-01-01T00:00:00.000Z"),
   updatedAt: new Date("2026-01-02T00:00:00.000Z"),
   images: [
@@ -38,6 +39,7 @@ const product = {
       price: new Prisma.Decimal("899.00"),
       compareAtPrice: null,
       status: "ACTIVE" as const,
+      optionValues: [],
       inventory: {
         trackingEnabled: true,
         onHand: 10,

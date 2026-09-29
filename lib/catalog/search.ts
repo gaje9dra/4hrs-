@@ -9,7 +9,7 @@ import {
   type CatalogSort,
 } from "@/lib/catalog/query";
 import {
-  type CatalogListResult,
+  type RepositoryCatalogListResult,
   type CatalogSearchMode as RepositoryCatalogSearchMode,
   type CatalogSearchRepositoryOptions,
   type PublicCatalogProductRecord,
@@ -79,7 +79,7 @@ export type CatalogSearchResult = {
 };
 
 export interface CatalogSearchProvider {
-  search(request: NormalizedCatalogSearchQuery): Promise<CatalogListResult<PublicCatalogProductRecord>>;
+  search(request: NormalizedCatalogSearchQuery): Promise<RepositoryCatalogListResult<PublicCatalogProductRecord>>;
 }
 
 export class DatabaseSearchAdapter implements CatalogSearchProvider {
@@ -242,16 +242,12 @@ function normalizeCatalogSearchQuery(input: CatalogSearchQuery): NormalizedCatal
     throw new CatalogServiceError("INVALID_QUERY", "Search mode must be PUBLIC or INTERNAL.");
   }
 
-  const catalogQuery: CatalogQuery = { ...input };
-  delete catalogQuery.query;
-  delete catalogQuery.mode;
+  const { query: _query, mode: _mode, ...catalogQuery } = input;
 
   return {
     query,
     mode,
-    catalog: {
-      ...normalizeCatalogQuery(catalogQuery),
-    },
+    catalog: normalizeCatalogQuery(catalogQuery),
   };
 }
 

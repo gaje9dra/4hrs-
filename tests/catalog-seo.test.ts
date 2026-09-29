@@ -1,4 +1,5 @@
 import test from "node:test";
+import { Prisma } from "@prisma/client";
 import assert from "node:assert/strict";
 import {
   SEO_DESCRIPTION_MAX_LENGTH,
@@ -221,7 +222,7 @@ test("published slug changes are rejected until a redirect strategy exists", asy
     description: null,
     shortDescription: null,
     status: "ACTIVE" as const,
-    price: { toString: () => "999.00" },
+    price: new Prisma.Decimal("999.00"),
     compareAtPrice: null,
     currency: "INR",
     seoTitle: null,

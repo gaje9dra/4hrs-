@@ -111,7 +111,7 @@ async function buildCategoryBreadcrumbs(category: Awaited<ReturnType<typeof cata
   const categories = await catalog.listActiveCategories();
   const byId = new Map(categories.map((item) => [item.id, item]));
   const breadcrumbs: Array<{ name: string; slug: string }> = [];
-  let current = category;
+  let current: Awaited<ReturnType<typeof catalog.getCategoryBySlug>> | undefined = category;
 
   while (current) {
     breadcrumbs.unshift({ name: current.name, slug: current.slug });
