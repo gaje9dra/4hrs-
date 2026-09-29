@@ -1080,7 +1080,25 @@ export function createCatalogService(
         if (hasCycle(id, parentById)) throw new CatalogServiceError("INVALID_CATEGORY", "Category hierarchy cannot contain a cycle.");
       }
       try {
-        return await repo.updateCategory(id, { name: normalizeTitle(next.name), slug: normalizeSlug(next.slug || next.name), seoTitle: normalizeSeoText(next.seoTitle), seoDescription: normalizeSeoText(next.seoDescription), status: next.status, parent: next.parentId ? { connect: { id: next.parentId } } : { disconnect: true } });
+        return await repo.withTransaction(async (tx) => {
+          const updated = await repo.updateCategory(id, {
+            name: normalizeTitle(next.name),
+            slug: normalizeSlug(next.slug || next.name),
+            seoTitle: normalizeSeoText(next.seoTitle),
+            seoDescription: normalizeSeoText(next.seoDescription),
+            status: next.status,
+            parent: next.parentId ? { connect: { id: next.parentId } } : { disconnect: true },
+          }, tx);
+          await audit({
+            entityType: "CATEGORY",
+            entityId: id,
+            operation: "UPDATE",
+            changedFields: changedFields(existing as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>),
+            beforeState: existing,
+            afterState: updated,
+          }, tx);
+          return updated;
+        });
       } catch (error) { mapDatabaseError(error); }
     },
 
