@@ -17,7 +17,9 @@ type MobileNavProps = {
 
 function isActive(item: NavigationItem, pathname: string) {
   if (item.match === 'section') {
-    return item.href === pathname || Boolean(item.children?.some((child) => child.href === pathname))
+    const exact = item.href === pathname
+    const prefix = item.activePrefixes?.some((value) => pathname.startsWith(value)) ?? false
+    return exact || prefix || Boolean(item.children?.some((child) => child.href === pathname))
   }
   if (item.match === 'exact' || !item.children?.length) return item.href === pathname
   return item.children.some((child) => child.href === pathname)
