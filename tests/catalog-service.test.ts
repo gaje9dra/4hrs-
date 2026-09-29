@@ -160,3 +160,20 @@ test("service reports deterministic publication readiness without mutating statu
   assert.ok(result.issues.some((issue) => issue.code === "VARIANT_REQUIRED"));
   assert.ok(result.issues.some((issue) => issue.code === "PRODUCT_IMAGE_REQUIRED"));
 });
+
+
+test("service rejects direct Product status mutation outside lifecycle operations", async () => {
+  const service = createCatalogService({
+    getProductById: async () => product,
+  });
+
+  await assert.rejects(
+    service.updateProduct({
+      id: "product-1",
+      status: "ACTIVE",
+    }),
+    (error: unknown) =>
+      error instanceof CatalogServiceError &&
+      error.code === "INVALID_STATUS_TRANSITION",
+  );
+});
