@@ -1207,7 +1207,13 @@ export function createCatalogService(
       if (!collection) throw new CatalogServiceError("COLLECTION_NOT_FOUND", "Collection was not found.");
       const existing = await repo.getProductCollection(productId, collectionId);
       if (existing) throw new CatalogServiceError("INVALID_COLLECTION", "Product is already a member of this collection.");
-      try { return await repo.attachCollection(productId, collectionId, options); } catch (error) { mapDatabaseError(error); }
+      try {
+        return await repo.withTransaction(async (tx) => {
+          const result = await repo.attachCollection(productId, collectionId, options, tx);
+          await audit({ entityType: "PRODUCT_COLLECTION", entityId: productId, operation: "RELATIONSHIP_ADD", afterState: result, metadata: { collectionId } }, tx);
+          return result;
+        });
+      } catch (error) { mapDatabaseError(error); }
     },
 
     async updateCollectionMembership(
@@ -1219,7 +1225,13 @@ export function createCatalogService(
       if (!existing) throw new CatalogServiceError("INVALID_COLLECTION", "Product is not a member of this collection.");
       const issues = validateMerchandisingMembership({ productId, collectionId, ...patch });
       if (issues.length) validationError(issues, "INVALID_COLLECTION");
-      try { return await repo.updateProductCollection(productId, collectionId, patch); } catch (error) { mapDatabaseError(error); }
+      try {
+        return await repo.withTransaction(async (tx) => {
+          const result = await repo.updateProductCollection(productId, collectionId, patch, tx);
+          await audit({ entityType: "PRODUCT_COLLECTION", entityId: productId, operation: "UPDATE", changedFields: changedFields(existing as unknown as Record<string, unknown>, result as unknown as Record<string, unknown>), beforeState: existing, afterState: result, metadata: { collectionId } }, tx);
+          return result;
+        });
+      } catch (error) { mapDatabaseError(error); }
     },
 
     async reorderCollectionProducts(
@@ -1240,7 +1252,13 @@ export function createCatalogService(
       });
       if (issues.length) validationError(issues, "INVALID_COLLECTION");
       try {
-        return await repo.withTransaction((tx) => repo.reorderProductCollection(collectionId, updates, tx));
+        return await repo.withTransaction(async (tx) => {
+          const result = await repo.reorderProductCollection(collectionId, updates, tx);
+          for (const update of updates) {
+            await audit({ entityType: "PRODUCT_COLLECTION", entityId: update.productId, operation: "REORDER", changedFields: ["position", "priority", "isFeatured"], afterState: update, metadata: { collectionId } }, tx);
+          }
+          return result;
+        });
       } catch (error) { mapDatabaseError(error); }
     },
 
@@ -1265,7 +1283,13 @@ export function createCatalogService(
     },
 
     async detachCollection(productId: string, collectionId: string) {
-      try { return await repo.detachCollection(productId, collectionId); } catch (error) { mapDatabaseError(error); }
+      try {
+        return await repo.withTransaction(async (tx) => {
+          const result = await repo.detachCollection(productId, collectionId, tx);
+          await audit({ entityType: "PRODUCT_COLLECTION", entityId: productId, operation: "RELATIONSHIP_REMOVE", metadata: { collectionId } }, tx);
+          return result;
+        });
+      } catch (error) { mapDatabaseError(error); }
     },
 
     async createTag(input: TagInput) {
@@ -1323,11 +1347,23 @@ export function createCatalogService(
       await this.getProductById(productId);
       const tag = await repo.getTagById(tagId);
       if (!tag) throw new CatalogServiceError("TAG_NOT_FOUND", "Tag was not found.");
-      try { return await repo.attachTag(productId, tagId); } catch (error) { mapDatabaseError(error); }
+      try {
+        return await repo.withTransaction(async (tx) => {
+          const result = await repo.attachTag(productId, tagId, tx);
+          await audit({ entityType: "PRODUCT_TAG", entityId: productId, operation: "RELATIONSHIP_ADD", metadata: { tagId } }, tx);
+          return result;
+        });
+      } catch (error) { mapDatabaseError(error); }
     },
 
     async detachTag(productId: string, tagId: string) {
-      try { return await repo.detachTag(productId, tagId); } catch (error) { mapDatabaseError(error); }
+      try {
+        return await repo.withTransaction(async (tx) => {
+          const result = await repo.detachTag(productId, tagId, tx);
+          await audit({ entityType: "PRODUCT_TAG", entityId: productId, operation: "RELATIONSHIP_REMOVE", metadata: { tagId } }, tx);
+          return result;
+        });
+      } catch (error) { mapDatabaseError(error); }
     },
 
     async attachCategory(
@@ -1342,7 +1378,13 @@ export function createCatalogService(
       if (!category) throw new CatalogServiceError("CATEGORY_NOT_FOUND", "Category was not found.");
       const existing = await repo.getProductCategory(productId, categoryId);
       if (existing) throw new CatalogServiceError("INVALID_CATEGORY", "Product is already assigned to this category.");
-      try { return await repo.attachCategory(productId, categoryId, options); } catch (error) { mapDatabaseError(error); }
+      try {
+        return await repo.withTransaction(async (tx) => {
+          const result = await repo.attachCategory(productId, categoryId, options, tx);
+          await audit({ entityType: "PRODUCT_CATEGORY", entityId: productId, operation: "RELATIONSHIP_ADD", afterState: result, metadata: { categoryId } }, tx);
+          return result;
+        });
+      } catch (error) { mapDatabaseError(error); }
     },
 
     async updateCategoryMembership(
@@ -1354,7 +1396,13 @@ export function createCatalogService(
       if (!existing) throw new CatalogServiceError("INVALID_CATEGORY", "Product is not assigned to this category.");
       const issues = validateMerchandisingMembership({ productId, categoryId, ...patch });
       if (issues.length) validationError(issues, "INVALID_CATEGORY");
-      try { return await repo.updateProductCategory(productId, categoryId, patch); } catch (error) { mapDatabaseError(error); }
+      try {
+        return await repo.withTransaction(async (tx) => {
+          const result = await repo.updateProductCategory(productId, categoryId, patch, tx);
+          await audit({ entityType: "PRODUCT_CATEGORY", entityId: productId, operation: "UPDATE", changedFields: changedFields(existing as unknown as Record<string, unknown>, result as unknown as Record<string, unknown>), beforeState: existing, afterState: result, metadata: { categoryId } }, tx);
+          return result;
+        });
+      } catch (error) { mapDatabaseError(error); }
     },
 
     async reorderCategoryProducts(
@@ -1375,12 +1423,24 @@ export function createCatalogService(
       });
       if (issues.length) validationError(issues, "INVALID_CATEGORY");
       try {
-        return await repo.withTransaction((tx) => repo.reorderProductCategory(categoryId, updates, tx));
+        return await repo.withTransaction(async (tx) => {
+          const result = await repo.reorderProductCategory(categoryId, updates, tx);
+          for (const update of updates) {
+            await audit({ entityType: "PRODUCT_CATEGORY", entityId: update.productId, operation: "REORDER", changedFields: ["position", "priority", "isFeatured"], afterState: update, metadata: { categoryId } }, tx);
+          }
+          return result;
+        });
       } catch (error) { mapDatabaseError(error); }
     },
 
     async detachCategory(productId: string, categoryId: string) {
-      try { return await repo.detachCategory(productId, categoryId); } catch (error) { mapDatabaseError(error); }
+      try {
+        return await repo.withTransaction(async (tx) => {
+          const result = await repo.detachCategory(productId, categoryId, tx);
+          await audit({ entityType: "PRODUCT_CATEGORY", entityId: productId, operation: "RELATIONSHIP_REMOVE", metadata: { categoryId } }, tx);
+          return result;
+        });
+      } catch (error) { mapDatabaseError(error); }
     },
 
     async listProducts(options: repository.CatalogListOptions = {}) {
