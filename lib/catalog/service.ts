@@ -411,10 +411,6 @@ export function createCatalogService(
           for (const variant of normalizedVariants) {
             await audit({ entityType: "VARIANT", entityId: variant.id!, operation: "CREATE", afterState: variant }, tx);
           }
-          for (const image of normalizedImages) {
-            // Images created here do not expose their generated ID without an extra read; product creation remains the parent audit boundary.
-          }
-
           return created;
         });
 
