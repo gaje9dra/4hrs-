@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { toCatalogMediaDto, type CatalogMediaDto } from "@/lib/catalog/media";
 import { Prisma } from "@prisma/client";
 import {
   CatalogServiceError,
@@ -13,6 +14,7 @@ import {
   validateCollection,
   validateImage,
   validateImageRelationships,
+  normalizeAltText,
   validateMoney,
   validateProduct,
   validatePublishingReadiness,
@@ -72,6 +74,9 @@ type CatalogRepository = {
   getVariantOptionValues: typeof repository.getVariantOptionValues;
   createImage: typeof repository.createImage;
   getImageById: typeof repository.getImageById;
+  listProductImages: typeof repository.listProductImages;
+  listVariantImages: typeof repository.listVariantImages;
+  getPrimaryProductImage: typeof repository.getPrimaryProductImage;
   updateImage: typeof repository.updateImage;
   deleteImage: typeof repository.deleteImage;
   reorderImages: typeof repository.reorderImages;
@@ -316,8 +321,10 @@ export function createCatalogService(customRepository: Partial<CatalogRepository
             await repo.createImage({
               product: image.productId ? { connect: { id: image.productId } } : undefined,
               variant: image.variantId ? { connect: { id: image.variantId } } : undefined,
-              url: image.url,
-              altText: image.altText ?? null,
+              url: image.url.trim(),
+              storageReference: image.storageReference?.trim() || null,
+              mediaType: image.mediaType ?? "IMAGE",
+              altText: normalizeAltText(image.altText),
               sortOrder: image.sortOrder,
               isPrimary: image.isPrimary,
             }, tx);
@@ -819,8 +826,10 @@ export function createCatalogService(customRepository: Partial<CatalogRepository
           return repo.createImage({
             product: input.productId ? { connect: { id: input.productId } } : undefined,
             variant: input.variantId ? { connect: { id: input.variantId } } : undefined,
-            url: input.url,
-            altText: input.altText ?? null,
+            url: input.url.trim(),
+            storageReference: input.storageReference?.trim() || null,
+            mediaType: input.mediaType ?? "IMAGE",
+            altText: normalizeAltText(input.altText),
             sortOrder: input.sortOrder,
             isPrimary: input.isPrimary,
           }, tx);
@@ -835,7 +844,9 @@ export function createCatalogService(customRepository: Partial<CatalogRepository
         productId: existing.productId,
         variantId: existing.variantId,
         url: patch.url ?? existing.url,
-        altText: patch.altText === undefined ? existing.altText : patch.altText,
+        storageReference: existing.storageReference,
+        mediaType: existing.mediaType,
+        altText: patch.altText === undefined ? existing.altText : normalizeAltText(patch.altText),
         sortOrder: patch.sortOrder ?? existing.sortOrder,
         isPrimary: patch.isPrimary ?? existing.isPrimary,
       };
@@ -845,7 +856,9 @@ export function createCatalogService(customRepository: Partial<CatalogRepository
         return await repo.withTransaction(async (tx) => {
           if (next.isPrimary && next.productId) await repo.updateProductImagesPrimaryState(next.productId, id, tx);
           return repo.updateImage(id, {
-            url: next.url,
+            url: next.url.trim(),
+            storageReference: next.storageReference?.trim() || null,
+            mediaType: next.mediaType,
             altText: next.altText,
             sortOrder: next.sortOrder,
             isPrimary: next.isPrimary,
@@ -858,9 +871,39 @@ export function createCatalogService(customRepository: Partial<CatalogRepository
       const issues = updates.flatMap((item, index) => !Number.isInteger(item.sortOrder) || item.sortOrder < 0
         ? [{ field: "[" + index + "].sortOrder", code: "INVALID_SORT_ORDER", message: "Image sort order must be a non-negative integer." }]
         : []);
+      const images = await Promise.all(updates.map((item) => repo.getImageById(item.id)));
+      images.forEach((image, index) => {
+        if (!image) issues.push({ field: "[" + index + "].id", code: "IMAGE_NOT_FOUND", message: "Image was not found." });
+      });
+      const existingImages = images.filter((image): image is NonNullable<typeof image> => Boolean(image));
+      const ownerKeys = new Set(existingImages.map((image) =>
+        image.productId ? "product:" + image.productId : "variant:" + image.variantId,
+      ));
+      if (ownerKeys.size > 1) {
+        issues.push({ field: "updates", code: "INVALID_IMAGE_RELATIONSHIP", message: "Images from different Products or variants cannot be reordered together." });
+      }
       if (issues.length) validationError(issues, "INVALID_IMAGE_RELATIONSHIP");
       try { return await repo.withTransaction((tx) => repo.reorderImages(updates, tx)); }
       catch (error) { mapDatabaseError(error); }
+    },
+
+    async getProductMedia(productId: string): Promise<CatalogMediaDto[]> {
+      await this.getProductById(productId);
+      const images = await repo.listProductImages(productId);
+      return images.map((image) => toCatalogMediaDto(image));
+    },
+
+    async getVariantMedia(variantId: string): Promise<CatalogMediaDto[]> {
+      const variant = await repo.getVariantById(variantId);
+      if (!variant) throw new CatalogServiceError("VARIANT_NOT_FOUND", "Variant was not found.");
+      const images = await repo.listVariantImages(variantId);
+      return images.map((image) => toCatalogMediaDto(image));
+    },
+
+    async getPrimaryProductMedia(productId: string): Promise<CatalogMediaDto | null> {
+      await this.getProductById(productId);
+      const image = await repo.getPrimaryProductImage(productId);
+      return image ? toCatalogMediaDto(image) : null;
     },
 
     async removeImage(id: string) {
