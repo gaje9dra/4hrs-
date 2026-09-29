@@ -4,9 +4,14 @@ import { FooterCopyright } from '@/components/layout/footer-copyright'
 import { FooterLegal } from '@/components/layout/footer-legal'
 import { FooterNav } from '@/components/layout/footer-nav'
 import { FooterSocial } from '@/components/layout/footer-social'
-import { footerLegalLinks, footerNavigationGroups, footerSocialLinks } from '@/config/footer'
+import type { FooterNavGroup } from '@/types/footer'
+import { footerLegalLinks, footerSocialLinks } from '@/config/footer'
 
-export function Footer() {
+type FooterProps = {
+  navigationGroups: FooterNavGroup[]
+}
+
+export function Footer({ navigationGroups }: FooterProps) {
   return (
     <footer className="border-t-2 border-border bg-foreground text-white lg:border-t-4">
       <Container className="py-12 sm:py-16 lg:py-20">
@@ -14,7 +19,7 @@ export function Footer() {
           <FooterBrand />
 
           <div className="grid gap-10 sm:grid-cols-2">
-            <FooterNav groups={footerNavigationGroups} />
+            <FooterNav groups={navigationGroups} />
             <FooterSocial links={footerSocialLinks} />
           </div>
         </div>
