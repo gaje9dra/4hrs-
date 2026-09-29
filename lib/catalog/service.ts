@@ -87,11 +87,13 @@ type CatalogRepository = {
   updateProductImagesPrimaryState: typeof repository.updateProductImagesPrimaryState;
   createCategory: typeof repository.createCategory;
   getCategoryById: typeof repository.getCategoryById;
+  getCategoryBySlug: typeof repository.getCategoryBySlug;
   getCategoryHierarchy: typeof repository.getCategoryHierarchy;
   updateCategory: typeof repository.updateCategory;
   archiveCategory: typeof repository.archiveCategory;
   createCollection: typeof repository.createCollection;
   getCollectionById: typeof repository.getCollectionById;
+  getCollectionBySlug: typeof repository.getCollectionBySlug;
   updateCollection: typeof repository.updateCollection;
   archiveCollection: typeof repository.archiveCollection;
   createTag: typeof repository.createTag;
