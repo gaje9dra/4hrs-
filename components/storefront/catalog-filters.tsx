@@ -71,6 +71,14 @@ export function CatalogFilters({
             <span id="catalog-tags-help" className="font-500 normal-case tracking-normal">Use Ctrl/Cmd to select multiple tags.</span>
           </label>
 
+          <label className="grid gap-2 text-xs font-900 uppercase tracking-widest">
+            Tag match
+            <select name="tagMode" defaultValue={appliedQuery.tagMode} className="min-h-12 border-2 border-border bg-white px-3 text-sm font-700 focus:border-primary-blue focus:outline-none">
+              <option value="AND">Match all</option>
+              <option value="OR">Match any</option>
+            </select>
+          </label>
+
           <div className="grid grid-cols-2 gap-3">
             <label className="grid gap-2 text-xs font-900 uppercase tracking-widest">
               Min price
