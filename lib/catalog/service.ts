@@ -369,9 +369,32 @@ export function createCatalogService(
             }, tx);
           }
 
-          for (const categoryId of categoryIds ?? []) await repo.attachCategory(productId, categoryId, {}, tx);
-          for (const collectionId of collectionIds ?? []) await repo.attachCollection(productId, collectionId, {}, tx);
-          for (const tagId of tagIds ?? []) await repo.attachTag(productId, tagId, tx);
+          for (const categoryId of categoryIds ?? []) {
+            await repo.attachCategory(productId, categoryId, {}, tx);
+            await audit({ entityType: "PRODUCT_CATEGORY", entityId: productId, operation: "RELATIONSHIP_ADD", metadata: { categoryId } }, tx);
+          }
+          for (const collectionId of collectionIds ?? []) {
+            await repo.attachCollection(productId, collectionId, {}, tx);
+            await audit({ entityType: "PRODUCT_COLLECTION", entityId: productId, operation: "RELATIONSHIP_ADD", metadata: { collectionId } }, tx);
+          }
+          for (const tagId of tagIds ?? []) {
+            await repo.attachTag(productId, tagId, tx);
+            await audit({ entityType: "PRODUCT_TAG", entityId: productId, operation: "RELATIONSHIP_ADD", metadata: { tagId } }, tx);
+          }
+
+          await audit({
+            entityType: "PRODUCT",
+            entityId: productId,
+            operation: "CREATE",
+            afterState: created,
+            metadata: { variantCount: normalizedVariants.length, mediaCount: normalizedImages.length },
+          }, tx);
+          for (const variant of normalizedVariants) {
+            await audit({ entityType: "VARIANT", entityId: variant.id!, operation: "CREATE", afterState: variant }, tx);
+          }
+          for (const image of normalizedImages) {
+            // Images created here do not expose their generated ID without an extra read; product creation remains the parent audit boundary.
+          }
 
           return created;
         });
