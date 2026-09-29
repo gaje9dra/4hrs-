@@ -732,7 +732,8 @@ export function createCatalogService(
       const issues = validateVariant(variant);
       const product = await repo.getProductById(variant.productId);
       if (!product) throw new CatalogServiceError("PRODUCT_NOT_FOUND", "Product was not found.");
-      const optionCheck = await validateVariantOptionValues(repo, variant.productId, variant.optionValueIds);
+      const optionValueIds = variant.optionValueIds ?? [];
+      const optionCheck = await validateVariantOptionValues(repo, variant.productId, optionValueIds);
       issues.push(...optionCheck.issues);
       const existingVariants = await repo.getVariantsByProduct(variant.productId);
       if (existingVariants.some((item) => item.sku === variant.sku)) {
@@ -745,7 +746,7 @@ export function createCatalogService(
         displayName: item.displayName,
         size: item.size,
         color: item.color,
-        optionValueIds: variant.optionValueIds.length
+        optionValueIds: optionValueIds.length
           ? (await repo.getVariantOptionValues(item.id)).map((value) => value.optionValueId)
           : [],
         price: item.price?.toString() ?? null,
