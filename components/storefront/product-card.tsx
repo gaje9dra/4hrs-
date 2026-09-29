@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import type { StorefrontProductCard } from "@/lib/storefront/catalog";
+import { productPath } from "@/lib/catalog/routes";
 
 const availabilityLabel: Record<StorefrontProductCard["availability"], string> = {
   IN_STOCK: "In stock",
@@ -13,7 +14,7 @@ const availabilityLabel: Record<StorefrontProductCard["availability"], string> =
 export function ProductCard({ product }: { product: StorefrontProductCard }) {
   return (
     <Card className="overflow-hidden p-0">
-      <Link href={product.href} className="motion-link block no-underline">
+      <Link href={productPath(product)} className="motion-link block no-underline">
         <div className="aspect-[4/5] overflow-hidden border-b-2 border-border bg-white lg:border-b-4">
           {product.image ? (
             <img
