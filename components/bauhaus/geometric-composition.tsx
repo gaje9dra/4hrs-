@@ -20,6 +20,6 @@ export function GeometricComposition({
 
 export function GeometricLayer({
   children, className = '', layer = 'base',
-}: { children: ReactNode; className?: string; layer?: GeometricLayerName }) {
+}: { children?: ReactNode; className?: string; layer?: GeometricLayerName }) {
   return <div className={['absolute pointer-events-none', layers[layer], className].join(' ')} aria-hidden="true">{children}</div>
 }
