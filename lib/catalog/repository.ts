@@ -31,7 +31,7 @@ export type CatalogListOptions = {
   offset?: number;
 };
 
-export type CatalogListResult<T> = {
+export type RepositoryCatalogListResult<T> = {
   items: T[];
   total: number;
   limit: number;
@@ -295,7 +295,7 @@ export type PublicCatalogProductRecord = Prisma.ProductGetPayload<{
 export async function queryPublishedCatalogProducts(
   options: CatalogQueryRepositoryOptions,
   client?: CatalogRepositoryClient,
-): Promise<CatalogListResult<PublicCatalogProductRecord>> {
+): Promise<RepositoryCatalogListResult<PublicCatalogProductRecord>> {
   const repository = clientOrDefault(client);
   const limit = clampLimit(options.limit);
   const offset = normalizeOffset(options.offset);
@@ -320,11 +320,11 @@ export async function queryPublishedCatalogProducts(
   return { items, total, limit, offset, hasNextPage: offset + items.length < total };
 }
 
-export type CatalogSearchMode = "PUBLIC" | "INTERNAL";
+export type RepositoryCatalogSearchMode = "PUBLIC" | "INTERNAL";
 
 export type CatalogSearchRepositoryOptions = CatalogQueryRepositoryOptions & {
   query: string;
-  mode: CatalogSearchMode;
+  mode: RepositoryCatalogSearchMode;
 };
 
 function buildCatalogSearchWhere(
@@ -408,7 +408,7 @@ function buildInternalCatalogWhere(
 export async function searchCatalogProducts(
   options: CatalogSearchRepositoryOptions,
   client?: CatalogRepositoryClient,
-): Promise<CatalogListResult<PublicCatalogProductRecord>> {
+): Promise<RepositoryCatalogListResult<PublicCatalogProductRecord>> {
   const repository = clientOrDefault(client);
   const limit = clampLimit(options.limit);
   const offset = normalizeOffset(options.offset);
@@ -458,7 +458,7 @@ function buildMerchandisingProductWhere(
 export async function queryMerchandisedCatalogProducts(
   options: MerchandisingQueryOptions,
   client?: CatalogRepositoryClient,
-): Promise<CatalogListResult<PublicCatalogProductRecord>> {
+): Promise<RepositoryCatalogListResult<PublicCatalogProductRecord>> {
   const repository = clientOrDefault(client);
   const limit = clampLimit(options.limit);
   const offset = normalizeOffset(options.offset);
@@ -528,7 +528,7 @@ export async function queryMerchandisedCatalogProducts(
 export async function searchMerchandisedCatalogProducts(
   options: CatalogSearchRepositoryOptions,
   client?: CatalogRepositoryClient,
-): Promise<CatalogListResult<PublicCatalogProductRecord>> {
+): Promise<RepositoryCatalogListResult<PublicCatalogProductRecord>> {
   const repository = clientOrDefault(client);
   const limit = clampLimit(options.limit);
   const offset = normalizeOffset(options.offset);
