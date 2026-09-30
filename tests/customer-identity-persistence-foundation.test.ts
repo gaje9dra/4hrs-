@@ -16,6 +16,7 @@ test("customer DTO explicitly excludes credentials and session secrets", async (
   assert.deepEqual(dto, {
     id: "customer-id",
     email: "customer@example.com",
+    displayName: null,
     status: "ACTIVE",
     emailVerifiedAt: null,
     createdAt: "2026-01-01T00:00:00.000Z",
