@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     const currentToken = (await cookies()).get(CUSTOMER_SESSION_COOKIE)?.value;
     const result = await authentication.login(
       credentials,
-      request.headers.get("x-forwarded-for") ?? "unknown",
+      (request.headers.get("x-forwarded-for") ?? "unknown") + ":" + credentials.email.trim().toLowerCase(),
       currentToken ? hashSessionToken(currentToken) : undefined,
     );
 
