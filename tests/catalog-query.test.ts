@@ -231,3 +231,106 @@ test("rejects excessive tag filters before repository execution", async () => {
   );
   assert.equal(called, false);
 });
+
+
+test("pagination metadata identifies pages beyond the final result page", async () => {
+  const service = createCatalogQueryService({
+    ...queryRepository,
+    queryPublishedCatalogProducts: async (options) => ({
+      items: [],
+      total: 49,
+      limit: options.limit,
+      offset: options.offset,
+      hasNextPage: false,
+    }),
+  });
+
+  const result = await service.listPublishedProducts({ page: 3, pageSize: 24 });
+  assert.equal(result.pagination.totalPages, 3);
+  assert.equal(result.pagination.isOutOfRange, false);
+
+  const outOfRange = await service.listPublishedProducts({ page: 4, pageSize: 24 });
+  assert.equal(outOfRange.pagination.totalPages, 3);
+  assert.equal(outOfRange.pagination.isOutOfRange, true);
+  assert.deepEqual(outOfRange.items, []);
+});
+
+test("an empty catalog is not treated as an out-of-range page", async () => {
+  const service = createCatalogQueryService({
+    ...queryRepository,
+    queryPublishedCatalogProducts: async (options) => ({
+      items: [],
+      total: 0,
+      limit: options.limit,
+      offset: options.offset,
+      hasNextPage: false,
+    }),
+  });
+
+  const result = await service.listPublishedProducts({ page: 2, pageSize: 24 });
+  assert.equal(result.pagination.totalPages, 0);
+  assert.equal(result.pagination.isOutOfRange, false);
+});
+
+test("pagination preserves the complete canonical filter and sort contract", async () => {
+  let received: any;
+  const service = createCatalogQueryService({
+    ...queryRepository,
+    queryPublishedCatalogProducts: async (options) => {
+      received = options;
+      return { items: [], total: 73, limit: options.limit, offset: options.offset, hasNextPage: true };
+    },
+  });
+
+  const result = await service.listPublishedProducts({
+    category: "T-SHIRTS",
+    collection: "SUMMER-EDIT",
+    tags: ["graphic", "streetwear"],
+    tagMode: "OR",
+    minPrice: "500",
+    maxPrice: "1500",
+    inStock: true,
+    sort: "price_desc",
+    page: 3,
+    pageSize: 24,
+  });
+
+  assert.equal(result.pagination.page, 3);
+  assert.equal(result.pagination.pageSize, 24);
+  assert.equal(result.pagination.total, 73);
+  assert.equal(result.pagination.totalPages, 4);
+  assert.equal(result.pagination.hasNextPage, true);
+  assert.equal(result.pagination.isOutOfRange, false);
+  assert.equal(received.offset, 48);
+  assert.equal(received.limit, 24);
+  assert.deepEqual(received.filters, {
+    categorySlug: "t-shirts",
+    collectionSlug: "summer-edit",
+    tagSlugs: ["graphic", "streetwear"],
+    tagMode: "OR",
+    minPrice: "500.00",
+    maxPrice: "1500.00",
+    inStock: true,
+  });
+  assert.equal(received.sortBy, "price");
+  assert.equal(received.sortDirection, "desc");
+});
+
+test("maximum page size remains bounded by the shared pagination contract", async () => {
+  let received: any;
+  const service = createCatalogQueryService({
+    ...queryRepository,
+    queryPublishedCatalogProducts: async (options) => {
+      received = options;
+      return { items: [], total: 0, limit: options.limit, offset: options.offset, hasNextPage: false };
+    },
+  });
+
+  await service.listPublishedProducts({ page: 1, pageSize: 100 });
+  assert.equal(received.limit, 100);
+
+  await assert.rejects(
+    service.listPublishedProducts({ page: 1, pageSize: 101 }),
+    (error: unknown) => error instanceof CatalogServiceError && error.code === "INVALID_PAGE",
+  );
+});
