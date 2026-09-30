@@ -334,3 +334,12 @@ test("maximum page size remains bounded by the shared pagination contract", asyn
     (error: unknown) => error instanceof CatalogServiceError && error.code === "INVALID_PAGE",
   );
 });
+
+
+test("page numbers use the same maximum in the service contract", async () => {
+  const service = createCatalogQueryService(queryRepository);
+  await assert.rejects(
+    service.listPublishedProducts({ page: 10001 }),
+    (error: unknown) => error instanceof CatalogServiceError && error.code === "INVALID_PAGE",
+  );
+});
