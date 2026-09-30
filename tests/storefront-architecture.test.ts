@@ -41,7 +41,7 @@ test("public repository visibility requires an active product, active variant an
   const source = read("lib/catalog/repository.ts");
   assert.match(source, /status:\s*"ACTIVE"/);
   assert.match(source, /variants:\s*\{\s*some:\s*\{[\s\S]*status:\s*"ACTIVE"/);
-  assert.match(source, /publicCatalogSelect/);
+  assert.match(source, /images:\s*\{/);
   assert.match(source, /mediaType:\s*"IMAGE"/);
 });
 
