@@ -82,6 +82,8 @@ test("collection resolution accepts active collections and distinguishes empty c
             seoDescription: "Summer edit",
             status: slug === "archived" ? "ARCHIVED" as const : "ACTIVE" as const,
             _count: { products: slug === "empty" ? 0 : 2 },
+            createdAt: new Date(),
+            updatedAt: new Date(),
           },
   };
   const service = createCatalogQueryService(collectionRepo);
@@ -106,6 +108,8 @@ test("collection context remains authoritative for pagination and merchandising 
       seoDescription: null,
       status: "ACTIVE" as const,
       _count: { products: 3 },
+      createdAt: new Date(),
+      updatedAt: new Date(),
     }),
     queryPublishedCatalogProducts: async (options: CatalogQueryRepositoryOptions) => {
       received = options;
