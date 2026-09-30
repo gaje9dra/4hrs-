@@ -5,7 +5,7 @@ export type CatalogRouteType = "product" | "category" | "collection";
 const routePrefix: Record<CatalogRouteType, string> = {
   product: "/product",
   category: "/category",
-  collection: "/collections",
+  collection: "/collection",
 };
 
 function safeSlug(slug: string): string {
