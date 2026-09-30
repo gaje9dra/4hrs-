@@ -33,6 +33,7 @@ export type NormalizedCatalogSearchQuery = {
   query: string;
   mode: CatalogSearchMode;
   catalog: CatalogAppliedQuery;
+  ranking: "relevance" | "catalog";
 };
 
 export type CatalogSearchResultItem = {
@@ -228,6 +229,7 @@ function normalizeCatalogSearchQuery(input: CatalogSearchQuery): NormalizedCatal
     query,
     mode,
     catalog: normalizeCatalogQuery(catalogQuery),
+    ranking: input.sort === undefined ? "relevance" : "catalog",
   };
 }
 
