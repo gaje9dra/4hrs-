@@ -52,6 +52,7 @@ export type CatalogAvailability = {
 };
 
 export type CatalogListItem = {
+  id: string;
   title: string;
   slug: string;
   primaryImage: {
@@ -351,6 +352,7 @@ function mapProduct(product: {
   );
 
   return {
+    id: (product as { id?: string }).id ?? "",
     title: product.title,
     slug: product.slug,
     primaryImage: product.images[0]
