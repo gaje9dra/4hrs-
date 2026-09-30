@@ -24,6 +24,13 @@ enum CollectionStatus {
   ACTIVE
   ARCHIVED
 }
+enum CustomerAccountStatus {
+  ACTIVE
+  DISABLED
+  SUSPENDED
+  PENDING_VERIFICATION
+}
+
 enum ProductMediaType {
   IMAGE
 }
@@ -347,11 +354,48 @@ model ProductTag {
 }
 
 
+model Customer {
+  id              String               @id @default(uuid()) @db.Uuid
+  email           String               @unique @db.VarChar(320)
+  status          CustomerAccountStatus @default(ACTIVE)
+  emailVerifiedAt DateTime?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  credential      CustomerCredential?
+  sessions        CustomerSession[]
+  cart            Cart?
+  @@index([status])
+}
+
+model CustomerCredential {
+  id           String   @id @default(uuid()) @db.Uuid
+  customerId   String   @unique @db.Uuid
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  customer     Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+}
+
+model CustomerSession {
+  id              String    @id @default(uuid()) @db.Uuid
+  customerId      String    @db.Uuid
+  sessionTokenHash String   @unique @db.VarChar(128)
+  createdAt       DateTime  @default(now())
+  expiresAt       DateTime
+  revokedAt       DateTime?
+  lastUsedAt      DateTime?
+  customer        Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  @@index([customerId, revokedAt, expiresAt])
+  @@index([expiresAt])
+}
+
 model Cart {
-  id        String     @id @default(uuid()) @db.Uuid
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  items     CartItem[]
+  id         String     @id @default(uuid()) @db.Uuid
+  customerId String?    @unique @db.Uuid
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  customer   Customer?  @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  items      CartItem[]
 }
 
 model CartItem {
