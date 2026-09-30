@@ -66,6 +66,7 @@ model Product {
   categories       ProductCategory[]
   collections      ProductCollection[]
   tags             ProductTag[]
+  cartItems        CartItem[]
   @@index([status])
   @@index([createdAt])
   @@index([price])
@@ -245,6 +246,7 @@ model ProductVariant {
   images         ProductImage[]
   inventory      Inventory?
   optionValues   ProductVariantOptionValue[]
+  cartItems      CartItem[]
   @@index([productId])
   @@index([status])
   @@index([productId, size, color])
