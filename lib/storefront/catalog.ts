@@ -147,36 +147,52 @@ async function buildCategoryBreadcrumbs(category: Awaited<ReturnType<typeof cata
 }
 
 export const getStorefrontCategory = cache(async function getStorefrontCategory(slug: string): Promise<StorefrontCategory> {
-  const category = await catalog.getCategoryBySlug(slug);
-  if (!category || category.status !== "ACTIVE") {
-    throw new CatalogServiceError("CATEGORY_NOT_FOUND", "Category was not found.");
+  const startedAt = Date.now();
+  try {
+    const category = await catalog.getCategoryBySlug(slug);
+    if (!category || category.status !== "ACTIVE") {
+      logCatalogObservation({ surface: "category", operation: "resolveCategory", classification: "not_found", durationMs: Date.now() - startedAt });
+      throw new CatalogServiceError("CATEGORY_NOT_FOUND", "Category was not found.");
+    }
+    return {
+      name: category.name,
+      slug: category.slug,
+      description: category.description,
+      seoTitle: category.seoTitle,
+      seoDescription: category.seoDescription,
+      status: "ACTIVE",
+      hasPublishedProducts: category._count.products > 0,
+      breadcrumbs: await buildCategoryBreadcrumbs(category),
+    };
+  } catch (error) {
+    if (error instanceof CatalogServiceError && error.code === "CATEGORY_NOT_FOUND") throw error;
+    logCatalogObservation({ surface: "category", operation: "resolveCategory", classification: "database_failure", durationMs: Date.now() - startedAt });
+    throw error;
   }
-  return {
-    name: category.name,
-    slug: category.slug,
-    description: category.description,
-    seoTitle: category.seoTitle,
-    seoDescription: category.seoDescription,
-    status: "ACTIVE",
-    hasPublishedProducts: category._count.products > 0,
-    breadcrumbs: await buildCategoryBreadcrumbs(category),
-  };
 });
 
 export const getStorefrontCollection = cache(async function getStorefrontCollection(slug: string): Promise<StorefrontCollection> {
-  const collection = await catalog.getCollectionBySlug(slug);
-  if (!collection || collection.status !== "ACTIVE") {
-    throw new CatalogServiceError("COLLECTION_NOT_FOUND", "Collection was not found.");
+  const startedAt = Date.now();
+  try {
+    const collection = await catalog.getCollectionBySlug(slug);
+    if (!collection || collection.status !== "ACTIVE") {
+      logCatalogObservation({ surface: "collection", operation: "resolveCollection", classification: "not_found", durationMs: Date.now() - startedAt });
+      throw new CatalogServiceError("COLLECTION_NOT_FOUND", "Collection was not found.");
+    }
+    return {
+      name: collection.name,
+      slug: collection.slug,
+      description: collection.description,
+      seoTitle: collection.seoTitle,
+      seoDescription: collection.seoDescription,
+      status: "ACTIVE",
+      hasPublishedProducts: collection._count.products > 0,
+    };
+  } catch (error) {
+    if (error instanceof CatalogServiceError && error.code === "COLLECTION_NOT_FOUND") throw error;
+    logCatalogObservation({ surface: "collection", operation: "resolveCollection", classification: "database_failure", durationMs: Date.now() - startedAt });
+    throw error;
   }
-  return {
-    name: collection.name,
-    slug: collection.slug,
-    description: collection.description,
-    seoTitle: collection.seoTitle,
-    seoDescription: collection.seoDescription,
-    status: "ACTIVE",
-    hasPublishedProducts: collection._count.products > 0,
-  };
 });
 
 export async function getStorefrontTags(): Promise<StorefrontTag[]> {
