@@ -112,8 +112,8 @@ function append(search: URLSearchParams, key: string, value: string | undefined)
 }
 
 export function buildCatalogHref(pathname: string, params: StorefrontSearchParams, page: number): string {
-  if (!Number.isSafeInteger(page) || page < 1) {
-    throw new Error("Catalog page must be a positive integer.");
+  if (!Number.isSafeInteger(page) || page < 1 || page > MAX_CATALOG_PAGE) {
+    throw new Error("Catalog page must be an integer from 1 to " + MAX_CATALOG_PAGE + ".");
   }
 
   const search = new URLSearchParams();
