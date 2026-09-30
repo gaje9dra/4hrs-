@@ -15,6 +15,7 @@ import {
   type RepositoryCatalogSearchMode,
   type CatalogSearchRepositoryOptions,
   type PublicCatalogProductRecord,
+  type PublicCatalogProductListRecord,
   searchCatalogProducts,
 } from "@/lib/catalog/repository";
 
@@ -35,11 +36,11 @@ export type NormalizedCatalogSearchQuery = {
 };
 
 export type CatalogSearchResultItem = {
-  id: string;
+  id?: string;
   title: string;
   slug: string;
   primaryImage: {
-    id: string;
+    id?: string;
     url: string;
     altText: string | null;
   } | null;
@@ -47,9 +48,9 @@ export type CatalogSearchResultItem = {
   compareAtPrice: string | null;
   currency: string;
   availability: CatalogAvailability;
-  categories: Array<{ id: string; name: string; slug: string }>;
-  collections: Array<{ id: string; name: string; slug: string }>;
-  tags: Array<{ id: string; name: string; slug: string }>;
+  categories?: Array<{ id: string; name: string; slug: string }>;
+  collections?: Array<{ id: string; name: string; slug: string }>;
+  tags?: Array<{ id: string; name: string; slug: string }>;
   internalVariants?: Array<{
     id: string;
     sku: string;
@@ -82,7 +83,7 @@ export type CatalogSearchResult = {
 };
 
 export interface CatalogSearchProvider {
-  search(request: NormalizedCatalogSearchQuery): Promise<RepositoryCatalogListResult<PublicCatalogProductRecord>>;
+  search(request: NormalizedCatalogSearchQuery): Promise<RepositoryCatalogListResult<PublicCatalogProductRecord | PublicCatalogProductListRecord>>;
 }
 
 export class DatabaseSearchAdapter implements CatalogSearchProvider {
@@ -271,14 +272,14 @@ export function createCatalogSearchService(options: {
   lookup?: {
     getCategoryBySlug: (slug: string) => Promise<unknown>;
     getCollectionBySlug: (slug: string) => Promise<unknown>;
-    listTags: () => Promise<Array<{ slug: string }>>;
+    getTagsBySlugs: (slugs: string[]) => Promise<Array<{ slug: string }>>;
   };
 } = {}) {
   const provider = options.provider ?? new DatabaseSearchAdapter();
   const lookup = options.lookup ?? {
     getCategoryBySlug: catalogRepository.getCategoryBySlug,
     getCollectionBySlug: catalogRepository.getCollectionBySlug,
-    listTags: async () => catalogRepository.listTags(),
+    getTagsBySlugs: async (slugs) => catalogRepository.getTagsBySlugs(slugs),
   };
 
   return {
@@ -288,24 +289,23 @@ export function createCatalogSearchService(options: {
 
       try {
         normalized = normalizeCatalogSearchQuery(input);
-        if (normalized.catalog.category) {
-          const category = await lookup.getCategoryBySlug(normalized.catalog.category) as { status?: string } | null;
-          if (!category || category.status === "ARCHIVED" || category.status === "DRAFT") {
-            throw new CatalogServiceError("CATEGORY_NOT_FOUND", "Category was not found.");
-          }
+        const [category, collection, tags] = await Promise.all([
+          normalized.catalog.category ? lookup.getCategoryBySlug(normalized.catalog.category) : Promise.resolve(null),
+          normalized.catalog.collection ? lookup.getCollectionBySlug(normalized.catalog.collection) : Promise.resolve(null),
+          normalized.catalog.tags.length ? lookup.getTagsBySlugs(normalized.catalog.tags) : Promise.resolve([]),
+        ]);
+        const categoryStatus = category as { status?: string } | null;
+        const collectionStatus = collection as { status?: string } | null;
+        if (normalized.catalog.category && (!categoryStatus || categoryStatus.status === "ARCHIVED" || categoryStatus.status === "DRAFT")) {
+          throw new CatalogServiceError("CATEGORY_NOT_FOUND", "Category was not found.");
         }
-        if (normalized.catalog.collection) {
-          const collection = await lookup.getCollectionBySlug(normalized.catalog.collection) as { status?: string } | null;
-          if (!collection || collection.status === "ARCHIVED" || collection.status === "DRAFT") {
-            throw new CatalogServiceError("COLLECTION_NOT_FOUND", "Collection was not found.");
-          }
+        if (normalized.catalog.collection && (!collectionStatus || collectionStatus.status === "ARCHIVED" || collectionStatus.status === "DRAFT")) {
+          throw new CatalogServiceError("COLLECTION_NOT_FOUND", "Collection was not found.");
         }
         if (normalized.catalog.tags.length) {
-          const availableTags = new Set((await lookup.listTags()).map((tag) => tag.slug));
+          const availableTags = new Set(tags.map((tag) => tag.slug));
           const missingTag = normalized.catalog.tags.find((tag) => !availableTags.has(tag));
-          if (missingTag) {
-            throw new CatalogServiceError("TAG_NOT_FOUND", "Tag was not found: " + missingTag + ".");
-          }
+          if (missingTag) throw new CatalogServiceError("TAG_NOT_FOUND", "Tag was not found: " + missingTag + ".");
         }
 
         const result = await provider.search(normalized);
