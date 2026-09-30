@@ -6,6 +6,7 @@ test("customer DTO explicitly excludes credentials and session secrets", async (
   const dto = toCustomerDto({
     id: "customer-id",
     email: "customer@example.com",
+    displayName: null,
     status: "ACTIVE",
     emailVerifiedAt: null,
     createdAt: new Date("2026-01-01T00:00:00.000Z"),
