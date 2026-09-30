@@ -111,7 +111,15 @@ export function createCustomerIdentityService(dependencies: { repository?: Custo
   async function createSession(input: { customerId: string; sessionTokenHash: string; expiresAt: Date }) {
     assertSessionTokenHash(input.sessionTokenHash);
     try {
-      return await repository.createSession(input);
+      const session = await repository.createSession(input);
+      return {
+        id: session.id,
+        customerId: session.customerId,
+        createdAt: session.createdAt,
+        expiresAt: session.expiresAt,
+        revokedAt: session.revokedAt,
+        lastUsedAt: session.lastUsedAt,
+      };
     } catch (error) {
       mapPersistenceError(error);
     }
