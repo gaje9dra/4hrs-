@@ -117,6 +117,8 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
     return <CatalogErrorState />;
   }
 
+  if (!products || !filters) return <CatalogErrorState />;
+
   return (
     <CatalogListing
       pathname="/search"
