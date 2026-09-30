@@ -264,9 +264,9 @@ function normalizeQuery(query: CatalogQuery): CatalogAppliedQuery {
   }
 
   if (minPrice !== undefined && maxPrice !== undefined) {
-    const min = Number(minPrice);
-    const max = Number(maxPrice);
-    if (min > max) {
+    const min = new Prisma.Decimal(minPrice);
+    const max = new Prisma.Decimal(maxPrice);
+    if (min.gt(max)) {
       throw new CatalogServiceError("INVALID_PRICE_RANGE", "Minimum price must be less than or equal to maximum price.");
     }
   }
