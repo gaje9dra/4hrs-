@@ -4,11 +4,11 @@ import { db } from "@/lib/db/client";
 export type CartRepositoryClient = PrismaClient | Prisma.TransactionClient;
 
 type CartRecord = Prisma.CartGetPayload<{ include: { items: true } }>;
-type CartItemRecord = Prisma.CartItemGetPayload<{}>;
+type CartItemRecord = Prisma.CartItemGetPayload<Record<string, never>>;
 
 export type CartRepository = {
   withTransaction<T>(work: (transactionRepository: CartRepository) => Promise<T>, options?: CartRepositoryTransactionOptions): Promise<T>;
-  createCart(customerId?: string): Promise<Prisma.CartGetPayload<{}>>;
+  createCart(customerId?: string): Promise<Prisma.CartGetPayload<Record<string, never>>>;
   findCartById(cartId: string): Promise<CartRecord | null>;
   createCartItem(input: CreateCartItemInput): Promise<CartItemRecord>;
   findCartItemById(cartItemId: string): Promise<CartItemRecord | null>;
