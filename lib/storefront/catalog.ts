@@ -242,12 +242,29 @@ export function getStorefrontProductSeoInput(product: StorefrontProductDetail) {
 export async function getStorefrontRelatedProducts(product: StorefrontProductDetail): Promise<StorefrontProductCard[]> {
   const collection = [...product.collections].sort((a, b) => a.slug.localeCompare(b.slug))[0];
   const category = [...product.categories].sort((a, b) => a.slug.localeCompare(b.slug))[0];
-
   if (!collection && !category) return [];
 
-  const result = collection
-    ? await getStorefrontCollectionProducts(collection.slug, { pageSize: 8, sort: "merchandising" })
-    : await getStorefrontCategoryProducts(category!.slug, { pageSize: 8, sort: "merchandising" });
+  const [collectionResult, categoryResult] = await Promise.all([
+    collection
+      ? getStorefrontCollectionProducts(collection.slug, { pageSize: 8, sort: "merchandising" })
+      : Promise.resolve(null),
+    category
+      ? getStorefrontCategoryProducts(category.slug, { pageSize: 8, sort: "merchandising" })
+      : Promise.resolve(null),
+  ]);
 
-  return result.items.filter((item) => item.id !== product.id).slice(0, 4);
+  const related: StorefrontProductCard[] = [];
+  const seen = new Set<string>([product.id]);
+
+  for (const item of [
+    ...(collectionResult?.items ?? []),
+    ...(categoryResult?.items ?? []),
+  ]) {
+    if (seen.has(item.id)) continue;
+    seen.add(item.id);
+    related.push(item);
+    if (related.length === 4) break;
+  }
+
+  return related;
 }
