@@ -38,7 +38,7 @@ test("related products reuse canonical merchandising helpers and exclude the cur
 });
 
 test("product detail defers commerce mutations and excludes reviews", () => {
-  assert.match(options, /Cart and checkout are intentionally deferred/);
+  assert.match(options, /Cart integration is intentionally deferred/);
   assert.doesNotMatch(interactive + options + detail, /addToCart|checkout|payment|createOrder|review|rating/i);
 });
 
