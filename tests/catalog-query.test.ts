@@ -116,7 +116,7 @@ test("normalizes public query input and returns a stable catalog contract", asyn
   });
 
   assert.equal(result.items[0].price, "899.00");
-  assert.equal(result.items[0].availability.state, "IN_STOCK");
+  assert.equal(result.items[0].availability, "IN_STOCK");
   assert.equal(result.pagination.totalPages, 1);
 });
 
@@ -178,13 +178,45 @@ test("requires referenced public category, collection, and tags to exist", async
     (error: unknown) => error instanceof CatalogServiceError && error.code === "COLLECTION_NOT_FOUND",
   );
 
+
   const missingTag = createCatalogQueryService({
     ...queryRepository,
-    getTagBySlug: async () => null,
+    getTagsBySlugs: async () => [],
   });
 
   await assert.rejects(
     missingTag.listPublishedProducts({ tags: ["missing-tag"] }),
     (error: unknown) => error instanceof CatalogServiceError && error.code === "TAG_NOT_FOUND",
   );
+
+  const tagLookups: string[][] = [];
+  const batchedTags = createCatalogQueryService({
+    ...queryRepository,
+    getTagsBySlugs: async (slugs) => {
+      tagLookups.push(slugs);
+      return slugs.map((slug) => ({ id: slug, name: slug, slug, createdAt: new Date(), updatedAt: new Date() }));
+    },
+  });
+  await batchedTags.listPublishedProducts({ tags: ["streetwear", "graphic", "minimal"] });
+  assert.deepEqual(tagLookups, [["graphic", "minimal", "streetwear"]]);
+});
+
+
+test("rejects excessive tag filters before repository execution", async () => {
+  let called = false;
+  const service = createCatalogQueryService({
+    ...queryRepository,
+    queryPublishedCatalogProducts: async () => {
+      called = true;
+      return { items: [], total: 0, limit: 24, offset: 0, hasNextPage: false };
+    },
+  });
+
+  await assert.rejects(
+    service.listPublishedProducts({
+      tags: Array.from({ length: 21 }, (_, index) => "tag-" + index),
+    }),
+    (error: unknown) => error instanceof CatalogServiceError && error.code === "INVALID_QUERY",
+  );
+  assert.equal(called, false);
 });
