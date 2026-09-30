@@ -145,10 +145,10 @@ test("Phase 7.3 purchase intent remains the canonical pre-Cart selection contrac
   assert.match(selection, /quantity: 1/);
   assert.doesNotMatch(selection, /createOrder|checkout|payment|persistCart/i);
   assert.match(options, /purchaseIntentState|buildPurchaseSelection/);
-  assert.match(options, /Selection ready/);
-  assert.match(options, /Select options/);
-  assert.match(options, /Invalid selection/);
-  assert.match(options, /Unavailable/);
+  assert.match(options, /purchaseIntentState|Selection is ready to add to Cart/);
+  assert.match(options, /MISSING_REQUIRED_SELECTION|Select every required option/);
+  assert.match(options, /INVALID_SELECTION|selected option combination is not valid/);
+  assert.match(options, /UNAVAILABLE|option combination is currently unavailable/);
 });
 
 test("Phase 8.5 keeps purchase intent canonical and provider-neutral", () => {
