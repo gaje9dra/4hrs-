@@ -189,8 +189,8 @@ export type StorefrontHomeData = {
 export async function getStorefrontHomeCatalogData(): Promise<StorefrontHomeData> {
   const [newArrivalResult, categories, collections] = await Promise.all([
     getStorefrontProducts({ pageSize: 8, sort: "newest" }),
-    catalog.listActiveCategories(),
-    catalog.listActiveCollections(),
+    catalog.listActiveCategoriesWithPublishedProducts(),
+    catalog.listActiveCollectionsWithPublishedProducts(),
   ]);
 
   const editorialCollection = collections.find((collection) => Boolean(collection.description)) ?? null;
