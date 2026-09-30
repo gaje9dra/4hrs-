@@ -126,6 +126,7 @@ test("login rejects invalid credentials and inactive accounts without credential
   await service.register({ email: "login@example.com", password: "correct horse battery staple" }, "register");
   await assert.rejects(service.login({ email: "login@example.com", password: "wrong password" }, "login"), /Authentication failed/);
   const customer = await repository.findCustomerByNormalizedEmail("login@example.com");
+  if (!customer) throw new Error("Expected registered customer to exist.");
   await repository.updateCustomerStatus(customer.id, "DISABLED");
   await assert.rejects(service.login({ email: "login@example.com", password: "correct horse battery staple" }, "login2"), /Authentication failed/);
 });
