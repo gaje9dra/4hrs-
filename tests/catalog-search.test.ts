@@ -279,7 +279,7 @@ test("search + filters compose in a single normalized request", async () => {
       page: 1,
       pageSize: 24,
     },
-    ranking: "relevance",
+    ranking: "catalog",
   });
 });
 
