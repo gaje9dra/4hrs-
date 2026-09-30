@@ -490,7 +490,10 @@ test("search rejects control-heavy and malformed query input before repository e
     },
   };
   const service = createCatalogSearchService({ provider, lookup });
-  await service.searchPublic({ query: "\u0000\u0001   " });
+  await assert.rejects(
+    service.searchPublic({ query: "\u0000\u0001   " }),
+    (error: unknown) => error instanceof CatalogServiceError && error.code === "INVALID_QUERY",
+  );
   assert.equal(called, false);
 });
 
