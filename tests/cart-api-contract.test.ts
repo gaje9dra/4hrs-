@@ -145,11 +145,11 @@ test("strict request parsing rejects malformed JSON, empty bodies and oversized 
   );
 });
 
-test("default application fails closed without customer/session identity", async () => {
+test("default application rejects anonymous access without customer/session identity", async () => {
   const application = createCartApplication();
   await assert.rejects(
     application.getCurrentCart(new Request("https://example.test/api/cart")),
-    (error: unknown) => error instanceof CartServiceError && error.code === "CART_OWNERSHIP_UNAVAILABLE",
+    (error: unknown) => error instanceof CartServiceError && error.code === "CART_UNAUTHORIZED",
   );
 });
 
@@ -179,7 +179,7 @@ test("application mutations invoke the Cart service without accepting client pri
   assert.deepEqual(calls, [`add:${uuid}:${uuid}:2`]);
 });
 
-test("API route handlers expose malformed requests safely and fail closed without identity", async () => {
+test("API route handlers expose malformed requests safely and reject anonymous access", async () => {
   const route = await import("@/app/api/cart/route");
 
   const malformed = await route.POST(new Request("https://example.test/api/cart", {
@@ -196,7 +196,7 @@ test("API route handlers expose malformed requests safely and fail closed withou
   });
 
   const read = await route.GET(new Request("https://example.test/api/cart"));
-  assert.equal(read.status, 503);
+  assert.equal(read.status, 403);
   assert.deepEqual(await read.json(), {
     error: {
       code: "CART_OWNERSHIP_UNAVAILABLE",
