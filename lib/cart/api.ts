@@ -2,6 +2,9 @@ import { CartServiceError } from "@/lib/cart/errors";
 import type { CartDto, CartItemDto, AddCartItemInput, UpdateCartItemInput } from "@/lib/cart/contracts";
 import { createCartService, type CartOwnerContext, type CartService } from "@/lib/cart/service";
 import { validateCartQuantity } from "@/lib/cart/validation";
+import { resolveCurrentCustomer } from "@/lib/auth/context";
+import { createCustomerRepository } from "@/lib/customer/repository";
+import { createAuthenticatedCartOwnershipBoundary } from "@/lib/cart/auth-ownership";
 
 export const CART_API_MAX_BODY_BYTES = 64 * 1024;
 export const CART_API_MAX_QUANTITY = 100;
@@ -13,11 +16,31 @@ export type CartRequestContext = {
 
 export type CartRequestContextResolver = (request: Request) => Promise<CartRequestContext>;
 
-const unavailableRequestContext: CartRequestContextResolver = async () => {
-  throw new CartServiceError(
-    "CART_OWNERSHIP_UNAVAILABLE",
-    "Cart ownership cannot be resolved because customer/session identity is not implemented.",
-  );
+const customerRepository = createCustomerRepository();
+const cartOwnership = createAuthenticatedCartOwnershipBoundary();
+const authenticatedCartService = createCartService({ ownership: cartOwnership });
+
+const authenticatedRequestContext: CartRequestContextResolver = async () => {
+  const current = await resolveCurrentCustomer();
+  if (!current) {
+    throw new CartServiceError("CART_UNAUTHORIZED", "Authentication is required to access this Cart.");
+  }
+
+  let cart = await customerRepository.findCustomerCart(current.customer.id);
+  if (!cart) {
+    try {
+      cart = await authenticatedCartService.createCart({ customerId: current.customer.id });
+    } catch (error) {
+      if (error instanceof CartServiceError && error.code === "CART_ITEM_CONFLICT") {
+        cart = await customerRepository.findCustomerCart(current.customer.id);
+      } else {
+        throw error;
+      }
+    }
+  }
+
+  if (!cart) throw new CartServiceError("CART_DATABASE_ERROR", "Cart could not be initialized.");
+  return { cartId: cart.id, owner: { customerId: current.customer.id } };
 };
 
 export function toCartItemDto(item: Awaited<ReturnType<CartService["getCart"]>>["items"][number]): CartItemDto {
@@ -140,7 +163,7 @@ export function createCartApplication(options: {
   resolveRequestContext?: CartRequestContextResolver;
 } = {}) {
   const service = options.service ?? createCartService();
-  const resolveRequestContext = options.resolveRequestContext ?? unavailableRequestContext;
+  const resolveRequestContext = options.resolveRequestContext ?? authenticatedRequestContext;
 
   async function getCurrentCart(request: Request): Promise<CartDto> {
     const context = await resolveRequestContext(request);
