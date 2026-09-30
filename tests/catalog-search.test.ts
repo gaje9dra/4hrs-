@@ -572,3 +572,22 @@ test("search URL state canonicalizes q, preserves filters, sort, and page size, 
     "/search?q=hoodie",
   );
 });
+
+
+test("search clear state removes q while preserving applicable catalog controls", () => {
+  assert.equal(
+    buildCatalogFilterHref("/search", {
+      q: "hoodie",
+      category: "shirts",
+      collection: "new-arrivals",
+      tags: ["streetwear"],
+      tagMode: "OR",
+      minPrice: "800",
+      maxPrice: "1500",
+      inStock: "true",
+      sort: "price_asc",
+      pageSize: "48",
+    }),
+    "/search?category=shirts&collection=new-arrivals&tags=streetwear&tagMode=OR&minPrice=800.00&maxPrice=1500.00&inStock=true&sort=price_asc&pageSize=48",
+  );
+});
