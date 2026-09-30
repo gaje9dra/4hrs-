@@ -198,7 +198,7 @@ function normalizeTags(tags: string[] | undefined): string[] {
   const normalized = tags
     .map((tag) => normalizeSlug(tag, "tag"))
     .filter(Boolean);
-  return [...new Set(normalized)];
+  return [...new Set(normalized)].sort();
 }
 
 function normalizeMoney(value: string | number | undefined, field: string): string | undefined {
