@@ -2,6 +2,18 @@ import type { StorefrontProductDetail } from "@/lib/storefront/catalog";
 
 export type StorefrontVariantSelection = Record<string, string>;
 
+export type PurchaseSelection = {
+  productId: string;
+  variantId: string;
+  quantity: number;
+};
+
+export type PurchaseIntentState =
+  | "MISSING_REQUIRED_SELECTION"
+  | "INVALID_SELECTION"
+  | "UNAVAILABLE"
+  | "READY";
+
 type StorefrontVariant = StorefrontProductDetail["variants"][number];
 
 export function getVariantOptionValueId(variant: StorefrontVariant, optionTypeId: string) {
@@ -66,4 +78,27 @@ export function selectionFromVariant(
       .map((option) => [option.id, getVariantOptionValueId(variant, option.id)])
       .filter((entry): entry is [string, string] => Boolean(entry[1])),
   );
+}
+
+
+export function getPurchaseIntentState(
+  product: StorefrontProductDetail,
+  selection: StorefrontVariantSelection,
+): PurchaseIntentState {
+  if (product.options.some((option) => !selection[option.id])) return "MISSING_REQUIRED_SELECTION";
+
+  const variant = resolveSelectedVariant(product, selection);
+  if (!variant) return "INVALID_SELECTION";
+
+  return variant.availability.state === "OUT_OF_STOCK" ? "UNAVAILABLE" : "READY";
+}
+
+export function buildPurchaseSelection(
+  product: StorefrontProductDetail,
+  selection: StorefrontVariantSelection,
+): PurchaseSelection | null {
+  if (getPurchaseIntentState(product, selection) !== "READY") return null;
+
+  const variant = resolveSelectedVariant(product, selection);
+  return variant ? { productId: product.id, variantId: variant.id, quantity: 1 } : null;
 }
