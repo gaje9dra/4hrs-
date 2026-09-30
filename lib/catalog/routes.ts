@@ -4,7 +4,7 @@ export type CatalogRouteType = "product" | "category" | "collection";
 
 const routePrefix: Record<CatalogRouteType, string> = {
   product: "/product",
-  category: "/categories",
+  category: "/category",
   collection: "/collections",
 };
 
