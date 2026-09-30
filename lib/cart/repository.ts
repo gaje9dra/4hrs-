@@ -1,7 +1,12 @@
-import type { PrismaClient } from "@prisma/client";
+import { Prisma, type PrismaClient } from "@prisma/client";
 import { db } from "@/lib/db/client";
 
 export type CartRepositoryClient = PrismaClient | Prisma.TransactionClient;
+
+export type CartRepositoryTransactionOptions = {
+  maxWait?: number;
+  timeout?: number;
+};
 
 export type CreateCartItemInput = {
   cartId: string;
@@ -24,6 +29,20 @@ export function createCartRepository(client?: CartRepositoryClient) {
   const database = clientOrDefault(client);
 
   return {
+    withTransaction<T>(work: (transactionRepository: CartRepository) => Promise<T>, options?: CartRepositoryTransactionOptions) {
+      if ("$transaction" in database) {
+        return database.$transaction(
+          async (tx) => work(createCartRepository(tx)),
+          {
+            ...(options?.maxWait !== undefined ? { maxWait: options.maxWait } : {}),
+            ...(options?.timeout !== undefined ? { timeout: options.timeout } : {}),
+            isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+          },
+        );
+      }
+      return work(createCartRepository(database));
+    },
+
     createCart() {
       return database.cart.create({
         data: {},
