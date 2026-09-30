@@ -14,7 +14,8 @@ export async function POST(request: Request) {
   try {
     assertSameOrigin(request);
     const credentials = requireCredentials(await readAuthJson(request));
-    const result = await authentication.register(credentials, request.headers.get("x-forwarded-for") ?? "unknown");
+    const rateKey = (request.headers.get("x-forwarded-for") ?? "unknown") + ":" + credentials.email.trim().toLowerCase();
+    const result = await authentication.register(credentials, rateKey);
     const response = authJson({ authenticated: true, customer: result.customer });
     response.cookies.set(CUSTOMER_SESSION_COOKIE, result.sessionToken, {
       ...sessionCookieOptions(),
