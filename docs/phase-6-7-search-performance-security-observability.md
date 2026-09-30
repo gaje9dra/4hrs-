@@ -110,7 +110,7 @@ No explicit database timeout boundary exists in the current architecture, so no 
 ### FIXED
 The existing structured catalog observation surface now includes slow_search.
 
-Search execution uses a 1000 ms diagnostic threshold. Searches meeting or exceeding that threshold emit structured diagnostics containing surface, operation, classification, rounded duration, and sanitized catalog state.
+Search service execution uses a 1000 ms diagnostic threshold. The measurement covers provider execution and storefront result mapping before a successful result is returned. Searches meeting or exceeding that threshold emit structured diagnostics containing surface, operation, classification, rounded duration, and sanitized catalog state.
 
 The complete user-entered search query is not logged.
 
