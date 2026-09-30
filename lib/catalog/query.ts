@@ -6,6 +6,7 @@ import { validateMoney } from "@/lib/catalog/validation";
 
 export const CATALOG_QUERY_PAGE_DEFAULT = 24;
 export const CATALOG_QUERY_PAGE_MAX = 100;
+export const CATALOG_QUERY_PAGE_NUMBER_MAX = 10000;
 export const CATALOG_QUERY_MAX_TAGS = 20;
 
 export type CatalogSort =
@@ -224,8 +225,11 @@ function formatValidCompareAtPrice(
 
 function normalizePage(value: number | undefined): number {
   if (value === undefined) return 1;
-  if (!Number.isInteger(value) || value < 1) {
-    throw new CatalogServiceError("INVALID_PAGE", "Page must be a positive integer.");
+  if (!Number.isInteger(value) || value < 1 || value > CATALOG_QUERY_PAGE_NUMBER_MAX) {
+    throw new CatalogServiceError(
+      "INVALID_PAGE",
+      "Page must be an integer from 1 to " + CATALOG_QUERY_PAGE_NUMBER_MAX + ".",
+    );
   }
   return value;
 }
@@ -409,7 +413,8 @@ export function createCatalogQueryService(customRepository: Partial<QueryReposit
         offset,
       });
 
-      const totalPages = result.total === 0 ? 0 : Math.ceil(result.total / appliedQuery.pageSize);
+      const calculatedTotalPages = result.total === 0 ? 0 : Math.ceil(result.total / appliedQuery.pageSize);
+      const totalPages = Math.min(calculatedTotalPages, CATALOG_QUERY_PAGE_NUMBER_MAX);
       const isOutOfRange = result.total > 0 && appliedQuery.page > totalPages;
       return {
         items: result.items.map(mapProduct),
@@ -418,7 +423,7 @@ export function createCatalogQueryService(customRepository: Partial<QueryReposit
           pageSize: appliedQuery.pageSize,
           total: result.total,
           totalPages,
-          hasNextPage: result.hasNextPage,
+          hasNextPage: result.hasNextPage && appliedQuery.page < totalPages,
           isOutOfRange,
         },
         appliedQuery,
