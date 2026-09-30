@@ -139,6 +139,7 @@ test("normalizes public query input and returns a stable catalog contract", asyn
     "availability",
     "compareAtPrice",
     "currency",
+    "id",
     "price",
     "primaryImage",
     "slug",
