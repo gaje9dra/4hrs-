@@ -1,4 +1,4 @@
-import type { Prisma, PrismaClient } from "@prisma/client";
+import type { PrismaClient } from "@prisma/client";
 import { db } from "@/lib/db/client";
 
 export type CartRepositoryClient = PrismaClient | Prisma.TransactionClient;
