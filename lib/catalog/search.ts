@@ -107,6 +107,7 @@ export class DatabaseSearchAdapter implements CatalogSearchProvider {
     return searchCatalogProducts({
       query: request.query,
       mode: request.mode,
+      relevance: request.ranking === "relevance",
       filters: {
         categorySlug: request.catalog.category,
         collectionSlug: request.catalog.collection,
