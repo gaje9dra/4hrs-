@@ -59,6 +59,7 @@ export type StorefrontCollection = {
   seoTitle: string | null;
   seoDescription: string | null;
   status: "ACTIVE";
+  hasPublishedProducts: boolean;
 };
 
 export type StorefrontProductList = {
