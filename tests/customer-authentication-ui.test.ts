@@ -58,3 +58,11 @@ test("logout leaves private storefront state by navigating to a public destinati
   assert.match(source, /router\.replace\("\/"\)/);
   assert.match(source, /router\.refresh\(\)/);
 });
+
+
+test("Product Detail preserves the approved authenticated Cart boundary", () => {
+  const source = read("components/storefront/product-options.tsx");
+  assert.match(source, /CART_UNAUTHORIZED/);
+  assert.match(source, /\/login\?next=%2Fcart/);
+  assert.doesNotMatch(source, /customerId.*body|body.*customerId/i);
+});
