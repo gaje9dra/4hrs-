@@ -1,6 +1,7 @@
 import { createAuthenticationService } from "@/lib/auth/service";
 import { CUSTOMER_SESSION_COOKIE } from "@/lib/auth/session";
 import { authErrorResponse, authJson } from "@/lib/auth/http";
+import { AuthenticationError } from "@/lib/auth/errors";
 import { cookies } from "next/headers";
 
 export const dynamic = "force-dynamic";
@@ -16,10 +17,11 @@ export async function GET() {
     const result = await authentication.resolveSession(token);
     return authJson({ authenticated: true, customer: result.customer });
   } catch (error) {
-    const response = authErrorResponse(error);
-    if (response.status === 401) {
+    if (error instanceof AuthenticationError && (error.code === "SESSION_INVALID" || error.code === "SESSION_EXPIRED")) {
+      const response = authJson({ authenticated: false, customer: null });
       response.cookies.delete(CUSTOMER_SESSION_COOKIE);
+      return response;
     }
-    return response;
+    return authErrorResponse(error);
   }
 }
