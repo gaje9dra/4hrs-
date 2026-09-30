@@ -48,18 +48,17 @@ test("listing query normalization rejects malformed URL values instead of forwar
   assert.equal(result.sort, "price_asc");
   assert.equal(result.page, 2);
 
-  const invalid = catalogQueryFromSearchParams({
-    category: "../../internal",
-    minPrice: "-1",
-    maxPrice: "12.345",
-    sort: "not-supported",
-    page: "0",
-  });
-  assert.equal(invalid.category, undefined);
-  assert.equal(invalid.minPrice, undefined);
-  assert.equal(invalid.maxPrice, undefined);
-  assert.equal(invalid.sort, undefined);
-  assert.equal(invalid.page, undefined);
+  assert.throws(
+    () =>
+      catalogQueryFromSearchParams({
+        category: "../../internal",
+        minPrice: "-1",
+        maxPrice: "12.345",
+        sort: "not-supported",
+        page: "0",
+      }),
+    /Invalid catalog query parameter:/,
+  );
 });
 
 test("listing UX has an explicit public empty state and accessible pagination", () => {
