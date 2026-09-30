@@ -288,6 +288,7 @@ const publicCatalogListSelect = {
     where: { status: "ACTIVE" },
     orderBy: [{ createdAt: "asc" as const }, { id: "asc" as const }],
     select: {
+      id: true,
       price: true,
       compareAtPrice: true,
       inventory: {
