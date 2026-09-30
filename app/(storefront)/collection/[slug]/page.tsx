@@ -62,7 +62,7 @@ export default async function CollectionPage({
 
   const [products, filters] = await Promise.all([
     getStorefrontCollectionProducts(collection.slug, query),
-    getStorefrontListingFilters(),
+    getStorefrontListingFilters("collection"),
   ]);
 
   const collectionParams: StorefrontSearchParams = {
