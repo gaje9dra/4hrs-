@@ -72,3 +72,11 @@ test("catalog URL state rejects page sizes above the shared maximum", () => {
   );
   assert.deepEqual(catalogQueryFromSearchParams({ pageSize: "100" }).pageSize, 100);
 });
+
+
+test("generated pagination URLs reject pages beyond the shared maximum", () => {
+  assert.throws(
+    () => buildCatalogHref("/shop", {}, 10001),
+    /Catalog page must be an integer from 1 to 10000/,
+  );
+});
