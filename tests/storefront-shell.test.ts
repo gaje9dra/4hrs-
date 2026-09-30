@@ -29,7 +29,8 @@ test("global navigation contains only implemented storefront destinations", () =
   for (const href of ["/", "/shop", "/search"]) assert.match(source, new RegExp(href.replace("/", "\\/")));
   assert.match(source, /Categories/);
   assert.match(source, /Collections/);
-  assert.doesNotMatch(source, /\/cart|\/wishlist|\/account|\/checkout|\/orders/i);
+  assert.match(source, /\/cart/);
+  assert.doesNotMatch(source, /\/wishlist|\/account|\/checkout|\/orders/i);
 });
 
 test("desktop and mobile navigation expose route-aware active states", () => {
