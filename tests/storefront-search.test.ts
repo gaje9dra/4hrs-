@@ -70,3 +70,16 @@ test("search errors render the customer-safe storefront error state", () => {
   assert.match(source, /CatalogErrorState/);
   assert.doesNotMatch(source, /stack|DATABASE_URL|PrismaError|console\.error/i);
 });
+
+
+test("search URL state uses the canonical bounded q normalization", async () => {
+  const { buildCatalogHref } = await import("../lib/storefront/query-params.ts");
+  assert.equal(
+    buildCatalogHref("/search", { q: "  Oversized   Graphic  " }, 1),
+    "/search?q=oversized+graphic",
+  );
+  assert.throws(
+    () => buildCatalogHref("/search", { q: "x".repeat(101) }, 1),
+    /Search query cannot exceed 100 characters/,
+  );
+});
