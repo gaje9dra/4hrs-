@@ -117,6 +117,17 @@ test("normalizes public query input and returns a stable catalog contract", asyn
 
   assert.equal(result.items[0].price, "899.00");
   assert.equal(result.items[0].availability, "IN_STOCK");
+  assert.deepEqual(Object.keys(result.items[0]).sort(), [
+    "availability",
+    "compareAtPrice",
+    "currency",
+    "id",
+    "price",
+    "primaryImage",
+    "slug",
+    "status",
+    "title",
+  ]);
   assert.equal(result.pagination.totalPages, 1);
 });
 
