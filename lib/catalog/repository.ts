@@ -429,7 +429,7 @@ function buildInternalCatalogWhere(
 export async function searchCatalogProducts(
   options: CatalogSearchRepositoryOptions,
   client?: CatalogRepositoryClient,
-): Promise<RepositoryCatalogListResult<PublicCatalogProductRecord>> {
+): Promise<RepositoryCatalogListResult<PublicCatalogProductRecord | PublicCatalogProductListRecord>> {
   const repository = clientOrDefault(client);
   const limit = clampLimit(options.limit);
   const offset = normalizeOffset(options.offset);
@@ -450,7 +450,7 @@ export async function searchCatalogProducts(
       orderBy,
       skip: offset,
       take: limit,
-      select: publicCatalogListSelect,
+      select: options.mode === "PUBLIC" ? publicCatalogListSelect : publicCatalogSelect,
     }),
     repository.product.count({ where }),
   ]);
@@ -549,7 +549,7 @@ export async function queryMerchandisedCatalogProducts(
 export async function searchMerchandisedCatalogProducts(
   options: CatalogSearchRepositoryOptions,
   client?: CatalogRepositoryClient,
-): Promise<RepositoryCatalogListResult<PublicCatalogProductRecord>> {
+): Promise<RepositoryCatalogListResult<PublicCatalogProductRecord | PublicCatalogProductListRecord>> {
   const repository = clientOrDefault(client);
   const limit = clampLimit(options.limit);
   const offset = normalizeOffset(options.offset);
@@ -576,7 +576,7 @@ export async function searchMerchandisedCatalogProducts(
         ],
         skip: offset,
         take: limit,
-        select: { product: { select: publicCatalogListSelect } },
+        select: { product: { select: options.mode === "PUBLIC" ? publicCatalogListSelect : publicCatalogSelect } },
       }),
       repository.productCollection.count({ where: relationWhere }),
     ]);
