@@ -79,3 +79,16 @@ test("homepage imagery uses the framework image component", () => {
   assert.match(card, /import Image from "next\/image"/);
   assert.match(card, /<Image[\s\S]*fill/);
 });
+
+
+test("populated discovery methods reuse the canonical published-product predicate", () => {
+  const repository = read("lib/catalog/repository.ts");
+  assert.match(repository, /listActiveCategoriesWithPublishedProducts[\s\S]*products:\s*\{\s*some:\s*\{\s*product:\s*publishedProductWhere/);
+  assert.match(repository, /listActiveCollectionsWithPublishedProducts[\s\S]*products:\s*\{\s*some:\s*\{\s*product:\s*publishedProductWhere/);
+});
+
+test("homepage editorial copy never fabricates collection content", () => {
+  const source = read("components/storefront/homepage.tsx");
+  assert.doesNotMatch(source, /A live collection from the 4HRS catalog/);
+  assert.match(source, /title="Curated picks"/);
+});
