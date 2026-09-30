@@ -156,8 +156,8 @@ export function buildCatalogFilterHref(
   append(search, "collection", query.collection);
   if (query.tags?.length) append(search, "tags", query.tags.join(","));
   if (query.tagMode && query.tagMode !== "AND") append(search, "tagMode", query.tagMode);
-  append(search, "minPrice", query.minPrice);
-  append(search, "maxPrice", query.maxPrice);
+  append(search, "minPrice", query.minPrice === undefined ? undefined : String(query.minPrice));
+  append(search, "maxPrice", query.maxPrice === undefined ? undefined : String(query.maxPrice));
   if (query.inStock) append(search, "inStock", "true");
   if (query.sort && (pathname === "/search" || query.sort !== DEFAULT_CATALOG_SORT)) append(search, "sort", query.sort);
   if (query.pageSize && query.pageSize !== DEFAULT_CATALOG_PAGE_SIZE) append(search, "pageSize", String(query.pageSize));
