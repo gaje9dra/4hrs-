@@ -510,48 +510,48 @@ function buildSearchRelevanceWhereSql(options: CatalogSearchRepositoryOptions): 
 
   const q = options.query;
   const searchable = Prisma.sql`(
-    p."title" ILIKE ('%' || ${q} || '%') ESCAPE '\\'
-    OR COALESCE(p."shortDescription", '') ILIKE ('%' || ${q} || '%') ESCAPE '\\'
-    OR COALESCE(p."description", '') ILIKE ('%' || ${q} || '%') ESCAPE '\\'
-    OR p."slug" ILIKE ('%' || ${q} || '%') ESCAPE '\\'
+    p."title" ILIKE ('%' || ${q} || '%') ESCAPE CHR(92)
+    OR COALESCE(p."shortDescription", '') ILIKE ('%' || ${q} || '%') ESCAPE CHR(92)
+    OR COALESCE(p."description", '') ILIKE ('%' || ${q} || '%') ESCAPE CHR(92)
+    OR p."slug" ILIKE ('%' || ${q} || '%') ESCAPE CHR(92)
     OR EXISTS (
       SELECT 1 FROM "ProductTag" pt JOIN "Tag" t ON t."id" = pt."tagId"
-      WHERE pt."productId" = p."id" AND t."name" ILIKE ('%' || ${q} || '%') ESCAPE '\\'
+      WHERE pt."productId" = p."id" AND t."name" ILIKE ('%' || ${q} || '%') ESCAPE CHR(92)
     )
     OR EXISTS (
       SELECT 1 FROM "ProductCategory" pc JOIN "Category" c ON c."id" = pc."categoryId"
-      WHERE pc."productId" = p."id" AND c."status" = 'ACTIVE' AND c."name" ILIKE ('%' || ${q} || '%') ESCAPE '\\'
+      WHERE pc."productId" = p."id" AND c."status" = 'ACTIVE' AND c."name" ILIKE ('%' || ${q} || '%') ESCAPE CHR(92)
     )
     OR EXISTS (
       SELECT 1 FROM "ProductCollection" pc JOIN "Collection" c ON c."id" = pc."collectionId"
-      WHERE pc."productId" = p."id" AND c."status" = 'ACTIVE' AND c."name" ILIKE ('%' || ${q} || '%') ESCAPE '\\'
+      WHERE pc."productId" = p."id" AND c."status" = 'ACTIVE' AND c."name" ILIKE ('%' || ${q} || '%') ESCAPE CHR(92)
     )
     OR EXISTS (
       SELECT 1 FROM "ProductVariant" v
       WHERE v."productId" = p."id"
         ${options.mode === "PUBLIC" ? Prisma.sql`AND v."status" = 'ACTIVE'` : Prisma.empty}
         AND (
-          v."displayName" ILIKE ('%' || ${q} || '%') ESCAPE '\\'
-          OR v."size" ILIKE ('%' || ${q} || '%') ESCAPE '\\'
-          OR v."color" ILIKE ('%' || ${q} || '%') ESCAPE '\\'
+          v."displayName" ILIKE ('%' || ${q} || '%') ESCAPE CHR(92)
+          OR v."size" ILIKE ('%' || ${q} || '%') ESCAPE CHR(92)
+          OR v."color" ILIKE ('%' || ${q} || '%') ESCAPE CHR(92)
           OR EXISTS (
             SELECT 1
             FROM "ProductVariantOptionValue" pvov
             JOIN "VariantOptionValue" ov ON ov."id" = pvov."optionValueId"
-            WHERE pvov."variantId" = v."id" AND ov."displayName" ILIKE ('%' || ${q} || '%') ESCAPE '\\'
+            WHERE pvov."variantId" = v."id" AND ov."displayName" ILIKE ('%' || ${q} || '%') ESCAPE CHR(92)
           )
           OR EXISTS (
             SELECT 1
             FROM "ProductVariantOptionValue" pvov
             JOIN "VariantOptionValue" ov ON ov."id" = pvov."optionValueId"
             JOIN "VariantOptionType" ot ON ot."id" = ov."optionTypeId"
-            WHERE pvov."variantId" = v."id" AND ot."name" ILIKE ('%' || ${q} || '%') ESCAPE '\\'
+            WHERE pvov."variantId" = v."id" AND ot."name" ILIKE ('%' || ${q} || '%') ESCAPE CHR(92)
           )
         )
     )
     ${options.mode === "INTERNAL" ? Prisma.sql`OR EXISTS (
       SELECT 1 FROM "ProductVariant" v
-      WHERE v."productId" = p."id" AND v."sku" ILIKE ('%' || ${q} || '%') ESCAPE '\\'
+      WHERE v."productId" = p."id" AND v."sku" ILIKE ('%' || ${q} || '%') ESCAPE CHR(92)
     )` : Prisma.empty}
   )`;
 
@@ -563,46 +563,46 @@ function buildSearchRelevanceOrderSql(options: CatalogSearchRepositoryOptions): 
   const q = options.query;
   return Prisma.sql`
     CASE
-      WHEN p."title" ILIKE ${q} ESCAPE '\\' THEN 0
+      WHEN p."title" ILIKE ${q} ESCAPE CHR(92) THEN 0
       ${options.mode === "INTERNAL" ? Prisma.sql`WHEN EXISTS (
         SELECT 1 FROM "ProductVariant" v
-        WHERE v."productId" = p."id" AND v."sku" ILIKE ${q} ESCAPE '\\'
+        WHERE v."productId" = p."id" AND v."sku" ILIKE ${q} ESCAPE CHR(92)
       ) THEN 0` : Prisma.empty}
-      WHEN p."slug" ILIKE ${q} ESCAPE '\\' THEN 1
-      WHEN p."title" ILIKE (${q} || '%') ESCAPE '\\' THEN 2
+      WHEN p."slug" ILIKE ${q} ESCAPE CHR(92) THEN 1
+      WHEN p."title" ILIKE (${q} || '%') ESCAPE CHR(92) THEN 2
       WHEN NOT EXISTS (
         SELECT 1
         FROM unnest(regexp_split_to_array(${q}, ' ')) AS term
-        WHERE p."title" NOT ILIKE ('%' || term || '%') ESCAPE '\\'
+        WHERE p."title" NOT ILIKE ('%' || term || '%') ESCAPE CHR(92)
       ) THEN 3
-      WHEN p."title" ILIKE ('%' || ${q} || '%') ESCAPE '\\' THEN 4
+      WHEN p."title" ILIKE ('%' || ${q} || '%') ESCAPE CHR(92) THEN 4
       WHEN EXISTS (
         SELECT 1 FROM "ProductVariant" v
         WHERE v."productId" = p."id"
           ${options.mode === "PUBLIC" ? Prisma.sql`AND v."status" = 'ACTIVE'` : Prisma.empty}
           AND (
-            v."displayName" ILIKE ('%' || ${q} || '%') ESCAPE '\\'
-            OR v."size" ILIKE ('%' || ${q} || '%') ESCAPE '\\'
-            OR v."color" ILIKE ('%' || ${q} || '%') ESCAPE '\\'
+            v."displayName" ILIKE ('%' || ${q} || '%') ESCAPE CHR(92)
+            OR v."size" ILIKE ('%' || ${q} || '%') ESCAPE CHR(92)
+            OR v."color" ILIKE ('%' || ${q} || '%') ESCAPE CHR(92)
           )
       ) THEN 5
       WHEN EXISTS (
         SELECT 1 FROM "ProductTag" pt JOIN "Tag" t ON t."id" = pt."tagId"
-        WHERE pt."productId" = p."id" AND t."name" ILIKE ('%' || ${q} || '%') ESCAPE '\\'
+        WHERE pt."productId" = p."id" AND t."name" ILIKE ('%' || ${q} || '%') ESCAPE CHR(92)
       ) THEN 6
       WHEN EXISTS (
         SELECT 1 FROM "ProductCategory" pc JOIN "Category" c ON c."id" = pc."categoryId"
-        WHERE pc."productId" = p."id" AND c."status" = 'ACTIVE' AND c."name" ILIKE ('%' || ${q} || '%') ESCAPE '\\'
+        WHERE pc."productId" = p."id" AND c."status" = 'ACTIVE' AND c."name" ILIKE ('%' || ${q} || '%') ESCAPE CHR(92)
       ) THEN 6
       WHEN EXISTS (
         SELECT 1 FROM "ProductCollection" pc JOIN "Collection" c ON c."id" = pc."collectionId"
-        WHERE pc."productId" = p."id" AND c."status" = 'ACTIVE' AND c."name" ILIKE ('%' || ${q} || '%') ESCAPE '\\'
+        WHERE pc."productId" = p."id" AND c."status" = 'ACTIVE' AND c."name" ILIKE ('%' || ${q} || '%') ESCAPE CHR(92)
       ) THEN 5
-      WHEN COALESCE(p."shortDescription", '') ILIKE ('%' || ${q} || '%') ESCAPE '\\'
-        OR COALESCE(p."description", '') ILIKE ('%' || ${q} || '%') ESCAPE '\\' THEN 6
+      WHEN COALESCE(p."shortDescription", '') ILIKE ('%' || ${q} || '%') ESCAPE CHR(92)
+        OR COALESCE(p."description", '') ILIKE ('%' || ${q} || '%') ESCAPE CHR(92) THEN 7
       ${options.mode === "INTERNAL" ? Prisma.sql`WHEN EXISTS (
         SELECT 1 FROM "ProductVariant" v
-        WHERE v."productId" = p."id" AND v."sku" ILIKE ('%' || ${q} || '%') ESCAPE '\\'
+        WHERE v."productId" = p."id" AND v."sku" ILIKE ('%' || ${q} || '%') ESCAPE CHR(92)
       ) THEN 8` : Prisma.empty}
       ELSE 9
     END
