@@ -63,3 +63,68 @@ test("category URLs use the singular canonical route", () => {
   assert.equal(categoryPath({ slug: " T-SHIRTS " }), "/category/t-shirts");
   assert.throws(() => categoryPath({ slug: "t-shirts/other" }), /Canonical catalog slug is invalid/);
 });
+
+test("collection resolution accepts active collections and distinguishes empty collections", async () => {
+  const collectionRepo = {
+    ...repo,
+    getCollectionBySlug: async (slug: string) =>
+      slug === "missing"
+        ? null
+        : {
+            id: "collection-1",
+            name: "Summer Edit",
+            slug: "summer-edit",
+            description: "Summer collection",
+            seoTitle: "Summer Edit",
+            seoDescription: "Summer edit",
+            status: slug === "archived" ? "ARCHIVED" as const : "ACTIVE" as const,
+            _count: { products: slug === "empty" ? 0 : 2 },
+          },
+  };
+  const service = createCatalogQueryService(collectionRepo);
+  const active = await service.listPublishedProducts({ collection: "summer-edit", sort: "merchandising" });
+  assert.equal(active.pagination.total, 0);
+  await assert.rejects(
+    service.listPublishedProducts({ collection: "missing" }),
+    (error: unknown) => error instanceof CatalogServiceError && error.code === "COLLECTION_NOT_FOUND",
+  );
+});
+
+test("collection context remains authoritative for pagination and merchandising order", async () => {
+  let received: any;
+  const collectionRepo = {
+    ...repo,
+    getCollectionBySlug: async () => ({
+      id: "collection-1",
+      name: "Summer Edit",
+      slug: "summer-edit",
+      description: null,
+      seoTitle: null,
+      seoDescription: null,
+      status: "ACTIVE" as const,
+      _count: { products: 3 },
+    }),
+    queryPublishedCatalogProducts: async (options: any) => {
+      received = options;
+      return { items: [], total: 0, limit: 24, offset: 24, hasNextPage: false };
+    },
+  };
+  const service = createCatalogQueryService(collectionRepo);
+  await service.listPublishedProducts({
+    collection: "summer-edit",
+    page: 2,
+    sort: "merchandising",
+    category: "other-category",
+  });
+  assert.equal(received.filters.collectionSlug, "summer-edit");
+  assert.equal(received.filters.categorySlug, "other-category");
+  assert.equal(received.offset, 24);
+  assert.equal(received.sortBy, "merchandising");
+});
+
+test("collection canonical URL uses the singular route", async () => {
+  assert.equal(
+    (await import("../lib/catalog/routes.ts")).collectionPath({ slug: " SUMMER-EDIT " }),
+    "/collection/summer-edit",
+  );
+});
