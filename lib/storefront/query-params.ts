@@ -4,6 +4,7 @@ export type StorefrontSearchParams = Record<string, string | string[] | undefine
 
 export const DEFAULT_CATALOG_SORT: CatalogSort = "newest";
 export const DEFAULT_CATALOG_PAGE_SIZE = 24;
+export const MAX_CATALOG_PAGE = 10000;
 
 const sorts = new Set<CatalogSort>([
   "newest",
@@ -32,7 +33,7 @@ function positiveInteger(value: string | undefined, name: string): number | unde
   if (value === undefined || value === "") return undefined;
   if (!/^\d+$/.test(value)) invalidParameter(name, "must be a positive integer");
   const parsed = Number(value);
-  if (!Number.isSafeInteger(parsed) || parsed < 1) invalidParameter(name, "must be a positive integer");
+  if (!Number.isSafeInteger(parsed) || parsed < 1 || parsed > MAX_CATALOG_PAGE) invalidParameter(name, "must be an integer from 1 to " + MAX_CATALOG_PAGE);
   return parsed;
 }
 
@@ -75,6 +76,7 @@ export function catalogQueryFromSearchParams(params: StorefrontSearchParams): Ca
     .flatMap((value) => value.split(","))
     .map((tag) => slug(tag, "tags"))
     .filter((tag): tag is string => Boolean(tag));
+  const uniqueTags = [...new Set(tags)].sort();
 
   const tagModeValue = first(params.tagMode);
   const tagMode =
@@ -87,7 +89,7 @@ export function catalogQueryFromSearchParams(params: StorefrontSearchParams): Ca
   return {
     category: slug(first(params.category), "category"),
     collection: slug(first(params.collection), "collection"),
-    tags: tags.length ? [...new Set(tags)] : undefined,
+    tags: uniqueTags.length ? uniqueTags : undefined,
     tagMode,
     minPrice: money(first(params.minPrice), "minPrice"),
     maxPrice: money(first(params.maxPrice), "maxPrice"),
