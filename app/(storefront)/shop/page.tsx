@@ -15,7 +15,7 @@ export default async function ShopPage({ searchParams }: { searchParams: Promise
   const query = catalogQueryFromSearchParams(params);
   const [products, filters] = await Promise.all([
     getStorefrontProducts(query),
-    getStorefrontListingFilters(),
+    getStorefrontListingFilters("shop"),
   ]);
 
   return (
