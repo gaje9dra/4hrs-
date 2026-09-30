@@ -182,6 +182,62 @@ test("removeItem and clearCart are deterministic and scoped to the owned Cart", 
   assert.equal(cleared.removedItemCount, 1);
 });
 
+test("updateItemQuantity revalidates availability and preserves CartItem identity", async () => {
+  const service = makeService();
+  await service.addItem("cart-1", { productId: "product-1", variantId: "variant-1", quantity: 1 }, "owner");
+
+  const updated = await service.updateItemQuantity("cart-1", "item-1", 4, "owner");
+  assert.equal(updated.id, "item-1");
+  assert.equal(updated.quantity, 4);
+
+  await assert.rejects(
+    service.updateItemQuantity("cart-1", "item-1", 6, "owner"),
+    (error: unknown) => error instanceof CartServiceError && error.code === "INSUFFICIENT_AVAILABILITY",
+  );
+});
+
+test("update, remove, and clear operations cannot cross the ownership boundary", async () => {
+  const service = makeService();
+  await service.addItem("cart-1", { productId: "product-1", variantId: "variant-1", quantity: 1 }, "owner");
+
+  await assert.rejects(
+    service.updateItemQuantity("other-cart", "item-1", 2, "owner"),
+    (error: unknown) => error instanceof CartServiceError && error.code === "CART_UNAUTHORIZED",
+  );
+  await assert.rejects(
+    service.removeItem("other-cart", "item-1", "owner"),
+    (error: unknown) => error instanceof CartServiceError && error.code === "CART_UNAUTHORIZED",
+  );
+  await assert.rejects(
+    service.clearCart("other-cart", "owner"),
+    (error: unknown) => error instanceof CartServiceError && error.code === "CART_UNAUTHORIZED",
+  );
+});
+
+test("price changes are resolved from the current catalog rather than Cart persistence", async () => {
+  let currentProduct = product;
+  const service = createCartService({
+    repository: makeRepository(),
+    ownership: makeOwnership(),
+    catalogRepository: {
+      getProductById: async () => ({ id: product.id, title: product.title, slug: product.slug, status: product.status }),
+    } as never,
+    catalogQuery: {
+      getPublishedProductDetailsBySlug: async () => currentProduct,
+    } as never,
+  });
+
+  await service.addItem("cart-1", { productId: "product-1", variantId: "variant-1", quantity: 1 }, "owner");
+  currentProduct = {
+    ...product,
+    variants: [{ ...product.variants[0], price: "599.00" }],
+  };
+
+  const cart = await service.getCart("cart-1", "owner");
+  assert.equal(cart.items[0]?.unitPrice, "599.00");
+  assert.equal(cart.items[0]?.subtotal, "599.00");
+});
+
 test("stale product publication state becomes a structured unavailable line", async () => {
   const repository = makeRepository();
   const service = createCartService({
