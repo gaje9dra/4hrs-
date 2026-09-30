@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { LogOut, UserRound } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,7 @@ type SessionResponse =
 type Status = "loading" | "anonymous" | "authenticated" | "unavailable";
 
 export function CustomerAuthStatus() {
+  const router = useRouter();
   const [customer, setCustomer] = useState<CustomerDto | null>(null);
   const [status, setStatus] = useState<Status>("loading");
   const [loggingOut, setLoggingOut] = useState(false);
@@ -64,6 +66,8 @@ export function CustomerAuthStatus() {
       if (response.ok) {
         setCustomer(null);
         setStatus("anonymous");
+        router.replace("/");
+        router.refresh();
       }
     } finally {
       setLoggingOut(false);
