@@ -9,7 +9,7 @@ import { buildCatalogHref } from "@/lib/storefront/query-params";
 import { SearchInput } from "@/components/storefront/search-input";
 
 export function CatalogListing({
-  pathname, title, eyebrow, description, products, params, categories, collections, tags, fixedCategory, fixedCollection, breadcrumbs = [], searchQuery,
+  pathname, title, eyebrow, description, products, params, categories, collections, tags, fixedCategory, fixedCollection, breadcrumbs = [], searchQuery, emptyTitle, emptyDescription,
 }: {
   pathname: string;
   title: string;
@@ -24,6 +24,8 @@ export function CatalogListing({
   fixedCollection?: string;
   breadcrumbs?: Array<{ label: string; href?: string }>;
   searchQuery?: string;
+  emptyTitle?: string;
+  emptyDescription?: string;
 }) {
   const totalLabel = products.pagination.total === 1 ? "1 PRODUCT" : products.pagination.total + " PRODUCTS";
   const empty = products.items.length === 0;
@@ -66,8 +68,8 @@ export function CatalogListing({
       {empty ? (
         <section aria-labelledby="catalog-empty-title" className="border-4 border-border bg-primary-yellow p-8 shadow-hard-md sm:p-10">
           <p className="text-xs font-900 uppercase tracking-[.25em] text-primary-red">Catalog / Empty</p>
-          <h2 id="catalog-empty-title" className="mt-3 uppercase">{searchQuery ? <>No results for “{searchQuery}”</> : "No products found"}</h2>
-          <p className="mt-4 max-w-2xl text-base leading-7">{searchQuery ? "Try another search or explore the full collection." : "Try changing your filters or return to the full shop."}</p>
+          <h2 id="catalog-empty-title" className="mt-3 uppercase">{emptyTitle ?? (searchQuery ? <>No results for “{searchQuery}”</> : "No products found")}</h2>
+          <p className="mt-4 max-w-2xl text-base leading-7">{emptyDescription ?? (searchQuery ? "Try another search or explore the full collection." : "Try changing your filters or return to the full shop.")}</p>
           <Link href="/shop" className="motion-press mt-7 inline-flex min-h-12 items-center border-2 border-border bg-white px-5 py-3 text-sm font-900 uppercase no-underline shadow-hard-sm focus:outline-none focus:ring-2 focus:ring-primary-blue focus:ring-offset-2">
             Shop all
           </Link>
