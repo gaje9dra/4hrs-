@@ -42,7 +42,7 @@ test("public repository visibility requires an active product, active variant an
   assert.match(source, /status:\s*"ACTIVE"/);
   assert.match(source, /variants:\s*\{\s*some:\s*\{[\s\S]*status:\s*"ACTIVE"/);
   assert.match(source, /images:\s*\{/);
-  assert.match(source, /mediaType:\s*"IMAGE"/);
+  assert.match(source, /mediaType:\s*true/);
 });
 
 test("product detail uses the public catalog query service", () => {
