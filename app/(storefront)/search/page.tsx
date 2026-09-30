@@ -60,6 +60,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
         params={params}
         {...filters}
         searchQuery={query}
+        searchRelevance
       />
     );
   } catch (error) {
@@ -76,7 +77,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
           </header>
           <section aria-labelledby="search-invalid-title" className="mt-8 border-4 border-border bg-primary-yellow p-5 shadow-hard-md sm:p-8">
             <h2 id="search-invalid-title" className="sr-only">Correct the search query</h2>
-            <SearchInput defaultValue={query} />
+            <SearchInput defaultValue={query} preservedParams={params} />
           </section>
         </Container>
       );
