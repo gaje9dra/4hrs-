@@ -131,3 +131,29 @@ test("Phase 7.2 keeps the future commerce handoff provider-neutral and server-au
   assert.match(storefront, /variants: product\.variants\.map/);
   assert.match(storefront, /availability: \{ state: variant\.availability\.state \}/);
 });
+
+
+test("Phase 7.3 models purchase intent without implementing Cart", () => {
+  const selection = readFileSync("lib/storefront/variant-selection.ts", "utf8");
+  assert.match(selection, /PurchaseSelection/);
+  assert.match(selection, /PurchaseIntentState/);
+  assert.match(selection, /getPurchaseIntentState/);
+  assert.match(selection, /buildPurchaseSelection/);
+  assert.match(selection, /quantity: 1/);
+  assert.doesNotMatch(selection, /addToCart|createOrder|checkout|payment|persistCart/i);
+  assert.match(options, /Purchase intent/);
+  assert.match(options, /Ready for cart/);
+  assert.match(options, /Purchase unavailable/);
+});
+
+test("Phase 7.3 keeps purchase intent non-authoritative and provider-neutral", () => {
+  assert.match(options, /disabled/);
+  assert.match(options, /aria-disabled="true"/);
+  assert.doesNotMatch(options + interactive, /addToCart|createOrder|checkout|payment|qikink|provider/i);
+  assert.match(storefront, /availability: \{ state: variant\.availability\.state \}/);
+});
+
+test("Phase 7.3 does not add a quantity UI", () => {
+  assert.doesNotMatch(options, /<input[^>]+quantity|name="quantity"|Quantity/);
+  assert.doesNotMatch(interactive, /<input[^>]+quantity|name="quantity"|Quantity/);
+});
