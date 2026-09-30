@@ -724,7 +724,23 @@ export async function getCategoryTree(client?: CatalogRepositoryClient) {
 }
 
 export async function getCollectionBySlug(slug: string, client?: CatalogRepositoryClient) {
-  return clientOrDefault(client).collection.findUnique({ where: { slug } });
+  return clientOrDefault(client).collection.findUnique({
+    where: { slug },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      description: true,
+      seoTitle: true,
+      seoDescription: true,
+      status: true,
+      _count: {
+        select: {
+          products: { where: { product: publishedProductWhere } },
+        },
+      },
+    },
+  });
 }
 
 export async function listActiveCollections(client?: CatalogRepositoryClient) {
