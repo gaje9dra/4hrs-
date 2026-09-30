@@ -169,7 +169,7 @@ test("expired sessions are rejected by the server", async () => {
     now: () => current,
   });
   const result = await service.register({ email: "expired@example.com", password: "correct horse battery staple" }, "register-expired");
-  current = new Date("2026-10-01T12:00:00.000Z");
+  current = new Date("2026-10-15T12:00:00.000Z");
   await assert.rejects(service.resolveSession(result.sessionToken), (error: unknown) =>
     error instanceof AuthenticationError && error.code === "SESSION_EXPIRED",
   );
