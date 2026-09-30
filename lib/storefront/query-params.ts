@@ -5,6 +5,7 @@ export type StorefrontSearchParams = Record<string, string | string[] | undefine
 export const DEFAULT_CATALOG_SORT: CatalogSort = "newest";
 export const DEFAULT_CATALOG_PAGE_SIZE = 24;
 export const MAX_CATALOG_PAGE = 10000;
+export const MAX_CATALOG_PAGE_SIZE = 100;
 export const MAX_CATALOG_TAGS = 20;
 
 const sorts = new Set<CatalogSort>([
@@ -30,11 +31,13 @@ function invalidParameter(name: string, reason: string): never {
   throw new Error("Invalid catalog query parameter: " + name + " (" + reason + ").");
 }
 
-function positiveInteger(value: string | undefined, name: string): number | undefined {
+function positiveInteger(value: string | undefined, name: string, max: number): number | undefined {
   if (value === undefined || value === "") return undefined;
   if (!/^\d+$/.test(value)) invalidParameter(name, "must be a positive integer");
   const parsed = Number(value);
-  if (!Number.isSafeInteger(parsed) || parsed < 1 || parsed > MAX_CATALOG_PAGE) invalidParameter(name, "must be an integer from 1 to " + MAX_CATALOG_PAGE);
+  if (!Number.isSafeInteger(parsed) || parsed < 1 || parsed > max) {
+    invalidParameter(name, "must be an integer from 1 to " + max);
+  }
   return parsed;
 }
 
@@ -99,8 +102,8 @@ export function catalogQueryFromSearchParams(params: StorefrontSearchParams): Ca
     maxPrice: money(first(params.maxPrice), "maxPrice"),
     inStock: booleanValue(first(params.inStock), "inStock"),
     sort,
-    page: positiveInteger(first(params.page), "page"),
-    pageSize: positiveInteger(first(params.pageSize), "pageSize"),
+    page: positiveInteger(first(params.page), "page", MAX_CATALOG_PAGE),
+    pageSize: positiveInteger(first(params.pageSize), "pageSize", MAX_CATALOG_PAGE_SIZE),
   };
 }
 
