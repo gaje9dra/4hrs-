@@ -28,7 +28,7 @@ test("product hierarchy contains breadcrumb, H1, description, price, availabilit
   assert.match(options, /compareAtPrice/);
   assert.match(interactive, /availabilityLabel/);
   assert.match(interactive, /aria-label=\{product\.options\.length \? undefined : "Product pricing and availability"\}/);
-  assert.match(options, /Purchase actions coming soon/);
+  assert.match(options, /Purchase intent/);
 });
 
 test("variant engine is dynamic, canonical, deterministic and rejects unavailable combinations", () => {
@@ -158,4 +158,19 @@ test("Phase 7.3 keeps purchase intent non-authoritative and provider-neutral", (
 test("Phase 7.3 does not add a quantity UI", () => {
   assert.doesNotMatch(options, /<input[^>]+quantity|name="quantity"|Quantity/);
   assert.doesNotMatch(interactive, /<input[^>]+quantity|name="quantity"|Quantity/);
+});
+
+
+test("Phase 7.4 rejects malformed or cross-option selection state before purchase handoff", () => {
+  const selection = readFileSync("lib/storefront/variant-selection.ts", "utf8");
+  assert.match(selection, /!optionIds\.has\(optionTypeId\)/);
+  assert.match(selection, /typeof valueId !== "string"/);
+  assert.match(selection, /valueId\.length === 0/);
+  assert.match(selection, /resolveSelectedVariant/);
+});
+
+test("Phase 7.4 keeps the purchase CTA explicitly deferred until Cart exists", () => {
+  assert.match(options, /Selection ready/);
+  assert.match(options, /disabled/);
+  assert.doesNotMatch(options, /Added to cart|Cart added|Order created|Payment successful|Reserved/i);
 });
