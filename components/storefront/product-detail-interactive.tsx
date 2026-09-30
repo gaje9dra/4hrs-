@@ -14,7 +14,10 @@ const availabilityLabel = {
 } as const;
 
 export function ProductDetailInteractive({ product }: { product: StorefrontProductDetail }) {
-  const [variantMedia, setVariantMedia] = useState(product.media);
+  const initialVariant = product.variants.find((variant) => variant.availability.state !== "OUT_OF_STOCK");
+  const [variantMedia, setVariantMedia] = useState(
+    initialVariant?.media.length ? initialVariant.media : product.media,
+  );
   const availability = product.availability;
 
   return (
