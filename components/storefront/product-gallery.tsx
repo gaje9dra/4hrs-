@@ -1,7 +1,7 @@
 'use client';
 
 import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { StorefrontProductDetail } from "@/lib/storefront/catalog";
 
 type ProductMedia = StorefrontProductDetail["media"][number];
@@ -15,6 +15,9 @@ export function ProductGallery({
 }) {
   const media = useMemo(() => (mediaOverride?.length ? mediaOverride : product.media), [mediaOverride, product.media]);
   const [selectedIndex, setSelectedIndex] = useState(0);
+  useEffect(() => {
+    setSelectedIndex(0);
+  }, [media]);
   const selected = media[selectedIndex] ?? media[0];
 
   if (!media.length) {
