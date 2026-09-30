@@ -1,11 +1,11 @@
 import { Prisma } from "@prisma/client";
-import { createCartRepository, type CartRepository, type CartRepositoryClient } from "@/lib/cart/repository";
+import { createCartRepository, type CartRepository } from "@/lib/cart/repository";
 import { CartServiceError } from "@/lib/cart/errors";
 import { logCartObservation } from "@/lib/cart/observability";
 import { validateCartQuantity, validateCartSelection, requireCartId, requireCartItemId } from "@/lib/cart/validation";
-import { createCatalogQueryService, type PublishedProductDetailResult } from "@/lib/catalog/query";
+import { createCatalogQueryService, type CatalogAvailability, type PublishedProductDetailResult } from "@/lib/catalog/query";
+import { CatalogServiceError } from "@/lib/catalog/errors";
 import * as catalogRepository from "@/lib/catalog/repository";
-import { db } from "@/lib/db/client";
 
 export type CartOwnerContext = unknown;
 
@@ -34,11 +34,6 @@ type CartServiceDependencies = {
   catalogRepository?: typeof catalogRepository;
   catalogQuery?: ReturnType<typeof createCatalogQueryService>;
   ownership?: CartOwnershipBoundary;
-  database?: PrismaClientLike;
-};
-
-type PrismaClientLike = {
-  $transaction: CartRepositoryClient extends never ? never : typeof db.$transaction;
 };
 
 export type CartLineState =
@@ -111,7 +106,7 @@ function mapPersistenceError(error: unknown): never {
   throw new CartServiceError("CART_DATABASE_ERROR", "Cart persistence operation failed.", undefined, error);
 }
 
-function assertAvailability(quantity: number, availableQuantity: number | null, state: ResolvedSelection["variant"] extends null ? never : string): void {
+function assertAvailability(quantity: number, availableQuantity: number | null, state: CatalogAvailability["state"]): void {
   validateCartQuantity(quantity);
   if (state === "OUT_OF_STOCK") {
     throw new CartServiceError("INSUFFICIENT_AVAILABILITY", "The selected item is currently unavailable.");
@@ -173,8 +168,11 @@ export function createCartService(dependencies: CartServiceDependencies = {}) {
       product = await catalogQuery.getPublishedProductDetailsBySlug(productRecord.slug);
     } catch (error) {
       if (error instanceof CartServiceError) throw error;
-      if (error instanceof Error && "code" in error && error.code === "PRODUCT_NOT_FOUND") {
-        throw new CartServiceError("PRODUCT_UNAVAILABLE", "Product is not currently purchasable.");
+      if (error instanceof CatalogServiceError && error.code === "PRODUCT_NOT_FOUND") {
+        throw new CartServiceError("PRODUCT_UNAVAILABLE", "Product is not currently purchasable.", undefined, error);
+      }
+      if (error instanceof CatalogServiceError) {
+        throw new CartServiceError("PRODUCT_UNAVAILABLE", "Product is not currently purchasable.", undefined, error);
       }
       throw error;
     }
