@@ -36,6 +36,7 @@ export async function getStorefrontNavigation(): Promise<NavigationItem[]> {
       })),
     },
     { label: "Search", href: "/search", match: "section" },
+    { label: "Cart", href: "/cart", match: "exact" },
   ];
 }
 
