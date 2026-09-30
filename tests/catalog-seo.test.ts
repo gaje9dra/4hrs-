@@ -263,7 +263,7 @@ test("application-level slug uniqueness is checked before category and collectio
   );
 
   const collectionService = createCatalogService({
-    getCollectionBySlug: async () => ({ id: "other-collection", name: "Other", slug: "other-collection", description: null, seoTitle: null, seoDescription: null, status: "ACTIVE" as const, createdAt: new Date(), updatedAt: new Date() }),
+    getCollectionBySlug: async () => ({ id: "other-collection", name: "Other", slug: "other-collection", description: null, seoTitle: null, seoDescription: null, status: "ACTIVE" as const, createdAt: new Date(), updatedAt: new Date(), _count: { products: 0 } }),
   });
   await assert.rejects(
     collectionService.createCollection({
