@@ -50,3 +50,11 @@ test("Bauhaus auth surfaces use existing primitives and token classes", () => {
   assert.match(form, /FormField/);
   assert.doesNotMatch(form, /linear-gradient|backdrop-filter|glassmorphism|rounded-full/i);
 });
+
+
+test("logout leaves private storefront state by navigating to a public destination", () => {
+  const source = read("components/storefront/customer-auth-status.tsx");
+  assert.match(source, /\/api\/auth\/logout/);
+  assert.match(source, /router\.replace\("\/"\)/);
+  assert.match(source, /router\.refresh\(\)/);
+});
