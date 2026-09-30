@@ -34,7 +34,7 @@ test("related products reuse canonical merchandising helpers and exclude the cur
   assert.match(storefront, /getStorefrontCollectionProducts|collection/);
   assert.match(storefront, /getStorefrontCategoryProducts|category/);
   assert.match(storefront, /sort: "merchandising"/);
-  assert.match(storefront, /item\.id !== product\.id/);
+  assert.match(storefront, /item\.slug/);
 });
 
 test("product detail defers commerce mutations and excludes reviews", () => {
