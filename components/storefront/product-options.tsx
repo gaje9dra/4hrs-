@@ -39,10 +39,12 @@ async function addToCart(selection: { productId: string; variantId: string; quan
   });
   const body = await response.json().catch(() => null) as { error?: { code?: string; message?: string } } | unknown;
   if (!response.ok) {
-    const message = body && typeof body === "object" && body !== null && "error" in body
-      ? ((body as { error?: { message?: string } }).error?.message ?? "Could not add this item to Cart.")
-      : "Could not add this item to Cart.";
-    throw new Error(message);
+    const errorBody = body && typeof body === "object" && body !== null && "error" in body
+      ? (body as { error?: { code?: string; message?: string } }).error
+      : undefined;
+    const error = new Error(errorBody?.message ?? "Could not add this item to Cart.") as CartMutationError;
+    error.code = errorBody?.code;
+    throw error;
   }
   return body;
 }
@@ -58,7 +60,8 @@ export function ProductOptions({
     selectionFromVariant(product, getDeterministicInitialVariant(product)),
   );
   const [addState, setAddState] = useState<AddState>("idle");
-  const [addError, setAddError] = useState<string | null>(null);\n  const [authRequired, setAuthRequired] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
+  const [authRequired, setAuthRequired] = useState(false);
   const addRequest = useRef(0);
 
   const selectedVariant = useMemo(() => resolveSelectedVariant(product, selection), [product, selection]);
@@ -76,6 +79,7 @@ export function ProductOptions({
     setSelection(next);
     setAddState("idle");
     setAddError(null);
+    setAuthRequired(false);
     onMediaChange?.(variant.media.length ? variant.media : product.media);
   }
 
@@ -84,6 +88,7 @@ export function ProductOptions({
     const requestId = ++addRequest.current;
     setAddState("pending");
     setAddError(null);
+    setAuthRequired(false);
     try {
       await addToCart(purchaseSelection);
       if (requestId !== addRequest.current) return;
@@ -91,7 +96,9 @@ export function ProductOptions({
     } catch (error) {
       if (requestId !== addRequest.current) return;
       setAddState("error");
-      setAddError(error instanceof Error ? error.message : "Could not add this item to Cart.");
+      const mutationError = error as CartMutationError;
+      setAuthRequired(mutationError.code === "CART_UNAUTHORIZED");
+      setAddError(mutationError.message || "Could not add this item to Cart.");
     }
   }
 
