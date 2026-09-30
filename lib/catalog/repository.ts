@@ -563,12 +563,12 @@ function buildSearchRelevanceOrderSql(options: CatalogSearchRepositoryOptions): 
   const q = options.query;
   return Prisma.sql`
     CASE
-      WHEN LOWER(p."title") = LOWER(p."title") AND p."title" ILIKE ${q} ESCAPE '\\' THEN 0
+      WHEN p."title" ILIKE ${q} ESCAPE '\\' THEN 0
       ${options.mode === "INTERNAL" ? Prisma.sql`WHEN EXISTS (
         SELECT 1 FROM "ProductVariant" v
-        WHERE v."productId" = p."id" AND LOWER(v."sku") = LOWER(v."sku") AND v."sku" ILIKE ${q} ESCAPE '\\'
+        WHERE v."productId" = p."id" AND v."sku" ILIKE ${q} ESCAPE '\\'
       ) THEN 0` : Prisma.empty}
-      WHEN LOWER(p."slug") = LOWER(p."slug") AND p."slug" ILIKE ${q} ESCAPE '\\' THEN 1
+      WHEN p."slug" ILIKE ${q} ESCAPE '\\' THEN 1
       WHEN p."title" ILIKE (${q} || '%') ESCAPE '\\' THEN 2
       WHEN p."title" ILIKE ('%' || ${q} || '%') ESCAPE '\\' THEN 3
       WHEN EXISTS (
