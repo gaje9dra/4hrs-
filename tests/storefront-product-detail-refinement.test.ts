@@ -9,6 +9,8 @@ const sections = readFileSync("components/storefront/product-detail-sections.tsx
 const options = readFileSync("components/storefront/product-options.tsx", "utf8");
 const gallery = readFileSync("components/storefront/product-gallery.tsx", "utf8");
 const storefront = readFileSync("lib/storefront/catalog.ts", "utf8");
+const query = readFileSync("lib/catalog/query.ts", "utf8");
+const repository = readFileSync("lib/catalog/repository.ts", "utf8");
 
 test("PDP keeps server-first architecture and canonical public query boundaries", () => {
   assert.doesNotMatch(route, /prisma|@\/lib\/db|repository/);
@@ -80,4 +82,20 @@ test("public storefront DTO strips internal variant availability quantities", ()
   assert.match(storefront, /availability: \{ state: product\.availability\.state \}/);
   assert.match(storefront, /availability: \{ state: variant\.availability\.state \}/);
   assert.doesNotMatch(storefront, /availableQuantity/);
+});
+
+
+test("published lifecycle permits valid active products without optional media or variants", () => {
+  assert.match(repository, /const publishedProductWhere/);
+  assert.doesNotMatch(repository, /publishedProductWhere[\\s\\S]*variants:\\s*\\{\\s*some:/);
+  assert.doesNotMatch(repository, /publishedProductWhere[\\s\\S]*images:\\s*\\{\\s*some:/);
+  assert.match(repository, /status: "ACTIVE"/);
+  assert.match(repository, /price: \{ gte: new Prisma\.Decimal\(0\) \}/);
+});
+
+test("compare-at pricing is sanitized against each effective selling price at the server boundary", () => {
+  assert.match(query, /function formatValidCompareAtPrice/);
+  assert.match(query, /compareAt\.gte\(selling\)/);
+  assert.match(query, /formatValidCompareAtPrice\(effectivePrice, variant\.compareAtPrice\)/);
+  assert.match(query, /formatValidCompareAtPrice\(effectivePrice, product\.compareAtPrice\)/);
 });
