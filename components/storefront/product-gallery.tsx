@@ -1,7 +1,7 @@
 'use client';
 
 import Image from "next/image";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { StorefrontProductDetail } from "@/lib/storefront/catalog";
 
 type ProductMedia = StorefrontProductDetail["media"][number];
@@ -14,13 +14,18 @@ export function ProductGallery({
   mediaOverride?: ProductMedia[];
 }) {
   const media = useMemo(() => (mediaOverride?.length ? mediaOverride : product.media), [mediaOverride, product.media]);
+  return <ProductGalleryView key={media.map((item) => item.id).join("|")} product={product} media={media} />;
+}
+
+function ProductGalleryView({
+  product,
+  media,
+}: {
+  product: StorefrontProductDetail;
+  media: ProductMedia[];
+}) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [failedMediaIds, setFailedMediaIds] = useState<Set<string>>(() => new Set());
-
-  useEffect(() => {
-    setSelectedIndex(0);
-    setFailedMediaIds(new Set());
-  }, [media]);
 
   const selected = media[selectedIndex] ?? media[0];
   const selectedFailed = Boolean(selected && failedMediaIds.has(selected.id));
