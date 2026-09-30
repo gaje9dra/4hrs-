@@ -97,8 +97,8 @@ test("CatalogService reorders a collection transactionally", async () => {
 test("catalog query service accepts merchandising sorting only with a category or collection", async () => {
   const queries: unknown[] = [];
   const queryService = createCatalogQueryService({
-    getCategoryBySlug: async () => ({ id: "category-1", name: "T-Shirts", slug: "t-shirts", description: null, seoTitle: null, seoDescription: null, parentId: null, status: "ACTIVE" as const, createdAt: new Date(), updatedAt: new Date() }),
-    getCollectionBySlug: async () => ({ id: "22222222-2222-4222-8222-222222222222", name: "New Arrivals", slug: "new-arrivals", description: null, seoTitle: null, seoDescription: null, status: "ACTIVE" as const, createdAt: new Date(), updatedAt: new Date() }),
+    getCategoryBySlug: async () => ({ id: "category-1", name: "T-Shirts", slug: "t-shirts", description: null, seoTitle: null, seoDescription: null, parentId: null, status: "ACTIVE" as const, createdAt: new Date(), updatedAt: new Date(), _count: { products: 1 } }),
+    getCollectionBySlug: async () => ({ id: "22222222-2222-4222-8222-222222222222", name: "New Arrivals", slug: "new-arrivals", description: null, seoTitle: null, seoDescription: null, status: "ACTIVE" as const, createdAt: new Date(), updatedAt: new Date(), _count: { products: 1 } }),
     getTagBySlug: async () => ({ id: "tag-1", name: "Streetwear", slug: "streetwear", createdAt: new Date(), updatedAt: new Date() }),
     queryPublishedCatalogProducts: async (options: unknown) => {
       queries.push(options);
