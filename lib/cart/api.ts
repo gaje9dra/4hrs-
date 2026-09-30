@@ -64,11 +64,7 @@ export function toCartDto(cart: Awaited<ReturnType<CartService["getCart"]>>): Ca
     currency: cart.currency,
     hasUnavailableItems: cart.hasUnavailableItems,
     warnings: cart.items
-      .filter((item) => item.state !== "AVAILABLE")
-      .map((item) => ({
-        code: item.state,
-        itemId: item.id,
-      })),
+      .flatMap((item) => item.state === "AVAILABLE" ? [] : [{ code: item.state, itemId: item.id }]),
   };
 }
 
