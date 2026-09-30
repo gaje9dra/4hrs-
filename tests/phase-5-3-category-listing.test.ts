@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { CatalogServiceError } from "../lib/catalog/errors.ts";
 import { createCatalogQueryService } from "../lib/catalog/query.ts";
+import { categoryPath } from "../lib/catalog/routes.ts";
 
 function category(status: "ACTIVE" | "ARCHIVED" = "ACTIVE", products = 2) {
   return { id: "cat-1", name: "T-Shirts", slug: "t-shirts", description: "T-shirts", seoTitle: "T-Shirts", seoDescription: "T-Shirts", parentId: null, status, createdAt: new Date(), updatedAt: new Date(), _count: { products } };
@@ -56,4 +57,9 @@ test("category listing requires the canonical category context for merchandising
 test("category listing cannot use merchandising order without category or collection context", async () => {
   const service = createCatalogQueryService(repo);
   await assert.rejects(service.listPublishedProducts({ sort: "merchandising" }), (error: unknown) => error instanceof CatalogServiceError && error.code === "INVALID_SORT");
+});
+
+test("category URLs use the singular canonical route", () => {
+  assert.equal(categoryPath({ slug: " T-SHIRTS " }), "/category/t-shirts");
+  assert.throws(() => categoryPath({ slug: "t-shirts/other" }), /Canonical catalog slug is invalid/);
 });
