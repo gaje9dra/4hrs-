@@ -57,6 +57,18 @@ const queryRepository = {
   async getPublishedProductBySlug() {
     return product;
   },
+  async getPublishedProductDetailsBySlug() {
+    return {
+      ...product,
+      description: null,
+      shortDescription: null,
+      seoTitle: null,
+      seoDescription: null,
+      optionTypes: [],
+      categories: [{ category: { id: "category-1", name: "T-Shirts", slug: "t-shirts", description: null, parentId: null } }],
+      collections: [{ collection: { id: "collection-1", name: "New Arrivals", slug: "new-arrivals", description: null } }],
+    };
+  },
   async getCategoryBySlug() {
     return { id: "category-1", name: "T-Shirts", slug: "t-shirts", description: null, seoTitle: null, seoDescription: null, parentId: null, status: "ACTIVE" as const, createdAt: new Date(), updatedAt: new Date(), _count: { products: 1 } };
   },
@@ -118,7 +130,7 @@ test("normalizes public query input and returns a stable catalog contract", asyn
 
   assert.equal(result.items[0].price, "899.00");
   assert.equal(result.items[0].availability, "IN_STOCK");
-  assert.equal("id" in result.items[0], false);
+  assert.equal(result.items[0].id, "product-1");
   assert.equal("sku" in result.items[0], false);
   assert.deepEqual(Object.keys(result.items[0]).sort(), [
     "availability",
@@ -135,7 +147,7 @@ test("normalizes public query input and returns a stable catalog contract", asyn
 
 test("uses Decimal-safe effective variant pricing and deterministic availability", async () => {
   const service = createCatalogQueryService(queryRepository);
-  const result = await service.getPublishedProductBySlug("OVERSIZED-GRAPHIC-T-SHIRT");
+  const result = await service.getPublishedProductDetailsBySlug("OVERSIZED-GRAPHIC-T-SHIRT");
 
   assert.equal(result.price, "899.00");
   assert.equal(result.compareAtPrice, "1299.00");
