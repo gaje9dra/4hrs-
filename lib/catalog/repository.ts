@@ -687,6 +687,17 @@ export async function listActiveCategories(client?: CatalogRepositoryClient) {
   });
 }
 
+export async function listActiveCategoriesWithPublishedProducts(client?: CatalogRepositoryClient) {
+  return clientOrDefault(client).category.findMany({
+    where: {
+      status: "ACTIVE",
+      products: { some: { product: publishedProductWhere } },
+    },
+    orderBy: [{ parentId: "asc" }, { name: "asc" }, { id: "asc" }],
+    select: { id: true, name: true, slug: true, description: true, seoTitle: true, seoDescription: true, parentId: true, status: true },
+  });
+}
+
 export async function getCategoryTree(client?: CatalogRepositoryClient) {
   return clientOrDefault(client).category.findMany({
     where: { status: "ACTIVE" },
@@ -702,6 +713,17 @@ export async function getCollectionBySlug(slug: string, client?: CatalogReposito
 export async function listActiveCollections(client?: CatalogRepositoryClient) {
   return clientOrDefault(client).collection.findMany({
     where: { status: "ACTIVE" },
+    orderBy: [{ name: "asc" }, { id: "asc" }],
+    select: { id: true, name: true, slug: true, description: true, seoTitle: true, seoDescription: true, status: true },
+  });
+}
+
+export async function listActiveCollectionsWithPublishedProducts(client?: CatalogRepositoryClient) {
+  return clientOrDefault(client).collection.findMany({
+    where: {
+      status: "ACTIVE",
+      products: { some: { product: publishedProductWhere } },
+    },
     orderBy: [{ name: "asc" }, { id: "asc" }],
     select: { id: true, name: true, slug: true, description: true, seoTitle: true, seoDescription: true, status: true },
   });
