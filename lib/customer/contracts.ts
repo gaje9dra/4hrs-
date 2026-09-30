@@ -3,6 +3,7 @@ export type CustomerStatus = "ACTIVE" | "DISABLED" | "SUSPENDED" | "PENDING_VERI
 export type CustomerDto = {
   id: string;
   email: string;
+  displayName: string | null;
   status: CustomerStatus;
   emailVerifiedAt: string | null;
   createdAt: string;
@@ -24,6 +25,7 @@ export function toCustomerDto(customer: {
   return {
     id: customer.id,
     email: customer.email,
+    displayName: "displayName" in customer ? (customer.displayName ?? null) : null,
     status: customer.status,
     emailVerifiedAt: customer.emailVerifiedAt?.toISOString() ?? null,
     createdAt: customer.createdAt.toISOString(),
