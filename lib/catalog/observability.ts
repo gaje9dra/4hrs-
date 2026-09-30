@@ -1,6 +1,6 @@
 import type { CatalogAppliedQuery } from "@/lib/catalog/query";
 
-export type CatalogSurface = "shop" | "category" | "collection";
+export type CatalogSurface = "shop" | "category" | "collection" | "search";
 export type CatalogErrorClassification =
   | "invalid_query"
   | "not_found"
