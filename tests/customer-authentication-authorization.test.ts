@@ -2,11 +2,12 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createAuthenticatedCartOwnershipBoundary } from "../lib/cart/auth-ownership.ts";
 import { CartServiceError } from "../lib/cart/errors.ts";
+import type { CartRepository } from "../lib/cart/repository.ts";
 
 test("authenticated Cart ownership rejects cross-customer access", async () => {
-  const repository: any = {
+  const repository: Pick<CartRepository, "findCartById"> = {
     async findCartById() {
-      return { id: "cart-1", customerId: "customer-a" };
+      return { id: "cart-1", customerId: "customer-a", createdAt: new Date(), updatedAt: new Date(), items: [] };
     },
   };
   const boundary = createAuthenticatedCartOwnershipBoundary(repository);
@@ -17,9 +18,9 @@ test("authenticated Cart ownership rejects cross-customer access", async () => {
 });
 
 test("authenticated Cart ownership accepts the authenticated customer", async () => {
-  const repository: any = {
+  const repository: Pick<CartRepository, "findCartById"> = {
     async findCartById() {
-      return { id: "cart-1", customerId: "customer-a" };
+      return { id: "cart-1", customerId: "customer-a", createdAt: new Date(), updatedAt: new Date(), items: [] };
     },
   };
   const boundary = createAuthenticatedCartOwnershipBoundary(repository);
