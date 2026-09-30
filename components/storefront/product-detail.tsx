@@ -14,27 +14,29 @@ export function ProductDetail({
 }) {
   const collectionContext = [...product.collections].sort((a, b) => a.slug.localeCompare(b.slug))[0];
   const categoryContext = [...product.categories].sort((a, b) => a.slug.localeCompare(b.slug))[0];
-  const context = collectionContext ?? categoryContext;
 
   return (
     <Container className="py-8 sm:py-12 lg:py-16">
       <nav aria-label="Breadcrumb" className="mb-8 text-sm font-700 uppercase">
-        <Link href="/" className="motion-link">Home</Link>
-        <span aria-hidden="true"> / </span>
-        <Link href="/shop" className="motion-link">Shop</Link>
-        {context ? (
-          <>
-            <span aria-hidden="true"> / </span>
-            <Link
-              href={collectionContext ? "/collections/" + context.slug : "/categories/" + context.slug}
-              className="motion-link"
-            >
-              {context.name}
-            </Link>
-          </>
-        ) : null}
-        <span aria-hidden="true"> / </span>
-        <span aria-current="page">{product.title}</span>
+        <ol className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <li><Link href="/" className="motion-link">Home</Link></li>
+          <li aria-hidden="true">/</li>
+          <li><Link href="/shop" className="motion-link">Shop</Link></li>
+          {collectionContext ? (
+            <>
+              <li aria-hidden="true">/</li>
+              <li><Link href={"/collections/" + collectionContext.slug} className="motion-link">{collectionContext.name}</Link></li>
+            </>
+          ) : null}
+          {categoryContext ? (
+            <>
+              <li aria-hidden="true">/</li>
+              <li><Link href={"/categories/" + categoryContext.slug} className="motion-link">{categoryContext.name}</Link></li>
+            </>
+          ) : null}
+          <li aria-hidden="true">/</li>
+          <li aria-current="page">{product.title}</li>
+        </ol>
       </nav>
 
       <ProductDetailInteractive product={product} />
