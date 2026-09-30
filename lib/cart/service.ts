@@ -353,7 +353,10 @@ export function createCartService(dependencies: CartServiceDependencies = {}) {
   async function createCart(owner: CartOwnerContext) {
     try {
       await ownership.authorizeCartCreation(owner);
-      return await repository.createCart();
+      const customerId = typeof owner === "object" && owner !== null && "customerId" in owner && typeof owner.customerId === "string"
+        ? owner.customerId
+        : undefined;
+      return await repository.createCart(customerId);
     } catch (error) {
       if (error instanceof CartServiceError) throw error;
       mapPersistenceError(error);
