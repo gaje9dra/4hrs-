@@ -1,7 +1,10 @@
-'use client';
+"use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import { Check, ShoppingBag } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Alert } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { formatCatalogMoney } from "@/lib/storefront/money";
 import {
   buildPurchaseSelection,
@@ -21,6 +24,26 @@ const availabilityLabel = {
   UNTRACKED: "Available",
 } as const;
 
+type AddState = "idle" | "pending" | "success" | "error";
+
+async function addToCart(selection: { productId: string; variantId: string; quantity: number }) {
+  const response = await fetch("/api/cart", {
+    method: "POST",
+    credentials: "same-origin",
+    cache: "no-store",
+    headers: { Accept: "application/json", "Content-Type": "application/json" },
+    body: JSON.stringify(selection),
+  });
+  const body = await response.json().catch(() => null) as { error?: { message?: string } } | unknown;
+  if (!response.ok) {
+    const message = body && typeof body === "object" && body !== null && "error" in body
+      ? ((body as { error?: { message?: string } }).error?.message ?? "Could not add this item to Cart.")
+      : "Could not add this item to Cart.";
+    throw new Error(message);
+  }
+  return body;
+}
+
 export function ProductOptions({
   product,
   onMediaChange,
@@ -31,12 +54,11 @@ export function ProductOptions({
   const [selection, setSelection] = useState<StorefrontVariantSelection>(() =>
     selectionFromVariant(product, getDeterministicInitialVariant(product)),
   );
+  const [addState, setAddState] = useState<AddState>("idle");
+  const [addError, setAddError] = useState<string | null>(null);
+  const addRequest = useRef(0);
 
-  const selectedVariant = useMemo(
-    () => resolveSelectedVariant(product, selection),
-    [product, selection],
-  );
-
+  const selectedVariant = useMemo(() => resolveSelectedVariant(product, selection), [product, selection]);
   const effectivePrice = selectedVariant?.price ?? product.price;
   const compareAtPrice = selectedVariant?.compareAtPrice ?? product.compareAtPrice;
   const availability = selectedVariant?.availability ?? product.availability;
@@ -48,9 +70,26 @@ export function ProductOptions({
     const next = { ...selection, [optionTypeId]: valueId };
     const variant = resolveSelectedVariant(product, next);
     if (!variant) return;
-
     setSelection(next);
+    setAddState("idle");
+    setAddError(null);
     onMediaChange?.(variant.media.length ? variant.media : product.media);
+  }
+
+  async function handleAdd() {
+    if (!purchaseSelection || addState === "pending") return;
+    const requestId = ++addRequest.current;
+    setAddState("pending");
+    setAddError(null);
+    try {
+      await addToCart(purchaseSelection);
+      if (requestId !== addRequest.current) return;
+      setAddState("success");
+    } catch (error) {
+      if (requestId !== addRequest.current) return;
+      setAddState("error");
+      setAddError(error instanceof Error ? error.message : "Could not add this item to Cart.");
+    }
   }
 
   return (
@@ -63,24 +102,7 @@ export function ProductOptions({
               const selected = selection[option.id] === value.id;
               const selectable = isVariantValueSelectable(product, selection, option.id, value.id);
               return (
-                <button
-                  key={value.id}
-                  type="button"
-                  aria-pressed={selected}
-                  aria-disabled={!selectable}
-                  disabled={!selectable}
-                  onClick={() => selectValue(option.id, value.id)}
-                  className={[
-                    "min-h-11 border-2 border-border px-4 py-2 text-sm font-800 uppercase",
-                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-blue",
-                    selected ? "bg-primary-blue text-white" : "bg-white",
-                    selectable ? "hover:-translate-y-0.5" : "cursor-not-allowed opacity-40 line-through",
-                    "motion-reduce:transition-none motion-reduce:hover:translate-y-0",
-                  ].join(" ")}
-                >
-                  {value.displayName}
-                </button>
-              );
+                <button key={value.id} type="button" aria-pressed={selected} aria-disabled={!selectable} disabled={!selectable} onClick={() => selectValue(option.id, value.id)} className={["min-h-11 border-2 border-border px-4 py-2 text-sm font-800 uppercase focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-blue", selected ? "bg-primary-blue text-white" : "bg-white", selectable ? "hover:-translate-y-0.5" : "cursor-not-allowed opacity-40 line-through", "motion-reduce:transition-none motion-reduce:hover:translate-y-0"].join(" ")}>{value.displayName}</button>
             })}
           </div>
         </fieldset>
@@ -91,49 +113,24 @@ export function ProductOptions({
           <span className="text-2xl font-900">{formatCatalogMoney(effectivePrice, product.currency)}</span>
           {compareAtPrice ? <span className="text-sm line-through">{formatCatalogMoney(compareAtPrice, product.currency)}</span> : null}
         </div>
-        <div className="mt-3">
-          <Badge variant={availability.state === "OUT_OF_STOCK" ? "outline" : "yellow"}>
-            {availabilityLabel[availability.state]}
-          </Badge>
-        </div>
-        {selectedVariant && availability.state === "OUT_OF_STOCK" ? (
-          <p className="mt-3 text-sm font-800 uppercase">This option combination is currently unavailable.</p>
-        ) : null}
+        <div className="mt-3"><Badge variant={availability.state === "OUT_OF_STOCK" ? "outline" : "yellow"}>{availabilityLabel[availability.state]}</Badge></div>
+        {selectedVariant && availability.state === "OUT_OF_STOCK" ? <p className="mt-3 text-sm font-800 uppercase">This option combination is currently unavailable.</p> : null}
       </div>
 
-      <div className="border-2 border-border bg-primary-red p-5 text-white shadow-hard-md lg:border-4 lg:shadow-hard-lg" aria-label="Purchase intent">
-        <p className="text-xs font-900 uppercase tracking-[.2em]">Purchase intent</p>
-        <button
-          type="button"
-          disabled
-          aria-disabled="true"
-          aria-describedby="purchase-intent-status"
-          className="mt-3 min-h-12 w-full border-2 border-white bg-white px-5 py-3 text-base font-900 uppercase text-primary-red opacity-100"
-        >
-          {purchaseIntentState === "READY"
-  ? "Selection ready"
-  : purchaseIntentState === "MISSING_REQUIRED_SELECTION"
-    ? "Select options"
-    : purchaseIntentState === "INVALID_SELECTION"
-      ? "Invalid selection"
-      : "Unavailable"}
-        </button>
-        <p id="purchase-intent-status" className="mt-3 text-sm font-700">
-          {purchaseIntentState === "PRODUCT_UNAVAILABLE"
-            ? "This product is currently unavailable."
-            : purchaseIntentState === "MISSING_REQUIRED_SELECTION"
-              ? "Select every required option before continuing."
-              : purchaseIntentState === "INVALID_SELECTION"
-                ? "The selected option combination is not valid."
-                : purchaseIntentState === "UNAVAILABLE"
-                  ? "This option combination is currently unavailable."
-                  : "The selection is validated. Cart integration is intentionally deferred."}
+      <div className="border-2 border-border bg-primary-red p-5 text-white shadow-hard-md lg:border-4 lg:shadow-hard-lg" aria-label="Add to Cart">
+        <div className="flex items-center gap-3"><ShoppingBag size={22} strokeWidth={3} aria-hidden="true" /><p className="text-xs font-900 uppercase tracking-[.2em]">Cart</p></div>
+        <Button variant="yellow" loading={addState === "pending"} disabled={!purchaseSelection || purchaseIntentState !== "READY"} onClick={() => void handleAdd()} className="mt-3 w-full">
+          {addState === "success" ? <><Check size={18} aria-hidden="true" />Added to cart</> : "Add to cart"}
+        </Button>
+        <p id="purchase-intent-status" className="mt-3 text-sm font-700" aria-live="polite">
+          {purchaseIntentState === "PRODUCT_UNAVAILABLE" ? "This product is currently unavailable."
+            : purchaseIntentState === "MISSING_REQUIRED_SELECTION" ? "Select every required option before adding to Cart."
+              : purchaseIntentState === "INVALID_SELECTION" ? "The selected option combination is not valid."
+                : purchaseIntentState === "UNAVAILABLE" ? "This option combination is currently unavailable."
+                  : addState === "success" ? "The server confirmed this Cart mutation." : "Selection is ready to add to Cart."}
         </p>
-        {purchaseSelection ? (
-          <p className="sr-only">
-            Valid selection for product {purchaseSelection.productId} and variant {purchaseSelection.variantId}.
-          </p>
-        ) : null}
+        {addError ? <Alert variant="error" title="Could not add to Cart" className="mt-4">{addError}</Alert> : null}
+        {addState === "success" ? <div className="mt-4"><Button href="/cart" variant="yellow" className="w-full">View cart</Button></div> : null}
       </div>
     </div>
   );
