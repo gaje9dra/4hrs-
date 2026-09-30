@@ -53,7 +53,7 @@ export default async function CategoryPage({
 
   const [products, filters] = await Promise.all([
     getStorefrontCategoryProducts(category.slug, query),
-    getStorefrontListingFilters(),
+    getStorefrontListingFilters("category"),
   ]);
 
   const categoryParams: StorefrontSearchParams = {
