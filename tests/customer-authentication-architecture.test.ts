@@ -21,7 +21,8 @@ test("current Cart ownership remains fail-closed until trusted identity exists",
 test("Cart now supports nullable authenticated customer ownership without breaking anonymous rows", () => {
   const schema = fs.readFileSync(path.join(root, "prisma/schema.prisma"), "utf8");
   const cartBlock = schema.match(/model Cart \{[\s\S]*?\n\}/)?.[0] ?? "";
-  assert.match(cartBlock, /customerId String\?[^\n]*@unique/);\n  assert.match(cartBlock, /Customer\?/);
+  assert.match(cartBlock, /customerId String\?[^\n]*@unique/);
+  assert.match(cartBlock, /Customer\?/);
 });
 
 test("no customer authentication route has been introduced during the audit phase", () => {
