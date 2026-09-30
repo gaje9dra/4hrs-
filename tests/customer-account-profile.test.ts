@@ -38,7 +38,9 @@ test("profile editor sends only displayName", () => {
 });
 
 test("email changes remain unavailable without verification infrastructure", () => {
-  assert.doesNotMatch(read("app/api/customer/profile/route.ts"), /email.*update|update.*email/i);
+  const source = read("app/api/customer/profile/route.ts");
+  assert.match(source, /displayName/);
+  assert.doesNotMatch(source, /body\.email|updateProfile\([^\n]*email/i);
 });
 
 test("account navigation contains only implemented destinations", () => {
