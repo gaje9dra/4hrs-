@@ -81,8 +81,8 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
     );
   }
 
-  let products;
-  let filters;
+  let products: Awaited<ReturnType<typeof searchStorefrontProducts>> | undefined;
+  let filters: Awaited<ReturnType<typeof getStorefrontListingFilters>> | undefined;
   let listingError: unknown = null;
 
   try {
