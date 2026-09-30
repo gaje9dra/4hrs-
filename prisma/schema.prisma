@@ -365,7 +365,28 @@ model Customer {
   credential      CustomerCredential?
   sessions        CustomerSession[]
   cart            Cart?
+  addresses       CustomerAddress[]
   @@index([status])
+}
+
+model CustomerAddress {
+  id               String   @id @default(uuid()) @db.Uuid
+  customerId       String   @db.Uuid
+  recipientName    String   @db.VarChar(120)
+  phone            String?  @db.VarChar(32)
+  addressLine1     String   @db.VarChar(200)
+  addressLine2     String?  @db.VarChar(200)
+  city             String   @db.VarChar(100)
+  stateOrProvince  String   @db.VarChar(100)
+  postalCode       String   @db.VarChar(32)
+  countryCode      String   @db.Char(2)
+  label            String   @db.VarChar(40)
+  isDefault        Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  customer         Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  @@index([customerId, createdAt])
+  @@index([customerId, updatedAt])
 }
 
 model CustomerCredential {
