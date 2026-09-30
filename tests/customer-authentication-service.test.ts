@@ -129,3 +129,34 @@ test("rate limiter blocks repeated attempts", () => {
   for (let i = 0; i < 2; i += 1) assert.equal(limiter.consume("key", 2, 60_000).allowed, true);
   assert.equal(limiter.consume("key", 2, 60_000).allowed, false);
 });
+
+
+test("expired sessions are rejected by the server", async () => {
+  const repository = createFakeRepository();
+  let current = new Date("2026-09-30T12:00:00.000Z");
+  const service = createAuthenticationService({
+    repository,
+    rateLimiter: createInMemoryAuthenticationRateLimiter(),
+    now: () => current,
+  });
+  const result = await service.register({ email: "expired@example.com", password: "correct horse battery staple" }, "register-expired");
+  current = new Date("2026-10-01T12:00:00.000Z");
+  await assert.rejects(service.resolveSession(result.sessionToken), (error: unknown) =>
+    error instanceof AuthenticationError && error.code === "SESSION_EXPIRED",
+  );
+});
+
+test("authentication public contracts contain no session or credential secrets", async () => {
+  const { toCustomerDto } = await import("../lib/customer/contracts.ts");
+  const dto = toCustomerDto({
+    id: "customer-1",
+    email: "safe@example.com",
+    status: "ACTIVE",
+    emailVerifiedAt: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
+  assert.equal("passwordHash" in dto, false);
+  assert.equal("sessionTokenHash" in dto, false);
+  assert.equal("sessionToken" in dto, false);
+});
