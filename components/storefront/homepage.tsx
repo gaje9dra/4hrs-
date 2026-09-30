@@ -92,7 +92,7 @@ function CategoryDiscovery({ categories }: { categories: StorefrontHomeData["cat
               href={categoryPath(category)}
               className="motion-lift group relative min-h-36 overflow-hidden border-4 border-border bg-white p-6 shadow-hard-md no-underline"
             >
-              <span aria-hidden="true" className={`absolute -right-6 -top-8 h-24 w-24 rounded-full ${index % 3 === 0 ? "bg-primary-red" : index % 3 === 1 ? "bg-primary-blue" : "bg-primary-yellow"} transition-transform duration-200 group-hover:rotate-12`} />
+              <span aria-hidden="true" className={`absolute -right-6 -top-8 h-24 w-24 rounded-full ${index % 3 === 0 ? "bg-primary-red" : index % 3 === 1 ? "bg-primary-blue" : "bg-primary-yellow"}`} />
               <span className="relative z-10 flex h-full items-end justify-between gap-4">
                 <span className="text-2xl font-900 uppercase leading-none">{category.name}</span>
                 <ArrowRight size={24} strokeWidth={3} aria-hidden="true" />
@@ -152,7 +152,7 @@ function EditorialBlock({ collection }: { collection: StorefrontHomeData["editor
             </div>
           </div>
           <div className="flex min-h-72 flex-col justify-center p-8 sm:p-12">
-            {collection.description ? <p className="max-w-xl text-lg leading-8">{collection.description}</p> : <p className="max-w-xl text-lg leading-8">A live collection from the 4HRS catalog, presented through the same visual system as the storefront.</p>}
+            <p className="max-w-xl text-lg leading-8">{collection.description}</p>
             <Link href={collectionPath(collection)} className="motion-link mt-7 inline-flex min-h-12 w-fit items-center gap-2 border-2 border-border bg-primary-yellow px-5 py-3 text-sm font-900 uppercase shadow-hard-sm no-underline">
               Explore collection <Compass size={18} aria-hidden="true" />
             </Link>
@@ -186,7 +186,7 @@ export function Homepage({ data }: { data: StorefrontHomeData }) {
   return (
     <div className="overflow-hidden">
       <Hero data={data} />
-      <ProductDiscovery id="featured-products-heading" eyebrow="Discovery / 01" title="Featured" products={data.featuredProducts} />
+      <ProductDiscovery id="featured-products-heading" eyebrow="Discovery / 01" title="Curated picks" products={data.featuredProducts} />
       <CategoryDiscovery categories={data.categories} />
       <ProductDiscovery id="new-arrivals-heading" eyebrow="New arrivals / 03" title="New arrivals" products={data.newArrivals} />
       <CollectionDiscovery collections={data.collections} />
