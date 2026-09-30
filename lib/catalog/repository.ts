@@ -744,7 +744,7 @@ export async function queryMerchandisedCatalogProducts(
         ],
         skip: offset,
         take: limit,
-        select: { product: { select: publicCatalogListSelect } },
+        select: { product: { select: publicCatalogSelect } },
       }),
       repository.productCollection.count({ where: relationWhere }),
     ]);
@@ -774,7 +774,7 @@ export async function queryMerchandisedCatalogProducts(
       ],
       skip: offset,
       take: limit,
-      select: { product: { select: publicCatalogListSelect } },
+      select: { product: { select: publicCatalogSelect } },
     }),
     repository.productCategory.count({ where: relationWhere }),
   ]);
@@ -841,7 +841,7 @@ export async function searchMerchandisedCatalogProducts(
       ],
       skip: offset,
       take: limit,
-      select: { product: { select: publicCatalogListSelect } },
+      select: { product: { select: publicCatalogSelect } },
     }),
     repository.productCategory.count({ where: relationWhere }),
   ]);
