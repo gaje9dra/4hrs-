@@ -19,9 +19,15 @@ export function authErrorResponse(error: unknown) {
       error.code === "INVALID_INPUT" || error.code === "CSRF_REJECTED" ? 400 :
       error.code === "SESSION_INVALID" || error.code === "SESSION_EXPIRED" ? 401 :
       401;
+    const publicCode =
+      error.code === "ACCOUNT_DISABLED" ||
+      error.code === "ACCOUNT_UNAVAILABLE" ||
+      error.code === "INVALID_CREDENTIALS"
+        ? "INVALID_CREDENTIALS"
+        : error.code;
 
     return authJson(
-      { error: { code: error.code, message: error.publicMessage } },
+      { error: { code: publicCode, message: error.publicMessage } },
       {
         status,
         headers: error.code === "RATE_LIMITED" ? { "retry-after": "60" } : undefined,
