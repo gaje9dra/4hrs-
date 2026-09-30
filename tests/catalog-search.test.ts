@@ -511,3 +511,30 @@ test("default search uses relevance ranking while explicit catalog sort remains 
     { ranking: "catalog", sort: "price_asc" },
   ]);
 });
+
+test("database relevance ordering is applied before page-sized record hydration", async () => {
+  const second = {
+    ...product,
+    id: "product-2",
+    title: "Hoodie Graphic",
+    slug: "hoodie-graphic",
+  };
+  const fakeClient = {
+    $queryRaw: async () => [{ ids: ["product-2", "product-1"], total: 2n }],
+    product: {
+      findMany: async () => [product, second],
+    },
+  } as never;
+
+  const result = await searchCatalogProducts({
+    query: "hoodie",
+    mode: "PUBLIC",
+    relevance: true,
+    limit: 2,
+    offset: 0,
+  }, fakeClient);
+
+  assert.deepEqual(result.items.map((item) => item.slug), ["hoodie-graphic", "oversized-graphic-t-shirt"]);
+  assert.equal(result.total, 2);
+  assert.equal(result.hasNextPage, false);
+});
