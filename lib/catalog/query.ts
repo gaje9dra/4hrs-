@@ -157,8 +157,10 @@ type QueryRepository = {
   getPublishedProductDetailsBySlug: typeof repository.getPublishedProductDetailsBySlug;
   getCategoryBySlug: typeof repository.getCategoryBySlug;
   listActiveCategories: typeof repository.listActiveCategories;
+  listActiveCategoriesWithPublishedProducts: typeof repository.listActiveCategoriesWithPublishedProducts;
   getCollectionBySlug: typeof repository.getCollectionBySlug;
   listActiveCollections: typeof repository.listActiveCollections;
+  listActiveCollectionsWithPublishedProducts: typeof repository.listActiveCollectionsWithPublishedProducts;
   getTagBySlug: typeof repository.getTagBySlug;
   listTags: typeof repository.listTags;
 };
@@ -169,8 +171,10 @@ const defaultRepository: QueryRepository = {
   getPublishedProductDetailsBySlug: repository.getPublishedProductDetailsBySlug,
   getCategoryBySlug: repository.getCategoryBySlug,
   listActiveCategories: repository.listActiveCategories,
+  listActiveCategoriesWithPublishedProducts: repository.listActiveCategoriesWithPublishedProducts,
   getCollectionBySlug: repository.getCollectionBySlug,
   listActiveCollections: repository.listActiveCollections,
+  listActiveCollectionsWithPublishedProducts: repository.listActiveCollectionsWithPublishedProducts,
   getTagBySlug: repository.getTagBySlug,
   listTags: repository.listTags,
 };
@@ -500,6 +504,10 @@ export function createCatalogQueryService(customRepository: Partial<QueryReposit
       return repo.listActiveCategories();
     },
 
+    async listActiveCategoriesWithPublishedProducts() {
+      return repo.listActiveCategoriesWithPublishedProducts();
+    },
+
     async getCategoryTree() {
       const categories = await repo.listActiveCategories();
       const nodes = new Map(categories.map((category) => [category.id, { ...category, children: [] as Array<unknown> }]));
@@ -527,6 +535,10 @@ export function createCatalogQueryService(customRepository: Partial<QueryReposit
 
     async listActiveCollections() {
       return repo.listActiveCollections();
+    },
+
+    async listActiveCollectionsWithPublishedProducts() {
+      return repo.listActiveCollectionsWithPublishedProducts();
     },
 
     async getCollectionBySlug(slug: string) {
