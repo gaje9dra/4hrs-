@@ -966,6 +966,11 @@ export async function getCategoryBySlug(slug: string, client?: CatalogRepository
       status: true,
       createdAt: true,
       updatedAt: true,
+      _count: {
+        select: {
+          products: { where: { product: publishedProductWhere } },
+        },
+      },
     },
   });
 }
@@ -1010,6 +1015,11 @@ export async function getCollectionBySlug(slug: string, client?: CatalogReposito
       status: true,
       createdAt: true,
       updatedAt: true,
+      _count: {
+        select: {
+          products: { where: { product: publishedProductWhere } },
+        },
+      },
     },
   });
 }
