@@ -119,6 +119,7 @@ test("collection context remains authoritative for pagination and merchandising 
     sort: "merchandising",
     category: "other-category",
   });
+  if (!received) throw new Error("Expected query options to be captured.");
   assert.equal(received.filters?.collectionSlug, "summer-edit");
   assert.equal(received.filters?.categorySlug, "other-category");
   assert.equal(received.offset, 24);
