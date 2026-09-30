@@ -56,7 +56,7 @@ const product = {
 const lookup = {
   getCategoryBySlug: async () => ({ id: "category-1" }),
   getCollectionBySlug: async () => ({ id: "collection-1" }),
-  listTags: async () => [{ slug: "streetwear" }],
+  getTagsBySlugs: async () => [{ slug: "streetwear" }],
 };
 
 function makeProvider(result = [product]): CatalogSearchProvider {
@@ -144,6 +144,46 @@ test("rejects empty, overlong, and invalid search input before provider executio
     (error: unknown) => error instanceof CatalogServiceError && error.code === "INVALID_PAGE",
   );
   assert.equal(called, false);
+});
+
+
+
+test("public search accepts the lightweight repository projection without reading internal fields", async () => {
+  const lightweight = {
+    title: product.title,
+    slug: product.slug,
+    price: product.price,
+    compareAtPrice: product.compareAtPrice,
+    currency: product.currency,
+    status: "ACTIVE" as const,
+    images: [{ url: product.images[0].url, altText: product.images[0].altText }],
+    variants: [{ price: product.variants[0].price, compareAtPrice: product.variants[0].compareAtPrice, inventory: product.variants[0].inventory }],
+  };
+  const provider: CatalogSearchProvider = {
+    async search() {
+      return { items: [lightweight], total: 1, limit: 24, offset: 0, hasNextPage: false };
+    },
+  };
+  const service = createCatalogSearchService({ provider, lookup });
+  const result = await service.searchPublic({ query: "oversized" });
+  assert.equal(result.items[0].slug, product.slug);
+  assert.equal(result.items[0].price, "899.00");
+  assert.equal(result.items[0].availability, "IN_STOCK");
+  assert.equal("id" in result.items[0], false);
+});
+
+test("search reference validation batches category, collection, and tag lookups", async () => {
+  const calls: string[] = [];
+  const service = createCatalogSearchService({
+    provider: makeProvider(),
+    lookup: {
+      getCategoryBySlug: async () => { calls.push("category"); return { status: "ACTIVE" }; },
+      getCollectionBySlug: async () => { calls.push("collection"); return { status: "ACTIVE" }; },
+      getTagsBySlugs: async (slugs) => { calls.push("tags:" + slugs.join(",")); return slugs.map((slug) => ({ slug })); },
+    },
+  });
+  await service.searchPublic({ query: "shirt", category: "t-shirts", collection: "new-arrivals", tags: ["streetwear"] });
+  assert.deepEqual(calls.sort(), ["category", "collection", "tags:streetwear"].sort());
 });
 
 test("public search returns a stable storefront-safe contract without SKU fields", async () => {
