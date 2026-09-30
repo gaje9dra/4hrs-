@@ -75,9 +75,11 @@ test("related products are bounded, deterministic, deduplicated and self-excludi
   assert.match(storefront, /related\.length === 4/);
 });
 
-test("commerce, reviews and provider-specific purchasing logic remain absent", () => {
+test("Cart integration remains provider-neutral and excludes downstream commerce", () => {
   const source = route + detail + interactive + sections + options + gallery;
-  assert.doesNotMatch(source, /addToCart|createOrder|checkout|payment|wishlist|review|rating|qikink|provider/i);
+  assert.match(options, /fetch\("\/api\/cart"/);
+  assert.match(options, /buildPurchaseSelection/);
+  assert.doesNotMatch(source, /createOrder|checkout|payment|wishlist|review|rating|qikink|provider/i);
 });
 
 test("public storefront DTO strips internal variant availability quantities", () => {
@@ -126,21 +128,22 @@ test("Phase 7.2 centralizes variant resolution and rejects ambiguous or incomple
   assert.doesNotMatch(options, /function optionValueId|function matchesSelection|function isSelectable|function initialSelection/);
 });
 
-test("Phase 7.2 keeps the future commerce handoff provider-neutral and server-authoritative", () => {
-  assert.doesNotMatch(options + interactive, /addToCart|createOrder|checkout|payment|qikink|provider/i);
+test("Phase 8.5 keeps the Cart handoff provider-neutral and server-authoritative", () => {
+  assert.match(options, /fetch\("\/api\/cart"/);
+  assert.doesNotMatch(options + interactive, /createOrder|checkout|payment|qikink|provider/i);
   assert.match(storefront, /variants: product\.variants\.map/);
   assert.match(storefront, /availability: \{ state: variant\.availability\.state \}/);
 });
 
 
-test("Phase 7.3 models purchase intent without implementing Cart", () => {
+test("Phase 7.3 purchase intent remains the canonical pre-Cart selection contract", () => {
   const selection = readFileSync("lib/storefront/variant-selection.ts", "utf8");
   assert.match(selection, /PurchaseSelection/);
   assert.match(selection, /PurchaseIntentState/);
   assert.match(selection, /getPurchaseIntentState/);
   assert.match(selection, /buildPurchaseSelection/);
   assert.match(selection, /quantity: 1/);
-  assert.doesNotMatch(selection, /addToCart|createOrder|checkout|payment|persistCart/i);
+  assert.doesNotMatch(selection, /createOrder|checkout|payment|persistCart/i);
   assert.match(options, /Purchase intent/);
   assert.match(options, /Selection ready/);
   assert.match(options, /Select options/);
@@ -148,10 +151,10 @@ test("Phase 7.3 models purchase intent without implementing Cart", () => {
   assert.match(options, /Unavailable/);
 });
 
-test("Phase 7.3 keeps purchase intent non-authoritative and provider-neutral", () => {
-  assert.match(options, /disabled/);
-  assert.match(options, /aria-disabled="true"/);
-  assert.doesNotMatch(options + interactive, /addToCart|createOrder|checkout|payment|qikink|provider/i);
+test("Phase 8.5 keeps purchase intent canonical and provider-neutral", () => {
+  assert.match(options, /buildPurchaseSelection/);
+  assert.match(options, /fetch\("\/api\/cart"/);
+  assert.doesNotMatch(options + interactive, /createOrder|checkout|payment|qikink|provider/i);
   assert.match(storefront, /availability: \{ state: variant\.availability\.state \}/);
 });
 
@@ -169,10 +172,11 @@ test("Phase 7.4 rejects malformed or cross-option selection state before purchas
   assert.match(selection, /resolveSelectedVariant/);
 });
 
-test("Phase 7.4 keeps the purchase CTA explicitly deferred until Cart exists", () => {
-  assert.match(options, /Selection ready/);
-  assert.match(options, /disabled/);
-  assert.doesNotMatch(options, /Added to cart|Cart added|Order created|Payment successful|Reserved/i);
+test("Phase 8.5 connects the purchase CTA only through the Cart API", () => {
+  assert.match(options, /Add to cart/);
+  assert.match(options, /method: "POST"/);
+  assert.match(options, /\/api\/cart/);
+  assert.doesNotMatch(options, /Order created|Payment successful|Reserved/i);
 });
 
 
@@ -198,9 +202,8 @@ test("Phase 7.5 purchase contract remains minimal and provider-neutral", () => {
   assert.doesNotMatch(selection, /price|currency|sku|shipping|payment|provider|qikink/i);
 });
 
-test("Phase 7.5 does not introduce premature Cart action states or mutations", () => {
+test("Phase 8.5 does not introduce downstream commerce or inventory reservation", () => {
   const source = route + detail + interactive + sections + options + gallery;
-  assert.doesNotMatch(source, /addToCart|createOrder|checkout|payment|persistCart|reserveInventory/i);
-  assert.match(options, /disabled/);
-  assert.match(options, /Selection ready/);
+  assert.match(source, /fetch\("\/api\/cart"/);
+  assert.doesNotMatch(source, /createOrder|checkout|payment|persistCart|reserveInventory/i);
 });
