@@ -327,7 +327,9 @@ export function createCatalogSearchService(options: {
         const durationMs = Date.now() - startedAt;
         const classification =
           error instanceof CatalogServiceError
-            ? "unexpected_application_failure"
+            ? error.code === "CATALOG_DATABASE_ERROR"
+              ? "database_failure"
+              : "unexpected_application_failure"
             : "database_failure";
         logCatalogObservation({
           surface: "search",
