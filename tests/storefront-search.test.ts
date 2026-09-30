@@ -10,8 +10,8 @@ const read = (path: string) => readFileSync(resolve(root, path), "utf8");
 test("search route uses the canonical public search service and remains noindex", () => {
   const source = read("app/(storefront)/search/page.tsx");
   assert.match(source, /searchStorefrontProducts/);
-  assert.match(source, /noindex/);
-  assert.match(source, /alternates:\s*\{\s*canonical:\s*"\/search"/);
+  assert.match(source, /generateMetadata/);
+  assert.match(source, /robots:\s*\{\s*index:\s*false,\s*follow:\s*true\s*\}/);
   assert.doesNotMatch(source, /Prisma|@\/lib\/db|qikink|printful|printrove|printify/i);
 });
 
@@ -119,4 +119,11 @@ test("search metadata is server-generated, query-derived, and noindex", () => {
 test("search SEO does not add a sitemap or structured-data payload", () => {
   const source = read("app/(storefront)/search/page.tsx");
   assert.doesNotMatch(source, /application\/ld\+json|ItemList|Product|AggregateRating|Review/);
+});
+
+
+test("empty search metadata canonicalizes to the landing URL even with unused catalog state", () => {
+  const source = read("app/(storefront)/search/page.tsx");
+  assert.match(source, /const canonical = normalizedQuery\s*\?/);
+  assert.match(source, /: "\/search";/);
 });
