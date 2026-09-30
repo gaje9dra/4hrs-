@@ -87,6 +87,7 @@ export function ProductOptions({
                   key={value.id}
                   type="button"
                   aria-pressed={selected}
+                  aria-disabled={!selectable}
                   disabled={!selectable}
                   onClick={() => selectValue(option.id, value.id)}
                   className={[
