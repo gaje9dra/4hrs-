@@ -358,17 +358,28 @@ function buildCatalogSearchWhere(
     },
     {
       categories: {
-        some: { category: { name: { contains: query, mode: "insensitive" } } },
+        some: {
+          category: {
+            status: "ACTIVE",
+            name: { contains: query, mode: "insensitive" },
+          },
+        },
       },
     },
     {
       collections: {
-        some: { collection: { name: { contains: query, mode: "insensitive" } } },
+        some: {
+          collection: {
+            status: "ACTIVE",
+            name: { contains: query, mode: "insensitive" },
+          },
+        },
       },
     },
     {
       variants: {
         some: {
+          ...(options.mode === "PUBLIC" ? { status: "ACTIVE" as const } : {}),
           OR: [
             { displayName: { contains: query, mode: "insensitive" } },
             { size: { contains: query, mode: "insensitive" } },
