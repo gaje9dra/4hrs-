@@ -155,6 +155,7 @@ export async function getStorefrontCollection(slug: string): Promise<StorefrontC
     seoTitle: collection.seoTitle,
     seoDescription: collection.seoDescription,
     status: "ACTIVE",
+    hasPublishedProducts: collection._count.products > 0,
   };
 }
 
