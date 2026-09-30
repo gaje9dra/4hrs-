@@ -34,7 +34,20 @@ export function resolveSelectedVariant(
   product: StorefrontProductDetail,
   selection: StorefrontVariantSelection,
 ) {
+  const optionIds = new Set(product.options.map((option) => option.id));
+  const selectionEntries = Object.entries(selection);
+
+  if (
+    selectionEntries.some(
+      ([optionTypeId, valueId]) =>
+        !optionIds.has(optionTypeId) || typeof valueId !== "string" || valueId.length === 0,
+    )
+  ) {
+    return null;
+  }
+
   if (product.options.some((option) => !selection[option.id])) return null;
+
   return product.variants.find((variant) => matchesVariantSelection(product, variant, selection)) ?? null;
 }
 
