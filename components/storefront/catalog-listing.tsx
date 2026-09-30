@@ -9,7 +9,7 @@ import { buildCatalogHref } from "@/lib/storefront/query-params";
 import { SearchInput } from "@/components/storefront/search-input";
 
 export function CatalogListing({
-  pathname, title, eyebrow, description, products, params, categories, collections, tags, fixedCategory, fixedCollection, breadcrumbs = [], searchQuery, emptyTitle, emptyDescription,
+  pathname, title, eyebrow, description, products, params, categories, collections, tags, fixedCategory, fixedCollection, breadcrumbs = [], searchQuery, emptyTitle, emptyDescription, searchRelevance,
 }: {
   pathname: string;
   title: string;
@@ -47,7 +47,7 @@ export function CatalogListing({
         <section aria-labelledby="search-input-title" className="mb-10 border-4 border-border bg-primary-yellow p-5 shadow-hard-md sm:p-7">
           <p className="text-xs font-900 uppercase tracking-[.25em] text-primary-blue">Store / Search</p>
           <h2 id="search-input-title" className="mt-2 uppercase">Find what you want</h2>
-          <div className="mt-5"><SearchInput defaultValue={searchQuery} /></div>
+          <div className="mt-5"><SearchInput defaultValue={searchQuery} preservedParams={params} /></div>
         </section>
       ) : null}
 
@@ -63,7 +63,7 @@ export function CatalogListing({
       </header>
 
       <div className="mb-8">
-        <CatalogFilters pathname={pathname} appliedQuery={products.appliedQuery} categories={categories} collections={collections} tags={tags} fixedCategory={fixedCategory} fixedCollection={fixedCollection} preservedParams={searchQuery !== undefined ? { q: searchQuery } : undefined} />
+        <CatalogFilters pathname={pathname} appliedQuery={products.appliedQuery} categories={categories} collections={collections} tags={tags} fixedCategory={fixedCategory} fixedCollection={fixedCollection} preservedParams={searchQuery !== undefined ? { q: searchQuery } : undefined} searchRelevance={searchRelevance} />
       </div>
 
       {outOfRange ? (
