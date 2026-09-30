@@ -31,31 +31,27 @@ export type StorefrontProductDetail = Omit<PublishedProductDetailResult, "availa
 
 
 export type StorefrontCategory = {
-  id: string;
   name: string;
   slug: string;
   description: string | null;
-  parentId: string | null;
   seoTitle: string | null;
   seoDescription: string | null;
   status: "ACTIVE";
+  hasPublishedProducts: boolean;
   breadcrumbs: Array<{ name: string; slug: string }>;
 };
 
+export type StorefrontCategoryOption = Pick<StorefrontCategory, "name" | "slug">;
+export type StorefrontCollectionOption = Pick<StorefrontCollection, "name" | "slug">;
+export type StorefrontTag = { name: string; slug: string };
+
 export type StorefrontCollection = {
-  id: string;
   name: string;
   slug: string;
   description: string | null;
   seoTitle: string | null;
   seoDescription: string | null;
   status: "ACTIVE";
-};
-
-export type StorefrontTag = {
-  id: string;
-  name: string;
-  slug: string;
 };
 
 export type StorefrontProductList = {
@@ -136,14 +132,13 @@ export async function getStorefrontCategory(slug: string): Promise<StorefrontCat
     throw new CatalogServiceError("CATEGORY_NOT_FOUND", "Category was not found.");
   }
   return {
-    id: category.id,
     name: category.name,
     slug: category.slug,
     description: category.description,
-    parentId: category.parentId,
     seoTitle: category.seoTitle,
     seoDescription: category.seoDescription,
     status: "ACTIVE",
+    hasPublishedProducts: category._count.products > 0,
     breadcrumbs: await buildCategoryBreadcrumbs(category),
   };
 }
@@ -154,7 +149,6 @@ export async function getStorefrontCollection(slug: string): Promise<StorefrontC
     throw new CatalogServiceError("COLLECTION_NOT_FOUND", "Collection was not found.");
   }
   return {
-    id: collection.id,
     name: collection.name,
     slug: collection.slug,
     description: collection.description,
@@ -165,7 +159,7 @@ export async function getStorefrontCollection(slug: string): Promise<StorefrontC
 }
 
 export async function getStorefrontTags(): Promise<StorefrontTag[]> {
-  return catalog.listTags();
+  return (await catalog.listTags()).map(({ name, slug }) => ({ name, slug }));
 }
 
 export async function getStorefrontListingFilters() {
@@ -174,7 +168,11 @@ export async function getStorefrontListingFilters() {
     catalog.listActiveCollections(),
     catalog.listTags(),
   ]);
-  return { categories, collections, tags };
+  return {
+    categories: categories.map(({ name, slug }) => ({ name, slug })),
+    collections: collections.map(({ name, slug }) => ({ name, slug })),
+    tags: tags.map(({ name, slug }) => ({ name, slug })),
+  };
 }
 
 export async function getStorefrontCategoryProducts(slug: string, query: Omit<CatalogQuery, "category"> = {}) {
