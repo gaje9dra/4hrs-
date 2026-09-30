@@ -308,7 +308,6 @@ function availabilityFromVariant(variant: {
 }
 
 function mapProduct(product: {
-  id: string;
   title: string;
   slug: string;
   price: Prisma.Decimal | string | number;
