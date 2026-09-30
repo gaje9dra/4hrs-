@@ -37,6 +37,7 @@ const product = {
       compareAtPrice: null,
       status: "ACTIVE" as const,
       optionValues: [],
+      images: [],
       inventory: {
         trackingEnabled: true,
         onHand: 10,
