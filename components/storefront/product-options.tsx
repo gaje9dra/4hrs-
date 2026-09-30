@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { Check, ShoppingBag } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/alert";
@@ -26,6 +27,8 @@ const availabilityLabel = {
 
 type AddState = "idle" | "pending" | "success" | "error";
 
+type CartMutationError = Error & { code?: string };
+
 async function addToCart(selection: { productId: string; variantId: string; quantity: number }) {
   const response = await fetch("/api/cart", {
     method: "POST",
@@ -34,7 +37,7 @@ async function addToCart(selection: { productId: string; variantId: string; quan
     headers: { Accept: "application/json", "Content-Type": "application/json" },
     body: JSON.stringify(selection),
   });
-  const body = await response.json().catch(() => null) as { error?: { message?: string } } | unknown;
+  const body = await response.json().catch(() => null) as { error?: { code?: string; message?: string } } | unknown;
   if (!response.ok) {
     const message = body && typeof body === "object" && body !== null && "error" in body
       ? ((body as { error?: { message?: string } }).error?.message ?? "Could not add this item to Cart.")
@@ -55,7 +58,7 @@ export function ProductOptions({
     selectionFromVariant(product, getDeterministicInitialVariant(product)),
   );
   const [addState, setAddState] = useState<AddState>("idle");
-  const [addError, setAddError] = useState<string | null>(null);
+  const [addError, setAddError] = useState<string | null>(null);\n  const [authRequired, setAuthRequired] = useState(false);
   const addRequest = useRef(0);
 
   const selectedVariant = useMemo(() => resolveSelectedVariant(product, selection), [product, selection]);
@@ -129,7 +132,19 @@ export function ProductOptions({
                 : purchaseIntentState === "UNAVAILABLE" ? "This option combination is currently unavailable."
                   : addState === "success" ? "The server confirmed this Cart mutation." : "Selection is ready to add to Cart."}
         </p>
-        {addError ? <Alert variant="error" title="Could not add to Cart" className="mt-4">{addError}</Alert> : null}
+        {addError ? (
+          <div className="mt-4 grid gap-3">
+            <Alert variant="error" title={authRequired ? "Sign in required" : "Could not add to Cart"}>{addError}</Alert>
+            {authRequired ? (
+              <Link
+                href="/login?next=%2Fcart"
+                className="inline-flex min-h-12 items-center justify-center border-2 border-border bg-primary-yellow px-4 py-3 text-sm font-900 uppercase text-foreground no-underline shadow-hard-sm hover:bg-white focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-primary-red"
+              >
+                Sign in to continue
+              </Link>
+            ) : null}
+          </div>
+        ) : null}
         {addState === "success" ? <div className="mt-4"><Button href="/cart" variant="yellow" className="w-full">View cart</Button></div> : null}
       </div>
     </div>
