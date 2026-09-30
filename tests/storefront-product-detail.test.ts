@@ -16,14 +16,15 @@ test("Phase 3.6 uses the singular canonical product route and public storefront 
 });
 
 test("product detail keeps the interactive surface client-only", () => {
-  assert.match(interactive, /'use client'/);
-  assert.match(gallery, /'use client'/);
-  assert.match(options, /'use client'/);
-  assert.doesNotMatch(detail, /'use client'/);
+  assert.match(interactive, /["']use client["']/);
+  assert.match(gallery, /["']use client["']/);
+  assert.match(options, /["']use client["']/);
+  assert.doesNotMatch(detail, /["']use client["']/);
 });
 
 test("variant UI is driven by canonical option relationships", () => {
-  assert.match(options, /optionValues/);
+  assert.match(options, /product\.options\.map/);
+  assert.match(options, /resolveSelectedVariant/);
   assert.match(options, /aria-pressed/);
   assert.match(options, /disabled={!selectable}/);
   assert.match(options, /variant\.price/);
