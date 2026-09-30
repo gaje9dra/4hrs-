@@ -27,7 +27,7 @@ test("variant UI is driven by canonical option relationships", () => {
   assert.match(options, /resolveSelectedVariant/);
   assert.match(options, /aria-pressed/);
   assert.match(options, /disabled={!selectable}/);
-  assert.match(options, /variant\.price/);
+  assert.match(options, /selectedVariant\?\.price/);
   assert.match(options, /variant\.media/);
 });
 
