@@ -55,12 +55,12 @@ test("catalog route helpers centralize canonical paths", () => {
   const category = { slug: "t-shirts" };
   const collection = { slug: "new-arrivals" };
 
-  assert.equal(productPath(product), "/products/graphic-shirt");
+  assert.equal(productPath(product), "/product/graphic-shirt");
   assert.equal(categoryPath(category), "/categories/t-shirts");
   assert.equal(collectionPath(collection), "/collections/new-arrivals");
 
   process.env.NEXT_PUBLIC_SITE_URL = "https://shop.example.com/";
-  assert.equal(productCanonicalUrl(product), "https://shop.example.com/products/graphic-shirt");
+  assert.equal(productCanonicalUrl(product), "https://shop.example.com/product/graphic-shirt");
   assert.equal(categoryCanonicalUrl(category), "https://shop.example.com/categories/t-shirts");
   assert.equal(collectionCanonicalUrl(collection), "https://shop.example.com/collections/new-arrivals");
 });
@@ -97,7 +97,7 @@ test("published product SEO uses custom metadata and canonical slug URL", () => 
   assert.deepEqual(metadata, {
     title: "Custom Graphic Shirt | 4HRS",
     description: "Custom search description.",
-    canonicalUrl: "https://shop.example.com/products/graphic-shirt",
+    canonicalUrl: "https://shop.example.com/product/graphic-shirt",
     indexable: true,
     robots: "index,follow",
   });
