@@ -225,7 +225,18 @@ function normalizeCatalogSearchQuery(input: CatalogSearchQuery): NormalizedCatal
     throw new CatalogServiceError("INVALID_QUERY", "Search mode must be PUBLIC or INTERNAL.");
   }
 
-  const { query: _query, mode: _mode, ...catalogQuery } = input;
+  const catalogQuery: CatalogQuery = {
+    category: input.category,
+    collection: input.collection,
+    tags: input.tags,
+    tagMode: input.tagMode,
+    minPrice: input.minPrice,
+    maxPrice: input.maxPrice,
+    inStock: input.inStock,
+    sort: input.sort,
+    page: input.page,
+    pageSize: input.pageSize,
+  };
 
   return {
     query,
