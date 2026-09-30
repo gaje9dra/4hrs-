@@ -2,6 +2,20 @@ import type { CatalogQuery, CatalogSort } from "@/lib/catalog/query";
 
 export type StorefrontSearchParams = Record<string, string | string[] | undefined>;
 
+export const DEFAULT_CATALOG_SORT: CatalogSort = "newest";
+export const DEFAULT_CATALOG_PAGE_SIZE = 24;
+
+const sorts = new Set<CatalogSort>([
+  "newest",
+  "oldest",
+  "price_asc",
+  "price_desc",
+  "title_asc",
+  "title_desc",
+  "updated",
+  "merchandising",
+]);
+
 function first(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
 }
@@ -10,76 +24,124 @@ function all(value: string | string[] | undefined): string[] {
   return Array.isArray(value) ? value : value ? [value] : [];
 }
 
-function positiveInteger(value: string | undefined): number | undefined {
-  if (!value) return undefined;
-  const parsed = Number(value);
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
+function invalidParameter(name: string, reason: string): never {
+  throw new Error("Invalid catalog query parameter: " + name + " (" + reason + ").");
 }
 
-function money(value: string | undefined): string | undefined {
-  if (!value) return undefined;
+function positiveInteger(value: string | undefined, name: string): number | undefined {
+  if (value === undefined || value === "") return undefined;
+  if (!/^\d+$/.test(value)) invalidParameter(name, "must be a positive integer");
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed < 1) invalidParameter(name, "must be a positive integer");
+  return parsed;
+}
+
+function money(value: string | undefined, name: string): string | undefined {
+  if (value === undefined || value === "") return undefined;
   const normalized = value.trim();
-  if (!/^\d+(?:\.\d{1,2})?$/.test(normalized)) return undefined;
+  if (!/^\d+(?:\.\d{1,2})?$/.test(normalized)) {
+    invalidParameter(name, "must be a non-negative amount with at most two decimals");
+  }
+  const [whole, fraction = ""] = normalized.split(".");
+  return whole + "." + fraction.padEnd(2, "0");
+}
+
+function slug(value: string | undefined, name: string): string | undefined {
+  if (value === undefined || value === "") return undefined;
+  const normalized = value.trim().toLowerCase();
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(normalized)) {
+    invalidParameter(name, "must be a canonical catalog slug");
+  }
   return normalized;
 }
 
-const sorts = new Set<CatalogSort>([
-  "newest", "oldest", "price_asc", "price_desc", "title_asc", "title_desc", "updated", "merchandising",
-]);
-
-const slugs = (value: string | undefined): string | undefined => {
-  const normalized = value?.trim().toLowerCase();
-  return normalized && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(normalized) ? normalized : undefined;
-};
+function booleanValue(value: string | undefined, name: string): boolean | undefined {
+  if (value === undefined || value === "") return undefined;
+  if (value !== "true" && value !== "false") invalidParameter(name, "must be true or false");
+  return value === "true";
+}
 
 export function catalogQueryFromSearchParams(params: StorefrontSearchParams): CatalogQuery {
   const sortValue = first(params.sort);
-  const sort = sortValue && sorts.has(sortValue as CatalogSort) ? sortValue as CatalogSort : undefined;
-  const tags = all(params.tags)
+  const sort =
+    sortValue === undefined || sortValue === ""
+      ? undefined
+      : sorts.has(sortValue as CatalogSort)
+        ? (sortValue as CatalogSort)
+        : invalidParameter("sort", "unsupported sort");
+
+  const rawTags = all(params.tags);
+  const tags = rawTags
     .flatMap((value) => value.split(","))
-    .map((tag) => slugs(tag))
+    .map((tag) => slug(tag, "tags"))
     .filter((tag): tag is string => Boolean(tag));
-  const inStockValue = first(params.inStock);
+
+  const tagModeValue = first(params.tagMode);
+  const tagMode =
+    tagModeValue === undefined || tagModeValue === ""
+      ? undefined
+      : tagModeValue === "AND" || tagModeValue === "OR"
+        ? tagModeValue
+        : invalidParameter("tagMode", "must be AND or OR");
 
   return {
-    category: slugs(first(params.category)),
-    collection: slugs(first(params.collection)),
+    category: slug(first(params.category), "category"),
+    collection: slug(first(params.collection), "collection"),
     tags: tags.length ? [...new Set(tags)] : undefined,
-    tagMode: first(params.tagMode) === "OR" ? "OR" : undefined,
-    minPrice: money(first(params.minPrice)),
-    maxPrice: money(first(params.maxPrice)),
-    inStock: inStockValue === "true" ? true : undefined,
+    tagMode,
+    minPrice: money(first(params.minPrice), "minPrice"),
+    maxPrice: money(first(params.maxPrice), "maxPrice"),
+    inStock: booleanValue(first(params.inStock), "inStock"),
     sort,
-    page: positiveInteger(first(params.page)),
-    pageSize: positiveInteger(first(params.pageSize)),
+    page: positiveInteger(first(params.page), "page"),
+    pageSize: positiveInteger(first(params.pageSize), "pageSize"),
   };
 }
 
-export function buildCatalogHref(pathname: string, params: StorefrontSearchParams, page: number): string {
-  const search = new URLSearchParams();
-
-  for (const [key, value] of Object.entries(params)) {
-    if (value === undefined || key === "page") continue;
-    if (Array.isArray(value)) {
-      for (const item of value) search.append(key, item);
-    } else {
-      search.set(key, value);
-    }
-  }
-
-  search.set("page", String(page));
-  return pathname + "?" + search.toString();
+function append(search: URLSearchParams, key: string, value: string | undefined): void {
+  if (value !== undefined) search.set(key, value);
 }
 
-export function buildCatalogFilterHref(pathname: string, values: Record<string, string | string[] | undefined>): string {
-  const search = new URLSearchParams();
-  for (const [key, value] of Object.entries(values)) {
-    if (value === undefined) continue;
-    if (Array.isArray(value)) {
-      for (const item of value) search.append(key, item);
-    } else {
-      search.set(key, value);
-    }
+export function buildCatalogHref(pathname: string, params: StorefrontSearchParams, page: number): string {
+  if (!Number.isSafeInteger(page) || page < 1) {
+    throw new Error("Catalog page must be a positive integer.");
   }
-  return search.toString() ? pathname + "?" + search.toString() : pathname;
+
+  const search = new URLSearchParams();
+  const query = catalogQueryFromSearchParams(params);
+
+  append(search, "category", query.category);
+  append(search, "collection", query.collection);
+  if (query.tags?.length) append(search, "tags", query.tags.join(","));
+  if (query.tagMode && query.tagMode !== "AND") append(search, "tagMode", query.tagMode);
+  append(search, "minPrice", query.minPrice);
+  append(search, "maxPrice", query.maxPrice);
+  if (query.inStock) append(search, "inStock", "true");
+  if (query.sort && query.sort !== DEFAULT_CATALOG_SORT) append(search, "sort", query.sort);
+  if (query.pageSize && query.pageSize !== DEFAULT_CATALOG_PAGE_SIZE) append(search, "pageSize", String(query.pageSize));
+  if (page > 1) append(search, "page", String(page));
+
+  const serialized = search.toString();
+  return serialized ? pathname + "?" + serialized : pathname;
+}
+
+export function buildCatalogFilterHref(
+  pathname: string,
+  values: Record<string, string | string[] | undefined>,
+): string {
+  const search = new URLSearchParams();
+  const query = catalogQueryFromSearchParams(values);
+
+  append(search, "category", query.category);
+  append(search, "collection", query.collection);
+  if (query.tags?.length) append(search, "tags", query.tags.join(","));
+  if (query.tagMode && query.tagMode !== "AND") append(search, "tagMode", query.tagMode);
+  append(search, "minPrice", query.minPrice);
+  append(search, "maxPrice", query.maxPrice);
+  if (query.inStock) append(search, "inStock", "true");
+  if (query.sort && query.sort !== DEFAULT_CATALOG_SORT) append(search, "sort", query.sort);
+  if (query.pageSize && query.pageSize !== DEFAULT_CATALOG_PAGE_SIZE) append(search, "pageSize", String(query.pageSize));
+
+  const serialized = search.toString();
+  return serialized ? pathname + "?" + serialized : pathname;
 }
