@@ -57,13 +57,15 @@ test(
         }),
       );
 
-      await assert.rejects(
-        repository.createCartItem({
-          cartId: cart.id,
-          productId: product.id,
-          variantId: null,
-          quantity: 0,
-        }),
+      assert.throws(
+        () =>
+          repository.createCartItem({
+            cartId: cart.id,
+            productId: product.id,
+            variantId: null,
+            quantity: 0,
+          }),
+        /Cart item quantity must be a positive integer/,
       );
 
       await repository.clearCartItems(cart.id);
