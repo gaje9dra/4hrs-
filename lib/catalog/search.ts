@@ -71,6 +71,26 @@ export type CatalogSearchResultItem = {
   }>;
 };
 
+type CatalogSearchProviderProduct = {
+  title: string;
+  slug: string;
+  price: Prisma.Decimal | string | number;
+  compareAtPrice: Prisma.Decimal | string | number | null;
+  currency: string;
+  status: "ACTIVE" | "DRAFT" | "ARCHIVED";
+  images: Array<{ url: string; altText: string | null }>;
+  variants: Array<{
+    price: Prisma.Decimal | string | number | null;
+    compareAtPrice: Prisma.Decimal | string | number | null;
+    inventory: {
+      trackingEnabled: boolean;
+      onHand: number;
+      reserved: number;
+      lowStockThreshold: number;
+    } | null;
+  }>;
+};
+
 export type CatalogSearchResult = {
   items: CatalogSearchResultItem[];
   pagination: {
@@ -85,7 +105,7 @@ export type CatalogSearchResult = {
 };
 
 export interface CatalogSearchProvider {
-  search(request: NormalizedCatalogSearchQuery): Promise<RepositoryCatalogListResult<PublicCatalogProductRecord | PublicCatalogProductListRecord>>;
+  search(request: NormalizedCatalogSearchQuery): Promise<RepositoryCatalogListResult<PublicCatalogProductRecord | PublicCatalogProductListRecord | CatalogSearchProviderProduct>>;
 }
 
 export class DatabaseSearchAdapter implements CatalogSearchProvider {
@@ -153,7 +173,7 @@ function normalizeSearchTerm(value: string): string {
   return normalizeCatalogSearchQueryParameter(value).replace(/([\\%_])/g, "\\$1");
 }
 
-function toSearchItem(product: PublicCatalogProductRecord | PublicCatalogProductListRecord, mode: CatalogSearchMode): CatalogSearchResultItem {
+function toSearchItem(product: PublicCatalogProductRecord | PublicCatalogProductListRecord | CatalogSearchProviderProduct, mode: CatalogSearchMode): CatalogSearchResultItem {
   if (mode === "PUBLIC") {
     const variants = product.variants.map((variant) => ({
       effectivePrice: formatMoney(variant.price ?? product.price)!,
