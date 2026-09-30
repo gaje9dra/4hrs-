@@ -174,3 +174,33 @@ test("Phase 7.4 keeps the purchase CTA explicitly deferred until Cart exists", (
   assert.match(options, /disabled/);
   assert.doesNotMatch(options, /Added to cart|Cart added|Order created|Payment successful|Reserved/i);
 });
+
+
+test("Phase 7.5 keeps PDP detail navigation on canonical singular catalog routes", () => {
+  assert.match(detail, /import \{ categoryPath, collectionPath \} from "@\/lib\/catalog\/routes"/);
+  assert.match(sections, /href=\{categoryPath\(category\)\}/);
+  assert.match(sections, /href=\{collectionPath\(collection\)\}/);
+  assert.doesNotMatch(sections, /href=\{["']\/categories\//);
+  assert.doesNotMatch(sections, /href=\{["']\/collections\//);
+});
+
+test("Phase 7.5 distinguishes product-level unavailability before purchase handoff", () => {
+  const selection = readFileSync("lib/storefront/variant-selection.ts", "utf8");
+  assert.match(selection, /"PRODUCT_UNAVAILABLE"/);
+  assert.match(selection, /product\.availability\.state === "OUT_OF_STOCK"/);
+});
+
+test("Phase 7.5 purchase contract remains minimal and provider-neutral", () => {
+  const selection = readFileSync("lib/storefront/variant-selection.ts", "utf8");
+  assert.match(selection, /productId: product\.id/);
+  assert.match(selection, /variantId: variant\.id/);
+  assert.match(selection, /quantity: 1/);
+  assert.doesNotMatch(selection, /price|currency|sku|shipping|payment|provider|qikink/i);
+});
+
+test("Phase 7.5 does not introduce premature Cart action states or mutations", () => {
+  const source = route + detail + interactive + sections + options + gallery;
+  assert.doesNotMatch(source, /addToCart|createOrder|checkout|payment|persistCart|reserveInventory/i);
+  assert.match(options, /disabled/);
+  assert.match(options, /Selection ready/);
+});
