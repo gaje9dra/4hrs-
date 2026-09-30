@@ -14,7 +14,7 @@ test("login and registration forms use semantic fields and accessible validation
   assert.match(source, /autoComplete="email"/);
   assert.match(source, /autoComplete=\{isRegister \? "new-password" : "current-password"\}/);
   assert.match(source, /aria-busy=/);
-  assert.match(source, /role="alert"/);
+  assert.match(source, /<Alert/);
   assert.match(source, /preventDefault/);
 });
 
