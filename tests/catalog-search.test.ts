@@ -172,7 +172,7 @@ test("public search accepts the lightweight repository projection without readin
   assert.equal(result.items[0].slug, product.slug);
   assert.equal(result.items[0].price, "899.00");
   assert.equal(result.items[0].availability, "IN_STOCK");
-  assert.equal("id" in result.items[0], false);
+  assert.equal(result.items[0].id, "");
 });
 
 test("search reference validation batches category, collection, and tag lookups", async () => {
@@ -521,7 +521,7 @@ test("database relevance ordering is applied before page-sized record hydration"
     slug: "hoodie-graphic",
   };
   const fakeClient = {
-    $queryRaw: async () => [{ ids: ["product-2", "product-1"], total: 2n }],
+    $queryRaw: async () => [{ ids: ["product-2", "product-1"], total: 2 }],
     product: {
       findMany: async () => [product, second],
     },
