@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound, permanentRedirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { CatalogServiceError } from "@/lib/catalog/errors";
 import { getPublicCollectionSeoMetadata } from "@/lib/catalog/seo";
 import { collectionPath } from "@/lib/catalog/routes";
@@ -30,17 +30,11 @@ async function loadCollection(slug: string) {
   }
 }
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Params;
-}): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const collection = await loadCollection((await params).slug);
   const seo = getPublicCollectionSeoMetadata(collection);
 
-  if (!seo) {
-    return { robots: { index: false, follow: false } };
-  }
+  if (!seo) return { robots: { index: false, follow: false } };
 
   return {
     title: seo.title,
@@ -86,11 +80,7 @@ export default async function CollectionPage({
       params={collectionParams}
       {...filters}
       fixedCollection={collection.slug}
-      emptyTitle={
-        collection.hasPublishedProducts
-          ? undefined
-          : "This collection is empty"
-      }
+      emptyTitle={collection.hasPublishedProducts ? undefined : "This collection is empty"}
       emptyDescription={
         collection.hasPublishedProducts
           ? undefined
