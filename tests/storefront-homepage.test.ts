@@ -19,6 +19,8 @@ test("homepage data uses public catalog services and bounded discovery sets", ()
   assert.match(source, /export type StorefrontHomeData/);
   assert.match(source, /getStorefrontProducts\(\{ pageSize: 8, sort: "newest" \}\)/);
   assert.match(source, /getStorefrontCollectionProducts/);
+  assert.match(source, /listActiveCategoriesWithPublishedProducts/);
+  assert.match(source, /listActiveCollectionsWithPublishedProducts/);
   assert.match(source, /pageSize: 4/);
   assert.match(source, /categories\.slice\(0, 6\)/);
   assert.match(source, /collections\.slice\(0, 3\)/);
@@ -29,6 +31,13 @@ test("homepage merchandising uses canonical collection ordering", () => {
   const source = read("lib/storefront/catalog.ts");
   assert.match(source, /sort: "merchandising"/);
   assert.match(source, /editorialCollection/);
+  assert.match(source, /sort: "merchandising"/);
+});
+
+test("homepage discovery does not present empty categories or collections as populated", () => {
+  const source = read("lib/storefront/catalog.ts");
+  assert.match(source, /listActiveCategoriesWithPublishedProducts/);
+  assert.match(source, /listActiveCollectionsWithPublishedProducts/);
 });
 
 test("homepage sections are conditional and do not manufacture empty catalog content", () => {
@@ -38,6 +47,8 @@ test("homepage sections are conditional and do not manufacture empty catalog con
   assert.match(source, /if \(!collections\.length\) return null/);
   assert.match(source, /if \(!collection\) return null/);
   assert.match(source, /href="\/shop"/);
+  assert.match(source, /title="Curated picks"/);
+  assert.doesNotMatch(source, /customer count|reviews?|bestseller|trending|fake/i);
 });
 
 test("homepage preserves canonical category and collection routes", () => {
