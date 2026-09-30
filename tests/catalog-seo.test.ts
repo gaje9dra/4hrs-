@@ -251,7 +251,7 @@ test("application-level slug uniqueness is checked before category and collectio
   const { createCatalogService } = await import("../lib/catalog/service.ts");
 
   const categoryService = createCatalogService({
-    getCategoryBySlug: async () => ({ id: "other-category", name: "Other", slug: "other-category", description: null, seoTitle: null, seoDescription: null, parentId: null, status: "ACTIVE" as const, createdAt: new Date(), updatedAt: new Date() }),
+    getCategoryBySlug: async () => ({ id: "other-category", name: "Other", slug: "other-category", description: null, seoTitle: null, seoDescription: null, parentId: null, status: "ACTIVE" as const, createdAt: new Date(), updatedAt: new Date(), _count: { products: 0 } }),
   });
   await assert.rejects(
     categoryService.createCategory({
