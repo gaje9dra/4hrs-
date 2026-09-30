@@ -19,6 +19,6 @@ test("shop URLs are canonical and remove redundant defaults", () => {
   assert.equal(buildCatalogHref("/shop", { category: "t-shirts", sort: "price_desc", inStock: "true" }, 3), "/shop?category=t-shirts&inStock=true&sort=price_desc&page=3");
 });
 
-test("filter hrefs reset pagination and ignore unsupported parameters", () => {
+test("search pagination preserves the search term", () => {\n  assert.equal(buildCatalogHref("/search", { q: "  oversized   tee  ", sort: "newest" }, 2), "/search?q=oversized+tee&page=2");\n});\n\ntest("filter hrefs reset pagination and ignore unsupported parameters", () => {
   assert.equal(buildCatalogFilterHref("/shop", { category: "t-shirts", page: "9", sort: "newest", debug: "1" }), "/shop?category=t-shirts");
 });
