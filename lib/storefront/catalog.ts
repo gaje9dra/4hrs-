@@ -9,7 +9,9 @@ const catalog = createCatalogQueryService();
 const search = createCatalogSearchService();
 
 const getActiveCategories = cache(() => catalog.listActiveCategories());
+const getActiveCategoriesWithPublishedProducts = cache(() => catalog.listActiveCategoriesWithPublishedProducts());
 const getActiveCollections = cache(() => catalog.listActiveCollections());
+const getActiveCollectionsWithPublishedProducts = cache(() => catalog.listActiveCollectionsWithPublishedProducts());
 const getActiveTags = cache(() => catalog.listTags());
 
 export type StorefrontProductCard = {
@@ -163,7 +165,7 @@ export const getStorefrontCategory = cache(async function getStorefrontCategory(
       seoTitle: category.seoTitle,
       seoDescription: category.seoDescription,
       status: "ACTIVE",
-      hasPublishedProducts: category._count.products > 0,
+      hasPublishedProducts: (await getActiveCategoriesWithPublishedProducts()).some((item) => item.id === category.id),
       breadcrumbs: await buildCategoryBreadcrumbs(category),
     };
   } catch (error) {
@@ -189,7 +191,7 @@ export const getStorefrontCollection = cache(async function getStorefrontCollect
       seoTitle: collection.seoTitle,
       seoDescription: collection.seoDescription,
       status: "ACTIVE",
-      hasPublishedProducts: collection._count.products > 0,
+      hasPublishedProducts: (await getActiveCollectionsWithPublishedProducts()).some((item) => item.id === collection.id),
     };
   } catch (error) {
     if (error instanceof CatalogServiceError && error.code === "COLLECTION_NOT_FOUND") throw error;
