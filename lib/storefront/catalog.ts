@@ -1,6 +1,7 @@
 import { createCatalogQueryService, type CatalogAppliedQuery, type CatalogQuery, type PublishedProductDetailResult } from "@/lib/catalog/query";
 import { createCatalogSearchService, type CatalogSearchQuery } from "@/lib/catalog/search";
 import { productPath } from "@/lib/catalog/routes";
+import { CatalogServiceError } from "@/lib/catalog/errors";
 
 const catalog = createCatalogQueryService();
 const search = createCatalogSearchService();
@@ -131,6 +132,9 @@ async function buildCategoryBreadcrumbs(category: Awaited<ReturnType<typeof cata
 
 export async function getStorefrontCategory(slug: string): Promise<StorefrontCategory> {
   const category = await catalog.getCategoryBySlug(slug);
+  if (!category || category.status !== "ACTIVE") {
+    throw new CatalogServiceError("CATEGORY_NOT_FOUND", "Category was not found.");
+  }
   return {
     id: category.id,
     name: category.name,
@@ -146,6 +150,9 @@ export async function getStorefrontCategory(slug: string): Promise<StorefrontCat
 
 export async function getStorefrontCollection(slug: string): Promise<StorefrontCollection> {
   const collection = await catalog.getCollectionBySlug(slug);
+  if (!collection || collection.status !== "ACTIVE") {
+    throw new CatalogServiceError("COLLECTION_NOT_FOUND", "Collection was not found.");
+  }
   return {
     id: collection.id,
     name: collection.name,
