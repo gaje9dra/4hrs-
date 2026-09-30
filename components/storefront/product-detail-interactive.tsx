@@ -5,6 +5,7 @@ import type { StorefrontProductDetail } from "@/lib/storefront/catalog";
 import { Badge } from "@/components/ui/badge";
 import { ProductGallery } from "@/components/storefront/product-gallery";
 import { ProductOptions } from "@/components/storefront/product-options";
+import { getDeterministicInitialVariant } from "@/lib/storefront/variant-selection";
 
 const availabilityLabel = {
   IN_STOCK: "In stock",
@@ -14,7 +15,7 @@ const availabilityLabel = {
 } as const;
 
 export function ProductDetailInteractive({ product }: { product: StorefrontProductDetail }) {
-  const initialVariant = product.variants.find((variant) => variant.availability.state !== "OUT_OF_STOCK");
+  const initialVariant = getDeterministicInitialVariant(product);
   const [variantMedia, setVariantMedia] = useState(
     initialVariant?.media.length ? initialVariant.media : product.media,
   );
