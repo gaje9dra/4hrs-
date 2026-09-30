@@ -17,7 +17,7 @@ test("Cart route is private, dynamic and uses the storefront Cart page", () => {
 
 test("Cart page consumes client-safe DTO contracts and the Cart API", () => {
   assert.match(page, /@\/lib\/cart\/contracts/);
-  assert.match(page, /fetch\("\/api\/cart"/);
+  assert.match(page, /cartRequest\("\/api\/cart"/);
   assert.match(page, /cache: "no-store"/);
   assert.match(page, /credentials: "same-origin"/);
   assert.doesNotMatch(page, /@\/lib\/db|Prisma|createCartService|repository/);
