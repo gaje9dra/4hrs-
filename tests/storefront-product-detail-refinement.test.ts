@@ -52,8 +52,8 @@ test("gallery supports one/many/no images and broken-image fallback without fake
 });
 
 test("breadcrumbs use canonical collection/category/product relationships and no IDs", () => {
-  assert.match(detail, /\/collections\/.*collectionContext\.slug/);
-  assert.match(detail, /\/categories\/.*categoryContext\.slug/);
+  assert.match(detail, /collectionPath\(collectionContext\)/);
+  assert.match(detail, /categoryPath\(categoryContext\)/);
   assert.doesNotMatch(detail, /collectionContext\.id|categoryContext\.id/);
 });
 
@@ -69,8 +69,8 @@ test("detail sections render only canonical fields and reuse Accordion", () => {
 test("related products are bounded, deterministic, deduplicated and self-excluding", () => {
   assert.match(storefront, /pageSize: 8/);
   assert.match(storefront, /sort: "merchandising"/);
-  assert.match(storefront, /new Set<string>\(\[product\.id\]\)/);
-  assert.match(storefront, /if \(seen\.has\(item\.id\)\)/);
+  assert.match(storefront, /new Set<string>\(\[product\.slug\]\)/);
+  assert.match(storefront, /if \(seen\.has\(item\.slug\)\)/);
   assert.match(storefront, /related\.length === 4/);
 });
 
@@ -99,4 +99,16 @@ test("compare-at pricing is sanitized against each effective selling price at th
   assert.match(query, /compareAt\.gte\(selling\)/);
   assert.match(query, /formatValidCompareAtPrice\(effectivePrice, variant\.compareAtPrice\)/);
   assert.match(query, /formatValidCompareAtPrice\(effectivePrice, product\.compareAtPrice\)/);
+});
+
+
+test("PDP uses canonical breadcrumb helpers and deduplicates route loading", () => {
+  assert.match(detail, /categoryPath/);
+  assert.match(detail, /collectionPath/);
+  assert.match(route, /cache\(async/);
+  assert.match(route, /loadProductForRequest/);
+});
+
+test("invalid product slugs resolve through not-found behavior", () => {
+  assert.match(route, /error\.code === "PRODUCT_NOT_FOUND" \|\| error\.code === "INVALID_QUERY"/);
 });
