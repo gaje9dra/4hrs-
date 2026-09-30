@@ -295,6 +295,7 @@ export function createCatalogSearchService(options: {
           if (missingTag) throw new CatalogServiceError("TAG_NOT_FOUND", "Tag was not found: " + missingTag + ".");
         }
 
+        if (!normalized) throw new Error("Normalized search query is unavailable.");
         const result = await provider.search(normalized);
         const totalPages = result.total === 0 ? 0 : Math.min(Math.ceil(result.total / normalized.catalog.pageSize), 10000);
         const isOutOfRange = result.total > 0 && normalized.catalog.page > totalPages;
