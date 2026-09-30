@@ -269,6 +269,7 @@ const publicCatalogSelect = {
 } satisfies Prisma.ProductSelect;
 
 const publicCatalogListSelect = {
+  id: true,
   title: true,
   slug: true,
   price: true,
