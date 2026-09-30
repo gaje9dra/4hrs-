@@ -287,7 +287,7 @@ test("missing public references are rejected using the existing catalog error ar
     lookup: {
       getCategoryBySlug: async () => null,
       getCollectionBySlug: async () => null,
-      listTags: async () => [],
+      getTagsBySlugs: async () => [],
     },
   });
 
@@ -422,7 +422,7 @@ test("public search lookup rejects inactive category and collection references",
     lookup: {
       getCategoryBySlug: async () => ({ id: "hidden", status: "ARCHIVED" }),
       getCollectionBySlug: async () => ({ id: "hidden", status: "ARCHIVED" }),
-      listTags: async () => [],
+      getTagsBySlugs: async () => [],
     },
   });
 
@@ -464,4 +464,30 @@ test("search failure diagnostics are sanitized and attributed to the search surf
   assert.equal(logs[0].includes("secret"), false);
   assert.equal(logs[0].includes("token"), false);
   assert.equal(logs[0].includes("SQL"), false);
+});
+
+test("search preserves legitimate Unicode while normalizing whitespace and casing", async () => {
+  let received: unknown;
+  const provider: CatalogSearchProvider = {
+    async search(request) {
+      received = request.query;
+      return { items: [], total: 0, limit: 24, offset: 0, hasNextPage: false };
+    },
+  };
+  const service = createCatalogSearchService({ provider, lookup });
+  await service.searchPublic({ query: "  CAFE   ÉTÉ  " });
+  assert.equal(received, "cafe été");
+});
+
+test("search rejects control-heavy and malformed query input before repository execution", async () => {
+  let called = false;
+  const provider: CatalogSearchProvider = {
+    async search() {
+      called = true;
+      return { items: [], total: 0, limit: 24, offset: 0, hasNextPage: false };
+    },
+  };
+  const service = createCatalogSearchService({ provider, lookup });
+  await service.searchPublic({ query: "\u0000\u0001   " });
+  assert.equal(called, false);
 });
