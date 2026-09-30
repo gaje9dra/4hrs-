@@ -294,6 +294,15 @@ const publicCatalogListSelect = {
   },
 } satisfies Prisma.ProductSelect;
 
+const publicCatalogSearchListSelect = {
+  id: true,
+  ...publicCatalogListSelect,
+} satisfies Prisma.ProductSelect;
+
+export type PublicCatalogProductSearchListRecord = Prisma.ProductGetPayload<{
+  select: typeof publicCatalogSearchListSelect;
+}>;
+
 export type PublicCatalogProductRecord = Prisma.ProductGetPayload<{
   select: typeof publicCatalogSelect;
 }>;
@@ -612,20 +621,20 @@ async function searchByRelevance(
     SELECT
       ARRAY(
         SELECT ranked."id"
-        FROM "Product" ranked
+        FROM "Product" p
         ${where}
         ORDER BY ${order}, ranked."id" ASC
         OFFSET ${offset}
         LIMIT ${limit}
       ) AS ids,
-      (SELECT COUNT(*) FROM "Product" counted ${where}) AS total
+      (SELECT COUNT(*) FROM "Product" p ${where}) AS total
   `);
   const ids = rows[0]?.ids ?? [];
   const total = Number(rows[0]?.total ?? 0n);
   if (!ids.length) return { items: [], total, limit, offset, hasNextPage: offset + 0 < total };
   const items = await repository.product.findMany({
     where: { id: { in: ids } },
-    select,
+    select: options.mode === "PUBLIC" ? publicCatalogSearchListSelect : select,
   });
   const byId = new Map(items.map((item) => [item.id, item]));
   return {
