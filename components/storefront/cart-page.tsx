@@ -64,17 +64,16 @@ export function CartPage() {
 
   useEffect(() => {
     const version = ++requestVersion.current;
-
-    void (async () => {
-      try {
-        const next = await cartRequest("/api/cart");
+    void cartRequest("/api/cart")
+      .then((next) => {
         if (version === requestVersion.current) setCart(next);
-      } catch (reason) {
+      })
+      .catch((reason: unknown) => {
         if (version === requestVersion.current) setError(customerError(reason));
-      } finally {
+      })
+      .finally(() => {
         if (version === requestVersion.current) setLoading(false);
-      }
-    })();
+      });
   }, []);
 
   async function mutate(key: string, url: string, init?: RequestInit) {
