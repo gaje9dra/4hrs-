@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
 
 const databaseConfigured = Boolean(process.env.DATABASE_URL);
 
@@ -11,7 +12,7 @@ test(
     const { createCartRepository } = await import("../lib/cart/repository.ts");
 
     const repository = createCartRepository(db);
-    const suffix = crypto.randomUUID();
+    const suffix = randomUUID();
 
     const product = await db.product.create({
       data: {
