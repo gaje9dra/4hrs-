@@ -117,11 +117,12 @@ test("normalizes public query input and returns a stable catalog contract", asyn
 
   assert.equal(result.items[0].price, "899.00");
   assert.equal(result.items[0].availability, "IN_STOCK");
+  assert.equal("id" in result.items[0], false);
+  assert.equal("sku" in result.items[0], false);
   assert.deepEqual(Object.keys(result.items[0]).sort(), [
     "availability",
     "compareAtPrice",
     "currency",
-    "id",
     "price",
     "primaryImage",
     "slug",
@@ -404,4 +405,72 @@ test("does not emit operational error logging for expected empty results", async
   }
   assert.equal(errorCalls, 0);
   assert.equal(warnCalls, 0);
+});
+
+
+test("rejects non-canonical slugs and oversized pagination before repository execution", async () => {
+  let called = false;
+  const service = createCatalogQueryService({
+    ...queryRepository,
+    queryPublishedCatalogProducts: async () => {
+      called = true;
+      return { items: [], total: 0, limit: 24, offset: 0, hasNextPage: false };
+    },
+  });
+
+  await assert.rejects(
+    service.listPublishedProducts({ category: "../admin" }),
+    (error: unknown) => error instanceof CatalogServiceError && error.code === "INVALID_QUERY",
+  );
+  await assert.rejects(
+    service.listPublishedProducts({ collection: "Hidden Collection" }),
+    (error: unknown) => error instanceof CatalogServiceError && error.code === "INVALID_QUERY",
+  );
+  await assert.rejects(
+    service.listPublishedProducts({ page: 10001 }),
+    (error: unknown) => error instanceof CatalogServiceError && error.code === "INVALID_PAGE",
+  );
+  assert.equal(called, false);
+});
+
+test("does not resolve inactive category or collection through public discovery", async () => {
+  const inactiveCategory = createCatalogQueryService({
+    ...queryRepository,
+    getCategoryBySlug: async () => ({
+      id: "hidden-category",
+      name: "Hidden",
+      slug: "hidden",
+      description: null,
+      seoTitle: null,
+      seoDescription: null,
+      parentId: null,
+      status: "ARCHIVED" as const,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      _count: { products: 0 },
+    }),
+  });
+  await assert.rejects(
+    inactiveCategory.listPublishedProducts({ category: "hidden" }),
+    (error: unknown) => error instanceof CatalogServiceError && error.code === "CATEGORY_NOT_FOUND",
+  );
+
+  const inactiveCollection = createCatalogQueryService({
+    ...queryRepository,
+    getCollectionBySlug: async () => ({
+      id: "hidden-collection",
+      name: "Hidden",
+      slug: "hidden",
+      description: null,
+      seoTitle: null,
+      seoDescription: null,
+      status: "ARCHIVED" as const,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }),
+  });
+  await assert.rejects(
+    inactiveCollection.listPublishedProducts({ collection: "hidden" }),
+    (error: unknown) => error instanceof CatalogServiceError && error.code === "COLLECTION_NOT_FOUND",
+  );
 });
