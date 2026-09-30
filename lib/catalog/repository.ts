@@ -276,6 +276,8 @@ const publicCatalogListSelect = {
   compareAtPrice: true,
   currency: true,
   status: true,
+  createdAt: true,
+  updatedAt: true,
   images: {
     where: { productId: { not: null } },
     orderBy: [{ isPrimary: "desc" as const }, { sortOrder: "asc" as const }, { id: "asc" as const }],
