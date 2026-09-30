@@ -21,6 +21,7 @@ import {
 
 export const CATALOG_SEARCH_QUERY_MIN = 1;
 export const CATALOG_SEARCH_QUERY_MAX = 100;
+export const CATALOG_SEARCH_SLOW_THRESHOLD_MS = 1000;
 
 export type CatalogSearchMode = RepositoryCatalogSearchMode;
 
@@ -284,6 +285,16 @@ export function createCatalogSearchService(options: {
         }
 
         const result = await provider.search(normalized);
+        const durationMs = Date.now() - startedAt;
+        if (durationMs >= CATALOG_SEARCH_SLOW_THRESHOLD_MS) {
+          logCatalogObservation({
+            surface: "search",
+            operation: "search",
+            classification: "slow_search",
+            durationMs,
+            query: normalized.catalog,
+          });
+        }
         const totalPages = result.total === 0 ? 0 : Math.min(Math.ceil(result.total / normalized.catalog.pageSize), 10000);
         const isOutOfRange = result.total > 0 && normalized.catalog.page > totalPages;
         return {
@@ -313,14 +324,21 @@ export function createCatalogSearchService(options: {
           }
           throw error;
         }
+        const durationMs = Date.now() - startedAt;
+        const classification =
+          error instanceof CatalogServiceError
+            ? "unexpected_application_failure"
+            : "database_failure";
         logCatalogObservation({
           surface: "search",
           operation: "search",
-          classification: "database_failure",
-          durationMs: Date.now() - startedAt,
+          classification,
+          durationMs,
           query: normalized?.catalog,
         });
-        throw new CatalogServiceError("CATALOG_DATABASE_ERROR", "Catalog search failed.", error);
+        throw error instanceof CatalogServiceError
+          ? error
+          : new CatalogServiceError("CATALOG_DATABASE_ERROR", "Catalog search failed.", error);
       }
     },
 
