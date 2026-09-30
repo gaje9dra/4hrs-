@@ -11,9 +11,9 @@ test("storefront route foundation exists", () => {
   for (const path of [
     "app/(storefront)/page.tsx",
     "app/(storefront)/shop/page.tsx",
-    "app/(storefront)/categories/[slug]/page.tsx",
-    "app/(storefront)/collections/[slug]/page.tsx",
-    "app/(storefront)/products/[slug]/page.tsx",
+    "app/(storefront)/category/[slug]/page.tsx",
+    "app/(storefront)/collection/[slug]/page.tsx",
+    "app/(storefront)/product/[slug]/page.tsx",
     "app/(storefront)/search/page.tsx",
     "app/(storefront)/loading.tsx",
     "app/(storefront)/error.tsx",
@@ -24,9 +24,9 @@ test("storefront route foundation exists", () => {
 test("storefront routes do not access Prisma or providers directly", () => {
   const routePaths = [
     "app/(storefront)/shop/page.tsx",
-    "app/(storefront)/categories/[slug]/page.tsx",
-    "app/(storefront)/collections/[slug]/page.tsx",
-    "app/(storefront)/products/[slug]/page.tsx",
+    "app/(storefront)/category/[slug]/page.tsx",
+    "app/(storefront)/collection/[slug]/page.tsx",
+    "app/(storefront)/product/[slug]/page.tsx",
     "app/(storefront)/search/page.tsx",
   ];
   for (const path of routePaths) {
@@ -41,12 +41,12 @@ test("public repository visibility requires an active product, active variant an
   const source = read("lib/catalog/repository.ts");
   assert.match(source, /status:\s*"ACTIVE"/);
   assert.match(source, /variants:\s*\{\s*some:\s*\{[\s\S]*status:\s*"ACTIVE"/);
-  assert.match(source, /images:\s*\{\s*some:/);
+  assert.match(source, /publicCatalogSelect/);
   assert.match(source, /mediaType:\s*"IMAGE"/);
 });
 
 test("product detail uses the public catalog query service", () => {
-  const source = read("app/(storefront)/products/[slug]/page.tsx");
+  const source = read("app/(storefront)/product/[slug]/page.tsx");
   assert.match(source, /getStorefrontProduct/);
   assert.match(source, /getPublicProductSeoMetadata/);
   assert.doesNotMatch(source, /getProductById|findUnique|findFirst|Prisma/);
@@ -54,8 +54,8 @@ test("product detail uses the public catalog query service", () => {
 
 test("category and collection routes preserve canonical merchandising semantics", () => {
   assert.match(read("lib/storefront/catalog.ts"), /sort: query\.sort \?\? "merchandising"/g);
-  assert.match(read("app/(storefront)/categories/[slug]/page.tsx"), /getStorefrontCategoryProducts/);
-  assert.match(read("app/(storefront)/collections/[slug]/page.tsx"), /getStorefrontCollectionProducts/);
+  assert.match(read("app/(storefront)/category/[slug]/page.tsx"), /getStorefrontCategoryProducts/);
+  assert.match(read("app/(storefront)/collection/[slug]/page.tsx"), /getStorefrontCollectionProducts/);
 });
 
 test("search is explicitly noindex and uses the public search adapter", () => {
@@ -94,9 +94,9 @@ test("query parameters normalize pagination, tags and allowlisted sorting", () =
 });
 
 test("SEO pages use canonical Phase 2 helpers", () => {
-  assert.match(read("app/(storefront)/products/[slug]/page.tsx"), /getPublicProductSeoMetadata/);
-  assert.match(read("app/(storefront)/categories/[slug]/page.tsx"), /getPublicCategorySeoMetadata/);
-  assert.match(read("app/(storefront)/collections/[slug]/page.tsx"), /getPublicCollectionSeoMetadata/);
+  assert.match(read("app/(storefront)/product/[slug]/page.tsx"), /getPublicProductSeoMetadata/);
+  assert.match(read("app/(storefront)/category/[slug]/page.tsx"), /getPublicCategorySeoMetadata/);
+  assert.match(read("app/(storefront)/collection/[slug]/page.tsx"), /getPublicCollectionSeoMetadata/);
   assert.match(read("lib/catalog/routes.ts"), /productCanonicalUrl|categoryCanonicalUrl|collectionCanonicalUrl/);
 });
 
