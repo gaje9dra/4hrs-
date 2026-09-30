@@ -22,12 +22,14 @@ export default async function RegisterPage({
   const params = await searchParams;
   const next = getSafeAuthRedirect(params.next);
 
+  let current = null;
   try {
-    const current = await resolveCurrentCustomer();
-    if (current) redirect(next);
+    current = await resolveCurrentCustomer();
   } catch {
     // Authentication service availability is handled by the form/API boundary.
   }
+
+  if (current) redirect(next);
 
   return (
     <Container width="narrow" className="py-10 sm:py-14 lg:py-20">
