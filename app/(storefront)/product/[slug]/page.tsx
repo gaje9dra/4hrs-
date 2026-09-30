@@ -22,7 +22,7 @@ async function loadProduct(slug: string) {
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   try {
-    const product = await loadProduct((await params).slug);
+    const product = await getStorefrontProduct((await params).slug);
     const seo = getPublicProductSeoMetadata(getStorefrontProductSeoInput(product));
     if (!seo) return { robots: { index: false, follow: true } };
 
@@ -38,8 +38,9 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
         type: "website",
       },
     };
-  } catch {
-    return { robots: { index: false, follow: false } };
+  } catch (error) {
+    if (error instanceof CatalogServiceError && error.code === "PRODUCT_NOT_FOUND") notFound();
+    throw error;
   }
 }
 
