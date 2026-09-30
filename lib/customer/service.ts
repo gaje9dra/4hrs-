@@ -161,3 +161,28 @@ export function createCustomerIdentityService(dependencies: { repository?: Custo
 }
 
 export type CustomerIdentityService = ReturnType<typeof createCustomerIdentityService>;
+
+
+export function createCustomerProfileService(dependencies: { repository?: CustomerRepository } = {}) {
+  const repository = dependencies.repository ?? createCustomerRepository();
+
+  async function getProfile(customerId: string): Promise<CustomerDto> {
+    try {
+      const customer = await repository.findCustomerById(customerId);
+      if (!customer) throw new CustomerIdentityError("CUSTOMER_NOT_FOUND", "Customer identity was not found.");
+      return toCustomerDto(customer);
+    } catch (error) {
+      mapPersistenceError(error);
+    }
+  }
+
+  async function updateProfile(customerId: string, input: { displayName: string | null }): Promise<CustomerDto> {
+    try {
+      return toCustomerDto(await repository.updateCustomerProfile(customerId, input));
+    } catch (error) {
+      mapPersistenceError(error);
+    }
+  }
+
+  return { getProfile, updateProfile };
+}
