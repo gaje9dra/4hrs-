@@ -83,3 +83,40 @@ test("search URL state uses the canonical bounded q normalization", async () => 
     /Search query cannot exceed 100 characters/,
   );
 });
+
+
+test("search canonicalization preserves explicit newest because it differs from relevance", async () => {
+  const { buildCatalogHref, buildCatalogFilterHref } = await import("../lib/storefront/query-params.ts");
+
+  assert.equal(
+    buildCatalogHref("/search", { q: "hoodie" }, 1),
+    "/search?q=hoodie",
+  );
+  assert.equal(
+    buildCatalogHref("/search", { q: "hoodie", sort: "newest" }, 1),
+    "/search?q=hoodie&sort=newest",
+  );
+  assert.equal(
+    buildCatalogFilterHref("/search", { q: "hoodie", sort: "newest" }),
+    "/search?q=hoodie&sort=newest",
+  );
+  assert.equal(
+    buildCatalogHref("/shop", { sort: "newest" }, 1),
+    "/shop",
+  );
+});
+
+test("search metadata is server-generated, query-derived, and noindex", () => {
+  const source = read("app/(storefront)/search/page.tsx");
+  assert.match(source, /export async function generateMetadata/);
+  assert.match(source, /normalizeCatalogSearchQueryParameter/);
+  assert.match(source, /robots:\s*\{\s*index:\s*false,\s*follow:\s*true\s*\}/);
+  assert.match(source, /alternates:\s*\{\s*canonical\s*\}/);
+  assert.match(source, /slice\(0, 80\)/);
+  assert.doesNotMatch(source, /dangerouslySetInnerHTML/);
+});
+
+test("search SEO does not add a sitemap or structured-data payload", () => {
+  const source = read("app/(storefront)/search/page.tsx");
+  assert.doesNotMatch(source, /application\/ld\+json|ItemList|Product|AggregateRating|Review/);
+});
