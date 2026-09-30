@@ -269,7 +269,6 @@ const publicCatalogSelect = {
 } satisfies Prisma.ProductSelect;
 
 const publicCatalogListSelect = {
-  id: true,
   title: true,
   slug: true,
   price: true,
@@ -280,13 +279,12 @@ const publicCatalogListSelect = {
     where: { productId: { not: null } },
     orderBy: [{ isPrimary: "desc" as const }, { sortOrder: "asc" as const }, { id: "asc" as const }],
     take: 1,
-    select: { id: true, url: true, altText: true },
+    select: { url: true, altText: true },
   },
   variants: {
     where: { status: "ACTIVE" },
     orderBy: [{ createdAt: "asc" as const }, { id: "asc" as const }],
     select: {
-      id: true,
       price: true,
       compareAtPrice: true,
       inventory: {
