@@ -1,12 +1,15 @@
 import { Prisma } from "@prisma/client";
 import { CatalogServiceError } from "@/lib/catalog/errors";
+import { logCatalogObservation } from "@/lib/catalog/observability";
 import { validateMoney } from "@/lib/catalog/validation";
 import * as catalogRepository from "@/lib/catalog/repository";
 import {
   type CatalogAppliedQuery,
   type CatalogAvailability,
+  type CatalogListItem,
   type CatalogQuery,
   type CatalogSort,
+  normalizeCatalogQuery,
 } from "@/lib/catalog/query";
 import {
   type RepositoryCatalogListResult,
@@ -74,6 +77,7 @@ export type CatalogSearchResult = {
     total: number;
     totalPages: number;
     hasNextPage: boolean;
+    isOutOfRange: boolean;
   };
   appliedQuery: NormalizedCatalogSearchQuery;
 };
@@ -251,76 +255,8 @@ function normalizeCatalogSearchQuery(input: CatalogSearchQuery): NormalizedCatal
   };
 }
 
-function normalizeCatalogQuery(input: CatalogQuery): CatalogAppliedQuery {
-  const category = input.category === undefined ? undefined : normalizeSlug(input.category, "category");
-  const collection = input.collection === undefined ? undefined : normalizeSlug(input.collection, "collection");
-  const tags = (input.tags ?? [])
-    .map((tag) => normalizeSlug(tag, "tag"))
-    .filter(Boolean);
-  const uniqueTags = [...new Set(tags)];
-  const minPrice = input.minPrice === undefined ? undefined : normalizeMoney(input.minPrice, "minPrice");
-  const maxPrice = input.maxPrice === undefined ? undefined : normalizeMoney(input.maxPrice, "maxPrice");
 
-  if (input.tagMode !== undefined && input.tagMode !== "AND" && input.tagMode !== "OR") {
-    throw new CatalogServiceError("INVALID_QUERY", "tagMode must be AND or OR.");
-  }
 
-  if (minPrice !== undefined && maxPrice !== undefined &&
-      new Prisma.Decimal(minPrice).gt(new Prisma.Decimal(maxPrice))) {
-    throw new CatalogServiceError(
-      "INVALID_PRICE_RANGE",
-      "Minimum price must be less than or equal to maximum price.",
-    );
-  }
-
-  const sort = input.sort ?? "newest";
-  if (!["newest", "oldest", "price_asc", "price_desc", "title_asc", "title_desc", "updated", "merchandising"].includes(sort)) {
-    throw new CatalogServiceError("INVALID_SORT", "Unsupported catalog sort.");
-  }
-  if (sort === "merchandising" && !category && !collection) {
-    throw new CatalogServiceError("INVALID_SORT", "Merchandising sorting requires a category or collection filter.");
-  }
-
-  const page = input.page ?? 1;
-  if (!Number.isInteger(page) || page < 1) {
-    throw new CatalogServiceError("INVALID_PAGE", "Page must be a positive integer.");
-  }
-
-  const pageSize = input.pageSize ?? 24;
-  if (!Number.isInteger(pageSize) || pageSize < 1 || pageSize > 100) {
-    throw new CatalogServiceError("INVALID_PAGE", "Page size must be a positive integer no greater than 100.");
-  }
-
-  return {
-    category,
-    collection,
-    tags: uniqueTags,
-    tagMode: input.tagMode ?? "AND",
-    minPrice,
-    maxPrice,
-    inStock: input.inStock ?? false,
-    sort,
-    page,
-    pageSize,
-  };
-}
-
-function normalizeSlug(value: string, field: string): string {
-  const normalized = value.trim().toLowerCase();
-  if (!normalized) throw new CatalogServiceError("INVALID_QUERY", field + " cannot be empty.");
-  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(normalized)) {
-    throw new CatalogServiceError("INVALID_QUERY", field + " must be a canonical catalog slug.");
-  }
-  return normalized;
-}
-
-function normalizeMoney(value: string | number, field: string): string {
-  const issues = validateMoney(value, field);
-  if (issues.length) {
-    throw new CatalogServiceError("INVALID_QUERY", issues[0].message);
-  }
-  return new Prisma.Decimal(String(value)).toFixed(2);
-}
 
 function formatMoney(value: Prisma.Decimal | string | number | null | undefined): string | null {
   if (value === null || value === undefined) return null;
@@ -345,6 +281,7 @@ export function createCatalogSearchService(options: {
   return {
     async search(input: CatalogSearchQuery): Promise<CatalogSearchResult> {
       const normalized = normalizeCatalogSearchQuery(input);
+      const startedAt = Date.now();
 
       try {
         if (normalized.catalog.category && !(await lookup.getCategoryBySlug(normalized.catalog.category))) {
@@ -362,25 +299,50 @@ export function createCatalogSearchService(options: {
         }
 
         const result = await provider.search(normalized);
+        const totalPages = result.total === 0 ? 0 : Math.min(Math.ceil(result.total / normalized.catalog.pageSize), 10000);
+        const isOutOfRange = result.total > 0 && normalized.catalog.page > totalPages;
         return {
           items: result.items.map((item) => toSearchItem(item, normalized.mode)),
           pagination: {
             page: normalized.catalog.page,
             pageSize: normalized.catalog.pageSize,
             total: result.total,
-            totalPages: result.total === 0 ? 0 : Math.ceil(result.total / normalized.catalog.pageSize),
-            hasNextPage: result.hasNextPage,
+            totalPages,
+            hasNextPage: !isOutOfRange && normalized.catalog.page < totalPages && result.hasNextPage,
+            isOutOfRange,
           },
           appliedQuery: normalized,
         };
       } catch (error) {
-        if (error instanceof CatalogServiceError) throw error;
+        if (error instanceof CatalogServiceError) {
+          if (error.code === "CATEGORY_NOT_FOUND" || error.code === "COLLECTION_NOT_FOUND" || error.code === "TAG_NOT_FOUND") {
+            logCatalogObservation({ surface: "search", operation: "search", classification: "not_found", durationMs: Date.now() - startedAt, query: normalized.catalog });
+          } else if (error.code === "INVALID_QUERY" || error.code === "INVALID_PAGE" || error.code === "INVALID_SORT" || error.code === "INVALID_PRICE_RANGE") {
+            logCatalogObservation({ surface: "search", operation: "search", classification: "invalid_query", durationMs: Date.now() - startedAt, query: normalized.catalog });
+          }
+          throw error;
+        }
+        logCatalogObservation({ surface: "search", operation: "search", classification: "database_failure", durationMs: Date.now() - startedAt, query: normalized.catalog });
         throw new CatalogServiceError("CATALOG_DATABASE_ERROR", "Catalog search failed.", error);
       }
     },
 
-    async searchPublic(input: Omit<CatalogSearchQuery, "mode">): Promise<CatalogSearchResult> {
-      return this.search({ ...input, mode: "PUBLIC" });
+    async searchPublic(input: Omit<CatalogSearchQuery, "mode">): Promise<{ items: CatalogListItem[]; pagination: CatalogSearchResult["pagination"]; appliedQuery: CatalogAppliedQuery }> {
+      const result = await this.search({ ...input, mode: "PUBLIC" });
+      return {
+        items: result.items.map((item) => ({
+          title: item.title,
+          slug: item.slug,
+          primaryImage: item.primaryImage ? { url: item.primaryImage.url, altText: item.primaryImage.altText } : null,
+          price: item.price,
+          compareAtPrice: item.compareAtPrice,
+          currency: item.currency,
+          status: "ACTIVE",
+          availability: item.availability.state,
+        })),
+        pagination: result.pagination,
+        appliedQuery: result.appliedQuery.catalog,
+      };
     },
 
     async searchInternal(input: Omit<CatalogSearchQuery, "mode">): Promise<CatalogSearchResult> {
