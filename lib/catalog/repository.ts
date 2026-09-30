@@ -634,7 +634,7 @@ async function searchByRelevance(
   const rows = await repository.$queryRaw<Array<{ ids: string[]; total: bigint }>>(Prisma.sql`
     SELECT
       ARRAY(
-        SELECT ranked."id"
+        SELECT p."id"
         FROM "Product" p
         ${where}
         ORDER BY ${order}, p."id" ASC
