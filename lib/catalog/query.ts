@@ -424,10 +424,16 @@ export function createCatalogQueryService(customRepository: Partial<QueryReposit
           appliedQuery.tags.length ? repo.getTagsBySlugs(appliedQuery.tags) : Promise.resolve([]),
         ]);
 
-        if (appliedQuery.category && !category) {
+        if (
+          appliedQuery.category &&
+          (!category || (category as { status?: string }).status !== "ACTIVE")
+        ) {
           throw new CatalogServiceError("CATEGORY_NOT_FOUND", "Category was not found.");
         }
-        if (appliedQuery.collection && !collection) {
+        if (
+          appliedQuery.collection &&
+          (!collection || (collection as { status?: string }).status !== "ACTIVE")
+        ) {
           throw new CatalogServiceError("COLLECTION_NOT_FOUND", "Collection was not found.");
         }
         if (tags.length !== appliedQuery.tags.length) {
