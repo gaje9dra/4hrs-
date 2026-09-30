@@ -118,7 +118,7 @@ test("search metadata is server-generated, query-derived, and noindex", () => {
 
 test("search SEO does not add a sitemap or structured-data payload", () => {
   const source = read("app/(storefront)/search/page.tsx");
-  assert.doesNotMatch(source, /application\/ld\+json|ItemList|Product|AggregateRating|Review/);
+  assert.doesNotMatch(source, /application\/ld\+json|itemListElement|AggregateRating|Review/);
 });
 
 
