@@ -285,6 +285,9 @@ export function createCatalogSearchService(options: {
         }
 
         const result = await provider.search(normalized);
+        const totalPages = result.total === 0 ? 0 : Math.min(Math.ceil(result.total / normalized.catalog.pageSize), 10000);
+        const isOutOfRange = result.total > 0 && normalized.catalog.page > totalPages;
+        const items = result.items.map((item) => toSearchItem(item, normalized.mode));
         const durationMs = Date.now() - startedAt;
         if (durationMs >= CATALOG_SEARCH_SLOW_THRESHOLD_MS) {
           logCatalogObservation({
@@ -295,10 +298,8 @@ export function createCatalogSearchService(options: {
             query: normalized.catalog,
           });
         }
-        const totalPages = result.total === 0 ? 0 : Math.min(Math.ceil(result.total / normalized.catalog.pageSize), 10000);
-        const isOutOfRange = result.total > 0 && normalized.catalog.page > totalPages;
         return {
-          items: result.items.map((item) => toSearchItem(item, normalized.mode)),
+          items,
           pagination: {
             page: normalized.catalog.page,
             pageSize: normalized.catalog.pageSize,
