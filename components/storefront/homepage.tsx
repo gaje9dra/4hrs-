@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Compass, Layers3 } from "lucide-react";
+import { ArrowRight, Layers3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ProductCard } from "@/components/storefront/product-card";
@@ -44,7 +44,7 @@ function Hero({ data }: { data: StorefrontHomeData }) {
                 alt={visualProduct.image.altText ?? visualProduct.title}
                 fill
                 priority
-                sizes="(max-width: 639px) calc(100vw - 5rem), (max-width: 1024px) 80vw, 42vw"
+                sizes="(max-width: 639px) calc(100vw - 5rem), (max-width: 1024px) 80vw, (max-width: 1535px) 42vw, 620px"
                 className="object-cover"
               />
             </div>
@@ -107,17 +107,16 @@ function CategoryDiscovery({ categories }: { categories: StorefrontHomeData["cat
         />
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {categories.slice(0, 6).map((category, index) => (
-            <Link
-              key={category.id}
-              href={categoryPath(category)}
-              className="motion-lift group relative min-h-36 overflow-hidden border-4 border-border bg-white p-6 shadow-hard-md no-underline"
-            >
-              <span aria-hidden="true" className={`absolute -right-6 -top-8 h-24 w-24 rounded-full ${index % 3 === 0 ? "bg-primary-red" : index % 3 === 1 ? "bg-primary-blue" : "bg-primary-yellow"}`} />
-              <span className="relative z-10 flex h-full items-end justify-between gap-4">
-                <span className="text-2xl font-900 uppercase leading-none">{category.name}</span>
+            <Card key={category.id} className="min-h-36 overflow-hidden p-0">
+              <Link
+                href={categoryPath(category)}
+                className="motion-link relative flex min-h-36 h-full items-end justify-between gap-4 p-6 no-underline"
+              >
+                <span aria-hidden="true" className={`absolute -right-6 -top-8 h-24 w-24 rounded-full ${index % 3 === 0 ? "bg-primary-red" : index % 3 === 1 ? "bg-primary-blue" : "bg-primary-yellow"}`} />
+                <span className="relative z-10 text-2xl font-900 uppercase leading-none">{category.name}</span>
                 <ArrowRight size={24} strokeWidth={3} aria-hidden="true" />
-              </span>
-            </Link>
+              </Link>
+            </Card>
           ))}
         </div>
       </Container>
@@ -226,7 +225,7 @@ function FinalCta() {
 
 export function Homepage({ data }: { data: StorefrontHomeData }) {
   return (
-    <div className="overflow-hidden">
+    <>
       <Hero data={data} />
       <ProductDiscovery eyebrow="Discovery / 01" title="Curated picks" products={data.featuredProducts} />
       <CategoryDiscovery categories={data.categories} />
@@ -234,6 +233,6 @@ export function Homepage({ data }: { data: StorefrontHomeData }) {
       <CollectionDiscovery collections={data.collections} />
       <BrandValue />
       <FinalCta />
-    </div>
+    </>
   );
 }
