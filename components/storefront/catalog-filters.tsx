@@ -29,7 +29,17 @@ export function CatalogFilters({
 }) {
   const options = fixedCategory || fixedCollection ? contextualSort : sortOptions;
   const preservedQuery = preservedParams.q ? (Array.isArray(preservedParams.q) ? preservedParams.q[0] : preservedParams.q) : undefined;
-  const baseValues = { ...appliedQuery, q: preservedQuery };
+  const baseValues: Record<string, string | string[] | undefined> = {
+    q: preservedQuery,
+    category: appliedQuery.category,
+    collection: appliedQuery.collection,
+    tags: appliedQuery.tags,
+    tagMode: appliedQuery.tags.length ? appliedQuery.tagMode : undefined,
+    minPrice: appliedQuery.minPrice,
+    maxPrice: appliedQuery.maxPrice,
+    inStock: appliedQuery.inStock ? "true" : undefined,
+    sort: appliedQuery.sort,
+  };
   const clearHref = buildCatalogFilterHref(pathname, { q: preservedQuery });
 
   const activeFilters: Array<{ label: string; href: string }> = [];
