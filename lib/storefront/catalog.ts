@@ -67,7 +67,7 @@ export type StorefrontProductList = {
     total: number;
     totalPages: number;
     hasNextPage: boolean;
-    isOutOfRange: boolean;
+    isOutOfRange?: boolean;
   };
   appliedQuery: CatalogAppliedQuery;
 };
