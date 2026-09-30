@@ -81,26 +81,21 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
     );
   }
 
+  let products;
+  let filters;
+  let listingError: unknown = null;
+
   try {
-    const [products, filters] = await Promise.all([
+    [products, filters] = await Promise.all([
       searchStorefrontProducts({ ...catalogQueryFromSearchParams(params), query }),
       getStorefrontListingFilters("search"),
     ]);
-
-    return (
-      <CatalogListing
-        pathname="/search"
-        title={`Search results for “${query}”`}
-        eyebrow="Store / Search"
-        description="Deterministic public catalog search with the same canonical filters and pagination used across the storefront."
-        products={products}
-        params={params}
-        {...filters}
-        searchQuery={query}
-        searchRelevance
-      />
-    );
   } catch (error) {
+    listingError = error;
+  }
+
+  if (listingError) {
+    const error = listingError;
     if (
       error instanceof CatalogServiceError &&
       ["INVALID_QUERY", "INVALID_PAGE", "INVALID_SORT", "INVALID_PRICE_RANGE"].includes(error.code)
@@ -120,5 +115,23 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
       );
     }
     return <CatalogErrorState />;
+  }
+
+  return (
+    <CatalogListing
+      pathname="/search"
+      title={`Search results for “${query}”`}
+      eyebrow="Store / Search"
+      description="Deterministic public catalog search with the same canonical filters and pagination used across the storefront."
+      products={products}
+      params={params}
+      {...filters}
+      searchQuery={query}
+      searchRelevance
+    />
+  );
+}
+
+      return <CatalogErrorState />;
   }
 }
