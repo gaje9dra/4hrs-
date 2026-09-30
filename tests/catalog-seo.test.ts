@@ -56,13 +56,13 @@ test("catalog route helpers centralize canonical paths", () => {
   const collection = { slug: "new-arrivals" };
 
   assert.equal(productPath(product), "/product/graphic-shirt");
-  assert.equal(categoryPath(category), "/categories/t-shirts");
-  assert.equal(collectionPath(collection), "/collections/new-arrivals");
+  assert.equal(categoryPath(category), "/category/t-shirts");
+  assert.equal(collectionPath(collection), "/collection/new-arrivals");
 
   process.env.NEXT_PUBLIC_SITE_URL = "https://shop.example.com/";
   assert.equal(productCanonicalUrl(product), "https://shop.example.com/product/graphic-shirt");
-  assert.equal(categoryCanonicalUrl(category), "https://shop.example.com/categories/t-shirts");
-  assert.equal(collectionCanonicalUrl(collection), "https://shop.example.com/collections/new-arrivals");
+  assert.equal(categoryCanonicalUrl(category), "https://shop.example.com/category/t-shirts");
+  assert.equal(collectionCanonicalUrl(collection), "https://shop.example.com/collection/new-arrivals");
 });
 
 test("canonical URL configuration rejects malformed or unsafe base URLs", () => {
@@ -123,7 +123,7 @@ test("SEO fallback derives metadata at runtime without duplicating generated val
 
   assert.equal(metadata?.title, "Minimal Tee");
   assert.equal(metadata?.description, "Minimal everyday tee.");
-  assert.equal(metadata?.canonicalUrl, "https://shop.example.com/products/minimal-tee");
+  assert.equal(metadata?.canonicalUrl, "https://shop.example.com/product/minimal-tee");
 });
 
 test("unpublished or invalid products are not exposed through the public SEO contract", () => {
@@ -178,8 +178,8 @@ test("category and collection SEO follow their own active lifecycle and canonica
 
   const categoryMetadata = getPublicCatalogSeoMetadata({ type: "category", entity: category });
   const collectionMetadata = getPublicCatalogSeoMetadata({ type: "collection", entity: collection });
-  assert.equal(categoryMetadata?.canonicalUrl, "https://shop.example.com/categories/t-shirts");
-  assert.equal(collectionMetadata?.canonicalUrl, "https://shop.example.com/collections/new-arrivals");
+  assert.equal(categoryMetadata?.canonicalUrl, "https://shop.example.com/category/t-shirts");
+  assert.equal(collectionMetadata?.canonicalUrl, "https://shop.example.com/collection/new-arrivals");
 });
 
 test("provider-neutral SEO identity is identical for manually created and imported products", () => {
@@ -209,7 +209,7 @@ test("provider-neutral SEO identity is identical for manually created and import
 
 test("search and SEO use the same canonical product slug identity", () => {
   const searchResult = { id: "product-9", slug: "same-canonical-product" };
-  assert.equal(productPath(searchResult), "/products/same-canonical-product");
+  assert.equal(productPath(searchResult), "/product/same-canonical-product");
 });
 
 test("published slug changes are rejected until a redirect strategy exists", async () => {
