@@ -10,9 +10,11 @@ type SessionResponse =
   | { authenticated: true; customer: CustomerDto }
   | { authenticated: false; customer: null };
 
+type Status = "loading" | "anonymous" | "authenticated" | "unavailable";
+
 export function CustomerAuthStatus() {
   const [customer, setCustomer] = useState<CustomerDto | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [status, setStatus] = useState<Status>("loading");
   const [loggingOut, setLoggingOut] = useState(false);
 
   useEffect(() => {
@@ -26,14 +28,22 @@ export function CustomerAuthStatus() {
       .then(async (response) => {
         const body = await response.json().catch(() => null) as SessionResponse | null;
         if (!active) return;
-        if (response.ok && body?.authenticated) setCustomer(body.customer);
-        else setCustomer(null);
+        if (response.ok && body?.authenticated) {
+          setCustomer(body.customer);
+          setStatus("authenticated");
+        } else if (response.ok && body?.authenticated === false) {
+          setCustomer(null);
+          setStatus("anonymous");
+        } else {
+          setCustomer(null);
+          setStatus("unavailable");
+        }
       })
       .catch(() => {
-        if (active) setCustomer(null);
-      })
-      .finally(() => {
-        if (active) setLoading(false);
+        if (active) {
+          setCustomer(null);
+          setStatus("unavailable");
+        }
       });
 
     return () => {
@@ -51,13 +61,16 @@ export function CustomerAuthStatus() {
         cache: "no-store",
         headers: { Accept: "application/json" },
       });
-      if (response.ok) setCustomer(null);
+      if (response.ok) {
+        setCustomer(null);
+        setStatus("anonymous");
+      }
     } finally {
       setLoggingOut(false);
     }
   }
 
-  if (loading) {
+  if (status === "loading") {
     return (
       <span
         className="inline-flex min-h-11 items-center border-2 border-border bg-white px-3 text-xs font-900 uppercase tracking-[0.08em]"
@@ -65,6 +78,17 @@ export function CustomerAuthStatus() {
         aria-label="Checking account status"
       >
         Checking…
+      </span>
+    );
+  }
+
+  if (status === "unavailable") {
+    return (
+      <span
+        className="hidden min-h-11 items-center border-2 border-border bg-primary-yellow px-3 text-xs font-900 uppercase tracking-[0.08em] sm:inline-flex"
+        aria-live="polite"
+      >
+        Account unavailable
       </span>
     );
   }
