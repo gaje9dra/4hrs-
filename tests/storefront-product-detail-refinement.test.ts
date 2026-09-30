@@ -36,11 +36,11 @@ test("variant engine is dynamic, canonical, deterministic and rejects unavailabl
   assert.match(options, /resolveSelectedVariant/);
   assert.match(options, /selectionFromVariant/);
   assert.match(options, /getDeterministicInitialVariant/);
-  assert.match(options, /variant\.availability\.state !== "OUT_OF_STOCK"/);
+  assert.match(options, /availability\.state === "OUT_OF_STOCK"/);
   assert.match(options, /aria-pressed/);
   assert.match(options, /aria-disabled/);
   assert.match(options, /disabled={!selectable}/);
-  assert.match(options, /variant\.price/);
+  assert.match(options, /selectedVariant\?\.price/);
   assert.match(options, /variant\.media/);
 });
 
@@ -90,11 +90,12 @@ test("public storefront DTO strips internal variant availability quantities", ()
 
 
 test("published lifecycle permits valid active products without optional media or variants", () => {
-  assert.match(repository, /const publishedProductWhere/);
-  assert.doesNotMatch(repository, /publishedProductWhere[\s\S]*variants:\s*\{\s*some:/);
-  assert.doesNotMatch(repository, /publishedProductWhere[\s\S]*images:\s*\{\s*some:/);
-  assert.match(repository, /status: "ACTIVE"/);
-  assert.match(repository, /price: \{ gte: new Prisma\.Decimal\(0\) \}/);
+  const publishedWhere = repository.match(/const publishedProductWhere: Prisma\.ProductWhereInput = \{[\s\S]*?\n\};/)?.[0] ?? "";
+  assert.match(publishedWhere, /const publishedProductWhere/);
+  assert.doesNotMatch(publishedWhere, /variants:\s*\{\s*some:/);
+  assert.doesNotMatch(publishedWhere, /images:\s*\{\s*some:/);
+  assert.match(publishedWhere, /status: "ACTIVE"/);
+  assert.match(publishedWhere, /price: \{ gte: new Prisma\.Decimal\(0\) \}/);
 });
 
 test("compare-at pricing is sanitized against each effective selling price at the server boundary", () => {
