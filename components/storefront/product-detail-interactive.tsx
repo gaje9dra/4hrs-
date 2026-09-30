@@ -37,7 +37,11 @@ export function ProductDetailInteractive({ product }: { product: StorefrontProdu
           </Badge>
         </div>
 
-        <section aria-labelledby="product-options" className="mt-8 border-t-2 border-border pt-6 lg:border-t-4">
+        <section
+          aria-labelledby={product.options.length ? "product-options" : undefined}
+          aria-label={product.options.length ? undefined : "Product pricing and availability"}
+          className="mt-8 border-t-2 border-border pt-6 lg:border-t-4"
+        >
           {product.options.length ? <h2 id="product-options" className="mb-5 text-xl uppercase">Options</h2> : null}
           <ProductOptions product={product} onMediaChange={setVariantMedia} />
         </section>
