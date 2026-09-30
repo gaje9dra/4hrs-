@@ -177,7 +177,7 @@ test("Phase 7.4 keeps the purchase CTA explicitly deferred until Cart exists", (
 
 
 test("Phase 7.5 keeps PDP detail navigation on canonical singular catalog routes", () => {
-  assert.match(detail, /import \{ categoryPath, collectionPath \} from "@\/lib\/catalog\/routes"/);
+  assert.match(sections, /import \{ categoryPath, collectionPath \} from "@\/lib\/catalog\/routes"/);
   assert.match(sections, /href=\{categoryPath\(category\)\}/);
   assert.match(sections, /href=\{collectionPath\(collection\)\}/);
   assert.doesNotMatch(sections, /href=\{["']\/categories\//);
