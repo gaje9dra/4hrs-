@@ -88,8 +88,8 @@ test("public storefront DTO strips internal variant availability quantities", ()
 
 test("published lifecycle permits valid active products without optional media or variants", () => {
   assert.match(repository, /const publishedProductWhere/);
-  assert.doesNotMatch(repository, /publishedProductWhere[\\s\\S]*variants:\\s*\\{\\s*some:/);
-  assert.doesNotMatch(repository, /publishedProductWhere[\\s\\S]*images:\\s*\\{\\s*some:/);
+  assert.doesNotMatch(repository, /publishedProductWhere[\s\S]*variants:\s*\{\s*some:/);
+  assert.doesNotMatch(repository, /publishedProductWhere[\s\S]*images:\s*\{\s*some:/);
   assert.match(repository, /status: "ACTIVE"/);
   assert.match(repository, /price: \{ gte: new Prisma\.Decimal\(0\) \}/);
 });
