@@ -570,7 +570,12 @@ function buildSearchRelevanceOrderSql(options: CatalogSearchRepositoryOptions): 
       ) THEN 0` : Prisma.empty}
       WHEN p."slug" ILIKE ${q} ESCAPE '\\' THEN 1
       WHEN p."title" ILIKE (${q} || '%') ESCAPE '\\' THEN 2
-      WHEN p."title" ILIKE ('%' || ${q} || '%') ESCAPE '\\' THEN 3
+      WHEN NOT EXISTS (
+        SELECT 1
+        FROM unnest(regexp_split_to_array(${q}, ' ')) AS term
+        WHERE p."title" NOT ILIKE ('%' || term || '%') ESCAPE '\\'
+      ) THEN 3
+      WHEN p."title" ILIKE ('%' || ${q} || '%') ESCAPE '\\' THEN 4
       WHEN EXISTS (
         SELECT 1 FROM "ProductVariant" v
         WHERE v."productId" = p."id"
@@ -580,15 +585,15 @@ function buildSearchRelevanceOrderSql(options: CatalogSearchRepositoryOptions): 
             OR v."size" ILIKE ('%' || ${q} || '%') ESCAPE '\\'
             OR v."color" ILIKE ('%' || ${q} || '%') ESCAPE '\\'
           )
-      ) THEN 4
+      ) THEN 5
       WHEN EXISTS (
         SELECT 1 FROM "ProductTag" pt JOIN "Tag" t ON t."id" = pt."tagId"
         WHERE pt."productId" = p."id" AND t."name" ILIKE ('%' || ${q} || '%') ESCAPE '\\'
-      ) THEN 5
+      ) THEN 6
       WHEN EXISTS (
         SELECT 1 FROM "ProductCategory" pc JOIN "Category" c ON c."id" = pc."categoryId"
         WHERE pc."productId" = p."id" AND c."status" = 'ACTIVE' AND c."name" ILIKE ('%' || ${q} || '%') ESCAPE '\\'
-      ) THEN 5
+      ) THEN 6
       WHEN EXISTS (
         SELECT 1 FROM "ProductCollection" pc JOIN "Collection" c ON c."id" = pc."collectionId"
         WHERE pc."productId" = p."id" AND c."status" = 'ACTIVE' AND c."name" ILIKE ('%' || ${q} || '%') ESCAPE '\\'
@@ -598,8 +603,8 @@ function buildSearchRelevanceOrderSql(options: CatalogSearchRepositoryOptions): 
       ${options.mode === "INTERNAL" ? Prisma.sql`WHEN EXISTS (
         SELECT 1 FROM "ProductVariant" v
         WHERE v."productId" = p."id" AND v."sku" ILIKE ('%' || ${q} || '%') ESCAPE '\\'
-      ) THEN 7` : Prisma.empty}
-      ELSE 8
+      ) THEN 8` : Prisma.empty}
+      ELSE 9
     END
   `;
 }
