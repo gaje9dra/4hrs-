@@ -94,7 +94,7 @@ test("collection resolution accepts active collections and distinguishes empty c
 });
 
 test("collection context remains authoritative for pagination and merchandising order", async () => {
-  let received: any;
+  let received: CatalogQueryRepositoryOptions | undefined;
   const collectionRepo = {
     ...repo,
     getCollectionBySlug: async () => ({
