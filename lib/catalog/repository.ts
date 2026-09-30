@@ -84,17 +84,6 @@ const publishedProductWhere: Prisma.ProductWhereInput = {
   slug: { not: "" },
   currency: { not: "" },
   price: { gte: new Prisma.Decimal(0) },
-  variants: {
-    some: {
-      status: "ACTIVE",
-    },
-  },
-  images: {
-    some: {
-      productId: { not: null },
-      mediaType: "IMAGE",
-    },
-  },
 };
 
 function clientOrDefault(client?: CatalogRepositoryClient): CatalogRepositoryClient {
