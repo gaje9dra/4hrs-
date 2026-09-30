@@ -13,6 +13,7 @@ const getActiveCollections = cache(() => catalog.listActiveCollections());
 const getActiveTags = cache(() => catalog.listTags());
 
 export type StorefrontProductCard = {
+  id: string;
   title: string;
   slug: string;
   href: string;
@@ -51,6 +52,7 @@ export type StorefrontCollectionOption = Pick<StorefrontCollection, "name" | "sl
 export type StorefrontTag = { name: string; slug: string };
 
 export type StorefrontCollection = {
+  id: string;
   name: string;
   slug: string;
   description: string | null;
@@ -73,6 +75,7 @@ export type StorefrontProductList = {
 };
 
 function toProductCard(product: {
+  id: string;
   title: string;
   slug: string;
   primaryImage: { url: string; altText: string | null } | null;
@@ -82,6 +85,7 @@ function toProductCard(product: {
   availability: "IN_STOCK" | "LOW_STOCK" | "OUT_OF_STOCK" | "UNTRACKED";
 }): StorefrontProductCard {
   return {
+    id: product.id,
     title: product.title,
     slug: product.slug,
     href: productPath(product),
@@ -177,6 +181,7 @@ export const getStorefrontCollection = cache(async function getStorefrontCollect
       throw new CatalogServiceError("COLLECTION_NOT_FOUND", "Collection was not found.");
     }
     return {
+      id: collection.id,
       name: collection.name,
       slug: collection.slug,
       description: collection.description,
