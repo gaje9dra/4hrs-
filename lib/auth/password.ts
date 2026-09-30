@@ -24,7 +24,7 @@ function assertPassword(password: string) {
 export async function hashPassword(password: string): Promise<string> {
   assertPassword(password);
   const salt = randomBytes(SALT_LENGTH);
-  const derived = (await scrypt(password, salt, KEY_LENGTH, { N, r: R, p: P, maxmem: 64 * 1024 * 1024 })) as Buffer;
+  const derived = (await scrypt(password, salt, KEY_LENGTH)) as Buffer;
   return [VERSION, `ln=${Math.log2(N)}`, `r=${R}`, `p=${P}`, salt.toString("base64url"), derived.toString("base64url")].join("$");
 }
 
@@ -45,12 +45,7 @@ export async function verifyPassword(password: string, encodedHash: string): Pro
     const expected = Buffer.from(hashPart, "base64url");
     if (salt.length !== SALT_LENGTH || expected.length !== KEY_LENGTH) return false;
 
-    const actual = (await scrypt(password, salt, expected.length, {
-      N: 1 << ln,
-      r,
-      p,
-      maxmem: 128 * 1024 * 1024,
-    })) as Buffer;
+    const actual = (await scrypt(password, salt, expected.length)) as Buffer;
 
     return timingSafeEqual(actual, expected);
   } catch {
