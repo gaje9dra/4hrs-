@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { Prisma } from "@prisma/client";
 import { CatalogServiceError } from "../lib/catalog/errors.ts";
 import { createCatalogQueryService } from "../lib/catalog/query.ts";
+import type { CatalogQueryRepositoryOptions } from "../lib/catalog/repository.ts";
 
 const product = {
   id: "product-1",
@@ -274,7 +275,7 @@ test("an empty catalog is not treated as an out-of-range page", async () => {
 });
 
 test("pagination preserves the complete canonical filter and sort contract", async () => {
-  let received: any;
+  let received: CatalogQueryRepositoryOptions | undefined;
   const service = createCatalogQueryService({
     ...queryRepository,
     queryPublishedCatalogProducts: async (options) => {
@@ -302,6 +303,7 @@ test("pagination preserves the complete canonical filter and sort contract", asy
   assert.equal(result.pagination.totalPages, 4);
   assert.equal(result.pagination.hasNextPage, true);
   assert.equal(result.pagination.isOutOfRange, false);
+  assert.ok(received);
   assert.equal(received.offset, 48);
   assert.equal(received.limit, 24);
   assert.deepEqual(received.filters, {
@@ -328,6 +330,7 @@ test("maximum page size remains bounded by the shared pagination contract", asyn
   });
 
   await service.listPublishedProducts({ page: 1, pageSize: 100 });
+  assert.ok(received);
   assert.equal(received.limit, 100);
 
   await assert.rejects(
