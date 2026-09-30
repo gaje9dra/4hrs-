@@ -26,6 +26,7 @@ export function CatalogListing({
   searchQuery?: string;
   emptyTitle?: string;
   emptyDescription?: string;
+  searchRelevance?: boolean;
 }) {
   const totalLabel = products.pagination.total === 1 ? "1 PRODUCT" : products.pagination.total + " PRODUCTS";
   const outOfRange = products.pagination.isOutOfRange;
