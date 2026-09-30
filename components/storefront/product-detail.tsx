@@ -3,6 +3,7 @@ import type { StorefrontProductCard, StorefrontProductDetail } from "@/lib/store
 import { Container } from "@/components/layout/container";
 import { ProductDetailInteractive } from "@/components/storefront/product-detail-interactive";
 import { ProductGrid } from "@/components/storefront/product-grid";
+import { ProductDetailSections } from "@/components/storefront/product-detail-sections";
 
 export function ProductDetail({
   product,
@@ -38,14 +39,7 @@ export function ProductDetail({
 
       <ProductDetailInteractive product={product} />
 
-      {product.description ? (
-        <section aria-labelledby="product-description" className="mt-12 border-t-4 border-border pt-8 lg:mt-16">
-          <div className="grid gap-6 lg:grid-cols-[.35fr_1fr]">
-            <h2 id="product-description" className="text-2xl uppercase">Details</h2>
-            <p className="max-w-3xl text-lg leading-relaxed">{product.description}</p>
-          </div>
-        </section>
-      ) : null}
+      <ProductDetailSections product={product} />
 
       {relatedProducts.length ? (
         <section aria-labelledby="related-products" className="mt-12 border-t-4 border-border pt-8 lg:mt-16">
