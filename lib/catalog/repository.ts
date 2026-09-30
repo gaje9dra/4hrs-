@@ -650,10 +650,16 @@ async function searchByRelevance(
   const ids = rows[0]?.ids ?? [];
   const total = Number(rows[0]?.total ?? 0);
   if (!ids.length) return { items: [], total, limit, offset, hasNextPage: offset + 0 < total };
-  const items = await repository.product.findMany({
-    where: { id: { in: ids } },
-    select: options.mode === "PUBLIC" ? publicCatalogSearchListSelect : select,
-  }) as Array<PublicCatalogProductRecord | PublicCatalogProductListRecord>;
+  const items =
+    options.mode === "PUBLIC"
+      ? await repository.product.findMany({
+          where: { id: { in: ids } },
+          select: publicCatalogSearchListSelect,
+        })
+      : await repository.product.findMany({
+          where: { id: { in: ids } },
+          select,
+        });
   const byId = new Map(items.map((item) => [item.id, item]));
   return {
     items: ids.map((id) => byId.get(id)).filter((item): item is (typeof items)[number] => Boolean(item)),
