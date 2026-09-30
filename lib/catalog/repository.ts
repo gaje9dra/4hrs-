@@ -269,10 +269,30 @@ const publicCatalogSelect = {
 } satisfies Prisma.ProductSelect;
 
 const publicCatalogListSelect = {
-  ...publicCatalogSelect,
+  id: true,
+  title: true,
+  slug: true,
+  price: true,
+  compareAtPrice: true,
+  currency: true,
+  status: true,
   images: {
-    ...publicCatalogSelect.images,
+    where: { productId: { not: null } },
+    orderBy: [{ isPrimary: "desc" as const }, { sortOrder: "asc" as const }, { id: "asc" as const }],
     take: 1,
+    select: { id: true, url: true, altText: true },
+  },
+  variants: {
+    where: { status: "ACTIVE" },
+    orderBy: [{ createdAt: "asc" as const }, { id: "asc" as const }],
+    select: {
+      id: true,
+      price: true,
+      compareAtPrice: true,
+      inventory: {
+        select: { trackingEnabled: true, onHand: true, reserved: true, lowStockThreshold: true },
+      },
+    },
   },
 } satisfies Prisma.ProductSelect;
 
@@ -764,6 +784,14 @@ export async function listActiveCollectionsWithPublishedProducts(client?: Catalo
 
 export async function getTagBySlug(slug: string, client?: CatalogRepositoryClient) {
   return clientOrDefault(client).tag.findUnique({ where: { slug } });
+}
+
+export async function getTagsBySlugs(slugs: string[], client?: CatalogRepositoryClient) {
+  if (!slugs.length) return [];
+  return clientOrDefault(client).tag.findMany({
+    where: { slug: { in: [...new Set(slugs)] } },
+    select: { id: true, name: true, slug: true },
+  });
 }
 
 export async function listTags(client?: CatalogRepositoryClient) {
