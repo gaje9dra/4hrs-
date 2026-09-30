@@ -3,11 +3,32 @@ import { db } from "@/lib/db/client";
 
 export type CustomerRepositoryClient = PrismaClient | Prisma.TransactionClient;
 
+type CustomerRecord = Prisma.CustomerGetPayload<{}>;
+type CredentialRecord = Prisma.CustomerCredentialGetPayload<{}>;
+type SessionRecord = Prisma.CustomerSessionGetPayload<{ include: { customer: true } }>;
+
+export type CustomerRepository = {
+  withTransaction<T>(work: (repository: CustomerRepository) => Promise<T>): Promise<T>;
+  findCustomerById(customerId: string): Promise<CustomerRecord | null>;
+  findCustomerByNormalizedEmail(email: string): Promise<CustomerRecord | null>;
+  createCustomer(input: { email: string; status?: "ACTIVE" | "DISABLED" | "SUSPENDED" | "PENDING_VERIFICATION"; emailVerifiedAt?: Date | null }): Promise<CustomerRecord>;
+  updateCustomerStatus(customerId: string, status: "ACTIVE" | "DISABLED" | "SUSPENDED" | "PENDING_VERIFICATION"): Promise<CustomerRecord>;
+  updateCustomerProfile(customerId: string, input: { displayName: string | null }): Promise<CustomerRecord>;
+  createCredential(input: { customerId: string; passwordHash: string }): Promise<CredentialRecord>;
+  findCredentialByCustomerId(customerId: string): Promise<CredentialRecord | null>;
+  updateCredentialHash(customerId: string, passwordHash: string): Promise<CredentialRecord>;
+  createSession(input: { customerId: string; sessionTokenHash: string; expiresAt: Date }): Promise<Prisma.CustomerSessionGetPayload<{}>>;
+  findSessionByTokenHash(sessionTokenHash: string): Promise<SessionRecord | null>;
+  revokeSession(sessionId: string, revokedAt?: Date): Promise<Prisma.CustomerSessionGetPayload<{}>>;
+  touchSession(sessionId: string, lastUsedAt?: Date): Promise<Prisma.CustomerSessionGetPayload<{}>>;
+  findCustomerCart(customerId: string): Promise<Prisma.CartGetPayload<{}> | null>;
+};
+
 function clientOrDefault(client?: CustomerRepositoryClient): CustomerRepositoryClient {
   return client ?? db;
 }
 
-export function createCustomerRepository(client?: CustomerRepositoryClient) {
+export function createCustomerRepository(client?: CustomerRepositoryClient): CustomerRepository {
   const database = clientOrDefault(client);
 
   return {
@@ -101,4 +122,3 @@ export function createCustomerRepository(client?: CustomerRepositoryClient) {
   };
 }
 
-export type CustomerRepository = ReturnType<typeof createCustomerRepository>;
