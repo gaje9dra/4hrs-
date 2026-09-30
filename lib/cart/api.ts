@@ -162,7 +162,7 @@ export function createCartApplication(options: {
   service?: CartService;
   resolveRequestContext?: CartRequestContextResolver;
 } = {}) {
-  const service = options.service ?? createCartService();
+  const service = options.service ?? authenticatedCartService;
   const resolveRequestContext = options.resolveRequestContext ?? authenticatedRequestContext;
 
   async function getCurrentCart(request: Request): Promise<CartDto> {
