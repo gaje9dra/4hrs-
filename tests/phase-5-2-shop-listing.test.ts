@@ -22,6 +22,7 @@ test("shop URLs are canonical and remove redundant defaults", () => {
 test("search pagination preserves the search term", () => {
   assert.equal(buildCatalogHref("/search", { q: "  oversized   tee  ", sort: "newest" }, 2), "/search?q=oversized+tee&page=2");
 });
-\ntest("filter hrefs reset pagination and ignore unsupported parameters", () => {
+
+test("filter hrefs reset pagination and ignore unsupported parameters", () => {
   assert.equal(buildCatalogFilterHref("/shop", { category: "t-shirts", page: "9", sort: "newest", debug: "1" }), "/shop?category=t-shirts");
 });
