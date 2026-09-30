@@ -597,7 +597,7 @@ function buildSearchRelevanceOrderSql(options: CatalogSearchRepositoryOptions): 
       WHEN EXISTS (
         SELECT 1 FROM "ProductCollection" pc JOIN "Collection" c ON c."id" = pc."collectionId"
         WHERE pc."productId" = p."id" AND c."status" = 'ACTIVE' AND c."name" ILIKE ('%' || ${q} || '%') ESCAPE CHR(92)
-      ) THEN 5
+      ) THEN 6
       WHEN COALESCE(p."shortDescription", '') ILIKE ('%' || ${q} || '%') ESCAPE CHR(92)
         OR COALESCE(p."description", '') ILIKE ('%' || ${q} || '%') ESCAPE CHR(92) THEN 7
       ${options.mode === "INTERNAL" ? Prisma.sql`WHEN EXISTS (
