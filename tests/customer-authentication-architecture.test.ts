@@ -7,8 +7,8 @@ const root = process.cwd();
 
 test("customer auth architecture remains provider-neutral and separate from admin auth", () => {
   const authBoundary = fs.readFileSync(path.join(root, "lib/auth/README.md"), "utf8");
-  assert.match(authBoundary, /Authentication and session infrastructure belongs here when introduced/);
-  assert.match(authBoundary, /Customer, admin and staff identity flows must remain outside individual pages/);
+  assert.match(authBoundary, /Customer authentication is isolated under/);
+  assert.match(authBoundary, /Customer and administrator identity domains remain separate/);
 });
 
 test("current Cart ownership remains fail-closed until trusted identity exists", () => {
