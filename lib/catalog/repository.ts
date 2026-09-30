@@ -300,10 +300,14 @@ export type PublicCatalogProductRecord = Prisma.ProductGetPayload<{
   select: typeof publicCatalogSelect;
 }>;
 
+export type PublicCatalogProductListRecord = Prisma.ProductGetPayload<{
+  select: typeof publicCatalogListSelect;
+}>;
+
 export async function queryPublishedCatalogProducts(
   options: CatalogQueryRepositoryOptions,
   client?: CatalogRepositoryClient,
-): Promise<RepositoryCatalogListResult<PublicCatalogProductRecord>> {
+): Promise<RepositoryCatalogListResult<PublicCatalogProductListRecord>> {
   const repository = clientOrDefault(client);
   const limit = clampLimit(options.limit);
   const offset = normalizeOffset(options.offset);
