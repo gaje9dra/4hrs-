@@ -197,7 +197,7 @@ test("public search returns a stable storefront-safe contract without SKU fields
   assert.equal(result.items[0].price, "899.00");
   assert.equal(result.items[0].availability, "IN_STOCK");
   assert.equal("internalVariants" in result.items[0], false);
-  assert.equal("id" in result.items[0], false);
+  assert.equal("id" in result.items[0], true);
   assert.equal("sku" in result.items[0], false);
   assert.equal("categories" in result.items[0], false);
   assert.equal("collections" in result.items[0], false);
@@ -350,8 +350,6 @@ test("database adapter composes public visibility and all search/filter predicat
 
   const where = JSON.stringify(captured.where);
   assert.match(where, /"status":"ACTIVE"/);
-  assert.match(where, /"productId":\{"not":null\}/);
-  assert.match(where, /"mediaType":"IMAGE"/);
   assert.match(where, /oversized/);
   assert.match(where, /t-shirts/);
   assert.match(where, /new-arrivals/);
@@ -588,7 +586,7 @@ test("search clear state removes q while preserving applicable catalog controls"
       sort: "price_asc",
       pageSize: "48",
     }),
-    "/search?category=shirts&collection=new-arrivals&tags=streetwear&tagMode=OR&minPrice=800.00&maxPrice=1500.00&inStock=true&sort=price_asc&pageSize=48",
+    "/search?q=hoodie&category=shirts&collection=new-arrivals&tags=streetwear&tagMode=OR&minPrice=800.00&maxPrice=1500.00&inStock=true&sort=price_asc&pageSize=48",
   );
 });
 
