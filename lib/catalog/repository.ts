@@ -584,6 +584,19 @@ function buildSearchRelevanceOrderSql(options: CatalogSearchRepositoryOptions): 
             v."displayName" ILIKE ('%' || ${q} || '%') ESCAPE CHR(92)
             OR v."size" ILIKE ('%' || ${q} || '%') ESCAPE CHR(92)
             OR v."color" ILIKE ('%' || ${q} || '%') ESCAPE CHR(92)
+            OR EXISTS (
+              SELECT 1
+              FROM "ProductVariantOptionValue" pvov
+              JOIN "VariantOptionValue" ov ON ov."id" = pvov."optionValueId"
+              WHERE pvov."variantId" = v."id" AND ov."displayName" ILIKE ('%' || ${q} || '%') ESCAPE CHR(92)
+            )
+            OR EXISTS (
+              SELECT 1
+              FROM "ProductVariantOptionValue" pvov
+              JOIN "VariantOptionValue" ov ON ov."id" = pvov."optionValueId"
+              JOIN "VariantOptionType" ot ON ot."id" = ov."optionTypeId"
+              WHERE pvov."variantId" = v."id" AND ot."name" ILIKE ('%' || ${q} || '%') ESCAPE CHR(92)
+            )
           )
       ) THEN 5
       WHEN EXISTS (
