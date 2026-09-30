@@ -3,6 +3,13 @@
 import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { formatCatalogMoney } from "@/lib/storefront/money";
+import {
+  getDeterministicInitialVariant,
+  isVariantValueSelectable,
+  resolveSelectedVariant,
+  selectionFromVariant,
+  type StorefrontVariantSelection,
+} from "@/lib/storefront/variant-selection";
 import type { StorefrontProductDetail } from "@/lib/storefront/catalog";
 
 const availabilityLabel = {
@@ -12,36 +19,6 @@ const availabilityLabel = {
   UNTRACKED: "Available",
 } as const;
 
-type Selection = Record<string, string>;
-
-function optionValueId(variant: StorefrontProductDetail["variants"][number], optionTypeId: string) {
-  return variant.optionValues.find((item) => item.optionType.id === optionTypeId)?.id;
-}
-
-function matchesSelection(variant: StorefrontProductDetail["variants"][number], selection: Selection) {
-  return Object.entries(selection).every(([optionTypeId, valueId]) => optionValueId(variant, optionTypeId) === valueId);
-}
-
-function isSelectable(product: StorefrontProductDetail, selection: Selection, optionTypeId: string, valueId: string) {
-  const next = { ...selection, [optionTypeId]: valueId };
-  return product.variants.some((variant) => matchesSelection(variant, next) && variant.availability.state !== "OUT_OF_STOCK");
-}
-
-function initialSelection(product: StorefrontProductDetail): Selection {
-  const variant = product.variants.find((item) =>
-    item.availability.state === "IN_STOCK" ||
-    item.availability.state === "LOW_STOCK" ||
-    item.availability.state === "UNTRACKED",
-  ) ?? product.variants[0];
-
-  if (!variant) return {};
-  return Object.fromEntries(
-    product.options
-      .map((option) => [option.id, optionValueId(variant, option.id)])
-      .filter((entry): entry is [string, string] => Boolean(entry[1])),
-  );
-}
-
 export function ProductOptions({
   product,
   onMediaChange,
@@ -49,13 +26,13 @@ export function ProductOptions({
   product: StorefrontProductDetail;
   onMediaChange?: (media: StorefrontProductDetail["media"]) => void;
 }) {
-  const [selection, setSelection] = useState<Selection>(() => initialSelection(product));
+  const [selection, setSelection] = useState<StorefrontVariantSelection>(() =>
+    selectionFromVariant(product, getDeterministicInitialVariant(product)),
+  );
 
   const selectedVariant = useMemo(
-    () => product.variants.find((variant) =>
-      product.options.every((option) => optionValueId(variant, option.id) === selection[option.id]),
-    ) ?? null,
-    [product.options, product.variants, selection],
+    () => resolveSelectedVariant(product, selection),
+    [product, selection],
   );
 
   const effectivePrice = selectedVariant?.price ?? product.price;
@@ -63,14 +40,13 @@ export function ProductOptions({
   const availability = selectedVariant?.availability ?? product.availability;
 
   function selectValue(optionTypeId: string, valueId: string) {
-    if (!isSelectable(product, selection, optionTypeId, valueId)) return;
+    if (!isVariantValueSelectable(product, selection, optionTypeId, valueId)) return;
     const next = { ...selection, [optionTypeId]: valueId };
-    setSelection(next);
+    const variant = resolveSelectedVariant(product, next);
+    if (!variant) return;
 
-    const variant = product.variants.find((item) =>
-      product.options.every((option) => optionValueId(item, option.id) === next[option.id]),
-    );
-    if (variant) onMediaChange?.(variant.media.length ? variant.media : product.media);
+    setSelection(next);
+    onMediaChange?.(variant.media.length ? variant.media : product.media);
   }
 
   return (
@@ -81,7 +57,7 @@ export function ProductOptions({
           <div className="flex flex-wrap gap-2">
             {option.values.map((value) => {
               const selected = selection[option.id] === value.id;
-              const selectable = isSelectable(product, selection, option.id, value.id);
+              const selectable = isVariantValueSelectable(product, selection, option.id, value.id);
               return (
                 <button
                   key={value.id}
