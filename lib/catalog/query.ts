@@ -313,7 +313,7 @@ function mapProduct(product: {
   price: Prisma.Decimal | string | number;
   compareAtPrice: Prisma.Decimal | string | number | null;
   currency: string;
-  status: "ACTIVE";
+  status: "ACTIVE" | "DRAFT" | "ARCHIVED";
   images: Array<{ id: string; url: string; altText: string | null }>;
   variants: Array<{
     id: string;
@@ -393,7 +393,7 @@ function validateVariantMatrix(
     const combination = [...optionTypeIds]
       .sort()
       .map((optionTypeId) => {
-        const value = variant.optionValues.find(({ optionValue }) => optionValue.optionType.id === optionTypeId);
+        const value = variant.optionValues.find((optionValue) => optionValue.optionType.id === optionTypeId);
         return `${optionTypeId}=${value?.id ?? ""}`;
       })
       .join("|");
