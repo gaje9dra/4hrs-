@@ -9,7 +9,7 @@ CREATE TABLE "Cart" (
 );
 
 CREATE TABLE "CartItem" (
-  "id" UUID NOT NULL,
+  "id" UUID NOT NULL DEFAULT gen_random_uuid(),
   "cartId" UUID NOT NULL,
   "productId" UUID NOT NULL,
   "variantId" UUID,
