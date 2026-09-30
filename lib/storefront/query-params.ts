@@ -32,14 +32,6 @@ function invalidParameter(name: string, reason: string): never {
   throw new Error("Invalid catalog query parameter: " + name + " (" + reason + ").");
 }
 
-function safe<T>(parse: () => T): T | undefined {
-  try {
-    return parse();
-  } catch {
-    return undefined;
-  }
-}
-
 function positiveInteger(value: string | undefined, name: string, max: number): number | undefined {
   if (value === undefined || value === "") return undefined;
   if (!/^\d+$/.test(value)) invalidParameter(name, "must be a positive integer");
@@ -77,45 +69,43 @@ function booleanValue(value: string | undefined, name: string): boolean | undefi
 
 export function catalogQueryFromSearchParams(params: StorefrontSearchParams): CatalogQuery {
   const sortValue = first(params.sort);
-  const sort = safe(() =>
+  const sort =
     sortValue === undefined || sortValue === ""
       ? undefined
       : sorts.has(sortValue as CatalogSort)
         ? (sortValue as CatalogSort)
-        : invalidParameter("sort", "unsupported sort"),
-  );
+        : invalidParameter("sort", "unsupported sort");
 
   const rawTags = all(params.tags);
   const tags = rawTags
     .flatMap((value) => value.split(","))
-    .map((tag) => safe(() => slug(tag, "tags")))
+    .map((tag) => slug(tag, "tags"))
     .filter((tag): tag is string => Boolean(tag));
   const uniqueTags = [...new Set(tags)].sort();
-  const boundedTags =
-    uniqueTags.length > MAX_CATALOG_TAGS
-      ? uniqueTags.slice(0, MAX_CATALOG_TAGS)
-      : uniqueTags;
+  if (uniqueTags.length > MAX_CATALOG_TAGS) {
+    invalidParameter("tags", "must contain no more than " + MAX_CATALOG_TAGS + " unique tags");
+  }
+  const boundedTags = uniqueTags;
 
   const tagModeValue = first(params.tagMode);
-  const tagMode = safe(() =>
+  const tagMode =
     tagModeValue === undefined || tagModeValue === ""
       ? undefined
       : tagModeValue === "AND" || tagModeValue === "OR"
         ? tagModeValue
-        : invalidParameter("tagMode", "must be AND or OR"),
-  );
+        : invalidParameter("tagMode", "must be AND or OR");
 
   return {
-    category: safe(() => slug(first(params.category), "category")),
-    collection: safe(() => slug(first(params.collection), "collection")),
+    category: slug(first(params.category), "category"),
+    collection: slug(first(params.collection), "collection"),
     tags: boundedTags.length ? boundedTags : undefined,
     tagMode: boundedTags.length ? (tagMode ?? "AND") : "AND",
-    minPrice: safe(() => money(first(params.minPrice), "minPrice")),
-    maxPrice: safe(() => money(first(params.maxPrice), "maxPrice")),
-    inStock: safe(() => booleanValue(first(params.inStock), "inStock")),
+    minPrice: money(first(params.minPrice), "minPrice"),
+    maxPrice: money(first(params.maxPrice), "maxPrice"),
+    inStock: booleanValue(first(params.inStock), "inStock"),
     sort,
-    page: safe(() => positiveInteger(first(params.page), "page", MAX_CATALOG_PAGE)),
-    pageSize: safe(() => positiveInteger(first(params.pageSize), "pageSize", MAX_CATALOG_PAGE_SIZE)),
+    page: positiveInteger(first(params.page), "page", MAX_CATALOG_PAGE),
+    pageSize: positiveInteger(first(params.pageSize), "pageSize", MAX_CATALOG_PAGE_SIZE),
   };
 }
 
