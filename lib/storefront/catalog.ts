@@ -237,3 +237,17 @@ export function getStorefrontProductSeoInput(product: StorefrontProductDetail) {
     seoDescription: product.seoDescription,
   };
 }
+
+
+export async function getStorefrontRelatedProducts(product: StorefrontProductDetail): Promise<StorefrontProductCard[]> {
+  const collection = [...product.collections].sort((a, b) => a.slug.localeCompare(b.slug))[0];
+  const category = [...product.categories].sort((a, b) => a.slug.localeCompare(b.slug))[0];
+
+  if (!collection && !category) return [];
+
+  const result = collection
+    ? await getStorefrontCollectionProducts(collection.slug, { pageSize: 8, sort: "merchandising" })
+    : await getStorefrontCategoryProducts(category!.slug, { pageSize: 8, sort: "merchandising" });
+
+  return result.items.filter((item) => item.id !== product.id).slice(0, 4);
+}
