@@ -122,7 +122,7 @@ export class DatabaseSearchAdapter implements CatalogSearchProvider {
   }
 }
 
-function normalizeSearchTerm(value: string): string {
+export function normalizeCatalogSearchQueryParameter(value: string): string {
   const normalized = value
     .replace(/[\u0000-\u001F\u007F]/g, " ")
     .trim()
@@ -142,7 +142,11 @@ function normalizeSearchTerm(value: string): string {
     );
   }
 
-  return normalized.replace(/([\\%_])/g, "\\$1");
+  return normalized;
+}
+
+function normalizeSearchTerm(value: string): string {
+  return normalizeCatalogSearchQueryParameter(value).replace(/([\\%_])/g, "\\$1");
 }
 
 function toSearchItem(
