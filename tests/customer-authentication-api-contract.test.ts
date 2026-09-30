@@ -23,10 +23,11 @@ test("authentication API and customer UI routes are separated", () => {
     "app/(storefront)/forgot-password",
     "app/(storefront)/reset-password",
     "app/(storefront)/verify-email",
-    "app/(storefront)/account",
   ]) {
     assert.equal(existsSync(deferredRoute), false, deferredRoute + " must remain deferred");
   }
+
+  assert.equal(existsSync("app/(storefront)/account"), true, "account surface is implemented in Phase 9.5");
 });
 
 test("authentication route source never accepts a customer ID as an authentication credential", () => {
