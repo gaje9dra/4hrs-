@@ -78,3 +78,11 @@ test("listing UI remains provider-neutral and does not expose internal product f
   const listing = read("components/storefront/catalog-listing.tsx") + read("components/storefront/catalog-filters.tsx");
   assert.doesNotMatch(listing, /qikink|printful|printrove|printify|provider|sku|onHand|reserved|audit/i);
 });
+
+test("public taxonomy loaders reject archived categories and collections", () => {
+  const source = read("lib/storefront/catalog.ts");
+  assert.match(source, /getStorefrontCategory[\s\S]*category\.status !== "ACTIVE"/);
+  assert.match(source, /getStorefrontCollection[\s\S]*collection\.status !== "ACTIVE"/);
+  assert.match(source, /CATEGORY_NOT_FOUND/);
+  assert.match(source, /COLLECTION_NOT_FOUND/);
+});
