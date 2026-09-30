@@ -64,6 +64,7 @@ function createFakeRepository(): CustomerRepository {
     async findCredentialByCustomerId(customerId: string) { return credentials.get(customerId) ?? null; },
     async updateCredentialHash(customerId: string, passwordHash: string) {
       const credential = credentials.get(customerId);
+      if (!credential) throw new Error("credential not found");
       credential.passwordHash = passwordHash;
       return credential;
     },
