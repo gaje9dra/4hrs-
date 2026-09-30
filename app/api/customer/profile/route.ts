@@ -1,5 +1,5 @@
 import { requireCurrentCustomer } from "@/lib/auth/context";
-import { AuthenticationError, isAuthenticationError } from "@/lib/auth/errors";
+import { isAuthenticationError } from "@/lib/auth/errors";
 import { authJson } from "@/lib/auth/http";
 import { CustomerIdentityError } from "@/lib/customer/errors";
 import { createCustomerProfileService } from "@/lib/customer/service";
