@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { StorefrontProductDetail } from "@/lib/storefront/catalog";
 import { Accordion, AccordionItem } from "@/components/ui/accordion";
+import { categoryPath, collectionPath } from "@/lib/catalog/routes";
 
 function descriptionParagraphs(description: string) {
   return description
@@ -38,7 +39,7 @@ export function ProductDetailSections({ product }: { product: StorefrontProductD
               {product.categories.map((category) => (
                 <Link
                   key={category.id}
-                  href={"/categories/" + category.slug}
+                  href={categoryPath(category)}
                   className="border-2 border-border bg-white px-3 py-2 text-sm font-800 uppercase motion-link"
                 >
                   {category.name}
@@ -54,7 +55,7 @@ export function ProductDetailSections({ product }: { product: StorefrontProductD
               {product.collections.map((collection) => (
                 <Link
                   key={collection.id}
-                  href={"/collections/" + collection.slug}
+                  href={collectionPath(collection)}
                   className="border-2 border-border bg-primary-yellow px-3 py-2 text-sm font-800 uppercase motion-link"
                 >
                   {collection.name}
