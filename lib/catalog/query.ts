@@ -52,11 +52,9 @@ export type CatalogAvailability = {
 };
 
 export type CatalogListItem = {
-  id: string;
   title: string;
   slug: string;
   primaryImage: {
-    id: string;
     url: string;
     altText: string | null;
   } | null;
@@ -354,11 +352,10 @@ function mapProduct(product: {
   );
 
   return {
-    id: product.id,
     title: product.title,
     slug: product.slug,
     primaryImage: product.images[0]
-      ? { id: product.images[0].id, url: product.images[0].url, altText: product.images[0].altText }
+      ? { url: product.images[0].url, altText: product.images[0].altText }
       : null,
     price: cheapest?.effectivePrice ?? formatMoney(product.price)!,
     compareAtPrice: cheapest?.compareAtPrice ?? formatMoney(product.compareAtPrice),
