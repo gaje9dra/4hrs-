@@ -25,11 +25,11 @@ export function AccordionItem({ title, children, defaultOpen = false, disabled =
           disabled={disabled}
           aria-expanded={open}
           aria-controls={panelId}
-          className="motion-link flex min-h-14 w-full items-center justify-between gap-4 px-4 py-4 text-left text-base font-900 uppercase no-underline disabled:cursor-not-allowed disabled:bg-muted disabled:hover:bg-muted disabled:hover:text-foreground"
+          className="motion-link flex min-h-14 w-full items-center justify-between gap-4 px-4 py-4 text-left text-base font-900 uppercase no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-blue disabled:cursor-not-allowed disabled:bg-muted disabled:hover:bg-muted disabled:hover:text-foreground motion-reduce:transition-none"
           onClick={() => setOpen((value) => !value)}
         >
           <span>{title}</span>
-          <ChevronDown className={`shrink-0 transition-transform duration-(--motion-standard) ease-(--motion-ease) ${open ? 'rotate-180' : ''}`} size={22} strokeWidth={3} aria-hidden="true" />
+          <ChevronDown className={`shrink-0 transition-transform duration-(--motion-standard) ease-(--motion-ease) motion-reduce:transition-none ${open ? 'rotate-180' : ''}`} size={22} strokeWidth={3} aria-hidden="true" />
         </button>
       </h3>
       <div id={panelId} role="region" aria-labelledby={buttonId} hidden={!open} className="border-t-2 border-border px-4 py-4">
