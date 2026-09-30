@@ -21,11 +21,12 @@ export function toCustomerDto(customer: {
   emailVerifiedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
+  displayName?: string | null;
 }): CustomerDto {
   return {
     id: customer.id,
     email: customer.email,
-    displayName: "displayName" in customer ? (customer.displayName ?? null) : null,
+    displayName: customer.displayName ?? null,
     status: customer.status,
     emailVerifiedAt: customer.emailVerifiedAt?.toISOString() ?? null,
     createdAt: customer.createdAt.toISOString(),
