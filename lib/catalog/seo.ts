@@ -154,10 +154,7 @@ export function getCollectionSeoMetadata(collection: CollectionSeoEntity): Catal
 
   return {
     title: seoTitle(collection.seoTitle, collection.name),
-    description: seoDescription(
-      collection.seoDescription,
-      collection.description ?? "Explore " + collection.name + ".",
-    ),
+    description: seoDescription(collection.seoDescription, collection.description ?? ""),
     canonicalUrl: collectionCanonicalUrl(collection),
     indexability,
   };
