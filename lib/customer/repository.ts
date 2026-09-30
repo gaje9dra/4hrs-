@@ -41,6 +41,13 @@ export function createCustomerRepository(client?: CustomerRepositoryClient) {
     updateCustomerStatus(customerId: string, status: "ACTIVE" | "DISABLED" | "SUSPENDED" | "PENDING_VERIFICATION") {
       return database.customer.update({ where: { id: customerId }, data: { status } });
     },
+    
+    updateCustomerProfile(customerId: string, input: { displayName: string | null }) {
+      return database.customer.update({
+        where: { id: customerId },
+        data: { displayName: input.displayName },
+      });
+    },
 
     createCredential(input: { customerId: string; passwordHash: string }) {
       return database.customerCredential.create({
