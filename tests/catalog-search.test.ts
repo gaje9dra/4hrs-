@@ -112,9 +112,11 @@ test("normalizes whitespace, casing, filters, pagination, and literal LIKE wildc
       page: 2,
       pageSize: 12,
     },
+    ranking: "catalog",
   });
   assert.equal(result.appliedQuery.query, "oversized\\_\\%");
   assert.equal(result.appliedQuery.mode, "PUBLIC");
+  assert.equal(result.appliedQuery.ranking, "catalog");
 });
 
 test("rejects empty, overlong, and invalid search input before provider execution", async () => {
@@ -277,6 +279,7 @@ test("search + filters compose in a single normalized request", async () => {
       page: 1,
       pageSize: 24,
     },
+    ranking: "relevance",
   });
 });
 
@@ -490,4 +493,21 @@ test("search rejects control-heavy and malformed query input before repository e
   const service = createCatalogSearchService({ provider, lookup });
   await service.searchPublic({ query: "\u0000\u0001   " });
   assert.equal(called, false);
+});
+
+test("default search uses relevance ranking while explicit catalog sort remains authoritative", async () => {
+  const requests: Array<{ ranking: string; sort: string }> = [];
+  const provider: CatalogSearchProvider = {
+    async search(request) {
+      requests.push({ ranking: request.ranking, sort: request.catalog.sort });
+      return { items: [], total: 0, limit: 24, offset: 0, hasNextPage: false };
+    },
+  };
+  const service = createCatalogSearchService({ provider, lookup });
+  await service.searchPublic({ query: "hoodie" });
+  await service.searchPublic({ query: "hoodie", sort: "price_asc" });
+  assert.deepEqual(requests, [
+    { ranking: "relevance", sort: "newest" },
+    { ranking: "catalog", sort: "price_asc" },
+  ]);
 });
