@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { StorefrontProductCard, StorefrontProductDetail } from "@/lib/storefront/catalog";
 import { Container } from "@/components/layout/container";
+import { categoryPath, collectionPath } from "@/lib/catalog/routes";
 import { ProductDetailInteractive } from "@/components/storefront/product-detail-interactive";
 import { ProductGrid } from "@/components/storefront/product-grid";
 import { ProductDetailSections } from "@/components/storefront/product-detail-sections";
@@ -25,13 +26,13 @@ export function ProductDetail({
           {collectionContext ? (
             <>
               <li aria-hidden="true">/</li>
-              <li><Link href={"/collections/" + collectionContext.slug} className="motion-link">{collectionContext.name}</Link></li>
+              <li><Link href={collectionPath(collectionContext)} className="motion-link">{collectionContext.name}</Link></li>
             </>
           ) : null}
           {categoryContext ? (
             <>
               <li aria-hidden="true">/</li>
-              <li><Link href={"/categories/" + categoryContext.slug} className="motion-link">{categoryContext.name}</Link></li>
+              <li><Link href={categoryPath(categoryContext)} className="motion-link">{categoryContext.name}</Link></li>
             </>
           ) : null}
           <li aria-hidden="true">/</li>
