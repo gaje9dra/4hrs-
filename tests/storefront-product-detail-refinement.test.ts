@@ -27,6 +27,7 @@ test("product hierarchy contains breadcrumb, H1, description, price, availabilit
   assert.match(options, /formatCatalogMoney\(effectivePrice/);
   assert.match(options, /compareAtPrice/);
   assert.match(interactive, /availabilityLabel/);
+  assert.match(interactive, /aria-label=\{product\.options\.length \? undefined : "Product pricing and availability"\}/);
   assert.match(options, /Purchase actions coming soon/);
 });
 
