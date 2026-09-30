@@ -53,3 +53,13 @@ test("filter URLs preserve search context while resetting pagination", () => {
     "/search?q=oversized+tee&tags=streetwear",
   );
 });
+
+
+test("catalog filter URLs remain bounded to the shared tag contract", () => {
+  assert.throws(
+    () => catalogQueryFromSearchParams({
+      tags: Array.from({ length: 21 }, (_, index) => "tag-" + index),
+    }),
+    /Invalid catalog query parameter: tags/,
+  );
+});
