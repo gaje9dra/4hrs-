@@ -7,7 +7,7 @@ import { Container } from "@/components/layout/container";
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
 import { IconButton } from "@/components/ui/icon-button";
-import type { CartDto } from "@/lib/cart/api";
+import type { CartDto } from "@/lib/cart/contracts";
 
 type ApiError = { error?: { code?: string; message?: string } };
 
