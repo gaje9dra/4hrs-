@@ -11,8 +11,8 @@ export function ProductDetail({
   product: StorefrontProductDetail;
   relatedProducts?: StorefrontProductCard[];
 }) {
-  const collectionContext = product.collections[0];
-  const categoryContext = product.categories[0];
+  const collectionContext = [...product.collections].sort((a, b) => a.slug.localeCompare(b.slug))[0];
+  const categoryContext = [...product.categories].sort((a, b) => a.slug.localeCompare(b.slug))[0];
   const context = collectionContext ?? categoryContext;
 
   return (
