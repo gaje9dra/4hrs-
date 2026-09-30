@@ -296,10 +296,11 @@ export function createCatalogSearchService(options: {
         }
 
         if (!normalized) throw new Error("Normalized search query is unavailable.");
-        const result = await provider.search(normalized);
-        const totalPages = result.total === 0 ? 0 : Math.min(Math.ceil(result.total / normalized.catalog.pageSize), 10000);
-        const isOutOfRange = result.total > 0 && normalized.catalog.page > totalPages;
-        const items = result.items.map((item) => toSearchItem(item, normalized.mode));
+        const current = normalized;
+        const result = await provider.search(current);
+        const totalPages = result.total === 0 ? 0 : Math.min(Math.ceil(result.total / current.catalog.pageSize), 10000);
+        const isOutOfRange = result.total > 0 && current.catalog.page > totalPages;
+        const items = result.items.map((item) => toSearchItem(item, current.mode));
         const durationMs = Date.now() - startedAt;
         if (durationMs >= CATALOG_SEARCH_SLOW_THRESHOLD_MS) {
           logCatalogObservation({
@@ -307,20 +308,20 @@ export function createCatalogSearchService(options: {
             operation: "search",
             classification: "slow_search",
             durationMs,
-            query: normalized.catalog,
+            query: current.catalog,
           });
         }
         return {
           items,
           pagination: {
-            page: normalized.catalog.page,
-            pageSize: normalized.catalog.pageSize,
+            page: current.catalog.page,
+            pageSize: current.catalog.pageSize,
             total: result.total,
             totalPages,
-            hasNextPage: !isOutOfRange && normalized.catalog.page < totalPages && result.hasNextPage,
+            hasNextPage: !isOutOfRange && current.catalog.page < totalPages && result.hasNextPage,
             isOutOfRange,
           },
-          appliedQuery: normalized,
+          appliedQuery: current,
         };
       } catch (error) {
         if (error instanceof CatalogServiceError) {
