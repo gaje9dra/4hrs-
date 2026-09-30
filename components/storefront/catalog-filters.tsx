@@ -16,7 +16,7 @@ const sortOptions: Array<{ value: CatalogSort; label: string }> = [
 const contextualSort = [...sortOptions, { value: "merchandising" as const, label: "Curated order" }];
 
 export function CatalogFilters({
-  pathname, appliedQuery, categories, collections, tags, fixedCategory, fixedCollection, preservedParams = {},
+  pathname, appliedQuery, categories, collections, tags, fixedCategory, fixedCollection, preservedParams = {}, searchRelevance = false,
 }: {
   pathname: string;
   appliedQuery: CatalogAppliedQuery;
@@ -26,6 +26,7 @@ export function CatalogFilters({
   fixedCategory?: string;
   fixedCollection?: string;
   preservedParams?: { q?: string | string[] };
+  searchRelevance?: boolean;
 }) {
   const options = fixedCategory || fixedCollection ? contextualSort : sortOptions;
   const preservedQuery = preservedParams.q ? (Array.isArray(preservedParams.q) ? preservedParams.q[0] : preservedParams.q) : undefined;
@@ -112,7 +113,8 @@ export function CatalogFilters({
 
             <label className="grid gap-2 text-xs font-900 uppercase tracking-widest">
               Sort
-              <select name="sort" defaultValue={appliedQuery.sort} className="min-h-12 border-2 border-border bg-white px-3 text-sm font-700 focus:border-primary-blue focus:outline-none focus:ring-2 focus:ring-primary-blue">
+              <select name="sort" defaultValue={searchRelevance ? "" : appliedQuery.sort} className="min-h-12 border-2 border-border bg-white px-3 text-sm font-700 focus:border-primary-blue focus:outline-none focus:ring-2 focus:ring-primary-blue">
+                {searchRelevance ? <option value="">Relevance</option> : null}
                 {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
               </select>
             </label>
