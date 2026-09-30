@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { CatalogAppliedQuery, CatalogSort } from "@/lib/catalog/query";
-import type { StorefrontCategory, StorefrontCollection, StorefrontTag } from "@/lib/storefront/catalog";
+import type { StorefrontCategoryOption, StorefrontCollectionOption, StorefrontTag } from "@/lib/storefront/catalog";
 
 const sortOptions: Array<{ value: CatalogSort; label: string }> = [
   { value: "newest", label: "Newest" },
@@ -19,8 +19,8 @@ export function CatalogFilters({
 }: {
   pathname: string;
   appliedQuery: CatalogAppliedQuery;
-  categories: Array<Pick<StorefrontCategory, "id" | "name" | "slug">>;
-  collections: Array<Pick<StorefrontCollection, "id" | "name" | "slug">>;
+  categories: StorefrontCategoryOption[];
+  collections: StorefrontCollectionOption[];
   tags: StorefrontTag[];
   fixedCategory?: string;
   fixedCollection?: string;
@@ -40,7 +40,7 @@ export function CatalogFilters({
               Category
               <select name="category" defaultValue={appliedQuery.category ?? ""} className="min-h-12 border-2 border-border bg-white px-3 text-sm font-700 focus:border-primary-blue focus:outline-none">
                 <option value="">All categories</option>
-                {categories.map((category) => <option key={category.id} value={category.slug}>{category.name}</option>)}
+                {categories.map((category) => <option key={category.slug} value={category.slug}>{category.name}</option>)}
               </select>
             </label>
           ) : null}
@@ -50,7 +50,7 @@ export function CatalogFilters({
               Collection
               <select name="collection" defaultValue={appliedQuery.collection ?? ""} className="min-h-12 border-2 border-border bg-white px-3 text-sm font-700 focus:border-primary-blue focus:outline-none">
                 <option value="">All collections</option>
-                {collections.map((collection) => <option key={collection.id} value={collection.slug}>{collection.name}</option>)}
+                {collections.map((collection) => <option key={collection.slug} value={collection.slug}>{collection.name}</option>)}
               </select>
             </label>
           ) : null}
@@ -65,7 +65,7 @@ export function CatalogFilters({
           <label className="grid gap-2 text-xs font-900 uppercase tracking-widest">
             Tags
             <select name="tags" multiple defaultValue={appliedQuery.tags} aria-describedby="catalog-tags-help" className="min-h-12 border-2 border-border bg-white px-3 py-2 text-sm font-700 focus:border-primary-blue focus:outline-none">
-              {tags.map((tag) => <option key={tag.id} value={tag.slug}>{tag.name}</option>)}
+              {tags.map((tag) => <option key={tag.slug} value={tag.slug}>{tag.name}</option>)}
             </select>
             <span id="catalog-tags-help" className="font-500 normal-case tracking-normal">Use Ctrl/Cmd to select multiple tags.</span>
           </label>
