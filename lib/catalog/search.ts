@@ -150,82 +150,54 @@ function normalizeSearchTerm(value: string): string {
   return normalizeCatalogSearchQueryParameter(value).replace(/([\\%_])/g, "\\$1");
 }
 
-function toSearchItem(
-  product: PublicCatalogProductRecord,
-  mode: CatalogSearchMode,
-): CatalogSearchResultItem {
-  const variants = product.variants.map((variant) => {
-    const effectivePrice = variant.price ?? product.price;
-    const availableQuantity = variant.inventory?.trackingEnabled
-      ? variant.inventory.onHand - variant.inventory.reserved
-      : null;
-    const availability =
-      !variant.inventory
-        ? { state: "UNTRACKED" as const, availableQuantity: null }
-        : {
-            state: getAvailabilityState(variant.inventory),
-            availableQuantity,
-          };
-
-    return {
-      id: variant.id,
-      sku: variant.sku,
-      displayName: variant.displayName,
-      size: variant.size,
-      color: variant.color,
-      optionValues: variant.optionValues.map(({ optionValue }) => ({
-        id: optionValue.id,
-        displayName: optionValue.displayName,
-        normalizedValue: optionValue.normalizedValue,
-        optionType: {
-          id: optionValue.optionType.id,
-          name: optionValue.optionType.name,
-          normalizedName: optionValue.optionType.normalizedName,
-        },
-      })),
-      effectivePrice: formatMoney(effectivePrice)!,
+function toSearchItem(product: PublicCatalogProductRecord | PublicCatalogProductListRecord, mode: CatalogSearchMode): CatalogSearchResultItem {
+  if (mode === "PUBLIC") {
+    const variants = product.variants.map((variant) => ({
+      effectivePrice: formatMoney(variant.price ?? product.price)!,
       compareAtPrice: formatMoney(variant.compareAtPrice) ?? formatMoney(product.compareAtPrice),
+      availability: variant.inventory
+        ? { state: getAvailabilityState(variant.inventory), availableQuantity: variant.inventory.trackingEnabled ? variant.inventory.onHand - variant.inventory.reserved : null }
+        : { state: "UNTRACKED" as const, availableQuantity: null },
+    }));
+    const price = variants.reduce((current, variant) => current === null || new Prisma.Decimal(variant.effectivePrice).lt(new Prisma.Decimal(current.effectivePrice)) ? variant : current, null as (typeof variants)[number] | null);
+    const availableVariant = variants.find((variant) => variant.availability.state === "IN_STOCK" || variant.availability.state === "LOW_STOCK" || variant.availability.state === "UNTRACKED");
+    return {
+      title: product.title, slug: product.slug,
+      primaryImage: product.images[0] ? { url: product.images[0].url, altText: product.images[0].altText } : null,
+      price: price?.effectivePrice ?? formatMoney(product.price)!,
+      compareAtPrice: price?.compareAtPrice ?? formatMoney(product.compareAtPrice),
+      currency: product.currency,
+      availability: availableVariant?.availability ?? { state: "OUT_OF_STOCK", availableQuantity: 0 },
+    };
+  }
+  const fullProduct = product as PublicCatalogProductRecord;
+  const variants = fullProduct.variants.map((variant) => {
+    const effectivePrice = variant.price ?? fullProduct.price;
+    const availableQuantity = variant.inventory?.trackingEnabled ? variant.inventory.onHand - variant.inventory.reserved : null;
+    const availability = !variant.inventory ? { state: "UNTRACKED" as const, availableQuantity: null } : { state: getAvailabilityState(variant.inventory), availableQuantity };
+    return {
+      id: variant.id, sku: variant.sku, displayName: variant.displayName, size: variant.size, color: variant.color,
+      optionValues: variant.optionValues.map(({ optionValue }) => ({ id: optionValue.id, displayName: optionValue.displayName, normalizedValue: optionValue.normalizedValue, optionType: { id: optionValue.optionType.id, name: optionValue.optionType.name, normalizedName: optionValue.optionType.normalizedName } })),
+      effectivePrice: formatMoney(effectivePrice)!,
+      compareAtPrice: formatMoney(variant.compareAtPrice) ?? formatMoney(fullProduct.compareAtPrice),
       availability,
     };
   });
-
-  const price = variants.reduce(
-    (current, variant) =>
-      current === null ||
-      new Prisma.Decimal(variant.effectivePrice).lt(new Prisma.Decimal(current.effectivePrice))
-        ? variant
-        : current,
-    null as (typeof variants)[number] | null,
-  );
-
-  const availableVariant = variants.find((variant) =>
-    variant.availability.state === "IN_STOCK" ||
-    variant.availability.state === "LOW_STOCK" ||
-    variant.availability.state === "UNTRACKED",
-  );
-
+  const price = variants.reduce((current, variant) => current === null || new Prisma.Decimal(variant.effectivePrice).lt(new Prisma.Decimal(current.effectivePrice)) ? variant : current, null as (typeof variants)[number] | null);
+  const availableVariant = variants.find((variant) => variant.availability.state === "IN_STOCK" || variant.availability.state === "LOW_STOCK" || variant.availability.state === "UNTRACKED");
   return {
-    id: product.id,
-    title: product.title,
-    slug: product.slug,
-    primaryImage: product.images[0]
-      ? {
-          id: product.images[0].id,
-          url: product.images[0].url,
-          altText: product.images[0].altText,
-        }
-      : null,
-    price: price?.effectivePrice ?? formatMoney(product.price)!,
-    compareAtPrice: price?.compareAtPrice ?? formatMoney(product.compareAtPrice),
-    currency: product.currency,
+    id: fullProduct.id, title: fullProduct.title, slug: fullProduct.slug,
+    primaryImage: fullProduct.images[0] ? { id: fullProduct.images[0].id, url: fullProduct.images[0].url, altText: fullProduct.images[0].altText } : null,
+    price: price?.effectivePrice ?? formatMoney(fullProduct.price)!,
+    compareAtPrice: price?.compareAtPrice ?? formatMoney(fullProduct.compareAtPrice),
+    currency: fullProduct.currency,
     availability: availableVariant?.availability ?? { state: "OUT_OF_STOCK", availableQuantity: 0 },
-    categories: product.categories.map(({ category }) => category),
-    collections: product.collections.map(({ collection }) => collection),
-    tags: product.tags.map(({ tag }) => tag),
-    ...(mode === "INTERNAL" ? { internalVariants: variants } : {}),
+    categories: fullProduct.categories.map(({ category }) => category),
+    collections: fullProduct.collections.map(({ collection }) => collection),
+    tags: fullProduct.tags.map(({ tag }) => tag),
+    internalVariants: variants,
   };
 }
-
 function getAvailabilityState(inventory: {
   trackingEnabled: boolean;
   onHand: number;
