@@ -236,14 +236,15 @@ The current implementation:
 - uses database-side filtering
 - uses database-side ordering
 - uses database-side pagination
-- selects the established public catalog list projection
+- selects the established public catalog list projection for PUBLIC search
+- uses the full projection only for INTERNAL search
 - avoids application-side result filtering
 - executes item retrieval and total count concurrently
 - does not introduce N+1 product fetches
 
 **REQUIRES RUNTIME VALIDATION**
 
-The search predicates include multiple case-insensitive substring and relational predicates. Without a live database query plan and production dataset, scan cost and index effectiveness cannot be truthfully characterized.
+The search predicates include multiple case-insensitive substring and relational predicates. Without a live database query plan and production dataset, scan cost and index effectiveness cannot be truthfully characterized. PUBLIC reference validation now uses requested tag slugs instead of loading the entire tag table, and category/collection/tag validation runs concurrently.
 
 No speculative search index or external search engine was introduced.
 
@@ -289,16 +290,17 @@ Actual keyboard traversal, touch-target measurements, contrast rendering, and re
 
 ## 17. Changes made
 
-Only search-foundation files were changed:
+The Phase 6.1 implementation changes are limited to search-foundation code, tests, and documentation:
 
 - `lib/catalog/query.ts` — exposed the canonical catalog query normalization function
-- `lib/catalog/search.ts` — reused canonical catalog normalization, added bounded pagination metadata, sanitized public search DTOs, added search observability, and centralized search `q` normalization
-- `lib/catalog/repository.ts` — restricted public text matching to active category/collection relations and active variants
+- `lib/catalog/search.ts` — hardened PUBLIC/INTERNAL projection handling, kept the public DTO minimal, and changed reference validation to batched requested-tag lookup plus concurrent category/collection/tag validation
+- `lib/catalog/repository.ts` — aligned search SELECT projections with PUBLIC/INTERNAL mode so the PUBLIC mapper consumes only the lightweight listing projection
 - `lib/catalog/observability.ts` — added the search catalog surface
 - `lib/storefront/query-params.ts` — canonicalized bounded search `q` URL state
 - `app/(storefront)/search/page.tsx` — attributed filter diagnostics to search and distinguished invalid query UX
 - `tests/catalog-search.test.ts` — strengthened query, visibility, DTO, pagination, and observability coverage
 - `tests/storefront-search.test.ts` — added canonical search URL normalization coverage
+- `tests/catalog-search.test.ts` — added lightweight-public-projection and batched-reference-validation regressions
 - `docs/phase-6-1-production-search-architecture-audit.md` — this audit
 
 No cart, checkout, payments, orders, shipping, authentication, reviews, fulfillment provider, external search engine, or storefront redesign changes were made.
@@ -344,6 +346,6 @@ Source-level regression coverage was added, but runtime execution remains a rele
 
 **OUT OF SCOPE:** product-detail commerce functionality, external search infrastructure, provider integrations, and storefront redesign.
 
-**REMAINING BLOCKER:** mandatory lint/typecheck/full-test/build and browser smoke validation cannot be executed or verified in the available environment.
+**REMAINING BLOCKER:** mandatory lint/typecheck/full-test/build and browser smoke validation cannot be executed or verified in the available environment. The GitHub workflow lookup for the current Phase 6.1 head reports no workflow runs.
 
 **Decision: NOT READY FOR PHASE 6.2**
