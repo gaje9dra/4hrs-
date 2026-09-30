@@ -110,7 +110,13 @@ export function ProductOptions({
           aria-describedby="purchase-intent-status"
           className="mt-3 min-h-12 w-full border-2 border-white bg-white px-5 py-3 text-base font-900 uppercase text-primary-red opacity-100"
         >
-          {purchaseIntentState === "READY" ? "Ready for cart" : "Purchase unavailable"}
+          {purchaseIntentState === "READY"
+  ? "Ready for cart"
+  : purchaseIntentState === "MISSING_REQUIRED_SELECTION"
+    ? "Select options"
+    : purchaseIntentState === "INVALID_SELECTION"
+      ? "Invalid selection"
+      : "Unavailable"}
         </button>
         <p id="purchase-intent-status" className="mt-3 text-sm font-700">
           {purchaseIntentState === "MISSING_REQUIRED_SELECTION"
