@@ -123,6 +123,19 @@ test("product cards remain reusable and use nested heading level", () => {
   assert.doesNotMatch(source, /<h2 className="text-xl/);
 });
 
+test("homepage visual polish keeps shared presentation primitives and bounded media", () => {
+  const homepage = read("components/storefront/homepage.tsx");
+  const card = read("components/storefront/product-card.tsx");
+  assert.match(homepage, /<Card key=\{category\.id\}/);
+  assert.match(homepage, /shadow-hard-(sm|md|lg)/);
+  assert.match(homepage, /bg-primary-(red|blue|yellow)/);
+  assert.doesNotMatch(homepage, /bg-gradient|backdrop-blur|bg-white\/\d|shadow-(sm|md|lg)(?!-hard)/);
+  assert.doesNotMatch(homepage, /rounded-(sm|md|lg|xl|2xl|3xl)/);
+  assert.match(homepage, /overflow-hidden/);
+  assert.match(card, /loading="lazy"/);
+  assert.match(card, /max-width: 1535px/);
+});
+
 test("homepage does not introduce unsupported benefits or provider-specific commerce claims", () => {
   const source = read("components/storefront/homepage.tsx");
   assert.doesNotMatch(source, /free shipping|lifetime warranty|fastest delivery|100% satisfaction|premium quality/i);
