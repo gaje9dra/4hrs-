@@ -219,6 +219,16 @@ function formatMoney(value: Prisma.Decimal | string | number | null | undefined)
   return new Prisma.Decimal(String(value)).toFixed(2);
 }
 
+function formatValidCompareAtPrice(
+  sellingPrice: Prisma.Decimal | string | number,
+  compareAtPrice: Prisma.Decimal | string | number | null | undefined,
+): string | null {
+  if (compareAtPrice === null || compareAtPrice === undefined) return null;
+  const selling = new Prisma.Decimal(String(sellingPrice));
+  const compareAt = new Prisma.Decimal(String(compareAtPrice));
+  return compareAt.gte(selling) ? compareAt.toFixed(2) : null;
+}
+
 function normalizePage(value: number | undefined): number {
   if (value === undefined) return 1;
   if (!Number.isInteger(value) || value < 1) {
@@ -416,7 +426,9 @@ export function createCatalogQueryService(customRepository: Partial<QueryReposit
           size: variant.size,
           color: variant.color,
           price: formatMoney(effectivePrice)!,
-          compareAtPrice: formatMoney(variant.compareAtPrice) ?? formatMoney(product.compareAtPrice),
+          compareAtPrice:
+            formatValidCompareAtPrice(effectivePrice, variant.compareAtPrice) ??
+            formatValidCompareAtPrice(effectivePrice, product.compareAtPrice),
           availability: availabilityFromVariant(variant),
           media: variant.images,
           optionValues: variant.optionValues.map(({ optionValue }) => ({
@@ -454,7 +466,9 @@ export function createCatalogQueryService(customRepository: Partial<QueryReposit
         description: product.description,
         shortDescription: product.shortDescription,
         price: cheapestVariant?.price ?? formatMoney(product.price)!,
-        compareAtPrice: cheapestVariant?.compareAtPrice ?? formatMoney(product.compareAtPrice),
+        compareAtPrice:
+          cheapestVariant?.compareAtPrice ??
+          formatValidCompareAtPrice(product.price, product.compareAtPrice),
         currency: product.currency,
         status: "ACTIVE",
         seoTitle: product.seoTitle,
