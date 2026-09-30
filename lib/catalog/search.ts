@@ -1,7 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { CatalogServiceError } from "@/lib/catalog/errors";
 import { logCatalogObservation } from "@/lib/catalog/observability";
-import { validateMoney } from "@/lib/catalog/validation";
 import * as catalogRepository from "@/lib/catalog/repository";
 import {
   type CatalogAppliedQuery,
@@ -280,10 +279,11 @@ export function createCatalogSearchService(options: {
 
   return {
     async search(input: CatalogSearchQuery): Promise<CatalogSearchResult> {
-      const normalized = normalizeCatalogSearchQuery(input);
       const startedAt = Date.now();
+      let normalized: NormalizedCatalogSearchQuery | undefined;
 
       try {
+        normalized = normalizeCatalogSearchQuery(input);
         if (normalized.catalog.category) {
           const category = await lookup.getCategoryBySlug(normalized.catalog.category) as { status?: string } | null;
           if (!category || category.status === "ARCHIVED" || category.status === "DRAFT") {
@@ -324,11 +324,23 @@ export function createCatalogSearchService(options: {
           if (error.code === "CATEGORY_NOT_FOUND" || error.code === "COLLECTION_NOT_FOUND" || error.code === "TAG_NOT_FOUND") {
             logCatalogObservation({ surface: "search", operation: "search", classification: "not_found", durationMs: Date.now() - startedAt, query: normalized.catalog });
           } else if (error.code === "INVALID_QUERY" || error.code === "INVALID_PAGE" || error.code === "INVALID_SORT" || error.code === "INVALID_PRICE_RANGE") {
-            logCatalogObservation({ surface: "search", operation: "search", classification: "invalid_query", durationMs: Date.now() - startedAt, query: normalized.catalog });
+            logCatalogObservation({
+              surface: "search",
+              operation: "search",
+              classification: "invalid_query",
+              durationMs: Date.now() - startedAt,
+              query: normalized?.catalog,
+            });
           }
           throw error;
         }
-        logCatalogObservation({ surface: "search", operation: "search", classification: "database_failure", durationMs: Date.now() - startedAt, query: normalized.catalog });
+        logCatalogObservation({
+          surface: "search",
+          operation: "search",
+          classification: "database_failure",
+          durationMs: Date.now() - startedAt,
+          query: normalized?.catalog,
+        });
         throw new CatalogServiceError("CATALOG_DATABASE_ERROR", "Catalog search failed.", error);
       }
     },
