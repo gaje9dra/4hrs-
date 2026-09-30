@@ -2,7 +2,7 @@
 -- Ownership is intentionally absent because no supported customer/session identity
 -- mechanism exists yet; Phase 8.2 must not invent an identity system.
 CREATE TABLE "Cart" (
-  "id" UUID NOT NULL,
+  "id" UUID NOT NULL DEFAULT gen_random_uuid(),
   "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "updatedAt" TIMESTAMP(3) NOT NULL,
   CONSTRAINT "Cart_pkey" PRIMARY KEY ("id")
