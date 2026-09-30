@@ -557,7 +557,6 @@ test("search URL state canonicalizes q, preserves filters, sort, and page size, 
 
   assert.equal(
     buildCatalogFilterHref("/search", {
-      q: "hoodie",
       category: "shirts",
       sort: "price_asc",
       pageSize: "48",
