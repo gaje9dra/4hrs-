@@ -74,6 +74,7 @@ model Product {
   collections      ProductCollection[]
   tags             ProductTag[]
   cartItems        CartItem[]
+  displayName       String?              @db.VarChar(120)
   @@index([status])
   @@index([createdAt])
   @@index([price])
