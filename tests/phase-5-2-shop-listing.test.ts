@@ -63,3 +63,12 @@ test("catalog filter URLs remain bounded to the shared tag contract", () => {
     /Invalid catalog query parameter: tags/,
   );
 });
+
+
+test("catalog URL state rejects page sizes above the shared maximum", () => {
+  assert.throws(
+    () => catalogQueryFromSearchParams({ pageSize: "101" }),
+    /Invalid catalog query parameter: pageSize/,
+  );
+  assert.deepEqual(catalogQueryFromSearchParams({ pageSize: "100" }).pageSize, 100);
+});
