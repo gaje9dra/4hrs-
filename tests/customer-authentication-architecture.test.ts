@@ -11,11 +11,12 @@ test("customer auth architecture remains provider-neutral and separate from admi
   assert.match(authBoundary, /Customer and administrator identity domains remain separate/);
 });
 
-test("current Cart ownership remains fail-closed until trusted identity exists", () => {
+test("Cart ownership is enforced from trusted server-side customer identity", () => {
   const service = fs.readFileSync(path.join(root, "lib/cart/service.ts"), "utf8");
-  assert.match(service, /CART_OWNERSHIP_UNAVAILABLE/);
+  const ownership = fs.readFileSync(path.join(root, "lib/cart/auth-ownership.ts"), "utf8");
   assert.match(service, /CartOwnershipBoundary/);
-  assert.doesNotMatch(service, /customerId.*from.*request/i);
+  assert.match(ownership, /customerId/);
+  assert.doesNotMatch(ownership, /customerId.*from.*request/i);
 });
 
 test("Cart now supports nullable authenticated customer ownership without breaking anonymous rows", () => {
@@ -25,13 +26,12 @@ test("Cart now supports nullable authenticated customer ownership without breaki
   assert.match(cartBlock, /Customer\?/);
 });
 
-test("no customer authentication route has been introduced during the audit phase", () => {
-  const appRoot = path.join(root, "app");
-  const candidates = [
-    "login", "register", "forgot-password", "reset-password",
-    "verify-email", "account"
-  ];
-  for (const name of candidates) {
-    assert.equal(fs.existsSync(path.join(appRoot, name)), false, "unexpected auth route: /" + name);
+test("Phase 9.4 creates only the approved customer auth UI routes", () => {
+  const rootApp = path.join(root, "app/(storefront)");
+  assert.equal(fs.existsSync(path.join(rootApp, "login/page.tsx")), true);
+  assert.equal(fs.existsSync(path.join(rootApp, "register/page.tsx")), true);
+
+  for (const deferred of ["forgot-password", "reset-password", "verify-email", "account"]) {
+    assert.equal(fs.existsSync(path.join(rootApp, deferred)), false, "unexpected route: /" + deferred);
   }
 });
