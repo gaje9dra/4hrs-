@@ -1,173 +1,331 @@
-# Phase 3.7 — Product Detail Refinement, Merchandising & Conversion Layer
+# Phase 3.7 — Product Detail Refinement & Merchandising
 
-## Status
-Phase 3.7 source implementation is complete. Runtime validation is intentionally not claimed until the local project validation gate is executed.
+## Changes
 
-## Refinement goals
-Phase 3.7 builds directly on Phase 3.6 and improves information hierarchy, detail readability, variant semantics, merchandising continuity, accessibility, responsive behavior, and future commerce readiness without implementing commerce transactions.
+Phase 3.7 refines the Phase 3.6 `/product/[slug]` experience while preserving the existing server-first storefront and canonical catalog boundary.
 
-## Product-detail composition
-The page now follows the established composition:
-1. Breadcrumb/context
-2. Product identity and short description
-3. Availability and options
-4. Variant-aware price/availability presentation
-5. Deferred commerce action area
-6. Structured product information
-7. Curated discovery
+Implemented:
+- refined PDP hierarchy
+- canonical breadcrumbs for collection/category/product context
+- dynamic canonical option/variant UX
+- deterministic default variant selection
+- variant-specific pricing, compare-at pricing, availability, and media
+- product media gallery with keyboard/touch controls
+- broken/missing-image fallback without generated imagery
+- structured product information using only fields present in the public DTO
+- related-product discovery using existing catalog merchandising queries
+- deterministic deduplication and self-exclusion
+- accessible future-commerce presentation slot
+- explicit Accordion focus and reduced-motion hardening
+- expanded Phase 3.7 source-level tests
+- this documentation
 
-The existing Bauhaus layout, borders, hard shadows, typography, and color tokens are reused.
+No cart, wishlist, checkout, payment, order, shipping, authentication, review/rating, provider-specific purchasing, or Qikink-specific storefront logic was added.
 
-## Product information sections
-ProductDetailSections reuses the existing Phase 1 Accordion component. It creates sections only from canonical public fields currently available:
+## Components
+
+### `components/storefront/product-detail.tsx`
+
+Server component responsible for the PDP composition and semantic breadcrumb trail.
+
+Breadcrumb relationships are derived from canonical collection/category arrays and use canonical slug routes. Internal IDs are not placed in URLs.
+
+### `components/storefront/product-detail-interactive.tsx`
+
+Small client island containing only local gallery/variant interaction.
+
+The initial media source prefers the first canonical variant that is not out of stock and falls back to product media.
+
+### `components/storefront/product-options.tsx`
+
+Reuses the Phase 2.9 option/variant data model.
+
+Option types and values are rendered dynamically from `product.options`. No Size/Color-specific engine is introduced.
+
+Combination availability is evaluated against the actual canonical variant option relationships. Out-of-stock combinations cannot be treated as selectable.
+
+Selected controls expose `aria-pressed` and `aria-disabled`, retain native disabled behavior, and provide visible focus treatment.
+
+### `components/storefront/product-gallery.tsx`
+
+Uses canonical ordered product/variant media and Next Image.
+
+Supports:
+- one image
+- multiple images
+- no images
+- broken image fallback
+- meaningful primary-image alt text
+- decorative thumbnail alt suppression
+- fixed aspect-ratio media regions
+- keyboard-operable buttons
+- touch-sized controls
+- reduced-motion interaction behavior
+
+No fake imagery is generated.
+
+### `components/storefront/product-detail-sections.tsx`
+
+Uses the existing Phase 1 Accordion.
+
+Only canonical public fields currently available are rendered:
 - Description
 - Categories
 - Collections
 - Tags
 
-Materials, fit, care, shipping, delivery, returns, sustainability, and other unsupported claims are deliberately omitted because those fields are not present in the canonical product DTO.
+Materials, fit, care, shipping, delivery, return, sustainability, ratings, and reviews are not fabricated because they are not present in the current public product DTO.
 
-Long descriptions are split at paragraph boundaries instead of being rendered as one monolithic text block.
+### `components/ui/accordion.tsx`
 
-## Variant UX
-The existing canonical variant matrix remains authoritative. Option values are evaluated against actual variant option-value relationships.
+Existing reusable Accordion is retained. Phase 3.7 adds explicit focus-visible treatment and reduced-motion transition suppression.
 
-Unavailable combinations are disabled using canonical availability. Controls expose selected state through aria-pressed, retain native disabled semantics, and keep visible text indicating unavailable combinations.
+### `lib/storefront/catalog.ts`
 
-Initial selection is deterministic: the first available canonical variant is preferred; otherwise the first variant is used. An unavailable variant is never intentionally selected when an available variant exists.
+Continues to be the public storefront boundary.
 
-Variant-specific price, compare-at price, availability, and media remain derived from the selected canonical variant.
+`getStorefrontRelatedProducts()`:
+- uses canonical collection/category relationships
+- uses canonical merchandising sorting
+- bounds each source query to eight cards
+- evaluates collection/category sources concurrently
+- excludes the current product
+- removes duplicates
+- caps final related results at four
+
+No complete catalog fetch, AI recommendation, popularity score, random selection, personalization, or provider query is used.
+
+## Variant behavior
+
+The canonical Phase 2.9 variant model remains authoritative.
+
+The selection algorithm:
+1. starts from the first variant whose public availability is not `OUT_OF_STOCK`
+2. maps each configured option type to that variant's option value
+3. evaluates every candidate value against actual variant relationships
+4. disables combinations that have no non-out-of-stock matching variant
+5. resolves the complete selection to the matching canonical variant
+6. derives effective price, compare-at price, availability, and media from that variant
+
+If no variant is available, the product-level canonical price/availability remains the fallback.
+
+Internal SKU values are not rendered.
 
 ## Media behavior
-The existing product gallery remains the only media component. Product media ordering comes from the canonical query projection. Variant media replaces the displayed gallery when supplied and falls back to product media when absent.
 
-Gallery selection resets when its media source changes, preventing stale thumbnail indexes after variant changes.
+Product media and variant media come from the canonical catalog projection.
 
-Products without media receive the existing Bauhaus-compatible fallback rather than a fake image or broken media control.
+When the selected variant supplies media, that media becomes the gallery source. Otherwise the product media remains the source.
 
-## Merchandising / related products
-The current canonical catalog model does not expose a dedicated explicit related-product relationship. Therefore no fabricated merchandising relationship was introduced.
+Gallery selection resets whenever the media source changes.
 
-Related discovery uses deterministic precedence:
-1. the first canonical collection by stable slug ordering
-2. the first canonical category by stable slug ordering
+If a selected image fails to load, the UI renders an explicit unavailable-image state instead of generating or substituting fake product imagery.
 
-Both bounded collection/category queries are evaluated concurrently. Results are merged deterministically, the current product is excluded, duplicates are removed, and the result is capped at four cards.
+## Merchandising
 
-No AI, popularity, bestseller, random, personalized, or provider-specific recommendation logic is used.
+The existing Phase 2 merchandising ordering remains authoritative.
 
-## Category / collection discovery
-Canonical category and collection relationships are rendered as links using the existing storefront route conventions. Internal IDs are not exposed in URLs.
+The current canonical public product model does not expose a separate explicit related-product relationship. Therefore Phase 3.7 does not invent one.
 
-## Breadcrumbs
-Breadcrumb context remains semantic and accessible. Collection context is preferred over category context, with stable slug ordering used when multiple relationships exist. Only existing relationships are rendered.
+Discovery precedence is deterministic:
+1. canonical collection context
+2. canonical category context
 
-## Future commerce boundary
-The existing future-action area remains presentation-only. No cart state, Add to Cart, Buy Now, checkout, payment, order, shipping, wishlist, review, or authentication behavior was added.
+The resulting bounded product sets are merged, deduplicated, self-excluded, and capped at four products.
+
+The existing `ProductGrid` / `ProductCard` implementation is reused.
+
+## SEO
+
+The Phase 2 SEO system remains authoritative.
+
+The PDP:
+- uses the canonical `/product/[slug]` route
+- uses the canonical product URL helper
+- uses public product SEO title/description
+- provides canonical metadata
+- provides Open Graph title/description/url
+- preserves framework not-found behavior for unavailable products
+- does not expose IDs in URLs
+
+Product structured data is not added because the current canonical architecture does not expose a dedicated structured-data contract that can safely guarantee all required fields without introducing a separate SEO system.
+
+No ratings, review counts, brand claims, invented pricing, or invented availability are emitted.
 
 ## Accessibility
-The refinement preserves:
-- one meaningful H1
-- semantic breadcrumb navigation
-- fieldset/legend option groups
-- native disabled controls
-- aria-pressed selected state
-- keyboard gallery controls
-- visible focus states
-- semantic Accordion controls
-- aria-expanded/aria-controls accordion relationships
-- meaningful primary image alt text
-- decorative thumbnail alt suppression
-- no color-only availability state
-- no keyboard trap
 
-The existing Accordion received an explicit focus-visible treatment and reduced-motion transition suppression.
+Implemented/source-verified:
+- one meaningful PDP H1
+- semantic ordered breadcrumb navigation
+- fieldset/legend option groups
+- keyboard-operable option buttons
+- selected-state semantics
+- unavailable-state semantics
+- visible focus treatment
+- keyboard-operable gallery thumbnails
+- meaningful primary-image alt text
+- decorative thumbnail alt suppression
+- semantic Accordion button/region relationships
+- no color-only availability messaging
+- reduced-motion handling
+- no intentional keyboard traps
+
+Decorative Bauhaus geometry remains separate from meaningful content.
 
 ## Responsive behavior
-The existing mobile-first product split is retained. Detail sections use stacked accordion presentation on smaller screens and a two-column arrangement at larger widths.
 
-Target validation remains:
+The existing Phase 1 mobile-first system is reused.
+
+PDP structure:
+- stacked gallery/details on smaller screens
+- editorial gallery/details split on desktop
+- wrapping option controls
+- touch-sized controls
+- bounded media aspect ratios
+- no new viewport JavaScript or breakpoint system
+
+Required viewport matrix for runtime validation:
 - 320px
 - 375px
 - 390px
 - 430px
+- 768px
 - 1024px
 - 1280px
 - 1440px
-- 1920px
 
-No horizontal-scroll behavior was intentionally introduced.
-
-## SEO
-Phase 3.6 canonical product routing and metadata remain unchanged. The refinement does not create alternate product URLs or query-parameter canonical URLs.
+Phase 1 also defines 640px, 820px and 1920px verification points; those remain useful supplemental checks.
 
 ## Performance
-The refinement avoids new data fetching in client components. Related-product discovery is bounded and executes the collection/category queries concurrently. Only local interactive components remain hydrated.
 
-No dependency was added for accordion, carousel, animation, recommendations, or search.
+- product data remains server-fetched
+- only gallery and variant interaction are hydrated
+- related queries are bounded
+- collection/category related queries execute concurrently
+- no full-catalog fetch is introduced
+- no N+1 product fetch loop is introduced
+- existing ProductCard is reused
+- no new animation/carousel/recommendation dependency is introduced
 
-## Server/client boundaries
-Server-side:
-- product retrieval
-- SEO metadata
-- related-product discovery
-- product detail section rendering
-- canonical catalog relationships
+## Provider-neutrality verification
 
-Client-side:
-- gallery selection
-- option selection
-- local accordion state
+The PDP consumes `StorefrontProductDetail` only.
 
-No storefront component accesses Prisma or a provider API directly.
+Repository-wide storefront source review found no:
+- `provider === "qikink"`
+- Qikink-specific storefront branch
+- direct provider API call
+- provider credential access
+- provider metadata rendering
+
+Manual and imported/provider-backed products therefore enter the PDP through the same canonical public product model.
+
+Provider-specific mapping remains outside storefront presentation.
 
 ## Public-data safety
-The refinement continues to consume StorefrontProductDetail, which maps the canonical public product detail result and strips inventory quantities and other internal availability data down to public states.
 
-No provider credentials, provider metadata, supplier costs, audit history, or administrative fields are added to the browser-facing model.
+The storefront mapper reduces catalog availability to public states and does not expose internal inventory quantities.
+
+The PDP does not render:
+- SKU
+- provider metadata
+- provider credentials
+- supplier costs
+- inventory quantities
+- reservation data
+- audit information
+- admin fields
+- internal integration state
+
+No storefront component imports Prisma or the database client.
 
 ## Testing
-Added static/source coverage for:
-- reuse of existing product-detail architecture
-- Accordion reuse
-- canonical-field-only detail sections
-- semantic variant states
-- bounded deterministic related-product discovery
-- exclusion of commerce transaction implementation
 
-Runtime lint, typecheck, unit/integration tests, production build, browser smoke, responsive, keyboard, and reduced-motion checks remain pending local execution.
+Added/updated source-level coverage for:
+- canonical product route
+- server/public catalog boundary
+- PDP hierarchy
+- dynamic variant options
+- deterministic variant selection
+- invalid/unavailable combinations
+- variant pricing/media
+- one/multiple/no-image behavior
+- broken-image fallback
+- canonical breadcrumbs
+- Accordion reuse
+- related-product bounds
+- deduplication
+- self-product exclusion
+- commerce/review/provider-specific exclusions
+- public DTO safety
+
+### Runtime validation
+
+The repository integration can inspect and modify GitHub source but does not provide an executable project shell or browser automation for this repository.
+
+Therefore the following cannot truthfully be marked passed from this environment:
+- `npm run lint`
+- `npm run typecheck`
+- `npm test`
+- `npm run build`
+- browser smoke tests
+- mobile/desktop viewport checks
+- keyboard interaction checks in a real browser
+- reduced-motion checks in a real browser
+- manual vs imported product runtime comparison
+
+No runtime pass is claimed.
 
 ## Known limitations
-- The current canonical model has no explicit related-product relationship, so explicit merchandising precedence cannot be implemented without extending the catalog model/service in a later dedicated phase.
-- Materials, fit, care, shipping, return, delivery, and sustainability fields are not currently part of the public product DTO and therefore are not rendered.
-- Browser visual validation requires a local running application.
 
-## Future integration points
-Future commerce phases can attach transactional actions to the existing action area and consume the canonical selected variant. The current client state is presentation-only.
+1. The canonical public DTO currently has no structured Materials/Fit/Care fields, so those sections are omitted rather than fabricated.
+2. The canonical public model has no separate explicit related-product relation; collection/category merchandising is therefore used.
+3. Product structured data remains deferred until a dedicated safe canonical schema contract exists.
+4. Runtime and browser validation require an executable local project environment.
 
-## Files changed
-- components/storefront/product-detail.tsx
-- components/storefront/product-detail-sections.tsx
-- components/storefront/product-options.tsx
-- components/storefront/product-gallery.tsx
-- components/storefront/product-detail-interactive.tsx
-- lib/storefront/catalog.ts
-- components/ui/accordion.tsx
-- tests/storefront-product-detail-refinement.test.ts
-- docs/phase-3-7-product-detail-refinement-merchandising.md
+## Future commerce integration
 
-## Validation status
-Required local commands:
+The red future-commerce slot is presentation-only.
 
-npm run lint
-npm run typecheck
-npm test
-npm run build
+A later commerce phase can consume the selected canonical variant for transactional behavior. Phase 3.7 does not create cart state, order state, payment state, or client-authoritative purchase identifiers.
 
-Required browser checks include valid/invalid products, unpublished products where testable, variants, variant media, pricing, out-of-stock state, mobile/desktop layouts, keyboard interaction, gallery interaction, canonical URL, metadata, and reduced-motion behavior.
+## Files changed in Phase 3.7
 
-Final readiness:
+- `components/storefront/product-detail.tsx`
+- `components/storefront/product-detail-sections.tsx`
+- `components/storefront/product-options.tsx`
+- `components/storefront/product-gallery.tsx`
+- `components/storefront/product-detail-interactive.tsx`
+- `lib/storefront/catalog.ts`
+- `components/ui/accordion.tsx`
+- `tests/storefront-product-detail-refinement.test.ts`
+- `docs/phase-3-7-product-detail-refinement-merchandising.md`
+
+## Final checklist
+
+- [x] PDP refined
+- [x] variants work at source level
+- [x] media behavior implemented
+- [x] availability behavior implemented
+- [x] breadcrumbs use canonical relationships
+- [x] related products use supported catalog relationships
+- [x] no fake recommendations
+- [x] no fake reviews/ratings
+- [x] Bauhaus design preserved
+- [x] responsive architecture preserved
+- [x] accessibility semantics implemented
+- [x] SEO integration preserved
+- [x] public DTO safety preserved
+- [x] provider-neutral storefront verified by source review
+- [x] no direct ORM access in storefront
+- [x] tests added/updated
+- [ ] runtime tests pass
+- [ ] production build validated
+- [x] GitHub source/diff review performed
+- [x] documentation complete
+
+## Final readiness
 
 NOT READY FOR PHASE 3.8
 
-Blocking condition: runtime validation has not been executed through the available repository integration.
+Blocking condition: the required runtime lint, typecheck, tests, production build, browser smoke, responsive, keyboard, reduced-motion, and manual/imported-product runtime checks cannot be executed through the available GitHub repository integration.
