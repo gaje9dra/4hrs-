@@ -284,11 +284,17 @@ export function createCatalogSearchService(options: {
       const startedAt = Date.now();
 
       try {
-        if (normalized.catalog.category && !(await lookup.getCategoryBySlug(normalized.catalog.category))) {
-          throw new CatalogServiceError("CATEGORY_NOT_FOUND", "Category was not found.");
+        if (normalized.catalog.category) {
+          const category = await lookup.getCategoryBySlug(normalized.catalog.category) as { status?: string } | null;
+          if (!category || category.status === "ARCHIVED" || category.status === "DRAFT") {
+            throw new CatalogServiceError("CATEGORY_NOT_FOUND", "Category was not found.");
+          }
         }
-        if (normalized.catalog.collection && !(await lookup.getCollectionBySlug(normalized.catalog.collection))) {
-          throw new CatalogServiceError("COLLECTION_NOT_FOUND", "Collection was not found.");
+        if (normalized.catalog.collection) {
+          const collection = await lookup.getCollectionBySlug(normalized.catalog.collection) as { status?: string } | null;
+          if (!collection || collection.status === "ARCHIVED" || collection.status === "DRAFT") {
+            throw new CatalogServiceError("COLLECTION_NOT_FOUND", "Collection was not found.");
+          }
         }
         if (normalized.catalog.tags.length) {
           const availableTags = new Set((await lookup.listTags()).map((tag) => tag.slug));
