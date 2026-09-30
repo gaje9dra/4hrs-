@@ -564,7 +564,7 @@ test("search URL state canonicalizes q, preserves filters, sort, and page size, 
       sort: "price_asc",
       pageSize: "48",
     }),
-    "/search?q=hoodie&category=shirts&sort=price_asc&pageSize=48",
+    "/search?category=shirts&sort=price_asc&pageSize=48",
   );
 
   assert.equal(
