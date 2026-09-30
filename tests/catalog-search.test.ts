@@ -7,6 +7,7 @@ import {
   type CatalogSearchProvider,
 } from "../lib/catalog/search.ts";
 import { searchCatalogProducts } from "../lib/catalog/repository.ts";
+import { buildCatalogHref, buildCatalogFilterHref } from "../lib/storefront/query-params.ts";
 
 const product = {
   id: "product-1",
@@ -537,4 +538,37 @@ test("database relevance ordering is applied before page-sized record hydration"
   assert.deepEqual(result.items.map((item) => item.slug), ["hoodie-graphic", "oversized-graphic-t-shirt"]);
   assert.equal(result.total, 2);
   assert.equal(result.hasNextPage, false);
+});
+
+
+test("search URL state canonicalizes q, preserves filters, sort, and page size, and resets page on filter changes", () => {
+  assert.equal(
+    buildCatalogHref("/search", {
+      q: "  HOODIE  ",
+      category: "SHIRTS",
+      tags: ["streetwear", "streetwear"],
+      tagMode: "OR",
+      minPrice: "800",
+      maxPrice: "1500",
+      inStock: "true",
+      sort: "price_asc",
+      pageSize: "48",
+    }, 2),
+    "/search?q=hoodie&category=shirts&tags=streetwear&tagMode=OR&minPrice=800.00&maxPrice=1500.00&inStock=true&sort=price_asc&pageSize=48&page=2",
+  );
+
+  assert.equal(
+    buildCatalogFilterHref("/search", {
+      q: "hoodie",
+      category: "shirts",
+      sort: "price_asc",
+      pageSize: "48",
+    }),
+    "/search?q=hoodie&category=shirts&sort=price_asc&pageSize=48",
+  );
+
+  assert.equal(
+    buildCatalogFilterHref("/search", { q: "hoodie" }),
+    "/search?q=hoodie",
+  );
 });
