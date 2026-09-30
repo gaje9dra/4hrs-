@@ -438,13 +438,9 @@ function buildInternalCatalogWhere(
 
 function buildSearchRelevanceWhereSql(options: CatalogSearchRepositoryOptions): Prisma.Sql {
   const f = options.filters ?? {};
-  const parts: Prisma.Sql[] = [
-    Prisma.sql`p."status" = 'ACTIVE' AND p."title" <> '' AND p."slug" <> '' AND p."currency" <> '' AND p."price" >= 0`,
-  ];
-
-  if (options.mode === "INTERNAL") {
-    parts.push(Prisma.sql`TRUE`);
-  }
+  const parts: Prisma.Sql[] = options.mode === "PUBLIC"
+    ? [Prisma.sql`p."status" = 'ACTIVE' AND p."title" <> '' AND p."slug" <> '' AND p."currency" <> '' AND p."price" >= 0`]
+    : [];
 
   if (f.categorySlug) {
     parts.push(Prisma.sql`EXISTS (
@@ -623,7 +619,7 @@ async function searchByRelevance(
         SELECT ranked."id"
         FROM "Product" p
         ${where}
-        ORDER BY ${order}, ranked."id" ASC
+        ORDER BY ${order}, p."id" ASC
         OFFSET ${offset}
         LIMIT ${limit}
       ) AS ids,
