@@ -15,8 +15,7 @@ function normalizeDisplayQuery(value: string): string {
 
 function metadataQuery(value: string | string[] | undefined): string {
   const raw = Array.isArray(value) ? value[0] : value;
-  if (!raw) return "";
-  return normalizeDisplayQuery(raw).slice(0, 80);
+  return raw ? normalizeDisplayQuery(raw) : "";
 }
 
 function searchMetadataDescription(query: string): string {
@@ -34,14 +33,15 @@ export async function generateMetadata({
 
   try {
     const canonical = buildCatalogHref("/search", params, catalogQueryFromSearchParams(params).page ?? 1);
-    const validQuery = query && normalizeCatalogSearchQueryParameter(query) === query;
-    const title = validQuery ? `Search results for “${query}” | 4HRS` : "Search | 4HRS";
-    const description = searchMetadataDescription(validQuery ? query : "");
+    const normalizedQuery = query ? normalizeCatalogSearchQueryParameter(query) : "";
+    const titleQuery = normalizedQuery.slice(0, 80);
+    const title = normalizedQuery ? `Search results for “${titleQuery}” | 4HRS` : "Search | 4HRS";
+    const description = searchMetadataDescription(titleQuery);
 
     return {
       title,
       description,
-      alternates: { canonical: validQuery || !query ? canonical : "/search" },
+      alternates: { canonical },
       robots: { index: false, follow: true },
     };
   } catch {
