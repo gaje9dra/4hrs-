@@ -119,13 +119,15 @@ export function ProductOptions({
       : "Unavailable"}
         </button>
         <p id="purchase-intent-status" className="mt-3 text-sm font-700">
-          {purchaseIntentState === "MISSING_REQUIRED_SELECTION"
-            ? "Select every required option before continuing."
-            : purchaseIntentState === "INVALID_SELECTION"
-              ? "The selected option combination is not valid."
-              : purchaseIntentState === "UNAVAILABLE"
-                ? "This option combination is currently unavailable."
-                : "The selection is validated. Cart integration is intentionally deferred."}
+          {purchaseIntentState === "PRODUCT_UNAVAILABLE"
+            ? "This product is currently unavailable."
+            : purchaseIntentState === "MISSING_REQUIRED_SELECTION"
+              ? "Select every required option before continuing."
+              : purchaseIntentState === "INVALID_SELECTION"
+                ? "The selected option combination is not valid."
+                : purchaseIntentState === "UNAVAILABLE"
+                  ? "This option combination is currently unavailable."
+                  : "The selection is validated. Cart integration is intentionally deferred."}
         </p>
         {purchaseSelection ? (
           <p className="sr-only">
