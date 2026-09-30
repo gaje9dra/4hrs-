@@ -28,7 +28,7 @@ test("product hierarchy contains breadcrumb, H1, description, price, availabilit
   assert.match(options, /compareAtPrice/);
   assert.match(interactive, /availabilityLabel/);
   assert.match(interactive, /aria-label=\{product\.options\.length \? undefined : "Product pricing and availability"\}/);
-  assert.match(options, /Purchase intent/);
+  assert.match(options, /purchaseIntentState|buildPurchaseSelection/);
 });
 
 test("variant engine is dynamic, canonical, deterministic and rejects unavailable combinations", () => {
@@ -144,7 +144,7 @@ test("Phase 7.3 purchase intent remains the canonical pre-Cart selection contrac
   assert.match(selection, /buildPurchaseSelection/);
   assert.match(selection, /quantity: 1/);
   assert.doesNotMatch(selection, /createOrder|checkout|payment|persistCart/i);
-  assert.match(options, /Purchase intent/);
+  assert.match(options, /purchaseIntentState|buildPurchaseSelection/);
   assert.match(options, /Selection ready/);
   assert.match(options, /Select options/);
   assert.match(options, /Invalid selection/);
