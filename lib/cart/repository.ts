@@ -43,9 +43,9 @@ export function createCartRepository(client?: CartRepositoryClient) {
       return work(createCartRepository(database));
     },
 
-    createCart() {
+    createCart(customerId?: string) {
       return database.cart.create({
-        data: {},
+        data: customerId ? { customerId } : {},
       });
     },
 
