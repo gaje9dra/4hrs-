@@ -37,9 +37,13 @@ test("related products reuse canonical merchandising helpers and exclude the cur
   assert.match(storefront, /item\.slug/);
 });
 
-test("product detail defers commerce mutations and excludes reviews", () => {
-  assert.match(options, /Cart integration is intentionally deferred/);
-  assert.doesNotMatch(interactive + options + detail, /addToCart|checkout|payment|createOrder|review|rating/i);
+test("Product Detail sends only the canonical purchase selection to Cart", () => {
+  assert.match(options, /buildPurchaseSelection/);
+  assert.match(options, /fetch\("\/api\/cart"/);
+  assert.match(options, /method: "POST"/);
+  assert.match(options, /productId: string; variantId: string; quantity: number/);
+  assert.doesNotMatch(options, /price.*body|body.*price|provider|inventory|subtotal|total/i);
+  assert.doesNotMatch(interactive + options + detail, /checkout|payment|createOrder|review|rating/i);
 });
 
 test("gallery provides keyboard-operable image controls and meaningful primary alt text", () => {
