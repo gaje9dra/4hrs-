@@ -295,6 +295,9 @@ const publicCatalogListSelect = {
       },
     },
   },
+  categories: { select: { category: true } },
+  collections: { select: { collection: true } },
+  tags: { select: { tag: true } },
 } satisfies Prisma.ProductSelect;
 
 const publicCatalogSearchListSelect = {
