@@ -113,9 +113,13 @@ export function CustomerAuthStatus() {
 
   return (
     <div className="flex min-w-0 shrink-0 items-center gap-2">
-      <span className="hidden max-w-40 truncate text-xs font-900 uppercase tracking-[0.06em] lg:block" title={customer.email}>
+      <Link
+        href="/account"
+        className="hidden max-w-40 truncate text-xs font-900 uppercase tracking-[0.06em] no-underline hover:underline lg:block"
+        title="Open account"
+      >
         {customer.email}
-      </span>
+      </Link>
       <Button
         variant="outline"
         loading={loggingOut}
