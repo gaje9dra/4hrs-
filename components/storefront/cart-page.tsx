@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Minus, Plus, Trash2 } from "lucide-react";
 import { Container } from "@/components/layout/container";
@@ -149,7 +150,13 @@ export function CartPage() {
                   <div className="grid gap-5 sm:grid-cols-[7rem_minmax(0,1fr)_auto] sm:items-start">
                     <div className="aspect-square overflow-hidden border-2 border-border bg-muted">
                       {item.product?.media?.url ? (
-                        <img src={item.product.media.url} alt={item.product.media.altText ?? item.product.title} className="h-full w-full object-cover" />
+                        <Image
+                          src={item.product.media.url}
+                          alt={item.product.media.altText ?? item.product.title}
+                          fill
+                          sizes="(max-width: 639px) 7rem, 7rem"
+                          className="object-cover"
+                        />
                       ) : (
                         <div className="flex h-full items-center justify-center p-3 text-center text-xs font-900 uppercase">No image</div>
                       )}
