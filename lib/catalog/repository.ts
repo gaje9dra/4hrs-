@@ -777,7 +777,7 @@ export async function queryMerchandisedCatalogProducts(
       ],
       skip: offset,
       take: limit,
-      select: { product: { select: publicCatalogSelect } },
+      select: { product: { select: publicCatalogListSelect } },
     }),
     repository.productCategory.count({ where: relationWhere }),
   ]);
