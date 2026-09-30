@@ -13,7 +13,6 @@ const getActiveCollections = cache(() => catalog.listActiveCollections());
 const getActiveTags = cache(() => catalog.listTags());
 
 export type StorefrontProductCard = {
-  id: string;
   title: string;
   slug: string;
   href: string;
@@ -84,7 +83,6 @@ function toProductCard(product: {
   availability: "IN_STOCK" | "LOW_STOCK" | "OUT_OF_STOCK" | "UNTRACKED";
 }): StorefrontProductCard {
   return {
-    id: product.id,
     title: product.title,
     slug: product.slug,
     href: productPath(product),
