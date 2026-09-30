@@ -6,6 +6,7 @@ import { validateMoney } from "@/lib/catalog/validation";
 
 export const CATALOG_QUERY_PAGE_DEFAULT = 24;
 export const CATALOG_QUERY_PAGE_MAX = 100;
+export const CATALOG_QUERY_MAX_TAGS = 20;
 
 export type CatalogSort =
   | "newest"
@@ -48,17 +49,6 @@ export type CatalogAvailability = {
   availableQuantity: number | null;
 };
 
-export type CatalogVariantSummary = {
-  id: string;
-  sku: string;
-  displayName: string | null;
-  size: string | null;
-  color: string | null;
-  effectivePrice: string;
-  compareAtPrice: string | null;
-  availability: CatalogAvailability;
-};
-
 export type CatalogListItem = {
   id: string;
   title: string;
@@ -72,11 +62,7 @@ export type CatalogListItem = {
   compareAtPrice: string | null;
   currency: string;
   status: "ACTIVE";
-  variants: CatalogVariantSummary[];
-  categories: Array<{ id: string; name: string; slug: string }>;
-  collections: Array<{ id: string; name: string; slug: string }>;
-  tags: Array<{ id: string; name: string; slug: string }>;
-  availability: CatalogAvailability;
+  availability: InventoryAvailability;
 };
 
 export type CatalogListResult = {
@@ -162,6 +148,7 @@ type QueryRepository = {
   listActiveCollections: typeof repository.listActiveCollections;
   listActiveCollectionsWithPublishedProducts: typeof repository.listActiveCollectionsWithPublishedProducts;
   getTagBySlug: typeof repository.getTagBySlug;
+  getTagsBySlugs: typeof repository.getTagsBySlugs;
   listTags: typeof repository.listTags;
 };
 
@@ -176,6 +163,7 @@ const defaultRepository: QueryRepository = {
   listActiveCollections: repository.listActiveCollections,
   listActiveCollectionsWithPublishedProducts: repository.listActiveCollectionsWithPublishedProducts,
   getTagBySlug: repository.getTagBySlug,
+  getTagsBySlugs: repository.getTagsBySlugs,
   listTags: repository.listTags,
 };
 
@@ -256,6 +244,9 @@ function normalizeQuery(query: CatalogQuery): CatalogAppliedQuery {
   const category = query.category === undefined ? undefined : normalizeSlug(query.category, "category");
   const collection = query.collection === undefined ? undefined : normalizeSlug(query.collection, "collection");
   const tags = normalizeTags(query.tags);
+  if (tags.length > CATALOG_QUERY_MAX_TAGS) {
+    invalidQuery("No more than " + CATALOG_QUERY_MAX_TAGS + " tags may be selected.");
+  }
   const minPrice = normalizeMoney(query.minPrice, "minPrice");
   const maxPrice = normalizeMoney(query.maxPrice, "maxPrice");
 
@@ -312,36 +303,49 @@ function availabilityFromVariant(variant: {
   return { state, availableQuantity };
 }
 
-function mapProduct(product: Awaited<ReturnType<QueryRepository["getPublishedProductBySlug"]>> extends infer T
-  ? Exclude<T, null>
-  : never): CatalogListItem {
+function mapProduct(product: {
+  id: string;
+  title: string;
+  slug: string;
+  price: Prisma.Decimal | string | number;
+  compareAtPrice: Prisma.Decimal | string | number | null;
+  currency: string;
+  status: "ACTIVE";
+  images: Array<{ id: string; url: string; altText: string | null }>;
+  variants: Array<{
+    id: string;
+    price: Prisma.Decimal | string | number | null;
+    compareAtPrice: Prisma.Decimal | string | number | null;
+    inventory: {
+      trackingEnabled: boolean;
+      onHand: number;
+      reserved: number;
+      lowStockThreshold: number;
+    } | null;
+  }>;
+}): CatalogListItem {
   const variants = product.variants.map((variant) => {
     const effectivePrice = variant.price ?? product.price;
     const availability = availabilityFromVariant(variant);
     return {
-      id: variant.id,
-      sku: variant.sku,
-      displayName: variant.displayName,
-      size: variant.size,
-      color: variant.color,
       effectivePrice: formatMoney(effectivePrice)!,
       compareAtPrice: formatMoney(variant.compareAtPrice) ?? formatMoney(product.compareAtPrice),
       availability,
     };
   });
 
-  const cheapest = variants.reduce((current, variant) =>
-    current === null || new Prisma.Decimal(variant.effectivePrice).lt(new Prisma.Decimal(current.effectivePrice)) ? variant : current,
-    null as CatalogVariantSummary | null,
+  const cheapest = variants.reduce(
+    (current, variant) =>
+      current === null || new Prisma.Decimal(variant.effectivePrice).lt(new Prisma.Decimal(current.effectivePrice))
+        ? variant
+        : current,
+    null as (typeof variants)[number] | null,
   );
-
   const availableVariant = variants.find((variant) =>
-    variant.availability.state === "IN_STOCK" || variant.availability.state === "LOW_STOCK" || variant.availability.state === "UNTRACKED",
+    variant.availability.state === "IN_STOCK" ||
+    variant.availability.state === "LOW_STOCK" ||
+    variant.availability.state === "UNTRACKED",
   );
-  const availability = availableVariant?.availability ?? {
-    state: "OUT_OF_STOCK" as const,
-    availableQuantity: 0,
-  };
 
   return {
     id: product.id,
@@ -354,11 +358,7 @@ function mapProduct(product: Awaited<ReturnType<QueryRepository["getPublishedPro
     compareAtPrice: cheapest?.compareAtPrice ?? formatMoney(product.compareAtPrice),
     currency: product.currency,
     status: "ACTIVE",
-    variants,
-    categories: product.categories.map(({ category }) => category),
-    collections: product.collections.map(({ collection }) => collection),
-    tags: product.tags.map(({ tag }) => tag),
-    availability,
+    availability: availableVariant?.availability.state ?? "OUT_OF_STOCK",
   };
 }
 
@@ -369,16 +369,21 @@ export function createCatalogQueryService(customRepository: Partial<QueryReposit
     async listPublishedProducts(query: CatalogQuery = {}): Promise<CatalogListResult> {
       const appliedQuery = normalizeQuery(query);
 
-      if (appliedQuery.category && !(await repo.getCategoryBySlug(appliedQuery.category))) {
+      const [category, collection, tags] = await Promise.all([
+        appliedQuery.category ? repo.getCategoryBySlug(appliedQuery.category) : Promise.resolve(null),
+        appliedQuery.collection ? repo.getCollectionBySlug(appliedQuery.collection) : Promise.resolve(null),
+        appliedQuery.tags.length ? repo.getTagsBySlugs(appliedQuery.tags) : Promise.resolve([]),
+      ]);
+      if (appliedQuery.category && !category) {
         throw new CatalogServiceError("CATEGORY_NOT_FOUND", "Category was not found.");
       }
-      if (appliedQuery.collection && !(await repo.getCollectionBySlug(appliedQuery.collection))) {
+      if (appliedQuery.collection && !collection) {
         throw new CatalogServiceError("COLLECTION_NOT_FOUND", "Collection was not found.");
       }
-      for (const tag of appliedQuery.tags) {
-        if (!(await repo.getTagBySlug(tag))) {
-          throw new CatalogServiceError("TAG_NOT_FOUND", "Tag was not found: " + tag + ".");
-        }
+      if (tags.length !== appliedQuery.tags.length) {
+        const found = new Set(tags.map((tag) => tag.slug));
+        const missingTag = appliedQuery.tags.find((tag) => !found.has(tag));
+        throw new CatalogServiceError("TAG_NOT_FOUND", "Tag was not found: " + missingTag + ".");
       }
 
       const sort = SORT_MAP[appliedQuery.sort];
