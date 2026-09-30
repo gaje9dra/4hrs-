@@ -134,6 +134,8 @@ export function buildCatalogFilterHref(
   values: Record<string, string | string[] | undefined>,
 ): string {
   const search = new URLSearchParams();
+  const rawQuery = first(values.q);
+  if (pathname === "/search" && rawQuery) search.set("q", rawQuery.trim().replace(/\\s+/g, " "));
   const query = catalogQueryFromSearchParams(values);
 
   append(search, "category", query.category);
