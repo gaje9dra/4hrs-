@@ -80,7 +80,7 @@ const queryRepository = {
     return [];
   },
   async getCollectionBySlug() {
-    return { id: "collection-1", name: "New Arrivals", slug: "new-arrivals", description: null, seoTitle: null, seoDescription: null, status: "ACTIVE" as const, createdAt: new Date(), updatedAt: new Date() };
+    return { id: "collection-1", name: "New Arrivals", slug: "new-arrivals", description: null, seoTitle: null, seoDescription: null, status: "ACTIVE" as const, createdAt: new Date(), updatedAt: new Date(), _count: { products: 1 } };
   },
   async listActiveCollections() {
     return [];
@@ -483,6 +483,7 @@ test("does not resolve inactive category or collection through public discovery"
       status: "ARCHIVED" as const,
       createdAt: new Date(),
       updatedAt: new Date(),
+      _count: { products: 0 },
     }),
   });
   await assert.rejects(
