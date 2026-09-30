@@ -20,7 +20,7 @@ test("shop URLs are canonical and remove redundant defaults", () => {
 });
 
 test("search pagination preserves the search term", () => {
-  assert.equal(buildCatalogHref("/search", { q: "  oversized   tee  ", sort: "newest" }, 2), "/search?q=oversized+tee&page=2");
+  assert.equal(buildCatalogHref("/search", { q: "  oversized   tee  ", sort: "newest" }, 2), "/search?q=oversized+tee&sort=newest&page=2");
 });
 
 test("filter hrefs reset pagination and ignore unsupported parameters", () => {
@@ -35,7 +35,7 @@ test("catalog URL state sorts repeated tag values and removes unused tag mode", 
     tagMode: "OR",
     minPrice: undefined,
     maxPrice: undefined,
-    inStock: false,
+    inStock: undefined,
     sort: undefined,
     page: undefined,
     pageSize: undefined,
