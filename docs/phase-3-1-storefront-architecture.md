@@ -14,7 +14,7 @@ The existing Phase 2 canonical URL helpers use provider-neutral plural paths, so
 - /shop — public catalog listing
 - /categories/[slug] — public category
 - /collections/[slug] — public collection
-- /products/[slug] — public product detail
+- /product/[slug] — public product detail
 - /search — public search
 
 The exact route helpers in lib/catalog/routes.ts remain authoritative for product/category/collection canonical URLs.
