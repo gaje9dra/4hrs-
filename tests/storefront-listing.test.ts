@@ -10,8 +10,8 @@ const read = (path: string) => readFileSync(resolve(root, path), "utf8");
 test("Phase 3.4 listing routes use the shared server listing component", () => {
   const routes = [
     "app/(storefront)/shop/page.tsx",
-    "app/(storefront)/categories/[slug]/page.tsx",
-    "app/(storefront)/collections/[slug]/page.tsx",
+    "app/(storefront)/category/[slug]/page.tsx",
+    "app/(storefront)/collection/[slug]/page.tsx",
   ];
 
   for (const path of routes) {
