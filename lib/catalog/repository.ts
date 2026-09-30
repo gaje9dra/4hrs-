@@ -335,6 +335,7 @@ export type RepositoryCatalogSearchMode = "PUBLIC" | "INTERNAL";
 export type CatalogSearchRepositoryOptions = CatalogQueryRepositoryOptions & {
   query: string;
   mode: RepositoryCatalogSearchMode;
+  relevance?: boolean;
 };
 
 function buildCatalogSearchWhere(
@@ -426,6 +427,216 @@ function buildInternalCatalogWhere(
   return and.length ? { AND: and } : {};
 }
 
+function buildSearchRelevanceWhereSql(options: CatalogSearchRepositoryOptions): Prisma.Sql {
+  const f = options.filters ?? {};
+  const parts: Prisma.Sql[] = [
+    Prisma.sql`p."status" = 'ACTIVE' AND p."title" <> '' AND p."slug" <> '' AND p."currency" <> '' AND p."price" >= 0`,
+  ];
+
+  if (options.mode === "INTERNAL") {
+    parts.push(Prisma.sql`TRUE`);
+  }
+
+  if (f.categorySlug) {
+    parts.push(Prisma.sql`EXISTS (
+      SELECT 1 FROM "ProductCategory" pc
+      JOIN "Category" c ON c."id" = pc."categoryId"
+      WHERE pc."productId" = p."id" AND c."slug" = ${f.categorySlug}
+      ${options.mode === "PUBLIC" ? Prisma.sql`AND c."status" = 'ACTIVE'` : Prisma.empty}
+    )`);
+  }
+
+  if (f.collectionSlug) {
+    parts.push(Prisma.sql`EXISTS (
+      SELECT 1 FROM "ProductCollection" pc
+      JOIN "Collection" c ON c."id" = pc."collectionId"
+      WHERE pc."productId" = p."id" AND c."slug" = ${f.collectionSlug}
+      ${options.mode === "PUBLIC" ? Prisma.sql`AND c."status" = 'ACTIVE'` : Prisma.empty}
+    )`);
+  }
+
+  if (f.tagSlugs?.length) {
+    const tagChecks = f.tagSlugs.map((slug) => Prisma.sql`EXISTS (
+      SELECT 1 FROM "ProductTag" pt
+      JOIN "Tag" t ON t."id" = pt."tagId"
+      WHERE pt."productId" = p."id" AND t."slug" = ${slug}
+    )`);
+    parts.push(f.tagMode === "OR" ? Prisma.sql`(${Prisma.join(tagChecks, " OR ")})` : Prisma.sql`(${Prisma.join(tagChecks, " AND ")})`);
+  }
+
+  if (f.minPrice !== undefined || f.maxPrice !== undefined) {
+    const productPrice = [
+      f.minPrice !== undefined ? Prisma.sql`p."price" >= ${new Prisma.Decimal(f.minPrice)}` : Prisma.sql`TRUE`,
+      f.maxPrice !== undefined ? Prisma.sql`p."price" <= ${new Prisma.Decimal(f.maxPrice)}` : Prisma.sql`TRUE`,
+    ];
+    const variantPrice = [
+      f.minPrice !== undefined ? Prisma.sql`v."price" >= ${new Prisma.Decimal(f.minPrice)}` : Prisma.sql`TRUE`,
+      f.maxPrice !== undefined ? Prisma.sql`v."price" <= ${new Prisma.Decimal(f.maxPrice)}` : Prisma.sql`TRUE`,
+    ];
+    parts.push(Prisma.sql`(
+      (
+        ${Prisma.join(productPrice, " AND ")}
+        AND EXISTS (
+          SELECT 1 FROM "ProductVariant" v
+          WHERE v."productId" = p."id" AND v."status" = 'ACTIVE' AND v."price" IS NULL
+        )
+      )
+      OR EXISTS (
+        SELECT 1 FROM "ProductVariant" v
+        WHERE v."productId" = p."id" AND v."status" = 'ACTIVE'
+          AND ${Prisma.join(variantPrice, " AND ")}
+      )
+    )`);
+  }
+
+  if (f.inStock === true) {
+    parts.push(Prisma.sql`EXISTS (
+      SELECT 1
+      FROM "ProductVariant" v
+      LEFT JOIN "Inventory" i ON i."variantId" = v."id"
+      WHERE v."productId" = p."id" AND v."status" = 'ACTIVE'
+        AND (
+          i."id" IS NULL
+          OR i."trackingEnabled" = false
+          OR (i."trackingEnabled" = true AND i."onHand" > i."reserved")
+        )
+    )`);
+  }
+
+  const q = options.query;
+  const searchable = Prisma.sql`(
+    p."title" ILIKE ('%' || ${q} || '%') ESCAPE '\\'
+    OR COALESCE(p."shortDescription", '') ILIKE ('%' || ${q} || '%') ESCAPE '\\'
+    OR COALESCE(p."description", '') ILIKE ('%' || ${q} || '%') ESCAPE '\\'
+    OR p."slug" ILIKE ('%' || ${q} || '%') ESCAPE '\\'
+    OR EXISTS (
+      SELECT 1 FROM "ProductTag" pt JOIN "Tag" t ON t."id" = pt."tagId"
+      WHERE pt."productId" = p."id" AND t."name" ILIKE ('%' || ${q} || '%') ESCAPE '\\'
+    )
+    OR EXISTS (
+      SELECT 1 FROM "ProductCategory" pc JOIN "Category" c ON c."id" = pc."categoryId"
+      WHERE pc."productId" = p."id" AND c."status" = 'ACTIVE' AND c."name" ILIKE ('%' || ${q} || '%') ESCAPE '\\'
+    )
+    OR EXISTS (
+      SELECT 1 FROM "ProductCollection" pc JOIN "Collection" c ON c."id" = pc."collectionId"
+      WHERE pc."productId" = p."id" AND c."status" = 'ACTIVE' AND c."name" ILIKE ('%' || ${q} || '%') ESCAPE '\\'
+    )
+    OR EXISTS (
+      SELECT 1 FROM "ProductVariant" v
+      WHERE v."productId" = p."id"
+        ${options.mode === "PUBLIC" ? Prisma.sql`AND v."status" = 'ACTIVE'` : Prisma.empty}
+        AND (
+          v."displayName" ILIKE ('%' || ${q} || '%') ESCAPE '\\'
+          OR v."size" ILIKE ('%' || ${q} || '%') ESCAPE '\\'
+          OR v."color" ILIKE ('%' || ${q} || '%') ESCAPE '\\'
+          OR EXISTS (
+            SELECT 1
+            FROM "ProductVariantOptionValue" pvov
+            JOIN "VariantOptionValue" ov ON ov."id" = pvov."optionValueId"
+            WHERE pvov."variantId" = v."id" AND ov."displayName" ILIKE ('%' || ${q} || '%') ESCAPE '\\'
+          )
+          OR EXISTS (
+            SELECT 1
+            FROM "ProductVariantOptionValue" pvov
+            JOIN "VariantOptionValue" ov ON ov."id" = pvov."optionValueId"
+            JOIN "VariantOptionType" ot ON ot."id" = ov."optionTypeId"
+            WHERE pvov."variantId" = v."id" AND ot."name" ILIKE ('%' || ${q} || '%') ESCAPE '\\'
+          )
+        )
+    )
+    ${options.mode === "INTERNAL" ? Prisma.sql`OR EXISTS (
+      SELECT 1 FROM "ProductVariant" v
+      WHERE v."productId" = p."id" AND v."sku" ILIKE ('%' || ${q} || '%') ESCAPE '\\'
+    )` : Prisma.empty}
+  )`;
+
+  parts.push(searchable);
+  return Prisma.sql`WHERE ${Prisma.join(parts, " AND ")}`;
+}
+
+function buildSearchRelevanceOrderSql(options: CatalogSearchRepositoryOptions): Prisma.Sql {
+  const q = options.query;
+  return Prisma.sql`
+    CASE
+      WHEN LOWER(p."title") = LOWER(REPLACE(REPLACE(${q}, '\\%', '%'), '\\_', '_')) THEN 0
+      ${options.mode === "INTERNAL" ? Prisma.sql`WHEN EXISTS (
+        SELECT 1 FROM "ProductVariant" v
+        WHERE v."productId" = p."id" AND LOWER(v."sku") = LOWER(REPLACE(REPLACE(${q}, '\\%', '%'), '\\_', '_'))
+      ) THEN 0` : Prisma.empty}
+      WHEN LOWER(p."slug") = LOWER(REPLACE(REPLACE(${q}, '\\%', '%'), '\\_', '_')) THEN 1
+      WHEN p."title" ILIKE (${q} || '%') ESCAPE '\\' THEN 2
+      WHEN p."title" ILIKE ('%' || ${q} || '%') ESCAPE '\\' THEN 3
+      WHEN EXISTS (
+        SELECT 1 FROM "ProductVariant" v
+        WHERE v."productId" = p."id"
+          ${options.mode === "PUBLIC" ? Prisma.sql`AND v."status" = 'ACTIVE'` : Prisma.empty}
+          AND (
+            v."displayName" ILIKE ('%' || ${q} || '%') ESCAPE '\\'
+            OR v."size" ILIKE ('%' || ${q} || '%') ESCAPE '\\'
+            OR v."color" ILIKE ('%' || ${q} || '%') ESCAPE '\\'
+          )
+      ) THEN 4
+      WHEN EXISTS (
+        SELECT 1 FROM "ProductTag" pt JOIN "Tag" t ON t."id" = pt."tagId"
+        WHERE pt."productId" = p."id" AND t."name" ILIKE ('%' || ${q} || '%') ESCAPE '\\'
+      ) THEN 5
+      WHEN EXISTS (
+        SELECT 1 FROM "ProductCategory" pc JOIN "Category" c ON c."id" = pc."categoryId"
+        WHERE pc."productId" = p."id" AND c."status" = 'ACTIVE' AND c."name" ILIKE ('%' || ${q} || '%') ESCAPE '\\'
+      ) THEN 5
+      WHEN EXISTS (
+        SELECT 1 FROM "ProductCollection" pc JOIN "Collection" c ON c."id" = pc."collectionId"
+        WHERE pc."productId" = p."id" AND c."status" = 'ACTIVE' AND c."name" ILIKE ('%' || ${q} || '%') ESCAPE '\\'
+      ) THEN 5
+      WHEN COALESCE(p."shortDescription", '') ILIKE ('%' || ${q} || '%') ESCAPE '\\'
+        OR COALESCE(p."description", '') ILIKE ('%' || ${q} || '%') ESCAPE '\\' THEN 6
+      ${options.mode === "INTERNAL" ? Prisma.sql`WHEN EXISTS (
+        SELECT 1 FROM "ProductVariant" v
+        WHERE v."productId" = p."id" AND v."sku" ILIKE ('%' || ${q} || '%') ESCAPE '\\'
+      ) THEN 7` : Prisma.empty}
+      ELSE 8
+    END
+  `;
+}
+
+async function searchByRelevance(
+  options: CatalogSearchRepositoryOptions,
+  repository: CatalogRepositoryClient,
+  select: Prisma.ProductSelect,
+): Promise<RepositoryCatalogListResult<PublicCatalogProductRecord | PublicCatalogProductListRecord>> {
+  const where = buildSearchRelevanceWhereSql(options);
+  const order = buildSearchRelevanceOrderSql(options);
+  const limit = clampLimit(options.limit);
+  const offset = normalizeOffset(options.offset);
+  const rows = await repository.$queryRaw<Array<{ ids: string[]; total: bigint }>>(Prisma.sql`
+    SELECT
+      ARRAY(
+        SELECT ranked."id"
+        FROM "Product" ranked
+        ${where}
+        ORDER BY ${order}, ranked."id" ASC
+        OFFSET ${offset}
+        LIMIT ${limit}
+      ) AS ids,
+      (SELECT COUNT(*) FROM "Product" counted ${where}) AS total
+  `);
+  const ids = rows[0]?.ids ?? [];
+  const total = Number(rows[0]?.total ?? 0n);
+  if (!ids.length) return { items: [], total, limit, offset, hasNextPage: offset + 0 < total };
+  const items = await repository.product.findMany({
+    where: { id: { in: ids } },
+    select,
+  });
+  const byId = new Map(items.map((item) => [item.id, item]));
+  return {
+    items: ids.map((id) => byId.get(id)).filter((item): item is (typeof items)[number] => Boolean(item)),
+    total,
+    limit,
+    offset,
+    hasNextPage: offset + ids.length < total,
+  };
+}
+
 export async function searchCatalogProducts(
   options: CatalogSearchRepositoryOptions,
   client?: CatalogRepositoryClient,
@@ -435,6 +646,13 @@ export async function searchCatalogProducts(
   const offset = normalizeOffset(options.offset);
   const where = buildCatalogSearchWhere(options);
   const sortBy = options.sortBy ?? "createdAt";
+  if (options.relevance) {
+    return searchByRelevance(
+      options,
+      repository,
+      options.mode === "PUBLIC" ? publicCatalogListSelect : publicCatalogSelect,
+    );
+  }
   const sortDirection = options.sortDirection ?? "desc";
   if (sortBy === "merchandising") {
     return searchMerchandisedCatalogProducts(options, client);
