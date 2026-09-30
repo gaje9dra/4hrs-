@@ -3,6 +3,7 @@ import { CatalogServiceError } from "@/lib/catalog/errors";
 import * as repository from "@/lib/catalog/repository";
 import { getInventoryAvailability, type InventoryAvailability } from "@/lib/inventory/repository";
 import { validateMoney } from "@/lib/catalog/validation";
+import { logCatalogObservation, type CatalogSurface } from "@/lib/catalog/observability";
 
 export const CATALOG_QUERY_PAGE_DEFAULT = 24;
 export const CATALOG_QUERY_PAGE_MAX = 100;
@@ -371,8 +372,11 @@ export function createCatalogQueryService(customRepository: Partial<QueryReposit
   const repo = { ...defaultRepository, ...customRepository };
 
   return {
-    async listPublishedProducts(query: CatalogQuery = {}): Promise<CatalogListResult> {
-      const appliedQuery = normalizeQuery(query);
+    async listPublishedProducts(query: CatalogQuery = {}, observation?: { surface: CatalogSurface }): Promise<CatalogListResult> {
+      const startedAt = Date.now();
+      let appliedQuery: CatalogAppliedQuery | undefined;
+      try {
+        appliedQuery = normalizeQuery(query);
 
       const [category, collection, tags] = await Promise.all([
         appliedQuery.category ? repo.getCategoryBySlug(appliedQuery.category) : Promise.resolve(null),
