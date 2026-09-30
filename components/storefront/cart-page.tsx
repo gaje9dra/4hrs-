@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import { Minus, Plus, Trash2 } from "lucide-react";
 import { Container } from "@/components/layout/container";
 import { Button } from "@/components/ui/button";
@@ -63,7 +62,20 @@ export function CartPage() {
     }
   }, []);
 
-  useEffect(() => { void loadCart(); }, [loadCart]);
+  useEffect(() => {
+    const version = ++requestVersion.current;
+
+    void (async () => {
+      try {
+        const next = await cartRequest("/api/cart");
+        if (version === requestVersion.current) setCart(next);
+      } catch (reason) {
+        if (version === requestVersion.current) setError(customerError(reason));
+      } finally {
+        if (version === requestVersion.current) setLoading(false);
+      }
+    })();
+  }, []);
 
   async function mutate(key: string, url: string, init?: RequestInit) {
     const version = ++requestVersion.current;
