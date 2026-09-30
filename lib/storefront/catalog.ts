@@ -193,10 +193,11 @@ export async function getStorefrontHomeCatalogData(): Promise<StorefrontHomeData
     catalog.listActiveCollectionsWithPublishedProducts(),
   ]);
 
+  const featuredCollection = collections[0] ?? null;
   const editorialCollection = collections.find((collection) => Boolean(collection.description)) ?? null;
 
-  const featuredResult = editorialCollection
-    ? await getStorefrontCollectionProducts(editorialCollection.slug, {
+  const featuredResult = featuredCollection
+    ? await getStorefrontCollectionProducts(featuredCollection.slug, {
         pageSize: 4,
         sort: "merchandising",
       })
