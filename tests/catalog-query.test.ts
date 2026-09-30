@@ -320,7 +320,7 @@ test("pagination preserves the complete canonical filter and sort contract", asy
 });
 
 test("maximum page size remains bounded by the shared pagination contract", async () => {
-  let received: any;
+  let received: CatalogQueryRepositoryOptions | undefined;
   const service = createCatalogQueryService({
     ...queryRepository,
     queryPublishedCatalogProducts: async (options) => {
