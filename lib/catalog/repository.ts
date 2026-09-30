@@ -676,7 +676,24 @@ export async function getPublishedProductDetailsBySlug(slug: string, client?: Ca
 }
 
 export async function getCategoryBySlug(slug: string, client?: CatalogRepositoryClient) {
-  return clientOrDefault(client).category.findUnique({ where: { slug } });
+  return clientOrDefault(client).category.findUnique({
+    where: { slug },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      description: true,
+      seoTitle: true,
+      seoDescription: true,
+      parentId: true,
+      status: true,
+      _count: {
+        select: {
+          products: { where: { product: publishedProductWhere } },
+        },
+      },
+    },
+  });
 }
 
 export async function listActiveCategories(client?: CatalogRepositoryClient) {
