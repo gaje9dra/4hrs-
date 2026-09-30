@@ -361,7 +361,7 @@ export function createCatalogSearchService(options: {
       }
     },
 
-    async searchPublic(input: Omit<CatalogSearchQuery, "mode">): Promise<{ items: CatalogListItem[]; pagination: CatalogSearchResult["pagination"]; appliedQuery: CatalogAppliedQuery }> {
+    async searchPublic(input: Omit<CatalogSearchQuery, "mode">): Promise<{ items: CatalogListItem[]; pagination: CatalogSearchResult["pagination"]; appliedQuery: NormalizedCatalogSearchQuery }> {
       const result = await this.search({ ...input, mode: "PUBLIC" });
       return {
         items: result.items.map((item) => ({
@@ -376,7 +376,7 @@ export function createCatalogSearchService(options: {
           availability: item.availability.state,
         })),
         pagination: result.pagination,
-        appliedQuery: result.appliedQuery.catalog,
+        appliedQuery: result.appliedQuery,
       };
     },
 
