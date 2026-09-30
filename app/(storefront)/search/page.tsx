@@ -47,7 +47,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   try {
     const [products, filters] = await Promise.all([
       searchStorefrontProducts({ ...catalogQueryFromSearchParams(params), query }),
-      getStorefrontListingFilters(),
+      getStorefrontListingFilters("search"),
     ]);
 
     return (
