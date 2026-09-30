@@ -73,7 +73,6 @@ export type StorefrontProductList = {
 };
 
 function toProductCard(product: {
-  id: string;
   title: string;
   slug: string;
   primaryImage: { url: string; altText: string | null } | null;
@@ -251,11 +250,11 @@ export async function getStorefrontHomeCatalogData(): Promise<StorefrontHomeData
       })
     : null;
 
-  const featuredIds = new Set(featuredResult?.items.map((product) => product.id) ?? []);
+  const featuredSlugs = new Set(featuredResult?.items.map((product) => product.slug) ?? []);
 
   return {
     featuredProducts: featuredResult?.items ?? [],
-    newArrivals: newArrivalResult.items.filter((product) => !featuredIds.has(product.id)).slice(0, 4),
+    newArrivals: newArrivalResult.items.filter((product) => !featuredSlugs.has(product.slug)).slice(0, 4),
     categories: categories.slice(0, 6).map(({ id, name, slug, description }) => ({ id, name, slug, description })),
     collections: collections.slice(0, 3).map(({ id, name, slug, description }) => ({ id, name, slug, description })),
   };
@@ -302,14 +301,14 @@ export async function getStorefrontRelatedProducts(product: StorefrontProductDet
   ]);
 
   const related: StorefrontProductCard[] = [];
-  const seen = new Set<string>([product.id]);
+  const seen = new Set<string>([product.slug]);
 
   for (const item of [
     ...(collectionResult?.items ?? []),
     ...(categoryResult?.items ?? []),
   ]) {
-    if (seen.has(item.id)) continue;
-    seen.add(item.id);
+    if (seen.has(item.slug)) continue;
+    seen.add(item.slug);
     related.push(item);
     if (related.length === 4) break;
   }
