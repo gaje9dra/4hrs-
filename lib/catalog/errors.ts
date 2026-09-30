@@ -29,8 +29,7 @@ export type CatalogErrorCode =
   | "INVALID_CURSOR"
   | "INVALID_PRICE_RANGE"
   | "CATALOG_DATABASE_ERROR"
-  | "CATALOG_DATA_INTEGRITY_ERROR"
-  | "UNEXPECTED_CATALOG_ERROR";
+  | "CATALOG_DATA_INTEGRITY_ERROR";
 
 export class CatalogServiceError extends Error {
   readonly code: CatalogErrorCode;
