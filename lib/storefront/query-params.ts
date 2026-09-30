@@ -90,7 +90,7 @@ export function catalogQueryFromSearchParams(params: StorefrontSearchParams): Ca
     category: slug(first(params.category), "category"),
     collection: slug(first(params.collection), "collection"),
     tags: uniqueTags.length ? uniqueTags : undefined,
-    tagMode,
+    tagMode: uniqueTags.length ? (tagMode ?? "AND") : "AND",
     minPrice: money(first(params.minPrice), "minPrice"),
     maxPrice: money(first(params.maxPrice), "maxPrice"),
     inStock: booleanValue(first(params.inStock), "inStock"),
