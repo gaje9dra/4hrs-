@@ -661,8 +661,12 @@ async function searchByRelevance(
           select,
         });
   const byId = new Map(items.map((item) => [item.id, item]));
+  const orderedItems = ids
+    .map((id) => byId.get(id))
+    .filter((item): item is NonNullable<typeof item> => Boolean(item));
+
   return {
-    items: ids.map((id) => byId.get(id)).filter((item): item is (typeof items)[number] => Boolean(item)),
+    items: orderedItems as Array<PublicCatalogProductRecord | PublicCatalogProductListRecord>,
     total,
     limit,
     offset,
