@@ -3,6 +3,7 @@ import { createCatalogQueryService, type CatalogAppliedQuery, type CatalogQuery,
 import { createCatalogSearchService, type CatalogSearchQuery } from "@/lib/catalog/search";
 import { productPath } from "@/lib/catalog/routes";
 import { CatalogServiceError } from "@/lib/catalog/errors";
+import { logCatalogObservation, type CatalogSurface } from "@/lib/catalog/observability";
 
 const catalog = createCatalogQueryService();
 const search = createCatalogSearchService();
@@ -95,13 +96,26 @@ function toProductCard(product: {
   };
 }
 
-export async function getStorefrontProducts(query: CatalogQuery = {}): Promise<StorefrontProductList> {
-  const result = await catalog.listPublishedProducts(query);
-  return {
-    items: result.items.map(toProductCard),
-    pagination: result.pagination,
-    appliedQuery: result.appliedQuery,
-  };
+export async function getStorefrontProducts(query: CatalogQuery = {}, surface: CatalogSurface = "shop"): Promise<StorefrontProductList> {
+  const startedAt = Date.now();
+  try {
+    const result = await catalog.listPublishedProducts(query, { surface });
+    return {
+      items: result.items.map(toProductCard),
+      pagination: result.pagination,
+      appliedQuery: result.appliedQuery,
+    };
+  } catch (error) {
+    if (!(error instanceof CatalogServiceError)) {
+      logCatalogObservation({
+        surface,
+        operation: "getStorefrontProducts",
+        classification: "unexpected_application_failure",
+        durationMs: Date.now() - startedAt,
+      });
+    }
+    throw error;
+  }
 }
 
 export async function getStorefrontProduct(slug: string): Promise<StorefrontProductDetail> {
@@ -169,17 +183,28 @@ export async function getStorefrontTags(): Promise<StorefrontTag[]> {
   return (await getActiveTags()).map(({ name, slug }) => ({ name, slug }));
 }
 
-export async function getStorefrontListingFilters() {
-  const [categories, collections, tags] = await Promise.all([
-    getActiveCategories(),
-    getActiveCollections(),
-    getActiveTags(),
-  ]);
-  return {
-    categories: categories.map(({ name, slug }) => ({ name, slug })),
-    collections: collections.map(({ name, slug }) => ({ name, slug })),
-    tags: tags.map(({ name, slug }) => ({ name, slug })),
-  };
+export async function getStorefrontListingFilters(surface: CatalogSurface = "shop") {
+  const startedAt = Date.now();
+  try {
+    const [categories, collections, tags] = await Promise.all([
+      getActiveCategories(),
+      getActiveCollections(),
+      getActiveTags(),
+    ]);
+    return {
+      categories: categories.map(({ name, slug }) => ({ name, slug })),
+      collections: collections.map(({ name, slug }) => ({ name, slug })),
+      tags: tags.map(({ name, slug }) => ({ name, slug })),
+    };
+  } catch (error) {
+    logCatalogObservation({
+      surface,
+      operation: "loadListingFilters",
+      classification: error instanceof CatalogServiceError ? "unexpected_application_failure" : "database_failure",
+      durationMs: Date.now() - startedAt,
+    });
+    throw error;
+  }
 }
 
 export async function getStorefrontCategoryProducts(slug: string, query: Omit<CatalogQuery, "category"> = {}) {
