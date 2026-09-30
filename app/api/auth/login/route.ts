@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createAuthenticationService } from "@/lib/auth/service";
 import { createInMemoryAuthenticationRateLimiter } from "@/lib/auth/rate-limit";
-import { CUSTOMER_SESSION_COOKIE, sessionCookieOptions } from "@/lib/auth/session";
+import { CUSTOMER_SESSION_COOKIE, sessionCookieOptions, hashSessionToken } from "@/lib/auth/session";
 import { assertSameOrigin, authErrorResponse, authJson, readAuthJson, requireCredentials } from "@/lib/auth/http";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     const result = await authentication.login(
       credentials,
       request.headers.get("x-forwarded-for") ?? "unknown",
-      currentToken ? (await import("@/lib/auth/session")).hashSessionToken(currentToken) : undefined,
+      currentToken ? hashSessionToken(currentToken) : undefined,
     );
 
     const response = authJson({ authenticated: true, customer: result.customer });
