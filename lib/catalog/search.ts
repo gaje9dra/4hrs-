@@ -324,7 +324,9 @@ export function createCatalogSearchService(options: {
                 ? "invalid_query"
                 : error.code === "CATALOG_DATABASE_ERROR"
                   ? "database_failure"
-                  : "unexpected_application_failure";
+                  : error.code === "CATALOG_DATA_INTEGRITY_ERROR"
+                    ? "catalog_data_integrity"
+                    : "unexpected_application_failure";
 
           logCatalogObservation({
             surface: "search",
