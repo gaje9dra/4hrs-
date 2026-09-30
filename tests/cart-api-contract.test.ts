@@ -199,8 +199,8 @@ test("API route handlers expose malformed requests safely and reject anonymous a
   assert.equal(read.status, 403);
   assert.deepEqual(await read.json(), {
     error: {
-      code: "CART_OWNERSHIP_UNAVAILABLE",
-      message: "Cart ownership cannot be resolved because customer/session identity is not implemented.",
+      code: "CART_UNAUTHORIZED",
+      message: "Authentication is required to access this Cart.",
     },
   });
   assert.equal(read.headers.get("cache-control"), "private, no-store, max-age=0");
