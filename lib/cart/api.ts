@@ -20,8 +20,8 @@ const customerRepository = createCustomerRepository();
 const cartOwnership = createAuthenticatedCartOwnershipBoundary();
 const authenticatedCartService = createCartService({ ownership: cartOwnership });
 
-const authenticatedRequestContext: CartRequestContextResolver = async () => {
-  const current = await resolveCurrentCustomer();
+const authenticatedRequestContext: CartRequestContextResolver = async (request) => {
+  const current = await resolveCurrentCustomer(request);
   if (!current) {
     throw new CartServiceError("CART_UNAUTHORIZED", "Authentication is required to access this Cart.");
   }
