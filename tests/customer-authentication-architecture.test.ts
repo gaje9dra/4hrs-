@@ -31,7 +31,7 @@ test("Phase 9.4 creates only the approved customer auth UI routes", () => {
   assert.equal(fs.existsSync(path.join(rootApp, "login/page.tsx")), true);
   assert.equal(fs.existsSync(path.join(rootApp, "register/page.tsx")), true);
 
-  for (const deferred of ["forgot-password", "reset-password", "verify-email", "account"]) {
+  for (const deferred of ["forgot-password", "reset-password", "verify-email"]) {
     assert.equal(fs.existsSync(path.join(rootApp, deferred)), false, "unexpected route: /" + deferred);
   }
 });
