@@ -591,3 +591,53 @@ test("search clear state removes q while preserving applicable catalog controls"
     "/search?category=shirts&collection=new-arrivals&tags=streetwear&tagMode=OR&minPrice=800.00&maxPrice=1500.00&inStock=true&sort=price_asc&pageSize=48",
   );
 });
+
+
+test("database service errors retain database-failure diagnostics", async () => {
+  const originalError = console.error;
+  const logs: string[] = [];
+  console.error = (...args: unknown[]) => logs.push(args.join(" "));
+  try {
+    const service = createCatalogSearchService({
+      provider: {
+        async search() {
+          throw new CatalogServiceError("CATALOG_DATABASE_ERROR", "Catalog search failed.");
+        },
+      },
+      lookup,
+    });
+    await assert.rejects(
+      service.searchPublic({ query: "shirt" }),
+      (error: unknown) => error instanceof CatalogServiceError && error.code === "CATALOG_DATABASE_ERROR",
+    );
+  } finally {
+    console.error = originalError;
+  }
+
+  assert.equal(logs.length, 1);
+  assert.match(logs[0], /"classification":"database_failure"/);
+});
+
+test("slow-search diagnostics use the existing structured catalog observation surface", async () => {
+  const originalInfo = console.info;
+  const logs: string[] = [];
+  console.info = (...args: unknown[]) => logs.push(args.join(" "));
+  try {
+    const { logCatalogObservation } = await import("../lib/catalog/observability.ts");
+    logCatalogObservation({
+      surface: "search",
+      operation: "search",
+      classification: "slow_search",
+      durationMs: 1500,
+      query: { page: 1, pageSize: 24 },
+    });
+  } finally {
+    console.info = originalInfo;
+  }
+
+  assert.equal(logs.length, 1);
+  assert.match(logs[0], /"surface":"search"/);
+  assert.match(logs[0], /"classification":"slow_search"/);
+  assert.match(logs[0], /"durationMs":1500/);
+  assert.doesNotMatch(logs[0], /query.*q/);
+});
