@@ -18,6 +18,7 @@ export function authErrorResponse(error: unknown) {
       error.code === "RATE_LIMITED" ? 429 :
       error.code === "INVALID_INPUT" || error.code === "CSRF_REJECTED" ? 400 :
       error.code === "SESSION_INVALID" || error.code === "SESSION_EXPIRED" ? 401 :
+      error.code === "AUTH_DATABASE_ERROR" ? 503 :
       401;
     const publicCode =
       error.code === "ACCOUNT_DISABLED" ||
