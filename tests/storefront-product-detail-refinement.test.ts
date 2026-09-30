@@ -33,8 +33,9 @@ test("product hierarchy contains breadcrumb, H1, description, price, availabilit
 
 test("variant engine is dynamic, canonical, deterministic and rejects unavailable combinations", () => {
   assert.match(options, /product\.options\.map/);
-  assert.match(options, /optionValueId/);
-  assert.match(options, /initialSelection/);
+  assert.match(options, /resolveSelectedVariant/);
+  assert.match(options, /selectionFromVariant/);
+  assert.match(options, /getDeterministicInitialVariant/);
   assert.match(options, /variant\.availability\.state !== "OUT_OF_STOCK"/);
   assert.match(options, /aria-pressed/);
   assert.match(options, /aria-disabled/);
@@ -111,4 +112,22 @@ test("PDP uses canonical breadcrumb helpers and deduplicates route loading", () 
 
 test("invalid product slugs resolve through not-found behavior", () => {
   assert.match(route, /error\.code === "PRODUCT_NOT_FOUND" \|\| error\.code === "INVALID_QUERY"/);
+});
+
+test("Phase 7.2 centralizes variant resolution and rejects ambiguous or incomplete matrices", () => {
+  const selection = readFileSync("lib/storefront/variant-selection.ts", "utf8");
+  assert.match(selection, /resolveSelectedVariant/);
+  assert.match(selection, /isVariantValueSelectable/);
+  assert.match(selection, /selectionFromVariant/);
+  assert.match(query, /validateVariantMatrix/);
+  assert.match(query, /duplicate variant option combinations/i);
+  assert.match(query, /seenOptionTypes/);
+  assert.match(query, /seenCombinations/);
+  assert.doesNotMatch(options, /function optionValueId|function matchesSelection|function isSelectable|function initialSelection/);
+});
+
+test("Phase 7.2 keeps the future commerce handoff provider-neutral and server-authoritative", () => {
+  assert.doesNotMatch(options + interactive, /addToCart|createOrder|checkout|payment|qikink|provider/i);
+  assert.match(storefront, /variants: product\.variants\.map/);
+  assert.match(storefront, /availability: \{ state: variant\.availability\.state \}/);
 });
