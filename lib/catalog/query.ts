@@ -244,7 +244,7 @@ function normalizePageSize(value: number | undefined): number {
   return value;
 }
 
-function normalizeQuery(query: CatalogQuery): CatalogAppliedQuery {
+export function normalizeCatalogQuery(query: CatalogQuery): CatalogAppliedQuery {
   const category = query.category === undefined ? undefined : normalizeSlug(query.category, "category");
   const collection = query.collection === undefined ? undefined : normalizeSlug(query.collection, "collection");
   const tags = normalizeTags(query.tags);
@@ -373,7 +373,7 @@ export function createCatalogQueryService(customRepository: Partial<QueryReposit
       let appliedQuery: CatalogAppliedQuery | undefined;
 
       try {
-        appliedQuery = normalizeQuery(query);
+        appliedQuery = normalizeCatalogQuery(query);
 
         const [category, collection, tags] = await Promise.all([
           appliedQuery.category ? repo.getCategoryBySlug(appliedQuery.category) : Promise.resolve(null),
