@@ -108,6 +108,8 @@ export function buildCatalogHref(pathname: string, params: StorefrontSearchParam
   }
 
   const search = new URLSearchParams();
+  const rawQuery = first(params.q);
+  if (pathname === "/search" && rawQuery) search.set("q", rawQuery.trim().replace(/\s+/g, " "));
   const query = catalogQueryFromSearchParams(params);
 
   append(search, "category", query.category);
