@@ -32,8 +32,10 @@ export async function generateMetadata({
   const query = metadataQuery(params.q);
 
   try {
-    const canonical = buildCatalogHref("/search", params, catalogQueryFromSearchParams(params).page ?? 1);
     const normalizedQuery = query ? normalizeCatalogSearchQueryParameter(query) : "";
+    const canonical = normalizedQuery
+      ? buildCatalogHref("/search", params, catalogQueryFromSearchParams(params).page ?? 1)
+      : "/search";
     const titleQuery = normalizedQuery.slice(0, 80);
     const title = normalizedQuery ? `Search results for “${titleQuery}” | 4HRS` : "Search | 4HRS";
     const description = searchMetadataDescription(titleQuery);
