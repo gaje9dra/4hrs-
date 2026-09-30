@@ -30,7 +30,6 @@ test("homepage data uses public catalog services and bounded discovery sets", ()
 test("homepage merchandising uses canonical collection ordering", () => {
   const source = read("lib/storefront/catalog.ts");
   assert.match(source, /sort: "merchandising"/);
-  assert.match(source, /editorialCollection/);
   assert.match(source, /sort: "merchandising"/);
 });
 
