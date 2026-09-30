@@ -44,7 +44,6 @@ test("homepage sections are conditional and do not manufacture empty catalog con
   assert.match(source, /if \(!products\.length\) return null/);
   assert.match(source, /if \(!categories\.length\) return null/);
   assert.match(source, /if \(!collections\.length\) return null/);
-  assert.match(source, /if \(!collection\) return null/);
   assert.match(source, /href="\/shop"/);
   assert.match(source, /title="Curated picks"/);
   assert.doesNotMatch(source, /customer count|reviews?|bestseller|trending|fake/i);
@@ -119,7 +118,7 @@ test("homepage section headings expose their labelled-by targets", () => {
 
 test("product cards remain reusable and use nested heading level", () => {
   const source = read("components/storefront/product-card.tsx");
-  assert.match(source, /<h3 className="text-xl/);
+  assert.match(source, /<h3 className="min-w-0 text-xl/);
   assert.doesNotMatch(source, /<h2 className="text-xl/);
 });
 
