@@ -34,7 +34,7 @@ export function ProductCard({ product }: { product: StorefrontProductCard }) {
         </div>
         <div className="space-y-4 p-5">
           <div className="flex items-start justify-between gap-3">
-            <h2 className="text-xl font-900 uppercase leading-tight">{product.title}</h2>
+            <h3 className="text-xl font-900 uppercase leading-tight">{product.title}</h3>
             <Badge variant={product.availability === "OUT_OF_STOCK" ? "outline" : "yellow"}>
               {availabilityLabel[product.availability]}
             </Badge>
