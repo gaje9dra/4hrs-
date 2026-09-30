@@ -32,6 +32,14 @@ function invalidParameter(name: string, reason: string): never {
   throw new Error("Invalid catalog query parameter: " + name + " (" + reason + ").");
 }
 
+function safe<T>(parse: () => T): T | undefined {
+  try {
+    return parse();
+  } catch {
+    return undefined;
+  }
+}
+
 function positiveInteger(value: string | undefined, name: string, max: number): number | undefined {
   if (value === undefined || value === "") return undefined;
   if (!/^\d+$/.test(value)) invalidParameter(name, "must be a positive integer");
@@ -69,42 +77,45 @@ function booleanValue(value: string | undefined, name: string): boolean | undefi
 
 export function catalogQueryFromSearchParams(params: StorefrontSearchParams): CatalogQuery {
   const sortValue = first(params.sort);
-  const sort =
+  const sort = safe(() =>
     sortValue === undefined || sortValue === ""
       ? undefined
       : sorts.has(sortValue as CatalogSort)
         ? (sortValue as CatalogSort)
-        : invalidParameter("sort", "unsupported sort");
+        : invalidParameter("sort", "unsupported sort"),
+  );
 
   const rawTags = all(params.tags);
   const tags = rawTags
     .flatMap((value) => value.split(","))
-    .map((tag) => slug(tag, "tags"))
+    .map((tag) => safe(() => slug(tag, "tags")))
     .filter((tag): tag is string => Boolean(tag));
   const uniqueTags = [...new Set(tags)].sort();
-  if (uniqueTags.length > MAX_CATALOG_TAGS) {
-    invalidParameter("tags", "must contain no more than " + MAX_CATALOG_TAGS + " unique tags");
-  }
+  const boundedTags =
+    uniqueTags.length > MAX_CATALOG_TAGS
+      ? uniqueTags.slice(0, MAX_CATALOG_TAGS)
+      : uniqueTags;
 
   const tagModeValue = first(params.tagMode);
-  const tagMode =
+  const tagMode = safe(() =>
     tagModeValue === undefined || tagModeValue === ""
       ? undefined
       : tagModeValue === "AND" || tagModeValue === "OR"
         ? tagModeValue
-        : invalidParameter("tagMode", "must be AND or OR");
+        : invalidParameter("tagMode", "must be AND or OR"),
+  );
 
   return {
-    category: slug(first(params.category), "category"),
-    collection: slug(first(params.collection), "collection"),
-    tags: uniqueTags.length ? uniqueTags : undefined,
-    tagMode: uniqueTags.length ? (tagMode ?? "AND") : "AND",
-    minPrice: money(first(params.minPrice), "minPrice"),
-    maxPrice: money(first(params.maxPrice), "maxPrice"),
-    inStock: booleanValue(first(params.inStock), "inStock"),
+    category: safe(() => slug(first(params.category), "category")),
+    collection: safe(() => slug(first(params.collection), "collection")),
+    tags: boundedTags.length ? boundedTags : undefined,
+    tagMode: boundedTags.length ? (tagMode ?? "AND") : "AND",
+    minPrice: safe(() => money(first(params.minPrice), "minPrice")),
+    maxPrice: safe(() => money(first(params.maxPrice), "maxPrice")),
+    inStock: safe(() => booleanValue(first(params.inStock), "inStock")),
     sort,
-    page: positiveInteger(first(params.page), "page", MAX_CATALOG_PAGE),
-    pageSize: positiveInteger(first(params.pageSize), "pageSize", MAX_CATALOG_PAGE_SIZE),
+    page: safe(() => positiveInteger(first(params.page), "page", MAX_CATALOG_PAGE)),
+    pageSize: safe(() => positiveInteger(first(params.pageSize), "pageSize", MAX_CATALOG_PAGE_SIZE)),
   };
 }
 
