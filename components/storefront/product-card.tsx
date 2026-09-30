@@ -23,7 +23,8 @@ export function ProductCard({ product }: { product: StorefrontProductCard }) {
               src={product.image.url}
               alt={product.image.altText ?? product.title}
               fill
-              sizes="(max-width: 639px) 100vw, (max-width: 1024px) 50vw, 25vw"
+              loading="lazy"
+              sizes="(max-width: 639px) 100vw, (max-width: 1024px) 50vw, (max-width: 1535px) 25vw, 320px"
               className="object-cover"
             />
           ) : (
@@ -34,7 +35,7 @@ export function ProductCard({ product }: { product: StorefrontProductCard }) {
         </div>
         <div className="space-y-4 p-5">
           <div className="flex items-start justify-between gap-3">
-            <h3 className="text-xl font-900 uppercase leading-tight">{product.title}</h3>
+            <h3 className="min-w-0 text-xl font-900 uppercase leading-tight">{product.title}</h3>
             <Badge variant={product.availability === "OUT_OF_STOCK" ? "outline" : "yellow"}>
               {availabilityLabel[product.availability]}
             </Badge>
