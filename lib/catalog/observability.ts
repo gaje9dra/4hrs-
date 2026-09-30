@@ -6,7 +6,8 @@ export type CatalogErrorClassification =
   | "not_found"
   | "catalog_data_integrity"
   | "database_failure"
-  | "unexpected_application_failure";
+  | "unexpected_application_failure"
+  | "slow_search";
 
 export type CatalogObservation = {
   surface: CatalogSurface;
@@ -47,7 +48,7 @@ export function logCatalogObservation(observation: CatalogObservation): void {
     console.error(JSON.stringify(payload));
   } else if (observation.classification === "invalid_query") {
     console.warn(JSON.stringify(payload));
-  } else if (observation.classification === "not_found") {
+  } else if (observation.classification === "not_found" || observation.classification === "slow_search") {
     console.info(JSON.stringify(payload));
   }
 }
