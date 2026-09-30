@@ -4,33 +4,60 @@ import { createInMemoryAuthenticationRateLimiter } from "../lib/auth/rate-limit.
 import { hashPassword, verifyPassword } from "../lib/auth/password.ts";
 import { createAuthenticationService } from "../lib/auth/service.ts";
 import { AuthenticationError } from "../lib/auth/errors.ts";
+import type { CustomerRepository } from "../lib/customer/repository.ts";
 
-function createFakeRepository() {
-  const customers = new Map<string, any>();
-  const credentials = new Map<string, any>();
-  const sessions = new Map<string, any>();
+function createFakeRepository(): CustomerRepository {
+  type FakeCustomer = {
+    id: string;
+    email: string;
+    displayName: string | null;
+    status: "ACTIVE" | "DISABLED" | "SUSPENDED" | "PENDING_VERIFICATION";
+    emailVerifiedAt: Date | null;
+    createdAt: Date;
+    updatedAt: Date;
+  };
+  type FakeCredential = {
+    id: string;
+    customerId: string;
+    passwordHash: string;
+    createdAt: Date;
+    updatedAt: Date;
+  };
+  type FakeSession = {
+    id: string;
+    customerId: string;
+    sessionTokenHash: string;
+    createdAt: Date;
+    expiresAt: Date;
+    revokedAt: Date | null;
+    lastUsedAt: Date | null;
+  };
+
+  const customers = new Map<string, FakeCustomer>();
+  const credentials = new Map<string, FakeCredential>();
+  const sessions = new Map<string, FakeSession>();
   let id = 0;
   const nextId = (prefix: string) => prefix + (++id);
 
   const repository: any = {
-    async withTransaction(work: any) { return work(repository); },
+    async withTransaction<T>(work: (repository: CustomerRepository) => Promise<T>) { return work(repository); },
     async findCustomerById(customerId: string) { return customers.get(customerId) ?? null; },
     async findCustomerByNormalizedEmail(email: string) {
       return [...customers.values()].find((customer) => customer.email === email) ?? null;
     },
-    async createCustomer(input: any) {
-      const customer = { id: nextId("customer-"), email: input.email, status: input.status ?? "ACTIVE", emailVerifiedAt: null, createdAt: new Date(), updatedAt: new Date() };
+    async createCustomer(input: { email: string; status?: FakeCustomer["status"]; emailVerifiedAt?: Date | null }) {
+      const customer: FakeCustomer = { id: nextId("customer-"), email: input.email, displayName: null, status: input.status ?? "ACTIVE", emailVerifiedAt: input.emailVerifiedAt ?? null, createdAt: new Date(), updatedAt: new Date() };
       customers.set(customer.id, customer);
       return customer;
     },
-    async updateCustomerStatus(customerId: string, status: string) {
+    async updateCustomerStatus(customerId: string, status: FakeCustomer["status"]) {
       const customer = customers.get(customerId);
       if (!customer) throw new Error("not found");
       customer.status = status;
       return customer;
     },
-    async createCredential(input: any) {
-      const credential = { id: nextId("credential-"), ...input, createdAt: new Date(), updatedAt: new Date() };
+    async createCredential(input: { customerId: string; passwordHash: string }) {
+      const credential: FakeCredential = { id: nextId("credential-"), ...input, createdAt: new Date(), updatedAt: new Date() };
       credentials.set(input.customerId, credential);
       return credential;
     },
@@ -40,8 +67,8 @@ function createFakeRepository() {
       credential.passwordHash = passwordHash;
       return credential;
     },
-    async createSession(input: any) {
-      const session = { id: nextId("session-"), ...input, createdAt: new Date(), revokedAt: null, lastUsedAt: null };
+    async createSession(input: { customerId: string; sessionTokenHash: string; expiresAt: Date }) {
+      const session: FakeSession = { id: nextId("session-"), ...input, createdAt: new Date(), revokedAt: null, lastUsedAt: null };
       sessions.set(input.sessionTokenHash, session);
       return session;
     },
