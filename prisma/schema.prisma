@@ -69,6 +69,10 @@ model Product {
   @@index([status])
   @@index([createdAt])
   @@index([price])
+  @@index([status, createdAt])
+  @@index([status, updatedAt])
+  @@index([status, price])
+  @@index([status, title])
 }
 
 
