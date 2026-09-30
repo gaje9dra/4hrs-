@@ -3,6 +3,21 @@ import { db } from "@/lib/db/client";
 
 export type CartRepositoryClient = PrismaClient | Prisma.TransactionClient;
 
+type CartRecord = Prisma.CartGetPayload<{ include: { items: true } }>;
+type CartItemRecord = Prisma.CartItemGetPayload<{}>;
+
+export type CartRepository = {
+  withTransaction<T>(work: (transactionRepository: CartRepository) => Promise<T>, options?: CartRepositoryTransactionOptions): Promise<T>;
+  createCart(customerId?: string): Promise<Prisma.CartGetPayload<{}>>;
+  findCartById(cartId: string): Promise<CartRecord | null>;
+  createCartItem(input: CreateCartItemInput): Promise<CartItemRecord>;
+  findCartItemById(cartItemId: string): Promise<CartItemRecord | null>;
+  findCartItem(cartId: string, productId: string, variantId?: string | null): Promise<CartItemRecord | null>;
+  updateCartItemQuantity(cartItemId: string, quantity: number): Promise<CartItemRecord>;
+  removeCartItem(cartItemId: string): Promise<CartItemRecord>;
+  clearCartItems(cartId: string): Promise<Prisma.BatchPayload>;
+};
+
 export type CartRepositoryTransactionOptions = {
   maxWait?: number;
   timeout?: number;
@@ -25,7 +40,7 @@ function assertPositiveQuantity(quantity: number) {
   }
 }
 
-export function createCartRepository(client?: CartRepositoryClient) {
+export function createCartRepository(client?: CartRepositoryClient): CartRepository {
   const database = clientOrDefault(client);
 
   return {
@@ -116,4 +131,3 @@ export function createCartRepository(client?: CartRepositoryClient) {
   };
 }
 
-export type CartRepository = ReturnType<typeof createCartRepository>;
