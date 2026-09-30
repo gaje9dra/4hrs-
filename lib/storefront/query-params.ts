@@ -159,7 +159,7 @@ export function buildCatalogFilterHref(
   append(search, "minPrice", query.minPrice);
   append(search, "maxPrice", query.maxPrice);
   if (query.inStock) append(search, "inStock", "true");
-  if (query.sort && query.sort !== DEFAULT_CATALOG_SORT) append(search, "sort", query.sort);
+  if (query.sort && (pathname === "/search" || query.sort !== DEFAULT_CATALOG_SORT)) append(search, "sort", query.sort);
   if (query.pageSize && query.pageSize !== DEFAULT_CATALOG_PAGE_SIZE) append(search, "pageSize", String(query.pageSize));
 
   const serialized = search.toString();
