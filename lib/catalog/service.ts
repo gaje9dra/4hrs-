@@ -87,13 +87,13 @@ type CatalogRepository = {
   updateProductImagesPrimaryState: typeof repository.updateProductImagesPrimaryState;
   createCategory: typeof repository.createCategory;
   getCategoryById: typeof repository.getCategoryById;
-  getCategoryBySlug: (slug: string, client?: repository.CatalogRepositoryClient) => Promise<{ id: string; status: "ACTIVE" | "DRAFT" | "ARCHIVED"; name: string; slug: string; description: string | null; seoTitle: string | null; seoDescription: string | null; parentId: string | null; createdAt: Date; updatedAt: Date } | null>;
+  getCategoryBySlug: (slug: string, client?: repository.CatalogRepositoryClient) => Promise<{ id: string; status: "ACTIVE" | "DRAFT" | "ARCHIVED"; name: string; slug: string; description: string | null; seoTitle: string | null; seoDescription: string | null; parentId: string | null; createdAt: Date; updatedAt: Date; _count: { products: number } } | null>;
   getCategoryHierarchy: typeof repository.getCategoryHierarchy;
   updateCategory: typeof repository.updateCategory;
   archiveCategory: typeof repository.archiveCategory;
   createCollection: typeof repository.createCollection;
   getCollectionById: typeof repository.getCollectionById;
-  getCollectionBySlug: (slug: string, client?: repository.CatalogRepositoryClient) => Promise<{ id: string; status: "ACTIVE" | "DRAFT" | "ARCHIVED"; name: string; slug: string; description: string | null; seoTitle: string | null; seoDescription: string | null; createdAt: Date; updatedAt: Date } | null>;
+  getCollectionBySlug: (slug: string, client?: repository.CatalogRepositoryClient) => Promise<{ id: string; status: "ACTIVE" | "DRAFT" | "ARCHIVED"; name: string; slug: string; description: string | null; seoTitle: string | null; seoDescription: string | null; createdAt: Date; updatedAt: Date; _count: { products: number } } | null>;
   updateCollection: typeof repository.updateCollection;
   archiveCollection: typeof repository.archiveCollection;
   createTag: typeof repository.createTag;
