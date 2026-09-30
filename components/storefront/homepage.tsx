@@ -29,7 +29,7 @@ function Hero({ data }: { data: StorefrontHomeData }) {
           </p>
           <div className="mt-9 flex flex-wrap gap-4">
             <Button href="/shop" variant="yellow">
-              Shop now <ArrowRight size={18} aria-hidden="true" />
+              Shop the catalog <ArrowRight size={18} aria-hidden="true" />
             </Button>
           </div>
         </div>
@@ -58,19 +58,33 @@ function Hero({ data }: { data: StorefrontHomeData }) {
   );
 }
 
-function ProductDiscovery({ id, title, eyebrow, products }: { id: string; title: string; eyebrow: string; products: StorefrontHomeData["newArrivals"] }) {
+function ProductDiscovery({
+  title,
+  eyebrow,
+  products,
+}: {
+  title: string;
+  eyebrow: string;
+  products: StorefrontHomeData["newArrivals"];
+}) {
   if (!products.length) return null;
 
   return (
-    <section aria-labelledby={id} className="border-b-2 border-border lg:border-b-4">
+    <section aria-labelledby="curated-products-title" className="border-b-2 border-border lg:border-b-4">
       <Container className="py-14 sm:py-18 lg:py-24">
-        <SharedSectionHeading eyebrow={eyebrow} title={title} className="mb-10" />
+        <SharedSectionHeading
+          id="curated-products-title"
+          eyebrow={eyebrow}
+          title={title}
+          description="Start with a deterministic edit from the live catalog, then browse the full range when you want more."
+          className="mb-10"
+        />
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {products.slice(0, 4).map((product) => <ProductCard key={product.id} product={product} />)}
         </div>
         <div className="mt-8 flex justify-start">
           <Link href="/shop" className="motion-link inline-flex min-h-12 items-center gap-2 border-2 border-border bg-white px-5 py-3 text-sm font-900 uppercase shadow-hard-sm no-underline">
-            Explore all products <ArrowRight size={18} aria-hidden="true" />
+            Browse all products <ArrowRight size={18} aria-hidden="true" />
           </Link>
         </div>
       </Container>
@@ -82,9 +96,15 @@ function CategoryDiscovery({ categories }: { categories: StorefrontHomeData["cat
   if (!categories.length) return null;
 
   return (
-    <section aria-labelledby="category-title" className="bg-primary-yellow border-b-2 border-border lg:border-b-4">
+    <section aria-labelledby="category-title" className="border-b-2 border-border bg-primary-yellow lg:border-b-4">
       <Container className="py-14 sm:py-18 lg:py-24">
-        <SharedSectionHeading eyebrow="Discover / 02" title="Shop by category" description="Start with the product family that fits your wardrobe and explore the live catalog." className="mb-10" />
+        <SharedSectionHeading
+          id="category-title"
+          eyebrow="Discover / 02"
+          title="Shop by category"
+          description="Go straight to a product family in the live catalog."
+          className="mb-10"
+        />
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {categories.slice(0, 6).map((category, index) => (
             <Link
@@ -105,18 +125,45 @@ function CategoryDiscovery({ categories }: { categories: StorefrontHomeData["cat
   );
 }
 
+function NewArrivals({ products }: { products: StorefrontHomeData["newArrivals"] }) {
+  if (!products.length) return null;
+
+  return (
+    <section aria-labelledby="new-arrivals-title" className="border-b-2 border-border lg:border-b-4">
+      <Container className="py-14 sm:py-18 lg:py-24">
+        <SharedSectionHeading
+          id="new-arrivals-title"
+          eyebrow="New arrivals / 03"
+          title="New arrivals"
+          description="The latest published products, ordered by the catalog's canonical creation timestamp."
+          className="mb-10"
+        />
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {products.slice(0, 4).map((product) => <ProductCard key={product.id} product={product} />)}
+        </div>
+      </Container>
+    </section>
+  );
+}
+
 function CollectionDiscovery({ collections }: { collections: StorefrontHomeData["collections"] }) {
   if (!collections.length) return null;
 
   return (
     <section aria-labelledby="collection-title" className="border-b-2 border-border bg-primary-blue text-white lg:border-b-4">
       <Container className="py-14 sm:py-18 lg:py-24">
-        <SharedSectionHeading eyebrow="Curated / 03" title="Collections" description="Browse the active editorial groups already defined in the canonical catalog." className="mb-10 [&_h2]:text-white [&_p]:text-white/90" />
+        <SharedSectionHeading
+          id="collection-title"
+          eyebrow="Collections / 04"
+          title="Shop the collections"
+          description="Enter an active editorial grouping and continue directly into its products."
+          className="mb-10 [&_h2]:text-white [&_p]:text-white/90 [&_p:first-of-type]:text-primary-yellow"
+        />
         <div className="grid gap-6 lg:grid-cols-3">
           {collections.slice(0, 3).map((collection, index) => (
             <Card key={collection.id} className="min-h-64 border-white bg-white text-foreground shadow-hard-lg">
               <div className="flex h-full flex-col">
-                <div className="mb-10 flex items-start justify-between">
+                <div className="mb-8 flex items-start justify-between">
                   <span className="text-5xl font-900 leading-none">0{index + 1}</span>
                   <span className="flex h-11 w-11 items-center justify-center border-2 border-border bg-primary-yellow" aria-hidden="true">
                     <Layers3 size={22} strokeWidth={3} />
@@ -125,7 +172,7 @@ function CollectionDiscovery({ collections }: { collections: StorefrontHomeData[
                 <h3 className="uppercase">{collection.name}</h3>
                 {collection.description ? <p className="mt-3 text-sm leading-6">{collection.description}</p> : null}
                 <Link href={collectionPath(collection)} className="motion-link mt-auto inline-flex min-h-11 w-fit items-center gap-2 pt-6 text-sm font-900 uppercase no-underline">
-                  Explore <ArrowRight size={18} aria-hidden="true" />
+                  Shop this collection <ArrowRight size={18} aria-hidden="true" />
                 </Link>
               </div>
             </Card>
@@ -136,26 +183,21 @@ function CollectionDiscovery({ collections }: { collections: StorefrontHomeData[
   );
 }
 
-function EditorialBlock({ collection }: { collection: StorefrontHomeData["editorialCollection"] }) {
-  if (!collection) return null;
-
+function BrandValue() {
   return (
-    <section aria-labelledby="editorial-title">
+    <section aria-labelledby="brand-value-title" className="border-b-2 border-border lg:border-b-4">
       <Container className="py-14 sm:py-18 lg:py-24">
         <div className="grid overflow-hidden border-4 border-border bg-white shadow-hard-lg lg:grid-cols-[1.1fr_.9fr]">
-          <div className="relative min-h-72 bg-primary-blue p-8 text-white sm:p-12">
-            <span aria-hidden="true" className="absolute right-8 top-8 h-24 w-24 rounded-full bg-primary-red" />
-            <span aria-hidden="true" className="absolute bottom-8 left-8 h-20 w-20 rotate-45 bg-primary-yellow" />
+          <div className="relative min-h-64 bg-primary-red p-8 text-white sm:p-12">
+            <span aria-hidden="true" className="absolute right-8 top-8 h-24 w-24 rounded-full bg-primary-yellow" />
+            <span aria-hidden="true" className="absolute bottom-8 left-8 h-20 w-20 rotate-45 bg-primary-blue" />
             <div className="relative z-10">
-              <p className="text-xs font-900 uppercase tracking-[.25em] text-primary-yellow">Editorial / 04</p>
-              <h2 id="editorial-title" className="mt-4 uppercase leading-[.9] text-white">{collection.name}</h2>
+              <p className="text-xs font-900 uppercase tracking-[.25em] text-white">The 4HRS point of view</p>
+              <h2 id="brand-value-title" className="mt-4 max-w-xl uppercase leading-[.9] text-white">Form first.<br />Color clear.</h2>
             </div>
           </div>
-          <div className="flex min-h-72 flex-col justify-center p-8 sm:p-12">
-            <p className="max-w-xl text-lg leading-8">{collection.description}</p>
-            <Link href={collectionPath(collection)} className="motion-link mt-7 inline-flex min-h-12 w-fit items-center gap-2 border-2 border-border bg-primary-yellow px-5 py-3 text-sm font-900 uppercase shadow-hard-sm no-underline">
-              Explore collection <Compass size={18} aria-hidden="true" />
-            </Link>
+          <div className="flex min-h-64 flex-col justify-center p-8 sm:p-12">
+            <p className="max-w-xl text-lg leading-8">4HRS builds its fashion language around bold form, clear color and a deliberately graphic point of view.</p>
           </div>
         </div>
       </Container>
@@ -169,9 +211,9 @@ function FinalCta() {
       <Container className="py-14 sm:py-18 lg:py-24">
         <div className="flex flex-col gap-8 border-4 border-border bg-primary-yellow p-7 shadow-hard-lg sm:p-10 lg:flex-row lg:items-end lg:justify-between lg:p-14">
           <div>
-            <p className="text-xs font-900 uppercase tracking-[.25em] text-primary-red">Final move / 05</p>
-            <h2 id="final-cta-title" className="mt-3 max-w-3xl uppercase leading-[.88]">Ready to explore?</h2>
-            <p className="mt-5 max-w-xl text-lg">Discover the live 4HRS catalog.</p>
+            <p className="text-xs font-900 uppercase tracking-[.25em] text-primary-red">Final move / 06</p>
+            <h2 id="final-cta-title" className="mt-3 max-w-3xl uppercase leading-[.88]">Find your next piece.</h2>
+            <p className="mt-5 max-w-xl text-lg">Browse the live 4HRS catalog.</p>
           </div>
           <Button href="/shop" variant="primary">
             Shop all <ArrowRight size={18} aria-hidden="true" />
@@ -186,11 +228,11 @@ export function Homepage({ data }: { data: StorefrontHomeData }) {
   return (
     <div className="overflow-hidden">
       <Hero data={data} />
-      <ProductDiscovery id="featured-products-heading" eyebrow="Discovery / 01" title="Curated picks" products={data.featuredProducts} />
+      <ProductDiscovery eyebrow="Discovery / 01" title="Curated picks" products={data.featuredProducts} />
       <CategoryDiscovery categories={data.categories} />
-      <ProductDiscovery id="new-arrivals-heading" eyebrow="New arrivals / 03" title="New arrivals" products={data.newArrivals} />
+      <NewArrivals products={data.newArrivals} />
       <CollectionDiscovery collections={data.collections} />
-      <EditorialBlock collection={data.editorialCollection} />
+      <BrandValue />
       <FinalCta />
     </div>
   );
