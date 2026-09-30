@@ -5,6 +5,7 @@ export type StorefrontSearchParams = Record<string, string | string[] | undefine
 export const DEFAULT_CATALOG_SORT: CatalogSort = "newest";
 export const DEFAULT_CATALOG_PAGE_SIZE = 24;
 export const MAX_CATALOG_PAGE = 10000;
+export const MAX_CATALOG_TAGS = 20;
 
 const sorts = new Set<CatalogSort>([
   "newest",
@@ -77,6 +78,9 @@ export function catalogQueryFromSearchParams(params: StorefrontSearchParams): Ca
     .map((tag) => slug(tag, "tags"))
     .filter((tag): tag is string => Boolean(tag));
   const uniqueTags = [...new Set(tags)].sort();
+  if (uniqueTags.length > MAX_CATALOG_TAGS) {
+    invalidParameter("tags", "must contain no more than " + MAX_CATALOG_TAGS + " unique tags");
+  }
 
   const tagModeValue = first(params.tagMode);
   const tagMode =
