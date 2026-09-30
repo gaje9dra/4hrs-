@@ -6,17 +6,52 @@ import { CatalogListing } from "@/components/storefront/catalog-listing";
 import { CatalogErrorState } from "@/components/storefront/catalog-error";
 import { SearchInput } from "@/components/storefront/search-input";
 import { getStorefrontListingFilters, searchStorefrontProducts } from "@/lib/storefront/catalog";
-import { catalogQueryFromSearchParams, type StorefrontSearchParams } from "@/lib/storefront/query-params";
-
-export const metadata: Metadata = {
-  title: "Search | 4HRS",
-  description: "Search the public 4HRS catalog.",
-  alternates: { canonical: "/search" },
-  robots: "noindex,follow",
-};
+import { buildCatalogHref, catalogQueryFromSearchParams, type StorefrontSearchParams } from "@/lib/storefront/query-params";
+import { normalizeCatalogSearchQueryParameter } from "@/lib/catalog/search";
 
 function normalizeDisplayQuery(value: string): string {
   return value.replace(/[\u0000-\u001F\u007F]/g, " ").trim().replace(/\s+/g, " ");
+}
+
+function metadataQuery(value: string | string[] | undefined): string {
+  const raw = Array.isArray(value) ? value[0] : value;
+  if (!raw) return "";
+  return normalizeDisplayQuery(raw).slice(0, 80);
+}
+
+function searchMetadataDescription(query: string): string {
+  if (!query) return "Search the public 4HRS catalog.";
+  return `Search the public 4HRS catalog for “${query}”.`;
+}
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<StorefrontSearchParams>;
+}): Promise<Metadata> {
+  const params = await searchParams;
+  const query = metadataQuery(params.q);
+
+  try {
+    const canonical = buildCatalogHref("/search", params, catalogQueryFromSearchParams(params).page ?? 1);
+    const validQuery = query && normalizeCatalogSearchQueryParameter(query) === query;
+    const title = validQuery ? `Search results for “${query}” | 4HRS` : "Search | 4HRS";
+    const description = searchMetadataDescription(validQuery ? query : "");
+
+    return {
+      title,
+      description,
+      alternates: { canonical: validQuery || !query ? canonical : "/search" },
+      robots: { index: false, follow: true },
+    };
+  } catch {
+    return {
+      title: query ? "Search | 4HRS" : "Search | 4HRS",
+      description: "Search the public 4HRS catalog.",
+      alternates: { canonical: "/search" },
+      robots: { index: false, follow: true },
+    };
+  }
 }
 
 export default async function SearchPage({ searchParams }: { searchParams: Promise<StorefrontSearchParams> }) {
