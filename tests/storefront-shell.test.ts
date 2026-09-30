@@ -26,7 +26,7 @@ test("storefront navigation uses the public catalog service and canonical routes
 
 test("global navigation contains only implemented storefront destinations", () => {
   const source = read("lib/storefront/navigation.ts");
-  for (const href of ["/", "/shop", "/search"]) assert.match(source, new RegExp(href.replace("/", "\\/")));
+  for (const href of ["/", "/shop", "/search"]) assert.match(source, new RegExp(href.replace("/", "\/")));
   assert.match(source, /Categories/);
   assert.match(source, /Collections/);
   assert.match(source, /\/cart/);
@@ -65,6 +65,15 @@ test("footer navigation is derived from public catalog navigation", () => {
   assert.match(source, /label: "Categories"/);
   assert.match(source, /label: "Collections"/);
   assert.doesNotMatch(source, /admin|provider/i);
+});
+
+test("storefront shell integrates customer authentication without admin navigation", () => {
+  const source = read("components/layout/header.tsx");
+  const authStatus = read("components/storefront/customer-auth-status.tsx");
+  assert.match(source, /CustomerAuthStatus/);
+  assert.match(authStatus, /\/api\/auth\/session/);
+  assert.match(authStatus, /\/api\/auth\/logout/);
+  assert.doesNotMatch(authStatus, /admin|passwordHash|sessionToken/i);
 });
 
 test("storefront shell preserves the established Bauhaus token system", () => {
