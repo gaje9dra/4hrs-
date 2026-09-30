@@ -312,36 +312,38 @@ export function createCatalogSearchService(options: {
         };
       } catch (error) {
         if (error instanceof CatalogServiceError) {
-          if (error.code === "CATEGORY_NOT_FOUND" || error.code === "COLLECTION_NOT_FOUND" || error.code === "TAG_NOT_FOUND") {
-            logCatalogObservation({ surface: "search", operation: "search", classification: "not_found", durationMs: Date.now() - startedAt, query: normalized.catalog });
-          } else if (error.code === "INVALID_QUERY" || error.code === "INVALID_PAGE" || error.code === "INVALID_SORT" || error.code === "INVALID_PRICE_RANGE") {
-            logCatalogObservation({
-              surface: "search",
-              operation: "search",
-              classification: "invalid_query",
-              durationMs: Date.now() - startedAt,
-              query: normalized?.catalog,
-            });
-          }
+          const classification =
+            error.code === "CATEGORY_NOT_FOUND" ||
+            error.code === "COLLECTION_NOT_FOUND" ||
+            error.code === "TAG_NOT_FOUND"
+              ? "not_found"
+              : error.code === "INVALID_QUERY" ||
+                  error.code === "INVALID_PAGE" ||
+                  error.code === "INVALID_SORT" ||
+                  error.code === "INVALID_PRICE_RANGE"
+                ? "invalid_query"
+                : error.code === "CATALOG_DATABASE_ERROR"
+                  ? "database_failure"
+                  : "unexpected_application_failure";
+
+          logCatalogObservation({
+            surface: "search",
+            operation: "search",
+            classification,
+            durationMs: Date.now() - startedAt,
+            query: normalized?.catalog,
+          });
           throw error;
         }
-        const durationMs = Date.now() - startedAt;
-        const classification =
-          error instanceof CatalogServiceError
-            ? error.code === "CATALOG_DATABASE_ERROR"
-              ? "database_failure"
-              : "unexpected_application_failure"
-            : "database_failure";
+
         logCatalogObservation({
           surface: "search",
           operation: "search",
-          classification,
-          durationMs,
+          classification: "database_failure",
+          durationMs: Date.now() - startedAt,
           query: normalized?.catalog,
         });
-        throw error instanceof CatalogServiceError
-          ? error
-          : new CatalogServiceError("CATALOG_DATABASE_ERROR", "Catalog search failed.", error);
+        throw new CatalogServiceError("CATALOG_DATABASE_ERROR", "Catalog search failed.", error);
       }
     },
 
