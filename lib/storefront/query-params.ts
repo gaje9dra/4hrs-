@@ -1,4 +1,5 @@
 import type { CatalogQuery, CatalogSort } from "@/lib/catalog/query";
+import { normalizeCatalogSearchQueryParameter } from "@/lib/catalog/search";
 
 export type StorefrontSearchParams = Record<string, string | string[] | undefined>;
 
@@ -118,7 +119,10 @@ export function buildCatalogHref(pathname: string, params: StorefrontSearchParam
 
   const search = new URLSearchParams();
   const rawQuery = first(params.q);
-  if (pathname === "/search" && rawQuery) search.set("q", rawQuery.trim().replace(/\s+/g, " "));
+  if (pathname === "/search" && rawQuery) {
+    const normalizedQuery = normalizeCatalogSearchQueryParameter(rawQuery);
+    search.set("q", normalizedQuery);
+  }
   const query = catalogQueryFromSearchParams(params);
 
   append(search, "category", query.category);
@@ -142,7 +146,10 @@ export function buildCatalogFilterHref(
 ): string {
   const search = new URLSearchParams();
   const rawQuery = first(values.q);
-  if (pathname === "/search" && rawQuery) search.set("q", rawQuery.trim().replace(/\s+/g, " "));
+  if (pathname === "/search" && rawQuery) {
+    const normalizedQuery = normalizeCatalogSearchQueryParameter(rawQuery);
+    search.set("q", normalizedQuery);
+  }
   const query = catalogQueryFromSearchParams(values);
 
   append(search, "category", query.category);
