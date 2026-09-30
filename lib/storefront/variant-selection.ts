@@ -9,6 +9,7 @@ export type PurchaseSelection = {
 };
 
 export type PurchaseIntentState =
+  | "PRODUCT_UNAVAILABLE"
   | "MISSING_REQUIRED_SELECTION"
   | "INVALID_SELECTION"
   | "UNAVAILABLE"
@@ -98,6 +99,7 @@ export function getPurchaseIntentState(
   product: StorefrontProductDetail,
   selection: StorefrontVariantSelection,
 ): PurchaseIntentState {
+  if (product.availability.state === "OUT_OF_STOCK") return "PRODUCT_UNAVAILABLE";
   if (product.options.some((option) => !selection[option.id])) return "MISSING_REQUIRED_SELECTION";
 
   const variant = resolveSelectedVariant(product, selection);
