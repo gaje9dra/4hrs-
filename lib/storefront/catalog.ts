@@ -183,7 +183,6 @@ export type StorefrontHomeData = {
   newArrivals: StorefrontProductCard[];
   categories: Array<{ id: string; name: string; slug: string; description: string | null }>;
   collections: Array<{ id: string; name: string; slug: string; description: string | null }>;
-  editorialCollection: { id: string; name: string; slug: string; description: string | null } | null;
 };
 
 export async function getStorefrontHomeCatalogData(): Promise<StorefrontHomeData> {
@@ -194,8 +193,6 @@ export async function getStorefrontHomeCatalogData(): Promise<StorefrontHomeData
   ]);
 
   const featuredCollection = collections[0] ?? null;
-  const editorialCollection = collections.find((collection) => Boolean(collection.description)) ?? null;
-
   const featuredResult = featuredCollection
     ? await getStorefrontCollectionProducts(featuredCollection.slug, {
         pageSize: 4,
@@ -210,7 +207,6 @@ export async function getStorefrontHomeCatalogData(): Promise<StorefrontHomeData
     newArrivals: newArrivalResult.items.filter((product) => !featuredIds.has(product.id)).slice(0, 4),
     categories: categories.slice(0, 6).map(({ id, name, slug, description }) => ({ id, name, slug, description })),
     collections: collections.slice(0, 3).map(({ id, name, slug, description }) => ({ id, name, slug, description })),
-    editorialCollection,
   };
 }
 
