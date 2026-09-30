@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { CatalogServiceError } from "../lib/catalog/errors.ts";
 import { createCatalogQueryService } from "../lib/catalog/query.ts";
 import { categoryPath } from "../lib/catalog/routes.ts";
+import type { CatalogQueryRepositoryOptions } from "../lib/catalog/repository.ts";
 
 function category(status: "ACTIVE" | "ARCHIVED" = "ACTIVE", products = 2) {
   return { id: "cat-1", name: "T-Shirts", slug: "t-shirts", description: "T-shirts", seoTitle: "T-Shirts", seoDescription: "T-Shirts", parentId: null, status, createdAt: new Date(), updatedAt: new Date(), _count: { products } };
@@ -43,14 +44,16 @@ test("empty categories remain resolvable without pretending they contain product
 });
 
 test("category listing requires the canonical category context for merchandising order", async () => {
-  let received: any;
+  let received: CatalogQueryRepositoryOptions | undefined;
   const service = createCatalogQueryService({
     ...repo,
     queryPublishedCatalogProducts: async (options) => { received = options; return { items: [], total: 0, limit: 24, offset: 24, hasNextPage: false }; },
   });
   await service.listPublishedProducts({ category: "t-shirts", sort: "merchandising", page: 2 });
-  assert.deepEqual(received.filters.categorySlug, "t-shirts");
+  assert.ok(received);
+  assert.deepEqual(received.filters?.categorySlug, "t-shirts");
   assert.equal(received.sortBy, "merchandising");
+  assert.ok(received);
   assert.equal(received.offset, 24);
 });
 
@@ -104,7 +107,7 @@ test("collection context remains authoritative for pagination and merchandising 
       status: "ACTIVE" as const,
       _count: { products: 3 },
     }),
-    queryPublishedCatalogProducts: async (options: any) => {
+    queryPublishedCatalogProducts: async (options: CatalogQueryRepositoryOptions) => {
       received = options;
       return { items: [], total: 0, limit: 24, offset: 24, hasNextPage: false };
     },
@@ -116,8 +119,8 @@ test("collection context remains authoritative for pagination and merchandising 
     sort: "merchandising",
     category: "other-category",
   });
-  assert.equal(received.filters.collectionSlug, "summer-edit");
-  assert.equal(received.filters.categorySlug, "other-category");
+  assert.equal(received.filters?.collectionSlug, "summer-edit");
+  assert.equal(received.filters?.categorySlug, "other-category");
   assert.equal(received.offset, 24);
   assert.equal(received.sortBy, "merchandising");
 });
