@@ -97,6 +97,8 @@ test("normalizes public query input and returns a stable catalog contract", asyn
   let received: unknown;
   const service = createCatalogQueryService({
     ...queryRepository,
+    getTagsBySlugs: async (slugs) =>
+      slugs.map((slug) => ({ id: slug, name: slug, slug, createdAt: new Date(), updatedAt: new Date() })),
     queryPublishedCatalogProducts: async (options) => {
       received = options;
       return { items: [product], total: 1, limit: 24, offset: 0, hasNextPage: false };
@@ -291,6 +293,8 @@ test("pagination preserves the complete canonical filter and sort contract", asy
   let received: CatalogQueryRepositoryOptions | undefined;
   const service = createCatalogQueryService({
     ...queryRepository,
+    getTagsBySlugs: async (slugs) =>
+      slugs.map((slug) => ({ id: slug, name: slug, slug, createdAt: new Date(), updatedAt: new Date() })),
     queryPublishedCatalogProducts: async (options) => {
       received = options;
       return { items: [], total: 73, limit: options.limit, offset: options.offset, hasNextPage: true };
