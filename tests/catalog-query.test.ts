@@ -343,3 +343,65 @@ test("page numbers use the same maximum in the service contract", async () => {
     (error: unknown) => error instanceof CatalogServiceError && error.code === "INVALID_PAGE",
   );
 });
+
+
+test("logs sanitized failure diagnostics without raw repository errors", async () => {
+  const originalError = console.error;
+  const logs: string[] = [];
+  console.error = (...args: unknown[]) => logs.push(args.join(" "));
+  try {
+    const service = createCatalogQueryService({
+      ...queryRepository,
+      queryPublishedCatalogProducts: async () => {
+        throw new Error("SQL password=secret token=abc");
+      },
+    });
+    await assert.rejects(
+      service.listPublishedProducts(
+        { category: "t-shirts", sort: "price_desc", page: 2, pageSize: 24 },
+        { surface: "category" },
+      ),
+      (error: unknown) => error instanceof CatalogServiceError && error.code === "CATALOG_DATABASE_ERROR",
+    );
+  } finally {
+    console.error = originalError;
+  }
+
+  assert.equal(logs.length, 1);
+  assert.match(logs[0], /"surface":"category"/);
+  assert.match(logs[0], /"operation":"listPublishedProducts"/);
+  assert.match(logs[0], /"classification":"database_failure"/);
+  assert.match(logs[0], /"page":2/);
+  assert.equal(logs[0].includes("password"), false);
+  assert.equal(logs[0].includes("secret"), false);
+  assert.equal(logs[0].includes("token"), false);
+  assert.equal(logs[0].includes("SQL"), false);
+});
+
+test("does not emit operational error logging for expected empty results", async () => {
+  const originalError = console.error;
+  const originalWarn = console.warn;
+  let errorCalls = 0;
+  let warnCalls = 0;
+  console.error = () => { errorCalls += 1; };
+  console.warn = () => { warnCalls += 1; };
+  try {
+    const service = createCatalogQueryService({
+      ...queryRepository,
+      queryPublishedCatalogProducts: async (options) => ({
+        items: [],
+        total: 0,
+        limit: options.limit,
+        offset: options.offset,
+        hasNextPage: false,
+      }),
+    });
+    const result = await service.listPublishedProducts({}, { surface: "shop" });
+    assert.equal(result.items.length, 0);
+  } finally {
+    console.error = originalError;
+    console.warn = originalWarn;
+  }
+  assert.equal(errorCalls, 0);
+  assert.equal(warnCalls, 0);
+});
