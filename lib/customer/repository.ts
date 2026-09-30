@@ -3,8 +3,8 @@ import { db } from "@/lib/db/client";
 
 export type CustomerRepositoryClient = PrismaClient | Prisma.TransactionClient;
 
-type CustomerRecord = Prisma.CustomerGetPayload<{}>;
-type CredentialRecord = Prisma.CustomerCredentialGetPayload<{}>;
+type CustomerRecord = Prisma.CustomerGetPayload<Record<string, never>>;
+type CredentialRecord = Prisma.CustomerCredentialGetPayload<Record<string, never>>;
 type SessionRecord = Prisma.CustomerSessionGetPayload<{ include: { customer: true } }>;
 
 export type CustomerRepository = {
@@ -17,11 +17,11 @@ export type CustomerRepository = {
   createCredential(input: { customerId: string; passwordHash: string }): Promise<CredentialRecord>;
   findCredentialByCustomerId(customerId: string): Promise<CredentialRecord | null>;
   updateCredentialHash(customerId: string, passwordHash: string): Promise<CredentialRecord>;
-  createSession(input: { customerId: string; sessionTokenHash: string; expiresAt: Date }): Promise<Prisma.CustomerSessionGetPayload<{}>>;
+  createSession(input: { customerId: string; sessionTokenHash: string; expiresAt: Date }): Promise<Prisma.CustomerSessionGetPayload<Record<string, never>>>;
   findSessionByTokenHash(sessionTokenHash: string): Promise<SessionRecord | null>;
-  revokeSession(sessionId: string, revokedAt?: Date): Promise<Prisma.CustomerSessionGetPayload<{}>>;
-  touchSession(sessionId: string, lastUsedAt?: Date): Promise<Prisma.CustomerSessionGetPayload<{}>>;
-  findCustomerCart(customerId: string): Promise<Prisma.CartGetPayload<{}> | null>;
+  revokeSession(sessionId: string, revokedAt?: Date): Promise<Prisma.CustomerSessionGetPayload<Record<string, never>>>;
+  touchSession(sessionId: string, lastUsedAt?: Date): Promise<Prisma.CustomerSessionGetPayload<Record<string, never>>>;
+  findCustomerCart(customerId: string): Promise<Prisma.CartGetPayload<Record<string, never>> | null>;
 };
 
 function clientOrDefault(client?: CustomerRepositoryClient): CustomerRepositoryClient {
