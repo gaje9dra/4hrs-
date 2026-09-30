@@ -3,7 +3,7 @@ export type CustomerStatus = "ACTIVE" | "DISABLED" | "SUSPENDED" | "PENDING_VERI
 export type CustomerDto = {
   id: string;
   email: string;
-  displayName: string | null;
+  displayName?: string | null;
   status: CustomerStatus;
   emailVerifiedAt: string | null;
   createdAt: string;
