@@ -39,7 +39,7 @@ function createFakeRepository(): CustomerRepository {
   let id = 0;
   const nextId = (prefix: string) => prefix + (++id);
 
-  const repository: any = {
+  const repository = {
     async withTransaction<T>(work: (repository: CustomerRepository) => Promise<T>) { return work(repository); },
     async findCustomerById(customerId: string) { return customers.get(customerId) ?? null; },
     async findCustomerByNormalizedEmail(email: string) {
@@ -87,7 +87,7 @@ function createFakeRepository(): CustomerRepository {
       if (session) session.lastUsedAt = lastUsedAt;
       return session;
     },
-  };
+  } as unknown as CustomerRepository;
   return repository;
 }
 
