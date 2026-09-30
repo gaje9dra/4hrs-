@@ -1,11 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
-
-export default function CollectionError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
-  useEffect(() => {
-    if (process.env.NODE_ENV !== "production") console.error(error);
-  }, [error]);
+export default function Error({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
   return (
     <main className="mx-auto flex min-h-[50vh] w-full max-w-3xl items-center px-4 py-16 sm:px-6 lg:px-8">
       <section className="w-full border-4 border-border bg-primary-yellow p-8 shadow-hard-md sm:p-10" aria-labelledby="collection-error-title">
