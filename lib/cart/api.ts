@@ -1,6 +1,7 @@
 import { CartServiceError } from "@/lib/cart/errors";
+import type { CartDto, CartItemDto, AddCartItemInput, UpdateCartItemInput } from "@/lib/cart/contracts";
 import { createCartService, type CartOwnerContext, type CartService } from "@/lib/cart/service";
-import { validateCartQuantity, requireCartItemId, requireProductId } from "@/lib/cart/validation";
+import { validateCartQuantity } from "@/lib/cart/validation";
 
 export const CART_API_MAX_BODY_BYTES = 64 * 1024;
 export const CART_API_MAX_QUANTITY = 100;
@@ -17,51 +18,6 @@ const unavailableRequestContext: CartRequestContextResolver = async () => {
     "CART_OWNERSHIP_UNAVAILABLE",
     "Cart ownership cannot be resolved because customer/session identity is not implemented.",
   );
-};
-
-export type CartWarning = {
-  code: "PRODUCT_UNAVAILABLE" | "VARIANT_UNAVAILABLE" | "INSUFFICIENT_AVAILABILITY";
-  itemId: string;
-};
-
-export type CartItemDto = {
-  id: string;
-  product: {
-    id: string;
-    title: string;
-    slug: string;
-    media: { url: string; altText: string | null } | null;
-  } | null;
-  variant: {
-    id: string;
-    displayName: string | null;
-    size: string | null;
-    color: string | null;
-  } | null;
-  quantity: number;
-  unitPrice: string | null;
-  currency: string | null;
-  subtotal: string | null;
-  availability: "AVAILABLE" | "PRODUCT_UNAVAILABLE" | "VARIANT_UNAVAILABLE" | "INSUFFICIENT_AVAILABILITY";
-};
-
-export type CartDto = {
-  id: string;
-  items: CartItemDto[];
-  subtotal: string;
-  currency: string | null;
-  hasUnavailableItems: boolean;
-  warnings: CartWarning[];
-};
-
-export type AddCartItemInput = {
-  productId: string;
-  variantId: string | null;
-  quantity: number;
-};
-
-export type UpdateCartItemInput = {
-  quantity: number;
 };
 
 export function toCartItemDto(item: Awaited<ReturnType<CartService["getCart"]>>["items"][number]): CartItemDto {
