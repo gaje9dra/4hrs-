@@ -364,6 +364,47 @@ function mapProduct(product: {
   };
 }
 
+function validateVariantMatrix(
+  product: PublishedProductDetailResult,
+  variants: PublishedProductDetailResult["variants"],
+) {
+  const optionTypeIds = new Set(product.options.map((option) => option.id));
+  const optionValueIdsByType = new Map(
+    product.options.map((option) => [option.id, new Set(option.values.map((value) => value.id))]),
+  );
+  const seenCombinations = new Set<string>();
+
+  for (const variant of variants) {
+    const seenOptionTypes = new Set<string>();
+
+    for (const optionValue of variant.optionValues) {
+      const optionTypeId = optionValue.optionType.id;
+      const allowedValues = optionValueIdsByType.get(optionTypeId);
+      if (!optionTypeIds.has(optionTypeId) || !allowedValues?.has(optionValue.id) || seenOptionTypes.has(optionTypeId)) {
+        throw new CatalogServiceError("CATALOG_DATA_INTEGRITY_ERROR", "Catalog variant options could not be rendered safely.");
+      }
+      seenOptionTypes.add(optionTypeId);
+    }
+
+    if (seenOptionTypes.size !== optionTypeIds.size) {
+      throw new CatalogServiceError("CATALOG_DATA_INTEGRITY_ERROR", "Catalog variant options could not be rendered safely.");
+    }
+
+    const combination = [...optionTypeIds]
+      .sort()
+      .map((optionTypeId) => {
+        const value = variant.optionValues.find(({ optionValue }) => optionValue.optionType.id === optionTypeId);
+        return `${optionTypeId}=${value?.id ?? ""}`;
+      })
+      .join("|");
+
+    if (seenCombinations.has(combination)) {
+      throw new CatalogServiceError("CATALOG_DATA_INTEGRITY_ERROR", "Catalog contains duplicate variant option combinations.");
+    }
+    seenCombinations.add(combination);
+  }
+}
+
 export function createCatalogQueryService(customRepository: Partial<QueryRepository> = {}) {
   const repo = { ...defaultRepository, ...customRepository };
 
@@ -503,6 +544,34 @@ export function createCatalogQueryService(customRepository: Partial<QueryReposit
           })),
         };
       });
+
+      const mappedProduct: PublishedProductDetailResult = {
+        id: product.id,
+        title: product.title,
+        slug: product.slug,
+        description: product.description,
+        shortDescription: product.shortDescription,
+        price: formatMoney(product.price)!,
+        compareAtPrice: formatValidCompareAtPrice(product.price, product.compareAtPrice),
+        currency: product.currency,
+        status: "ACTIVE",
+        seoTitle: product.seoTitle,
+        seoDescription: product.seoDescription,
+        media: product.images,
+        variants,
+        options: product.optionTypes.map(({ optionType, sortOrder }) => ({
+          id: optionType.id,
+          name: optionType.name,
+          normalizedName: optionType.normalizedName,
+          sortOrder,
+          values: optionType.values,
+        })),
+        categories: product.categories.map(({ category }) => category),
+        collections: product.collections.map(({ collection }) => collection),
+        tags: product.tags.map(({ tag }) => tag),
+        availability: { state: "OUT_OF_STOCK", availableQuantity: null },
+      };
+      validateVariantMatrix(mappedProduct, variants);
 
       const cheapestVariant = variants.reduce(
         (current, variant) =>
