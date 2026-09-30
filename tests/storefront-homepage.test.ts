@@ -92,3 +92,40 @@ test("homepage editorial copy never fabricates collection content", () => {
   assert.doesNotMatch(source, /A live collection from the 4HRS catalog/);
   assert.match(source, /title="Curated picks"/);
 });
+
+
+test("homepage conversion flow uses one primary shopping destination and clear section hierarchy", () => {
+  const source = read("components/storefront/homepage.tsx");
+  assert.match(source, /href="\/shop"/);
+  assert.match(source, /Shop the catalog/);
+  assert.match(source, /Browse all products/);
+  assert.match(source, /Shop all/);
+  assert.match(source, /Shop by category/);
+  assert.match(source, /New arrivals/);
+  assert.match(source, /Shop the collections/);
+  assert.match(source, /BrandValue/);
+  assert.doesNotMatch(source, /function EditorialBlock/);
+});
+
+test("homepage section headings expose their labelled-by targets", () => {
+  const source = read("components/storefront/homepage.tsx");
+  const heading = read("components/ui/section-heading.tsx");
+  assert.match(heading, /id\?\: string/);
+  assert.match(heading, /<h2 id=\{id\}/);
+  assert.match(source, /aria-labelledby="curated-products-title"/);
+  assert.match(source, /aria-labelledby="category-title"/);
+  assert.match(source, /aria-labelledby="new-arrivals-title"/);
+  assert.match(source, /aria-labelledby="collection-title"/);
+});
+
+test("product cards remain reusable and use nested heading level", () => {
+  const source = read("components/storefront/product-card.tsx");
+  assert.match(source, /<h3 className="text-xl/);
+  assert.doesNotMatch(source, /<h2 className="text-xl/);
+});
+
+test("homepage does not introduce unsupported benefits or provider-specific commerce claims", () => {
+  const source = read("components/storefront/homepage.tsx");
+  assert.doesNotMatch(source, /free shipping|lifetime warranty|fastest delivery|100% satisfaction|premium quality/i);
+  assert.doesNotMatch(source, /Qikink|Printful|Printrove|Printify|supplier|provider/i);
+});
