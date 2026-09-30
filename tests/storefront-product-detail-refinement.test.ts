@@ -142,7 +142,7 @@ test("Phase 7.3 models purchase intent without implementing Cart", () => {
   assert.match(selection, /quantity: 1/);
   assert.doesNotMatch(selection, /addToCart|createOrder|checkout|payment|persistCart/i);
   assert.match(options, /Purchase intent/);
-  assert.match(options, /Ready for cart/);
+  assert.match(options, /Selection ready/);
   assert.match(options, /Select options/);
   assert.match(options, /Invalid selection/);
   assert.match(options, /Unavailable/);
