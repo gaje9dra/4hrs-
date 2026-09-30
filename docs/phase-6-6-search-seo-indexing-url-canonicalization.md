@@ -15,7 +15,7 @@ No new SEO-only query parameters were introduced.
 ## Canonical URL strategy
 Search canonicalization is deterministic and server-derived through the existing catalog URL serializers.
 
-- Empty search canonicalizes to /search.
+- Empty search canonicalizes to /search, even if unused filter/sort/page parameters are present because the empty-search landing state does not execute catalog discovery.
 - Valid query states canonicalize to the normalized logical search URL.
 - Query whitespace/control-character normalization is reflected in the canonical URL.
 - Query casing is normalized through the existing search contract.
