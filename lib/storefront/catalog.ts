@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createCatalogQueryService, type CatalogAppliedQuery, type CatalogQuery, type PublishedProductDetailResult } from "@/lib/catalog/query";
 import { createCatalogSearchService, type CatalogSearchQuery } from "@/lib/catalog/search";
 import { productPath } from "@/lib/catalog/routes";
@@ -5,6 +6,10 @@ import { CatalogServiceError } from "@/lib/catalog/errors";
 
 const catalog = createCatalogQueryService();
 const search = createCatalogSearchService();
+
+const getActiveCategories = cache(() => catalog.listActiveCategories());
+const getActiveCollections = cache(() => catalog.listActiveCollections());
+const getActiveTags = cache(() => catalog.listTags());
 
 export type StorefrontProductCard = {
   id: string;
@@ -111,7 +116,7 @@ export async function getStorefrontProduct(slug: string): Promise<StorefrontProd
 }
 
 async function buildCategoryBreadcrumbs(category: Awaited<ReturnType<typeof catalog.getCategoryBySlug>>) {
-  const categories = await catalog.listActiveCategories();
+  const categories = await getActiveCategories();
   const byId = new Map(categories.map((item) => [item.id, item]));
   const breadcrumbs: Array<{ name: string; slug: string }> = [];
   let current: Awaited<ReturnType<typeof catalog.getCategoryBySlug>> | undefined = category;
@@ -126,7 +131,7 @@ async function buildCategoryBreadcrumbs(category: Awaited<ReturnType<typeof cata
   return breadcrumbs;
 }
 
-export async function getStorefrontCategory(slug: string): Promise<StorefrontCategory> {
+export const getStorefrontCategory = cache(async function getStorefrontCategory(slug: string): Promise<StorefrontCategory> {
   const category = await catalog.getCategoryBySlug(slug);
   if (!category || category.status !== "ACTIVE") {
     throw new CatalogServiceError("CATEGORY_NOT_FOUND", "Category was not found.");
@@ -141,9 +146,9 @@ export async function getStorefrontCategory(slug: string): Promise<StorefrontCat
     hasPublishedProducts: category._count.products > 0,
     breadcrumbs: await buildCategoryBreadcrumbs(category),
   };
-}
+});
 
-export async function getStorefrontCollection(slug: string): Promise<StorefrontCollection> {
+export const getStorefrontCollection = cache(async function getStorefrontCollection(slug: string): Promise<StorefrontCollection> {
   const collection = await catalog.getCollectionBySlug(slug);
   if (!collection || collection.status !== "ACTIVE") {
     throw new CatalogServiceError("COLLECTION_NOT_FOUND", "Collection was not found.");
@@ -157,17 +162,17 @@ export async function getStorefrontCollection(slug: string): Promise<StorefrontC
     status: "ACTIVE",
     hasPublishedProducts: collection._count.products > 0,
   };
-}
+});
 
 export async function getStorefrontTags(): Promise<StorefrontTag[]> {
-  return (await catalog.listTags()).map(({ name, slug }) => ({ name, slug }));
+  return (await getActiveTags()).map(({ name, slug }) => ({ name, slug }));
 }
 
 export async function getStorefrontListingFilters() {
   const [categories, collections, tags] = await Promise.all([
-    catalog.listActiveCategories(),
-    catalog.listActiveCollections(),
-    catalog.listTags(),
+    getActiveCategories(),
+    getActiveCollections(),
+    getActiveTags(),
   ]);
   return {
     categories: categories.map(({ name, slug }) => ({ name, slug })),
