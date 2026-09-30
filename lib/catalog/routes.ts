@@ -3,7 +3,7 @@ export type CatalogRouteEntity = { slug: string };
 export type CatalogRouteType = "product" | "category" | "collection";
 
 const routePrefix: Record<CatalogRouteType, string> = {
-  product: "/products",
+  product: "/product",
   category: "/categories",
   collection: "/collections",
 };
