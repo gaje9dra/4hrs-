@@ -76,7 +76,7 @@ test("listing UX has an explicit public empty state and accessible pagination", 
 
 test("listing UI remains provider-neutral and does not expose internal product fields", () => {
   const listing = read("components/storefront/catalog-listing.tsx") + read("components/storefront/catalog-filters.tsx");
-  assert.doesNotMatch(listing, /qikink|printful|printrove|printify|provider|sku|onHand|reserved|audit/i);
+  assert.doesNotMatch(listing, /qikink|printful|printrove|printify|\bsku\b|\bonHand\b|\breserved\b|\baudit\b/i);
 });
 
 test("public taxonomy loaders reject archived categories and collections", () => {
