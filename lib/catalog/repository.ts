@@ -282,7 +282,7 @@ const publicCatalogListSelect = {
     where: { productId: { not: null } },
     orderBy: [{ isPrimary: "desc" as const }, { sortOrder: "asc" as const }, { id: "asc" as const }],
     take: 1,
-    select: { url: true, altText: true },
+    select: { id: true, url: true, altText: true },
   },
   variants: {
     where: { status: "ACTIVE" },
@@ -295,15 +295,12 @@ const publicCatalogListSelect = {
       },
     },
   },
-  categories: { select: { category: true } },
-  collections: { select: { collection: true } },
-  tags: { select: { tag: true } },
+  categories: { select: { category: { select: { id: true, name: true, slug: true } } } },
+  collections: { select: { collection: { select: { id: true, name: true, slug: true } } } },
+  tags: { select: { tag: { select: { id: true, name: true, slug: true } } } },
 } satisfies Prisma.ProductSelect;
 
-const publicCatalogSearchListSelect = {
-  id: true,
-  ...publicCatalogListSelect,
-} satisfies Prisma.ProductSelect;
+const publicCatalogSearchListSelect = publicCatalogListSelect;
 
 export type PublicCatalogProductSearchListRecord = Prisma.ProductGetPayload<{
   select: typeof publicCatalogSearchListSelect;
@@ -650,12 +647,12 @@ async function searchByRelevance(
       (SELECT COUNT(*) FROM "Product" p ${where}) AS total
   `);
   const ids = rows[0]?.ids ?? [];
-  const total = Number(rows[0]?.total ?? 0n);
+  const total = Number(rows[0]?.total ?? 0);
   if (!ids.length) return { items: [], total, limit, offset, hasNextPage: offset + 0 < total };
   const items = await repository.product.findMany({
     where: { id: { in: ids } },
     select: options.mode === "PUBLIC" ? publicCatalogSearchListSelect : select,
-  });
+  }) as Array<PublicCatalogProductRecord | PublicCatalogProductListRecord>;
   const byId = new Map(items.map((item) => [item.id, item]));
   return {
     items: ids.map((id) => byId.get(id)).filter((item): item is (typeof items)[number] => Boolean(item)),
@@ -726,7 +723,7 @@ function buildMerchandisingProductWhere(
 export async function queryMerchandisedCatalogProducts(
   options: MerchandisingQueryOptions,
   client?: CatalogRepositoryClient,
-): Promise<RepositoryCatalogListResult<PublicCatalogProductRecord>> {
+): Promise<RepositoryCatalogListResult<PublicCatalogProductListRecord>> {
   const repository = clientOrDefault(client);
   const limit = clampLimit(options.limit);
   const offset = normalizeOffset(options.offset);
@@ -750,7 +747,7 @@ export async function queryMerchandisedCatalogProducts(
         ],
         skip: offset,
         take: limit,
-        select: { product: { select: publicCatalogSelect } },
+        select: { product: { select: publicCatalogListSelect } },
       }),
       repository.productCollection.count({ where: relationWhere }),
     ]);
@@ -785,7 +782,7 @@ export async function queryMerchandisedCatalogProducts(
     repository.productCategory.count({ where: relationWhere }),
   ]);
   return {
-    items: items.map((item) => item.product),
+    items: items.map((item) => item.product) as Array<PublicCatalogProductRecord | PublicCatalogProductListRecord>,
     total,
     limit,
     offset,
@@ -827,7 +824,7 @@ export async function searchMerchandisedCatalogProducts(
       }),
       repository.productCollection.count({ where: relationWhere }),
     ]);
-    return { items: items.map((item) => item.product), total, limit, offset, hasNextPage: offset + items.length < total };
+    return { items: items.map((item) => item.product) as Array<PublicCatalogProductRecord | PublicCatalogProductListRecord>, total, limit, offset, hasNextPage: offset + items.length < total };
   }
 
   const relationWhere = {
@@ -967,11 +964,8 @@ export async function getCategoryBySlug(slug: string, client?: CatalogRepository
       seoDescription: true,
       parentId: true,
       status: true,
-      _count: {
-        select: {
-          products: { where: { product: publishedProductWhere } },
-        },
-      },
+      createdAt: true,
+      updatedAt: true,
     },
   });
 }
@@ -1014,11 +1008,8 @@ export async function getCollectionBySlug(slug: string, client?: CatalogReposito
       seoTitle: true,
       seoDescription: true,
       status: true,
-      _count: {
-        select: {
-          products: { where: { product: publishedProductWhere } },
-        },
-      },
+      createdAt: true,
+      updatedAt: true,
     },
   });
 }
