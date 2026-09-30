@@ -21,7 +21,7 @@ export default async function AccountPage() {
   try {
     current = await requireCurrentCustomer();
   } catch {
-    redirect(getSafeAuthRedirect("/account", "/login?next=%2Faccount"));
+    redirect("/login?next=%2Faccount");
   }
 
   return (
