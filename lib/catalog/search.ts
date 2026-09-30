@@ -365,6 +365,7 @@ export function createCatalogSearchService(options: {
       const result = await this.search({ ...input, mode: "PUBLIC" });
       return {
         items: result.items.map((item) => ({
+          id: item.id ?? "",
           title: item.title,
           slug: item.slug,
           primaryImage: item.primaryImage ? { url: item.primaryImage.url, altText: item.primaryImage.altText } : null,
