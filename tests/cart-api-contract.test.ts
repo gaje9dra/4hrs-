@@ -152,3 +152,56 @@ test("default application fails closed without customer/session identity", async
     (error: unknown) => error instanceof CartServiceError && error.code === "CART_OWNERSHIP_UNAVAILABLE",
   );
 });
+
+test("application mutations invoke the Cart service without accepting client pricing data", async () => {
+  const calls: string[] = [];
+  const service = {
+    addItem: async (_cartId: string, input: { productId: string; variantId: string | null; quantity: number }) => {
+      calls.push(`add:${input.productId}:${input.variantId}:${input.quantity}`);
+      return { id: "item-1" };
+    },
+    getCart: async () => makeCartView(),
+  } as never;
+
+  const application = createCartApplication({
+    service,
+    resolveRequestContext: async () => ({ cartId: uuid, owner: "server-owner" }),
+  });
+
+  const request = new Request("https://example.test/api/cart", {
+    method: "POST",
+    body: JSON.stringify({ productId: uuid, variantId: uuid, quantity: 2 }),
+    headers: { "content-type": "application/json" },
+  });
+
+  const result = await application.addItem(request);
+  assert.equal(result.subtotal, "998.00");
+  assert.deepEqual(calls, [`add:${uuid}:${uuid}:2`]);
+});
+
+test("API route handlers expose malformed requests safely and fail closed without identity", async () => {
+  const route = await import("@/app/api/cart/route");
+
+  const malformed = await route.POST(new Request("https://example.test/api/cart", {
+    method: "POST",
+    body: JSON.stringify({ productId: uuid, quantity: 1, price: "1.00" }),
+    headers: { "content-type": "application/json" },
+  }));
+  assert.equal(malformed.status, 400);
+  assert.deepEqual(await malformed.json(), {
+    error: {
+      code: "INVALID_CART_INPUT",
+      message: "Request contains unsupported fields.",
+    },
+  });
+
+  const read = await route.GET(new Request("https://example.test/api/cart"));
+  assert.equal(read.status, 503);
+  assert.deepEqual(await read.json(), {
+    error: {
+      code: "CART_OWNERSHIP_UNAVAILABLE",
+      message: "Cart ownership cannot be resolved because customer/session identity is not implemented.",
+    },
+  });
+  assert.equal(read.headers.get("cache-control"), "private, no-store, max-age=0");
+});
