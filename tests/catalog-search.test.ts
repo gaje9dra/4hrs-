@@ -139,6 +139,10 @@ test("rejects empty, overlong, and invalid search input before provider executio
     service.searchPublic({ query: "shirt", pageSize: 101 }),
     (error: unknown) => error instanceof CatalogServiceError && error.code === "INVALID_PAGE",
   );
+  await assert.rejects(
+    service.searchPublic({ query: "shirt", page: 10001 }),
+    (error: unknown) => error instanceof CatalogServiceError && error.code === "INVALID_PAGE",
+  );
   assert.equal(called, false);
 });
 
@@ -148,8 +152,13 @@ test("public search returns a stable storefront-safe contract without SKU fields
 
   assert.equal(result.items[0].title, "Oversized Graphic T-Shirt");
   assert.equal(result.items[0].price, "899.00");
-  assert.equal(result.items[0].availability.state, "IN_STOCK");
+  assert.equal(result.items[0].availability, "IN_STOCK");
   assert.equal("internalVariants" in result.items[0], false);
+  assert.equal("id" in result.items[0], false);
+  assert.equal("sku" in result.items[0], false);
+  assert.equal("categories" in result.items[0], false);
+  assert.equal("collections" in result.items[0], false);
+  assert.equal("tags" in result.items[0], false);
 });
 
 test("internal search can expose variant SKU metadata while public search cannot", async () => {
@@ -351,4 +360,68 @@ test("database adapter keeps SKU search internal-only", async () => {
   const internalText = JSON.stringify(internalWhere);
   assert.doesNotMatch(publicText, /"sku"/);
   assert.match(internalText, /"sku"/);
+});
+
+
+test("search pagination identifies out-of-range pages using the canonical bounded contract", async () => {
+  const provider: CatalogSearchProvider = {
+    async search() {
+      return { items: [], total: 25, limit: 24, offset: 48, hasNextPage: false };
+    },
+  };
+  const service = createCatalogSearchService({ provider, lookup });
+  const result = await service.searchPublic({ query: "shirt", page: 3, pageSize: 24 });
+  assert.equal(result.pagination.totalPages, 2);
+  assert.equal(result.pagination.isOutOfRange, true);
+  assert.equal(result.pagination.hasNextPage, false);
+});
+
+test("public search lookup rejects inactive category and collection references", async () => {
+  const service = createCatalogSearchService({
+    provider: makeProvider(),
+    lookup: {
+      getCategoryBySlug: async () => ({ id: "hidden", status: "ARCHIVED" }),
+      getCollectionBySlug: async () => ({ id: "hidden", status: "ARCHIVED" }),
+      listTags: async () => [],
+    },
+  });
+
+  await assert.rejects(
+    service.searchPublic({ query: "shirt", category: "hidden" }),
+    (error: unknown) => error instanceof CatalogServiceError && error.code === "CATEGORY_NOT_FOUND",
+  );
+  await assert.rejects(
+    service.searchPublic({ query: "shirt", collection: "hidden" }),
+    (error: unknown) => error instanceof CatalogServiceError && error.code === "COLLECTION_NOT_FOUND",
+  );
+});
+
+test("search failure diagnostics are sanitized and attributed to the search surface", async () => {
+  const originalError = console.error;
+  const logs: string[] = [];
+  console.error = (...args: unknown[]) => logs.push(args.join(" "));
+  try {
+    const service = createCatalogSearchService({
+      provider: {
+        async search() {
+          throw new Error("SQL password=secret token=abc");
+        },
+      },
+      lookup,
+    });
+    await assert.rejects(
+      service.searchPublic({ query: "shirt" }),
+      (error: unknown) => error instanceof CatalogServiceError && error.code === "CATALOG_DATABASE_ERROR",
+    );
+  } finally {
+    console.error = originalError;
+  }
+
+  assert.equal(logs.length, 1);
+  assert.match(logs[0], /"surface":"search"/);
+  assert.match(logs[0], /"classification":"database_failure"/);
+  assert.equal(logs[0].includes("password"), false);
+  assert.equal(logs[0].includes("secret"), false);
+  assert.equal(logs[0].includes("token"), false);
+  assert.equal(logs[0].includes("SQL"), false);
 });
