@@ -4,7 +4,9 @@ import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { formatCatalogMoney } from "@/lib/storefront/money";
 import {
+  buildPurchaseSelection,
   getDeterministicInitialVariant,
+  getPurchaseIntentState,
   isVariantValueSelectable,
   resolveSelectedVariant,
   selectionFromVariant,
@@ -38,6 +40,8 @@ export function ProductOptions({
   const effectivePrice = selectedVariant?.price ?? product.price;
   const compareAtPrice = selectedVariant?.compareAtPrice ?? product.compareAtPrice;
   const availability = selectedVariant?.availability ?? product.availability;
+  const purchaseIntentState = getPurchaseIntentState(product, selection);
+  const purchaseSelection = buildPurchaseSelection(product, selection);
 
   function selectValue(optionTypeId: string, valueId: string) {
     if (!isVariantValueSelectable(product, selection, optionTypeId, valueId)) return;
@@ -97,9 +101,31 @@ export function ProductOptions({
         ) : null}
       </div>
 
-      <div className="border-2 border-border bg-primary-red p-5 text-white shadow-hard-md lg:border-4 lg:shadow-hard-lg" aria-label="Future commerce action area">
-        <p className="font-900 uppercase">Purchase actions coming soon</p>
-        <p className="mt-2 text-sm">Product selection is available now. Cart and checkout are intentionally deferred.</p>
+      <div className="border-2 border-border bg-primary-red p-5 text-white shadow-hard-md lg:border-4 lg:shadow-hard-lg" aria-label="Purchase intent">
+        <p className="text-xs font-900 uppercase tracking-[.2em]">Purchase intent</p>
+        <button
+          type="button"
+          disabled
+          aria-disabled="true"
+          aria-describedby="purchase-intent-status"
+          className="mt-3 min-h-12 w-full border-2 border-white bg-white px-5 py-3 text-base font-900 uppercase text-primary-red opacity-100"
+        >
+          {purchaseIntentState === "READY" ? "Ready for cart" : "Purchase unavailable"}
+        </button>
+        <p id="purchase-intent-status" className="mt-3 text-sm font-700">
+          {purchaseIntentState === "MISSING_REQUIRED_SELECTION"
+            ? "Select every required option before continuing."
+            : purchaseIntentState === "INVALID_SELECTION"
+              ? "The selected option combination is not valid."
+              : purchaseIntentState === "UNAVAILABLE"
+                ? "This option combination is currently unavailable."
+                : "The selection is validated. Cart integration is intentionally deferred."}
+        </p>
+        {purchaseSelection ? (
+          <p className="sr-only">
+            Valid selection for product {purchaseSelection.productId} and variant {purchaseSelection.variantId}.
+          </p>
+        ) : null}
       </div>
     </div>
   );
