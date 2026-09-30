@@ -73,6 +73,7 @@ export type CatalogListResult = {
     total: number;
     totalPages: number;
     hasNextPage: boolean;
+    isOutOfRange: boolean;
   };
   appliedQuery: CatalogAppliedQuery;
 };
@@ -409,6 +410,7 @@ export function createCatalogQueryService(customRepository: Partial<QueryReposit
       });
 
       const totalPages = result.total === 0 ? 0 : Math.ceil(result.total / appliedQuery.pageSize);
+      const isOutOfRange = result.total > 0 && appliedQuery.page > totalPages;
       return {
         items: result.items.map(mapProduct),
         pagination: {
@@ -417,6 +419,7 @@ export function createCatalogQueryService(customRepository: Partial<QueryReposit
           total: result.total,
           totalPages,
           hasNextPage: result.hasNextPage,
+          isOutOfRange,
         },
         appliedQuery,
       };
