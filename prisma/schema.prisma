@@ -74,7 +74,6 @@ model Product {
   collections      ProductCollection[]
   tags             ProductTag[]
   cartItems        CartItem[]
-  displayName       String?              @db.VarChar(120)
   @@index([status])
   @@index([createdAt])
   @@index([price])
@@ -358,6 +357,7 @@ model ProductTag {
 model Customer {
   id              String               @id @default(uuid()) @db.Uuid
   email           String               @unique @db.VarChar(320)
+  displayName     String?              @db.VarChar(120)
   status          CustomerAccountStatus @default(ACTIVE)
   emailVerifiedAt DateTime?
   createdAt       DateTime             @default(now())
