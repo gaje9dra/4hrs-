@@ -142,10 +142,7 @@ export function getCategorySeoMetadata(category: CategorySeoEntity): CatalogSeoM
 
   return {
     title: seoTitle(category.seoTitle, category.name),
-    description: seoDescription(
-      category.seoDescription,
-      category.description ?? "Browse " + category.name + " products.",
-    ),
+    description: seoDescription(category.seoDescription, category.description ?? ""),
     canonicalUrl: categoryCanonicalUrl(category),
     indexability,
   };
