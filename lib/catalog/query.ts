@@ -375,63 +375,104 @@ export function createCatalogQueryService(customRepository: Partial<QueryReposit
     async listPublishedProducts(query: CatalogQuery = {}, observation?: { surface: CatalogSurface }): Promise<CatalogListResult> {
       const startedAt = Date.now();
       let appliedQuery: CatalogAppliedQuery | undefined;
+
       try {
         appliedQuery = normalizeQuery(query);
 
-      const [category, collection, tags] = await Promise.all([
-        appliedQuery.category ? repo.getCategoryBySlug(appliedQuery.category) : Promise.resolve(null),
-        appliedQuery.collection ? repo.getCollectionBySlug(appliedQuery.collection) : Promise.resolve(null),
-        appliedQuery.tags.length ? repo.getTagsBySlugs(appliedQuery.tags) : Promise.resolve([]),
-      ]);
-      if (appliedQuery.category && !category) {
-        throw new CatalogServiceError("CATEGORY_NOT_FOUND", "Category was not found.");
-      }
-      if (appliedQuery.collection && !collection) {
-        throw new CatalogServiceError("COLLECTION_NOT_FOUND", "Collection was not found.");
-      }
-      if (tags.length !== appliedQuery.tags.length) {
-        const found = new Set(tags.map((tag) => tag.slug));
-        const missingTag = appliedQuery.tags.find((tag) => !found.has(tag));
-        throw new CatalogServiceError("TAG_NOT_FOUND", "Tag was not found: " + missingTag + ".");
-      }
+        const [category, collection, tags] = await Promise.all([
+          appliedQuery.category ? repo.getCategoryBySlug(appliedQuery.category) : Promise.resolve(null),
+          appliedQuery.collection ? repo.getCollectionBySlug(appliedQuery.collection) : Promise.resolve(null),
+          appliedQuery.tags.length ? repo.getTagsBySlugs(appliedQuery.tags) : Promise.resolve([]),
+        ]);
 
-      const sort = SORT_MAP[appliedQuery.sort];
-      const offset = (appliedQuery.page - 1) * appliedQuery.pageSize;
-      if (!Number.isSafeInteger(offset)) {
-        throw new CatalogServiceError("INVALID_PAGE", "Requested page is too large.");
+        if (appliedQuery.category && !category) {
+          throw new CatalogServiceError("CATEGORY_NOT_FOUND", "Category was not found.");
+        }
+        if (appliedQuery.collection && !collection) {
+          throw new CatalogServiceError("COLLECTION_NOT_FOUND", "Collection was not found.");
+        }
+        if (tags.length !== appliedQuery.tags.length) {
+          const found = new Set(tags.map((tag) => tag.slug));
+          const missingTag = appliedQuery.tags.find((tag) => !found.has(tag));
+          throw new CatalogServiceError("TAG_NOT_FOUND", "Tag was not found: " + missingTag + ".");
+        }
+
+        const sort = SORT_MAP[appliedQuery.sort];
+        const offset = (appliedQuery.page - 1) * appliedQuery.pageSize;
+        if (!Number.isSafeInteger(offset)) {
+          throw new CatalogServiceError("INVALID_PAGE", "Requested page is too large.");
+        }
+
+        const result = await repo.queryPublishedCatalogProducts({
+          filters: {
+            categorySlug: appliedQuery.category,
+            collectionSlug: appliedQuery.collection,
+            tagSlugs: appliedQuery.tags,
+            tagMode: appliedQuery.tagMode,
+            minPrice: appliedQuery.minPrice,
+            maxPrice: appliedQuery.maxPrice,
+            inStock: appliedQuery.inStock,
+          },
+          sortBy: sort.sortBy,
+          sortDirection: sort.sortDirection,
+          limit: appliedQuery.pageSize,
+          offset,
+        });
+
+        const calculatedTotalPages = result.total === 0 ? 0 : Math.ceil(result.total / appliedQuery.pageSize);
+        const totalPages = Math.min(calculatedTotalPages, CATALOG_QUERY_PAGE_NUMBER_MAX);
+        const isOutOfRange = result.total > 0 && appliedQuery.page > totalPages;
+        const items = result.items.map((item) => {
+          try {
+            return mapProduct(item);
+          } catch (error) {
+            throw new CatalogServiceError(
+              "CATALOG_DATA_INTEGRITY_ERROR",
+              "Catalog data could not be rendered safely.",
+              error,
+            );
+          }
+        });
+
+        return {
+          items,
+          pagination: {
+            page: appliedQuery.page,
+            pageSize: appliedQuery.pageSize,
+            total: result.total,
+            totalPages,
+            hasNextPage: result.hasNextPage && appliedQuery.page < totalPages,
+            isOutOfRange,
+          },
+          appliedQuery,
+        };
+      } catch (error) {
+        const classification =
+          error instanceof CatalogServiceError
+            ? error.code === "CATEGORY_NOT_FOUND" || error.code === "COLLECTION_NOT_FOUND" || error.code === "TAG_NOT_FOUND"
+              ? "not_found"
+              : error.code.startsWith("INVALID_")
+                ? "invalid_query"
+                : error.code === "CATALOG_DATABASE_ERROR"
+                  ? "database_failure"
+                  : error.code === "CATALOG_DATA_INTEGRITY_ERROR"
+                    ? "catalog_data_integrity"
+                    : "unexpected_application_failure"
+            : "database_failure";
+
+        if (observation) {
+          logCatalogObservation({
+            surface: observation.surface,
+            operation: "listPublishedProducts",
+            classification,
+            durationMs: Date.now() - startedAt,
+            query: appliedQuery,
+          });
+        }
+
+        if (error instanceof CatalogServiceError) throw error;
+        throw new CatalogServiceError("CATALOG_DATABASE_ERROR", "Catalog data could not be loaded.", error);
       }
-
-      const result = await repo.queryPublishedCatalogProducts({
-        filters: {
-          categorySlug: appliedQuery.category,
-          collectionSlug: appliedQuery.collection,
-          tagSlugs: appliedQuery.tags,
-          tagMode: appliedQuery.tagMode,
-          minPrice: appliedQuery.minPrice,
-          maxPrice: appliedQuery.maxPrice,
-          inStock: appliedQuery.inStock,
-        },
-        sortBy: sort.sortBy,
-        sortDirection: sort.sortDirection,
-        limit: appliedQuery.pageSize,
-        offset,
-      });
-
-      const calculatedTotalPages = result.total === 0 ? 0 : Math.ceil(result.total / appliedQuery.pageSize);
-      const totalPages = Math.min(calculatedTotalPages, CATALOG_QUERY_PAGE_NUMBER_MAX);
-      const isOutOfRange = result.total > 0 && appliedQuery.page > totalPages;
-      return {
-        items: result.items.map(mapProduct),
-        pagination: {
-          page: appliedQuery.page,
-          pageSize: appliedQuery.pageSize,
-          total: result.total,
-          totalPages,
-          hasNextPage: result.hasNextPage && appliedQuery.page < totalPages,
-          isOutOfRange,
-        },
-        appliedQuery,
-      };
     },
 
     async getPublishedProductDetailsBySlug(slug: string): Promise<PublishedProductDetailResult> {
