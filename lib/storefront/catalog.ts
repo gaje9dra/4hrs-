@@ -79,7 +79,7 @@ function toProductCard(product: {
   price: string;
   compareAtPrice: string | null;
   currency: string;
-  availability: { state: "IN_STOCK" | "LOW_STOCK" | "OUT_OF_STOCK" | "UNTRACKED" };
+  availability: "IN_STOCK" | "LOW_STOCK" | "OUT_OF_STOCK" | "UNTRACKED";
 }): StorefrontProductCard {
   return {
     id: product.id,
@@ -90,7 +90,7 @@ function toProductCard(product: {
     price: product.price,
     compareAtPrice: product.compareAtPrice,
     currency: product.currency,
-    availability: product.availability.state,
+    availability: product.availability,
   };
 }
 
