@@ -1,3 +1,4 @@
+import { cache } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { CatalogServiceError } from "@/lib/catalog/errors";
@@ -15,14 +16,16 @@ async function loadProduct(slug: string) {
   try {
     return await getStorefrontProduct(slug);
   } catch (error) {
-    if (error instanceof CatalogServiceError && error.code === "PRODUCT_NOT_FOUND") notFound();
+    if (error instanceof CatalogServiceError && (error.code === "PRODUCT_NOT_FOUND" || error.code === "INVALID_QUERY")) notFound();
     throw error;
   }
 }
 
+export const loadProductForRequest = cache(async (slug: string) => loadProduct(slug));
+
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   try {
-    const product = await getStorefrontProduct((await params).slug);
+    const product = await loadProductForRequest((await params).slug);
     const seo = getPublicProductSeoMetadata(getStorefrontProductSeoInput(product));
     if (!seo) return { robots: { index: false, follow: true } };
 
@@ -45,7 +48,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 }
 
 export default async function ProductPage({ params }: { params: Params }) {
-  const product = await loadProduct((await params).slug);
+  const product = await loadProductForRequest((await params).slug);
   const relatedProducts = await getStorefrontRelatedProducts(product);
   return <ProductDetail product={product} relatedProducts={relatedProducts} />;
 }
