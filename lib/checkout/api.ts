@@ -3,14 +3,36 @@ import { resolveCurrentCustomer } from "@/lib/auth/context";
 import { createCartApplication } from "@/lib/cart/api";
 import { createCustomerAddressService } from "@/lib/customer/address-service";
 import { CheckoutError } from "@/lib/checkout/errors";
-import type { CheckoutApplicationDependencies, CheckoutRequest } from "@/lib/checkout/contracts";
+import type { CheckoutApplicationDependencies, CheckoutRequest, CheckoutRevision } from "@/lib/checkout/contracts";
 import { createCheckoutService } from "@/lib/checkout/service";
 
 export const CHECKOUT_API_MAX_BODY_BYTES = 16 * 1024;
 const cartApplication = createCartApplication();
 const addressService = createCustomerAddressService();
 
-function parseSelectedAddressId(value: unknown): string | null | undefined {
+
+function parseExpectedRevision(value: unknown): CheckoutRevision | undefined {
+  if (value === undefined) return undefined;
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new CheckoutError("CHECKOUT_INCOMPLETE", "Checkout revision is invalid.");
+  }
+  const revision = value as Record<string, unknown>;
+  if (
+    Object.keys(revision).length !== 3 ||
+    !Object.keys(revision).every((key) => key === "cart" || key === "pricing" || key === "availability") ||
+    !["cart", "pricing", "availability"].every((key) =>
+      typeof revision[key] === "string" && /^[0-9a-f]{64}$/i.test(revision[key] as string),
+    )
+  ) {
+    throw new CheckoutError("CHECKOUT_INCOMPLETE", "Checkout revision is invalid.");
+  }
+  return {
+    cart: revision.cart as string,
+    pricing: revision.pricing as string,
+    availability: revision.availability as string,
+  };
+}
+\nfunction parseSelectedAddressId(value: unknown): string | null | undefined {
   if (value === undefined) return undefined;
   if (value === null) return null;
   if (typeof value !== "string" ||
@@ -24,7 +46,7 @@ function assertRequestObject(value: unknown): asserts value is Record<string, un
   if (value === null || typeof value !== "object" || Array.isArray(value)) {
     throw new CheckoutError("CHECKOUT_INCOMPLETE", "Checkout request must be a JSON object.");
   }
-  const unexpected = Object.keys(value).filter((key) => key !== "selectedAddressId");
+  const unexpected = Object.keys(value).filter((key) => key !== "selectedAddressId" && key !== "expectedRevision");
   if (unexpected.length) throw new CheckoutError("CHECKOUT_INCOMPLETE", "Checkout request contains unsupported fields.");
 }
 
@@ -44,7 +66,7 @@ async function readRequest(request: Request): Promise<CheckoutRequest> {
   try {
     const parsed = JSON.parse(body);
     assertRequestObject(parsed);
-    return { selectedAddressId: parseSelectedAddressId(parsed.selectedAddressId) };
+    return { selectedAddressId: parseSelectedAddressId(parsed.selectedAddressId), expectedRevision: parseExpectedRevision(parsed.expectedRevision) };
   } catch (error) {
     if (error instanceof CheckoutError) throw error;
     throw new CheckoutError("CHECKOUT_INCOMPLETE", "Checkout request must contain valid JSON.");
