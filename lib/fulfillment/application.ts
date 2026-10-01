@@ -3,8 +3,8 @@ import { db } from "@/lib/db/client";
 import { createFulfillmentRepository, type FulfillmentRepository, type FulfillmentWithItems, type FulfillmentOrderSource } from "@/lib/fulfillment/repository";
 import { assertOrderFulfillmentEligibility, assertFulfillmentTransition, mapOrderItemsToFulfillment, type FulfillmentLifecycleStatus } from "@/lib/fulfillment/domain";
 import { FulfillmentDomainError } from "@/lib/fulfillment/errors";
-import type { FulfillmentProviderAdapter, FulfillmentProviderRequest, FulfillmentProviderResolver } from "@/lib/fulfillment/provider";
-import { createConfiguredFulfillmentProviderRegistry, createFulfillmentProviderRegistry, createFulfillmentProviderResolver } from "@/lib/fulfillment/resolver";
+import type { FulfillmentProviderRequest, FulfillmentProviderResolver } from "@/lib/fulfillment/provider";
+import { createConfiguredFulfillmentProviderRegistry, createFulfillmentProviderResolver } from "@/lib/fulfillment/resolver";
 import { loadFulfillmentProviderConfiguration } from "@/lib/fulfillment/config";
 import { logFulfillmentObservation } from "@/lib/fulfillment/observability";
 
