@@ -19,6 +19,7 @@ export type CreateFulfillmentInput = { orderId: string; idempotencyKey: string }
 export type FulfillmentApplicationService = {
   createFulfillment(input: CreateFulfillmentInput): Promise<FulfillmentWithItems>;
   submitFulfillment(input: { fulfillmentId: string }): Promise<FulfillmentWithItems>;
+  reconcileFulfillment(input: { fulfillmentId: string }): Promise<FulfillmentWithItems>;
   transitionFulfillment(input: {
     fulfillmentId: string;
     expectedStatus: FulfillmentLifecycleStatus;
@@ -344,6 +345,124 @@ export function createFulfillmentApplication(
     }
   }
 
+  async function reconcileFulfillment(input: { fulfillmentId: string }): Promise<FulfillmentWithItems> {
+    const existing = await repository.getById(input.fulfillmentId);
+    if (!existing) throw new FulfillmentDomainError("FULFILLMENT_INVALID_STATE", "Fulfillment could not be found.");
+
+    // A terminal Fulfillment is authoritative internally; never reopen or rewrite it from a late provider result.
+    if (existing.status === "COMPLETED") return existing;
+
+    const adapter = providerResolver.resolve({ orderId: existing.orderId });
+    if (!adapter) {
+      throw new FulfillmentDomainError(
+        "FULFILLMENT_PROVIDER_RECONCILIATION_REQUIRED",
+        "The Fulfillment provider could not be resolved for reconciliation.",
+      );
+    }
+    if (!adapter.capabilities.statusLookup) {
+      throw new FulfillmentDomainError(
+        "FULFILLMENT_PROVIDER_RECONCILIATION_REQUIRED",
+        "The selected provider does not expose a verified status lookup contract; manual/provider-side reconciliation is required.",
+      );
+    }
+    if (!existing.providerFulfillmentReference) {
+      throw new FulfillmentDomainError(
+        "FULFILLMENT_PROVIDER_RECONCILIATION_REQUIRED",
+        "Fulfillment has no provider reference and cannot be reconciled safely.",
+      );
+    }
+
+    try {
+      adapter.validateConfiguration();
+      const response = await adapter.retrieveFulfillmentStatus({
+        providerFulfillmentReference: existing.providerFulfillmentReference,
+        orderReference: existing.orderId,
+      });
+
+      if (response.providerId !== adapter.id || response.providerFulfillmentReference !== existing.providerFulfillmentReference) {
+        throw new FulfillmentDomainError(
+          "FULFILLMENT_PROVIDER_RECONCILIATION_REQUIRED",
+          "Provider identity or fulfillment reference did not match the stored Fulfillment.",
+        );
+      }
+
+      if (response.status === existing.status) {
+        const refreshed = await database.$transaction(async (tx) => {
+          const txRepository = createFulfillmentRepository(tx);
+          return txRepository.updateReconciliationMetadata({
+            id: existing.id,
+            expectedStatus: existing.status,
+            metadata: {
+              outcome: "MATCH",
+              provider: adapter.id,
+              providerStatus: response.status,
+              checkedAt: new Date().toISOString(),
+            },
+          });
+        }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+        if (!refreshed) throw new FulfillmentDomainError("FULFILLMENT_CONCURRENCY_CONFLICT", "Fulfillment state changed concurrently during reconciliation.");
+        logFulfillmentObservation({
+          operation: "reconcile",
+          fulfillmentId: refreshed.id,
+          orderId: refreshed.orderId,
+          provider: refreshed.provider,
+          result: "success",
+        });
+        return refreshed;
+      }
+
+      assertFulfillmentTransition(existing.status, response.status);
+
+      const reconciled = await database.$transaction(async (tx) => {
+        const txRepository = createFulfillmentRepository(tx);
+        const current = await txRepository.getById(existing.id);
+        if (!current) throw new FulfillmentDomainError("FULFILLMENT_INVALID_STATE", "Fulfillment could not be found.");
+        if (current.status === "COMPLETED") return current;
+        assertFulfillmentTransition(current.status, response.status);
+        const updated = await txRepository.transitionStatus({
+          id: current.id,
+          expectedStatus: current.status,
+          nextStatus: response.status,
+          providerFulfillmentReference: existing.providerFulfillmentReference,
+          errorCode: null,
+          errorMessage: null,
+          reconciliationMetadata: {
+            outcome: "TRANSITIONED",
+            provider: adapter.id,
+            providerStatus: response.status,
+            checkedAt: new Date().toISOString(),
+          },
+          timestamps: {
+            submittedAt: response.status === "SUBMITTED" ? new Date() : undefined,
+            acceptedAt: response.providerFulfillmentReference ? new Date() : undefined,
+            completedAt: response.status === "COMPLETED" ? new Date() : undefined,
+            failedAt: response.status === "FAILED" ? new Date() : undefined,
+          },
+        });
+        if (!updated) throw new FulfillmentDomainError("FULFILLMENT_CONCURRENCY_CONFLICT", "Fulfillment state changed concurrently during reconciliation.");
+        return updated;
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+
+      logFulfillmentObservation({
+        operation: "reconcile",
+        fulfillmentId: reconciled.id,
+        orderId: reconciled.orderId,
+        provider: reconciled.provider,
+        from: existing.status,
+        to: reconciled.status,
+        result: "success",
+      });
+      return reconciled;
+    } catch (error) {
+      if (error instanceof FulfillmentDomainError) throw error;
+      throw new FulfillmentDomainError(
+        "FULFILLMENT_PROVIDER_RECONCILIATION_REQUIRED",
+        "Provider reconciliation could not be completed safely.",
+        { cause: error },
+      );
+    }
+  }
+
   async function transitionFulfillment(input: {
     fulfillmentId: string;
     expectedStatus: FulfillmentLifecycleStatus;
@@ -351,6 +470,12 @@ export function createFulfillmentApplication(
   }): Promise<FulfillmentWithItems> {
     const existing = await repository.getById(input.fulfillmentId);
     if (!existing) throw new FulfillmentDomainError("FULFILLMENT_INVALID_STATE", "Fulfillment could not be found.");
+    if (existing.status !== input.expectedStatus) {
+      throw new FulfillmentDomainError(
+        "FULFILLMENT_CONCURRENCY_CONFLICT",
+        "Fulfillment state changed since the caller last read it.",
+      );
+    }
     assertFulfillmentTransition(existing.status, input.nextStatus);
     try {
       const updated = await database.$transaction(async (tx) => {
@@ -390,7 +515,7 @@ export function createFulfillmentApplication(
     }
   }
 
-  return { createFulfillment, submitFulfillment, transitionFulfillment };
+  return { createFulfillment, submitFulfillment, reconcileFulfillment, transitionFulfillment };
 }
 
 export { providerRequest };
