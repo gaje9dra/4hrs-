@@ -1,0 +1,23 @@
+"use client";
+
+import { useEffect } from "react";
+import { Container } from "@/components/layout/container";
+import { Button } from "@/components/ui/button";
+
+export default function AccountOrdersError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+  useEffect(() => { console.error("Account Orders page failed", error); }, [error]);
+
+  return (
+    <Container width="standard" className="py-10 sm:py-14 lg:py-20">
+      <section aria-labelledby="orders-error-heading" className="border-4 border-border bg-white p-6 shadow-hard-md">
+        <p className="text-xs font-900 uppercase tracking-[0.25em] text-primary-red">Account / Orders</p>
+        <h1 id="orders-error-heading" className="mt-3 uppercase">Orders unavailable</h1>
+        <p className="mt-4 max-w-xl text-sm leading-6">Your Order history could not be loaded right now. No internal application details are shown here.</p>
+        <div className="mt-6 flex flex-wrap gap-3">
+          <Button onClick={reset}>Try again</Button>
+          <Button href="/account" variant="outline">Back to Account</Button>
+        </div>
+      </section>
+    </Container>
+  );
+}
