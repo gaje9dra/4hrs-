@@ -209,6 +209,89 @@ test("repeated provider submission does not call the adapter after successful pe
   assert.equal(calls, 1);
 });
 
+test("provider retries are bounded and non-retryable failures cannot loop", async () => {
+  const f = await fixture();
+  let calls = 0;
+  const adapter = mockAdapter();
+  const rateLimitedAdapter: FulfillmentProviderAdapter = {
+    ...adapter,
+    async createFulfillment() {
+      calls += 1;
+      throw Object.assign(new Error("rate limited"), { category: "PROVIDER_RATE_LIMITED" });
+    },
+    normalizeError(error) {
+      return typeof error === "object" && error !== null && "category" in error
+        ? (error as { category: "PROVIDER_RATE_LIMITED" }).category
+        : "PROVIDER_UNKNOWN_ERROR";
+    },
+  };
+  const service = createFulfillmentApplication({
+    providerResolver: createFulfillmentProviderResolver({
+      registry: createFulfillmentProviderRegistry([rateLimitedAdapter]),
+      configuration: { id: rateLimitedAdapter.id, enabled: true, mode: "test", secretReference: null, timeoutMs: 10000, capabilities: {} },
+    }),
+  });
+  const created = await service.createFulfillment({ orderId: f.order.id, idempotencyKey: `fulfill-${randomUUID()}` });
+  fulfillments.push(created.id);
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    await expectCode(
+      () => service.submitFulfillment({ fulfillmentId: created.id }),
+      "FULFILLMENT_PROVIDER_SUBMISSION_FAILED",
+    );
+  }
+  await expectCode(
+    () => service.submitFulfillment({ fulfillmentId: created.id }),
+    "FULFILLMENT_PROVIDER_RETRY_NOT_ALLOWED",
+  );
+  assert.equal(calls, 3);
+
+  const stored = await db.fulfillment.findUniqueOrThrow({ where: { id: created.id } });
+  assert.deepEqual(stored.reconciliationMetadata, {
+    ambiguous: false,
+    retryable: true,
+    reconciliationRequired: false,
+    submissionAttempts: 3,
+    provider: "mock-provider",
+  });
+});
+
+test("non-retryable provider failures are blocked after the first attempt", async () => {
+  const f = await fixture();
+  let calls = 0;
+  const adapter = mockAdapter();
+  const rejectingAdapter: FulfillmentProviderAdapter = {
+    ...adapter,
+    async createFulfillment() {
+      calls += 1;
+      throw Object.assign(new Error("invalid"), { category: "PROVIDER_VALIDATION" });
+    },
+    normalizeError(error) {
+      return typeof error === "object" && error !== null && "category" in error
+        ? (error as { category: "PROVIDER_VALIDATION" }).category
+        : "PROVIDER_UNKNOWN_ERROR";
+    },
+  };
+  const service = createFulfillmentApplication({
+    providerResolver: createFulfillmentProviderResolver({
+      registry: createFulfillmentProviderRegistry([rejectingAdapter]),
+      configuration: { id: rejectingAdapter.id, enabled: true, mode: "test", secretReference: null, timeoutMs: 10000, capabilities: {} },
+    }),
+  });
+  const created = await service.createFulfillment({ orderId: f.order.id, idempotencyKey: `fulfill-${randomUUID()}` });
+  fulfillments.push(created.id);
+
+  await expectCode(
+    () => service.submitFulfillment({ fulfillmentId: created.id }),
+    "FULFILLMENT_PROVIDER_SUBMISSION_FAILED",
+  );
+  await expectCode(
+    () => service.submitFulfillment({ fulfillmentId: created.id }),
+    "FULFILLMENT_PROVIDER_RETRY_NOT_ALLOWED",
+  );
+  assert.equal(calls, 1);
+});
+
 test("Fulfillment cannot alter historical Order snapshots", async () => {
   const f = await fixture();
   const before = await db.order.findUniqueOrThrow({ where: { id: f.order.id }, include: { items: true, shippingAddress: true } });
