@@ -51,14 +51,14 @@ test("provider adapter contract stays provider-neutral", () => {
   const adapter: PaymentProviderAdapter = {
     id: "test-provider",
     capabilities: {
-      currencies: ["INR"],
-      paymentMethods: ["test"],
+
+      createPayment: true,
+      clientAction: false,
+      webhookVerification: true,
+      statusLookup: true,
+      cancellation: false,
       refunds: true,
       partialRefunds: false,
-      webhooks: true,
-      asynchronousConfirmation: true,
-      cancellation: false,
-      authorizationCapture: false,
     },
     async createPayment() {
       return { providerId: "test-provider", providerPaymentReference: "external-1", providerAttemptReference: "attempt-1", status: "PROCESSING", clientAction: { type: "NONE" } };
@@ -71,13 +71,16 @@ test("provider adapter contract stays provider-neutral", () => {
     },
     async verifyWebhook() {
       return {
-        providerId: "test-provider",
+        verified: true,
+        event: {
+          providerId: "test-provider",
         providerEventReference: "event-1",
         providerPaymentReference: "external-1",
         internalPaymentReference: "payment-1",
         normalizedEventType: "PAYMENT_SUCCEEDED",
         status: "SUCCEEDED",
         occurredAt: "2026-10-01T00:00:00.000Z",
+        },
       };
     },
   };
