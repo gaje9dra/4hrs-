@@ -74,6 +74,7 @@ model Product {
   collections      ProductCollection[]
   tags             ProductTag[]
   cartItems        CartItem[]
+  orderItems       OrderItem[]
   @@index([status])
   @@index([createdAt])
   @@index([price])
@@ -254,6 +255,7 @@ model ProductVariant {
   inventory      Inventory?
   optionValues   ProductVariantOptionValue[]
   cartItems      CartItem[]
+  orderItems     OrderItem[]
   @@index([productId])
   @@index([status])
   @@index([productId, size, color])
@@ -368,6 +370,7 @@ model Customer {
   addresses       CustomerAddress[]
   payments        Payment[]
   paymentIdempotencyRecords PaymentIdempotency[]
+  orders          Order[]
   @@index([status])
 }
 
@@ -458,6 +461,140 @@ enum PaymentEventProcessingStatus {
   FAILED
 }
 
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+}
+
+model Order {
+  id               String      @id @default(uuid()) @db.Uuid
+  customerId       String      @db.Uuid
+  checkoutReference String     @unique @db.VarChar(128)
+  paymentId        String      @unique @db.Uuid
+  orderNumber      String      @unique @db.VarChar(40)
+  status           OrderStatus @default(PENDING)
+  subtotal         Decimal     @db.Decimal(12, 2)
+  total            Decimal     @db.Decimal(12, 2)
+  currency         String      @db.VarChar(3)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  customer         Customer    @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  payment          Payment     @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  items            OrderItem[]
+  shippingAddress  OrderAddressSnapshot?
+
+  @@index([customerId, createdAt])
+  @@index([status, createdAt])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id                    String          @id @default(uuid()) @db.Uuid
+  orderId               String          @db.Uuid
+  productId             String?         @db.Uuid
+  variantId             String?         @db.Uuid
+  productTitleSnapshot  String          @db.VarChar(255)
+  variantTitleSnapshot  String?         @db.VarChar(255)
+  skuSnapshot           String?         @db.VarChar(120)
+  selectedOptionsSnapshot Json?
+  quantity              Int
+  unitPrice             Decimal         @db.Decimal(12, 2)
+  lineTotal             Decimal         @db.Decimal(12, 2)
+  currency              String          @db.VarChar(3)
+  createdAt             DateTime        @default(now())
+  order                Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product              Product?        @relation(fields: [productId], references: [id], onDelete: SetNull)
+  variant              ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([productId])
+  @@index([variantId])
+}
+
+model OrderAddressSnapshot {
+  id               String   @id @default(uuid()) @db.Uuid
+  orderId          String   @unique @db.Uuid
+  recipientName    String   @db.VarChar(120)
+  phone            String?  @db.VarChar(32)
+  addressLine1     String   @db.VarChar(200)
+  addressLine2     String?  @db.VarChar(200)
+  city             String   @db.VarChar(100)
+  stateOrProvince  String   @db.VarChar(100)
+  postalCode       String   @db.VarChar(32)
+  countryCode      String   @db.Char(2)
+  label            String?  @db.VarChar(40)
+  createdAt        DateTime @default(now())
+  order            Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+}
+
+model Order {
+  id                String      @id @default(uuid()) @db.Uuid
+  customerId        String      @db.Uuid
+  checkoutReference String      @unique @db.VarChar(128)
+  paymentId         String      @unique @db.Uuid
+  orderNumber       String      @unique @db.VarChar(40)
+  status            OrderStatus @default(PENDING)
+  subtotal          Decimal     @db.Decimal(12, 2)
+  total             Decimal     @db.Decimal(12, 2)
+  currency          String      @db.VarChar(3)
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  customer          Customer    @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  payment           Payment     @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  items             OrderItem[]
+  shippingAddress   OrderAddressSnapshot?
+
+  @@index([customerId, createdAt])
+  @@index([status, createdAt])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id                     String           @id @default(uuid()) @db.Uuid
+  orderId                String           @db.Uuid
+  productId              String?          @db.Uuid
+  variantId             String?          @db.Uuid
+  productTitleSnapshot  String           @db.VarChar(255)
+  variantTitleSnapshot  String?          @db.VarChar(255)
+  skuSnapshot            String?          @db.VarChar(120)
+  selectedOptionsSnapshot Json?
+  quantity               Int
+  unitPrice              Decimal         @db.Decimal(12, 2)
+  lineTotal              Decimal         @db.Decimal(12, 2)
+  currency               String          @db.VarChar(3)
+  createdAt              DateTime        @default(now())
+  order                 Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product               Product?        @relation(fields: [productId], references: [id], onDelete: SetNull)
+  variant               ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([productId])
+  @@index([variantId])
+}
+
+model OrderAddressSnapshot {
+  id               String   @id @default(uuid()) @db.Uuid
+  orderId          String   @unique @db.Uuid
+  recipientName    String   @db.VarChar(120)
+  phone            String?  @db.VarChar(32)
+  addressLine1     String   @db.VarChar(200)
+  addressLine2     String?  @db.VarChar(200)
+  city             String   @db.VarChar(100)
+  stateOrProvince  String   @db.VarChar(100)
+  postalCode       String   @db.VarChar(32)
+  countryCode      String   @db.Char(2)
+  label            String?  @db.VarChar(40)
+  createdAt        DateTime @default(now())
+  order            Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
 model Payment {
   id                 String        @id @default(uuid()) @db.Uuid
   customerId         String        @db.Uuid
@@ -476,6 +613,7 @@ model Payment {
   attempts           PaymentAttempt[]
   events             PaymentEvent[]
   idempotencyRecords PaymentIdempotency[]
+  order            Order?
 
   @@unique([customerId, checkoutReference])
   @@index([customerId, createdAt])
