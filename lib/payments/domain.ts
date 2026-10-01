@@ -50,7 +50,7 @@ export type PaymentResult = {
 };
 
 const transitions: Readonly<Record<PaymentStatus, readonly PaymentStatus[]>> = {
-  CREATED: ["REQUIRES_ACTION", "PROCESSING", "FAILED", "CANCELLED", "EXPIRED"],
+  CREATED: ["REQUIRES_ACTION", "PROCESSING", "SUCCEEDED", "FAILED", "CANCELLED", "EXPIRED"],
   REQUIRES_ACTION: ["PROCESSING", "SUCCEEDED", "FAILED", "CANCELLED", "EXPIRED"],
   PROCESSING: ["REQUIRES_ACTION", "SUCCEEDED", "FAILED", "CANCELLED", "EXPIRED"],
   FAILED: ["REQUIRES_ACTION", "PROCESSING", "CANCELLED", "EXPIRED"],
@@ -80,7 +80,7 @@ export function canRetryPayment(status: PaymentStatus): boolean {
 }
 
 export function validatePaymentAmount(amount: PaymentAmount): void {
-  if (!/^[0-9]+(?:\\.[0-9]{1,2})?$/.test(amount.value)) {
+  if (!/^[0-9]+(?:\.[0-9]{1,2})?$/.test(amount.value)) {
     throw new Error("Payment amount is invalid.");
   }
   if (Number(amount.value) <= 0) throw new Error("Payment amount must be greater than zero.");

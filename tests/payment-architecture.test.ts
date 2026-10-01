@@ -84,11 +84,12 @@ test("provider adapter contract stays provider-neutral", () => {
     async normalizeWebhookEvent() {
       return {
         providerId: "test-provider",
-        externalEventId: "event-1",
-        type: "payment.updated",
-        paymentReference: "external-1",
+        providerEventReference: "event-1",
+        providerPaymentReference: "external-1",
+        internalPaymentReference: "payment-1",
+        normalizedEventType: "PAYMENT_SUCCEEDED",
         status: "SUCCEEDED",
-        receivedAt: "2026-10-01T00:00:00.000Z",
+        occurredAt: "2026-10-01T00:00:00.000Z",
       };
     },
   };
