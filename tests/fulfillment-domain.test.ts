@@ -126,15 +126,31 @@ test("concurrent creation cannot create duplicate Fulfillment records", async ()
   fulfillments.push(records[0].id);
 });
 
-test("invalid lifecycle transition and terminal state are protected", async () => {
+test("stale expected status is rejected and terminal state is protected", async () => {
   const f = await fixture();
   const created = await app().createFulfillment({ orderId: f.order.id, idempotencyKey: `fulfill-${randomUUID()}` });
   fulfillments.push(created.id);
   const submitted = await app().transitionFulfillment({ fulfillmentId: created.id, expectedStatus: "PENDING", nextStatus: "SUBMITTED" });
   assert.equal(submitted.status, "SUBMITTED");
+  await expectCode(
+    () => app().transitionFulfillment({ fulfillmentId: created.id, expectedStatus: "PENDING", nextStatus: "COMPLETED" }),
+    "FULFILLMENT_CONCURRENCY_CONFLICT",
+  );
   const completed = await app().transitionFulfillment({ fulfillmentId: created.id, expectedStatus: "SUBMITTED", nextStatus: "COMPLETED" });
   assert.equal(completed.status, "COMPLETED");
   await expectCode(() => app().transitionFulfillment({ fulfillmentId: created.id, expectedStatus: "COMPLETED", nextStatus: "FAILED" }), "FULFILLMENT_INVALID_STATE");
+  const terminal = await app().reconcileFulfillment({ fulfillmentId: created.id });
+  assert.equal(terminal.status, "COMPLETED");
+});
+
+test("reconciliation never calls an unsupported provider status endpoint", async () => {
+  const f = await fixture();
+  const created = await app().createFulfillment({ orderId: f.order.id, idempotencyKey: `fulfill-${randomUUID()}` });
+  fulfillments.push(created.id);
+  await expectCode(
+    () => app().reconcileFulfillment({ fulfillmentId: created.id }),
+    "FULFILLMENT_PROVIDER_RECONCILIATION_REQUIRED",
+  );
 });
 
 test("unsupported provider configuration fails safely", async () => {
