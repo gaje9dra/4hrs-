@@ -138,8 +138,6 @@ export function CheckoutPage({ customer }: { customer: CustomerDto }) {
 
   useEffect(() => {
     const version = ++requestVersion.current;
-    setState("loading");
-    setError(null);
     Promise.all([checkoutRequest("GET"), addressRequest()])
       .then(([nextCheckout, nextAddresses]) => {
         if (version !== requestVersion.current) return;
