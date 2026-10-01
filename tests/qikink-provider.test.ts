@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createQikinkFulfillmentProvider, providerOrderNumber } from "@/lib/fulfillment/providers/qikink";
+import { assertPrivateFulfillmentConfiguration } from "@/lib/fulfillment/config";
 
 function request() {
   return {
@@ -39,6 +40,20 @@ function response(body: unknown, init: ResponseInit = {}) {
     ...init,
   });
 }
+
+test("Fulfillment credentials cannot be configured through NEXT_PUBLIC variables", () => {
+  assert.throws(
+    () => assertPrivateFulfillmentConfiguration({
+      id: "qikink",
+      enabled: true,
+      mode: "live",
+      secretReference: "NEXT_PUBLIC_QIKINK_AUTH_TOKEN",
+      timeoutMs: 10000,
+      capabilities: {},
+    }),
+    /NEXT_PUBLIC_/,
+  );
+});
 
 test("Qikink provider creates a fulfillment from canonical data", async () => {
   let captured!: { url: string; init: RequestInit };
@@ -92,6 +107,9 @@ test("Qikink provider maps documented processing statuses without inventing term
   assert.equal(provider.normalizeStatus("Live"), "SUBMITTED");
   assert.equal(provider.normalizeStatus("Printed"), "SUBMITTED");
   assert.equal(provider.normalizeStatus("Delivered"), "COMPLETED");
+  assert.equal(provider.normalizeStatus("RTO Initiated"), "FAILED");
+  assert.equal(provider.normalizeStatus("Returned"), "FAILED");
+  assert.equal(provider.normalizeStatus("Cancelled"), "FAILED");
   assert.equal(provider.normalizeStatus("unknown-provider-status"), "PENDING");
 });
 

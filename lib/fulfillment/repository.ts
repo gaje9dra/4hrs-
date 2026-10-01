@@ -16,6 +16,7 @@ export type FulfillmentRepository = {
   createWithItems(input: { orderId: string; provider: string; idempotencyKey: string; items: readonly { orderItemId: string; quantity: number; providerSku?: string | null; providerVariantReference?: string | null }[] }): Promise<FulfillmentWithItems>;
   transitionStatus(input: { id: string; expectedStatus: PrismaFulfillmentStatus; nextStatus: PrismaFulfillmentStatus; timestamps?: { submittedAt?: Date; acceptedAt?: Date; completedAt?: Date; failedAt?: Date }; providerFulfillmentReference?: string | null; errorCode?: string | null; errorMessage?: string | null; reconciliationMetadata?: Prisma.InputJsonValue | typeof Prisma.DbNull }): Promise<FulfillmentWithItems | null>;
   updateReconciliationMetadata(input: { id: string; expectedStatus: PrismaFulfillmentStatus; metadata: Prisma.InputJsonValue | typeof Prisma.DbNull }): Promise<FulfillmentWithItems | null>;
+  recordProviderSubmissionFailure(input: { id: string; expectedStatus: PrismaFulfillmentStatus; errorCode: string; errorMessage: string; reconciliationMetadata: Prisma.InputJsonValue | typeof Prisma.DbNull }): Promise<FulfillmentWithItems | null>;
 };
 
 function clientOrDefault(client?: FulfillmentRepositoryClient): FulfillmentRepositoryClient { return client ?? db; }
@@ -77,6 +78,20 @@ export function createFulfillmentRepository(client?: FulfillmentRepositoryClient
       const result = await database.fulfillment.updateMany({
         where: { id: input.id, status: input.expectedStatus },
         data: { reconciliationMetadata: input.metadata },
+      });
+      if (result.count !== 1) return null;
+      return database.fulfillment.findUnique({ where: { id: input.id }, include: { items: true } });
+    },
+
+    async recordProviderSubmissionFailure(input) {
+      const result = await database.fulfillment.updateMany({
+        where: { id: input.id, status: input.expectedStatus },
+        data: {
+          errorCode: input.errorCode,
+          errorMessage: input.errorMessage,
+          reconciliationMetadata: input.reconciliationMetadata,
+          failedAt: new Date(),
+        },
       });
       if (result.count !== 1) return null;
       return database.fulfillment.findUnique({ where: { id: input.id }, include: { items: true } });
