@@ -3,7 +3,7 @@ import { db } from "@/lib/db/client";
 import { createFulfillmentRepository, type FulfillmentRepository, type FulfillmentWithItems, type FulfillmentOrderSource } from "@/lib/fulfillment/repository";
 import { assertOrderFulfillmentEligibility, assertFulfillmentTransition, mapOrderItemsToFulfillment, type FulfillmentLifecycleStatus } from "@/lib/fulfillment/domain";
 import { FulfillmentDomainError } from "@/lib/fulfillment/errors";
-import type { FulfillmentProviderRequest, FulfillmentProviderResolver } from "@/lib/fulfillment/provider";
+import type { FulfillmentProviderErrorCode, FulfillmentProviderRequest, FulfillmentProviderResolver } from "@/lib/fulfillment/provider";
 import { createConfiguredFulfillmentProviderRegistry, createFulfillmentProviderResolver } from "@/lib/fulfillment/resolver";
 import { loadFulfillmentProviderConfiguration } from "@/lib/fulfillment/config";
 import { logFulfillmentObservation } from "@/lib/fulfillment/observability";
@@ -83,6 +83,26 @@ function isAmbiguousProviderFailure(error: unknown): boolean {
     && "category" in error
     && ((error as { category?: unknown }).category === "PROVIDER_TIMEOUT"
       || (error as { category?: unknown }).category === "PROVIDER_NETWORK_ERROR");
+}
+
+function providerErrorCode(error: unknown): FulfillmentProviderErrorCode {
+  if (typeof error === "object" && error !== null && "category" in error) {
+    const category = (error as { category?: unknown }).category;
+    if (typeof category === "string") return category as FulfillmentProviderErrorCode;
+  }
+  return "PROVIDER_UNKNOWN_ERROR";
+}
+
+function isRetryableProviderErrorCode(code: FulfillmentProviderErrorCode): boolean {
+  return code === "PROVIDER_TIMEOUT"
+    || code === "PROVIDER_NETWORK_ERROR"
+    || code === "PROVIDER_RATE_LIMITED";
+}
+
+function submissionAttemptCount(metadata: Prisma.JsonValue | null): number {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return 0;
+  const value = (metadata as Record<string, unknown>).submissionAttempts;
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : 0;
 }
 
 export function createFulfillmentApplication(
@@ -210,18 +230,21 @@ export function createFulfillmentApplication(
     if (existing.status === "SUBMITTED" || existing.status === "COMPLETED") return existing;
 
     const metadata = existing.reconciliationMetadata;
-    if (
-      existing.status === "FAILED"
-      && metadata
-      && typeof metadata === "object"
-      && !Array.isArray(metadata)
-      && "ambiguous" in metadata
-      && metadata.ambiguous === true
-    ) {
-      throw new FulfillmentDomainError(
-        "FULFILLMENT_PROVIDER_RECONCILIATION_REQUIRED",
-        "The previous provider submission had an ambiguous outcome and must be reconciled before another submission.",
-      );
+    if (existing.status === "FAILED" && metadata && typeof metadata === "object" && !Array.isArray(metadata)) {
+      const record = metadata as Record<string, unknown>;
+      if (record.ambiguous === true) {
+        throw new FulfillmentDomainError(
+          "FULFILLMENT_PROVIDER_RECONCILIATION_REQUIRED",
+          "The previous provider submission had an ambiguous outcome and must be reconciled before another submission.",
+        );
+      }
+      const attempts = submissionAttemptCount(metadata);
+      if (record.retryable === false || attempts >= 3) {
+        throw new FulfillmentDomainError(
+          "FULFILLMENT_PROVIDER_RETRY_NOT_ALLOWED",
+          "The previous provider submission cannot be retried automatically.",
+        );
+      }
     }
 
     const adapter = providerResolver.resolve({ orderId: existing.orderId });
@@ -243,6 +266,7 @@ export function createFulfillmentApplication(
       });
 
       const request = providerRequest(order, existing.id);
+      const submissionAttempts = submissionAttemptCount(existing.reconciliationMetadata) + 1;
       logFulfillmentObservation({
         operation: "provider-resolution",
         fulfillmentId: existing.id,
@@ -267,7 +291,13 @@ export function createFulfillmentApplication(
             providerFulfillmentReference: response.providerFulfillmentReference,
             errorCode: null,
             errorMessage: null,
-            reconciliationMetadata: Prisma.DbNull,
+            reconciliationMetadata: {
+              submissionAttempts,
+              retryable: false,
+              ambiguous: false,
+              reconciliationRequired: false,
+              provider: adapter.id,
+            },
             timestamps: {
               submittedAt: response.status === "SUBMITTED" ? new Date() : undefined,
               acceptedAt: response.providerFulfillmentReference ? new Date() : undefined,
@@ -298,6 +328,8 @@ export function createFulfillmentApplication(
 
       const providerCode = adapter.normalizeError(error);
       const ambiguous = isAmbiguousProviderFailure(error);
+      const retryable = !ambiguous && isRetryableProviderErrorCode(providerCode);
+      const submissionAttempts = submissionAttemptCount(existing.reconciliationMetadata) + 1;
       const failureMessage = ambiguous
         ? "Provider submission outcome is ambiguous and requires reconciliation."
         : "Fulfillment provider rejected or could not process the submission.";
@@ -315,9 +347,13 @@ export function createFulfillmentApplication(
             nextStatus: "FAILED",
             errorCode: providerCode,
             errorMessage: failureMessage,
-            reconciliationMetadata: ambiguous
-              ? { ambiguous: true, reconciliationRequired: true, provider: adapter.id }
-              : { ambiguous: false, reconciliationRequired: false, provider: adapter.id },
+            reconciliationMetadata: {
+              ambiguous,
+              retryable,
+              reconciliationRequired: ambiguous,
+              submissionAttempts,
+              provider: adapter.id,
+            },
             timestamps: { failedAt: new Date() },
           });
           if (!updated) throw new FulfillmentDomainError("FULFILLMENT_CONCURRENCY_CONFLICT", "Fulfillment state changed concurrently.");
