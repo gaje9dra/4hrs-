@@ -1,11 +1,12 @@
 import { createPaymentApplication } from "@/lib/payments/application";
 import { paymentErrorResponse, paymentJson, paymentMethodNotAllowed } from "@/lib/payments/http";
-import { createPaymentProviderRegistry, createPaymentProviderResolver } from "@/lib/payments/resolver";
+import { createPaymentProviderResolver } from "@/lib/payments/resolver";
+import { getPaymentProviderRegistry } from "@/lib/payments/registry";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-const registry = createPaymentProviderRegistry([]);
+const registry = getPaymentProviderRegistry();
 const resolver = createPaymentProviderResolver({ registry });
 const paymentApplication = createPaymentApplication({ providerResolver: resolver });
 
