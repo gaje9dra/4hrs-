@@ -27,13 +27,9 @@ export default async function AccountOrderDetailPage({ params }: { params: Param
   const { orderNumber } = await params;
   if (!orderNumber || orderNumber.length > 128) notFound();
 
+  let order;
   try {
-    const order = await createOrderApplication().getCustomerOrder({ identifier: orderNumber });
-    return (
-      <Container width="standard" className="py-10 sm:py-14 lg:py-20">
-        <OrderDetail order={order} />
-      </Container>
-    );
+    order = await createOrderApplication().getCustomerOrder({ identifier: orderNumber });
   } catch (error) {
     if (error instanceof OrderDomainError && (
       error.code === "ORDER_NOT_FOUND" ||
@@ -43,4 +39,10 @@ export default async function AccountOrderDetailPage({ params }: { params: Param
     }
     throw error;
   }
+
+  return (
+    <Container width="standard" className="py-10 sm:py-14 lg:py-20">
+      <OrderDetail order={order} />
+    </Container>
+  );
 }
