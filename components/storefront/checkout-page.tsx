@@ -136,7 +136,29 @@ export function CheckoutPage({ customer }: { customer: CustomerDto }) {
     }
   }, []);
 
-  useEffect(() => { void load(false); }, [load]);
+  useEffect(() => {
+    const version = ++requestVersion.current;
+    setState("loading");
+    setError(null);
+    Promise.all([checkoutRequest("GET"), addressRequest()])
+      .then(([nextCheckout, nextAddresses]) => {
+        if (version !== requestVersion.current) return;
+        setCheckout(nextCheckout);
+        setAddresses(nextAddresses);
+        const serverAddress = nextCheckout.address?.id ?? null;
+        const nextSelected = selectedAddressRef.current && nextAddresses.some((item) => item.id === selectedAddressRef.current)
+          ? selectedAddressRef.current
+          : serverAddress;
+        selectedAddressRef.current = nextSelected;
+        setSelectedAddressId(nextSelected);
+        setState(classify(nextCheckout));
+      })
+      .catch((reason: unknown) => {
+        if (version !== requestVersion.current) return;
+        setState(reason instanceof Error && reason.message === "SESSION_EXPIRED" ? "session_expired" : "server_error");
+        setError("Checkout could not be loaded. Please try again.");
+      });
+  }, []);
 
   async function validateSelection(addressId: string | null) {
     if (pending) return;
