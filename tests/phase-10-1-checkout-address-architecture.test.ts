@@ -66,16 +66,15 @@ test("private customer surfaces remain non-indexable and cache-safe", () => {
   assert.match(cartHttp, /private, no-store/);
 });
 
-test("downstream checkout/payment/order/shipping integrations remain deferred", () => {
+test("final Checkout UI and downstream payment/order/shipping integrations remain deferred", () => {
   for (const path of [
     "app/(storefront)/checkout/page.tsx",
-    "app/api/checkout/route.ts",
     "app/api/payment/route.ts",
     "app/api/orders/route.ts",
   ]) {
     try {
       readFileSync(path, "utf8");
-      assert.fail(path + " must remain deferred in Phase 10.1");
+      assert.fail(path + " must remain deferred");
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
     }
