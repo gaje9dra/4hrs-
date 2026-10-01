@@ -285,19 +285,18 @@ export function createPaymentRepository(client?: PaymentRepositoryClient): Payme
       if (existing) return { record: existing, created: false };
 
       try {
-        const record = await database.paymentEvent.create({
-          data: {
-            providerId: input.providerId,
-            providerEventId: input.providerEventId,
-            eventType: input.eventType,
-            ...(input.normalizedEventType !== undefined
-              ? { normalizedEventType: input.normalizedEventType }
-              : {}),
-            ...(input.paymentId ? { paymentId: input.paymentId } : {}),
-            ...(input.occurredAt !== undefined ? { occurredAt: input.occurredAt } : {}),
-            ...(input.metadata !== undefined ? { metadata: input.metadata } : {}),
-          },
-        });
+        const data: Prisma.PaymentEventUncheckedCreateInput = {
+          providerId: input.providerId,
+          providerEventId: input.providerEventId,
+          eventType: input.eventType,
+          ...(input.normalizedEventType !== undefined
+            ? { normalizedEventType: input.normalizedEventType }
+            : {}),
+          ...(input.paymentId ? { paymentId: input.paymentId } : {}),
+          ...(input.occurredAt !== undefined ? { occurredAt: input.occurredAt } : {}),
+          ...(input.metadata !== undefined ? { metadata: input.metadata } : {}),
+        };
+        const record = await database.paymentEvent.create({ data });
         return { record, created: true };
       } catch (error) {
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
