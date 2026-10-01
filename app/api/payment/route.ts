@@ -2,7 +2,6 @@ import { resolveCurrentCustomer } from "@/lib/auth/context";
 import { AuthenticationError } from "@/lib/auth/errors";
 import { createCheckoutApplication } from "@/lib/checkout/api";
 import type { CheckoutRequest, CheckoutRevision } from "@/lib/checkout/contracts";
-import { CheckoutError } from "@/lib/checkout/errors";
 import { createCheckoutPaymentReference } from "@/lib/payments/checkout";
 import { createPaymentApplication } from "@/lib/payments/application";
 import { PaymentError } from "@/lib/payments/errors";
