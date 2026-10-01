@@ -13,6 +13,9 @@ import { resolveOrderCheckout, type OrderCheckoutResolverClient } from "@/lib/or
 import { createPaymentRepository, type PaymentRepository } from "@/lib/payments/repository";
 import { db } from "@/lib/db/client";
 import { logOrderCreationObservation } from "@/lib/orders/observability";
+import { toPublicOrderDto, toPublicOrderListDto } from "@/lib/orders/dto";
+import type { PublicOrderDto, PublicOrderListDto } from "@/lib/orders/contracts";
+import { isAuthenticationError } from "@/lib/auth/errors";
 
 type CustomerContext = { id: string };
 
@@ -33,8 +36,21 @@ export type CreateOrderFromVerifiedPaymentInput = {
   request?: Request;
 };
 
+export type OrderListInput = {
+  request?: Request;
+  page?: number;
+  pageSize?: number;
+};
+
+export type OrderLookupInput = {
+  request?: Request;
+  identifier: string;
+};
+
 export type OrderApplicationService = {
   createOrderFromVerifiedPayment(input: CreateOrderFromVerifiedPaymentInput): Promise<OrderCreationResult>;
+  getCustomerOrder(input: OrderLookupInput): Promise<PublicOrderDto>;
+  listCustomerOrders(input: OrderListInput): Promise<PublicOrderListDto>;
 };
 
 function isRetryableSerializationConflict(error: unknown): boolean {
@@ -220,5 +236,58 @@ export function createOrderApplication(
     }
   }
 
-  return { createOrderFromVerifiedPayment };
+  async function authenticatedCustomer(request?: Request): Promise<CustomerContext> {
+    try {
+      const current = await resolveCustomer(request);
+      if (!current) throw new OrderDomainError("PAYMENT_ACCESS_DENIED", "Authentication is required.");
+      return current;
+    } catch (error) {
+      if (isAuthenticationError(error)) throw error;
+      throw error;
+    }
+  }
+
+  function assertIdentifier(identifier: string): string {
+    const value = identifier.trim();
+    if (!value || value.length > 128) {
+      throw new OrderDomainError("ORDER_INVALID_REQUEST", "Order identifier is invalid.");
+    }
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value) &&
+        !/^ORD-[A-F0-9]{24}$/.test(value)) {
+      throw new OrderDomainError("ORDER_INVALID_REQUEST", "Order identifier is invalid.");
+    }
+    return value;
+  }
+
+  async function getCustomerOrder(input: OrderLookupInput): Promise<PublicOrderDto> {
+    const customer = await authenticatedCustomer(input.request);
+    const identifier = assertIdentifier(input.identifier);
+    const order = /^ORD-/.test(identifier)
+      ? await orderRepository.getOrderByNumberForCustomer(identifier, customer.id)
+      : await orderRepository.getOrderByCustomer(identifier, customer.id);
+    if (!order) throw new OrderDomainError("ORDER_NOT_FOUND", "Order could not be found.");
+    return toPublicOrderDto(order);
+  }
+
+  function parsePage(value: number | undefined, fallback: number, max: number): number {
+    const page = value ?? fallback;
+    if (!Number.isSafeInteger(page) || page < 1 || page > max) {
+      throw new OrderDomainError("ORDER_INVALID_REQUEST", "Order pagination parameters are invalid.");
+    }
+    return page;
+  }
+
+  async function listCustomerOrders(input: OrderListInput): Promise<PublicOrderListDto> {
+    const customer = await authenticatedCustomer(input.request);
+    const page = parsePage(input.page, 1, 1000000);
+    const pageSize = parsePage(input.pageSize, 20, 50);
+    try {
+      return toPublicOrderListDto(await orderRepository.listOrdersByCustomer(customer.id, { page, pageSize }));
+    } catch (error) {
+      if (error instanceof OrderDomainError) throw error;
+      throw new OrderDomainError("ORDER_DATABASE_ERROR", "Orders are temporarily unavailable.", undefined, { cause: error });
+    }
+  }
+
+  return { createOrderFromVerifiedPayment, getCustomerOrder, listCustomerOrders };
 }
