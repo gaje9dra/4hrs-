@@ -41,7 +41,7 @@ function response(body: unknown, init: ResponseInit = {}) {
 }
 
 test("Qikink provider creates a fulfillment from canonical data", async () => {
-  let captured: { url: string; init: RequestInit } | null = null;
+  let captured!: { url: string; init: RequestInit };
   const provider = createQikinkFulfillmentProvider({
     authToken: "secret-token",
     timeoutMs: 5000,
