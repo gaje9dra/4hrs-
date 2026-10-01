@@ -1,25 +1,35 @@
 import { createHash } from "node:crypto";
-import type { CheckoutDto } from "@/lib/checkout/contracts";
 
-export function createCheckoutPaymentReference(customerId: string, checkout: CheckoutDto): string {
+export type CheckoutPaymentReferenceInput = {
+  customer: { id: string; email: string; displayName: string | null } | null;
+  cart: { id: string };
+  address: { id: string } | null;
+  totals: { total: string; currency: string | null };
+  revision: { cart: string; pricing: string; availability: string };
+  validation: { state: string };
+};
+
+export function createCheckoutPaymentReference(
+  customerId: string,
+  checkout: CheckoutPaymentReferenceInput,
+): string {
   if (!checkout.customer || checkout.customer.id !== customerId) {
     throw new Error("Checkout customer does not match the authenticated customer.");
   }
-  const addressId = checkout.address?.id ?? "";
   const value = [
     customerId,
     checkout.cart.id,
     checkout.revision.cart,
     checkout.revision.pricing,
     checkout.revision.availability,
-    addressId,
+    checkout.address?.id ?? "",
     checkout.totals.total,
     checkout.totals.currency ?? "",
   ].join("\n");
   return createHash("sha256").update(value).digest("hex");
 }
 
-export function isCheckoutPayable(checkout: CheckoutDto): boolean {
+export function isCheckoutPayable(checkout: CheckoutPaymentReferenceInput): boolean {
   return checkout.validation.state === "VALID" &&
     checkout.address !== null &&
     checkout.totals.currency !== null &&
