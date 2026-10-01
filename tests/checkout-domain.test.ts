@@ -55,7 +55,7 @@ function cart(overrides: Partial<CartDto> = {}): CartDto {
   };
 }
 
-function service(getCart: () => Promise<CartDto>) {
+function serviceFactory(getCart: () => Promise<CartDto>) {
   return createCheckoutService({
     customer,
     getCart,
@@ -68,7 +68,7 @@ function service(getCart: () => Promise<CartDto>) {
 }
 
 test("valid checkout uses authoritative Cart totals and owned address", async () => {
-  const result = await service(async () => cart()).validate({ selectedAddressId: address.id });
+  const result = await serviceFactory(async () => cart()).validate({ selectedAddressId: address.id });
   assert.equal(result.validation.state, "VALID");
   assert.equal(result.totals.total, "998.00");
   assert.equal(result.address?.id, address.id);
@@ -77,20 +77,20 @@ test("valid checkout uses authoritative Cart totals and owned address", async ()
 
 test("missing Cart is a structured validation error", async () => {
   await assert.rejects(
-    () => service(async () => { throw new CartServiceError("CART_NOT_FOUND", "Cart was not found."); })
+    () => serviceFactory(async () => { throw new CartServiceError("CART_NOT_FOUND", "Cart was not found."); })
       .validate({ selectedAddressId: address.id }),
     (error: unknown) => error instanceof Error && error.message === "Your Cart could not be loaded.",
   );
 });
 
 test("empty Cart is rejected", async () => {
-  const result = await service(async () => cart({ items: [], subtotal: "0.00" })).validate({ selectedAddressId: address.id });
+  const result = await serviceFactory(async () => cart({ items: [], subtotal: "0.00" })).validate({ selectedAddressId: address.id });
   assert.equal(result.validation.state, "CART_EMPTY");
 });
 
 test("unavailable product, variant and invalid quantity are rejected", async () => {
   const base = cart();
-  const result = await service(async () => ({
+  const result = await serviceFactory(async () => ({
     ...base,
     items: [
       { ...base.items[0], quantity: 0 },
@@ -105,7 +105,7 @@ test("unavailable product, variant and invalid quantity are rejected", async () 
 
 test("authoritative price inconsistency becomes PRICE_CHANGED", async () => {
   const base = cart();
-  const result = await service(async () => ({
+  const result = await serviceFactory(async () => ({
     ...base,
     items: [{ ...base.items[0], unitPrice: "599.00", subtotal: "998.00" }],
   })).validate({ selectedAddressId: address.id });
@@ -136,7 +136,7 @@ test("browser price, total, currency, customer and Cart IDs are not accepted as 
 });
 
 test("another customer's address is rejected without leaking ownership", async () => {
-  const result = await service(async () => cart()).validate({
+  const result = await serviceFactory(async () => cart()).validate({
     selectedAddressId: "88888888-8888-4888-8888-888888888888",
   });
   assert.equal(result.validation.state, "ADDRESS_NOT_OWNED");
@@ -155,14 +155,14 @@ test("deleted address is rejected", async () => {
 });
 
 test("default address is resolved server-side when no address ID is submitted", async () => {
-  const result = await service(async () => cart()).validate({});
+  const result = await serviceFactory(async () => cart()).validate({});
   assert.equal(result.validation.state, "VALID");
   assert.equal(result.address?.id, address.id);
 });
 
 test("currency inconsistency is rejected", async () => {
   const base = cart();
-  const result = await service(async () => ({
+  const result = await serviceFactory(async () => ({
     ...base,
     items: [
       base.items[0],
@@ -183,13 +183,13 @@ test("no address produces an incomplete Checkout state", async () => {
 });
 
 test("customer identity cannot be overridden", async () => {
-  const result = await service(async () => cart()).validate({ selectedAddressId: address.id });
+  const result = await serviceFactory(async () => cart()).validate({ selectedAddressId: address.id });
   assert.equal(result.customer?.id, customer.id);
 });
 
 test("unexpected Cart failures are mapped without ORM or SQL leakage", async () => {
   await assert.rejects(
-    () => service(async () => { throw new Error("SQL relation secret"); }).validate({ selectedAddressId: address.id }),
+    () => serviceFactory(async () => { throw new Error("SQL relation secret"); }).validate({ selectedAddressId: address.id }),
     (error: unknown) => error instanceof Error &&
       error.message === "Checkout validation is temporarily unavailable." &&
       !error.message.includes("SQL"),
@@ -198,7 +198,77 @@ test("unexpected Cart failures are mapped without ORM or SQL leakage", async () 
 
 test("Checkout never performs inventory reservation", async () => {
   const reservationCalls = 0;
-  const result = await service(async () => cart()).validate({ selectedAddressId: address.id });
+  const result = await serviceFactory(async () => cart()).validate({ selectedAddressId: address.id });
   assert.equal(result.validation.state, "VALID");
   assert.equal(reservationCalls, 0);
+});
+
+
+test("Checkout returns a deterministic opaque revision and detects stale pricing", async () => {
+  let current = cart();
+  const service = serviceFactory(async () => current);
+  const first = await service.validate({ selectedAddressId: address.id });
+  assert.deepEqual(first.revision, (await serviceFactory(async () => current).validate({ selectedAddressId: address.id })).revision);
+
+  current = {
+    ...current,
+    items: [{ ...current.items[0], unitPrice: "599.00", subtotal: "1198.00" }],
+    subtotal: "1198.00",
+  };
+  const stale = await service.validate({
+    selectedAddressId: address.id,
+    expectedRevision: first.revision,
+  });
+  assert.equal(stale.validation.state, "PRICE_CHANGED");
+  assert.equal(stale.totals.total, "1198.00");
+});
+
+test("Checkout detects Cart structure changes without trusting client pricing", async () => {
+  let current = cart();
+  const service = serviceFactory(async () => current);
+  const first = await service.validate({ selectedAddressId: address.id });
+
+  current = {
+    ...current,
+    items: [
+      ...current.items,
+      {
+        ...current.items[0],
+        id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        quantity: 1,
+        subtotal: "499.00",
+      },
+    ],
+    subtotal: "1497.00",
+  };
+
+  const stale = await service.validate({
+    selectedAddressId: address.id,
+    expectedRevision: first.revision,
+  });
+  assert.equal(stale.validation.state, "CART_CHANGED");
+  assert.equal(stale.totals.total, "1497.00");
+});
+
+test("Checkout revision request rejects malformed or monetary client fields", async () => {
+  const app = createCheckoutApplication({
+    resolveCustomer: async () => customer,
+    getCart: async () => cart(),
+    getAddress: async () => address,
+    listAddresses: async () => [address],
+  });
+
+  const malformed = new Request("https://example.test/api/checkout", {
+    method: "POST",
+    body: JSON.stringify({ selectedAddressId: address.id, expectedRevision: { cart: "not-a-hash", pricing: "x", availability: "x" } }),
+    headers: { "content-type": "application/json" },
+  });
+  await assert.rejects(() => app.readRequest(malformed), /revision is invalid/i);
+
+  const monetary = new Request("https://example.test/api/checkout", {
+    method: "POST",
+    body: JSON.stringify({ selectedAddressId: address.id, expectedRevision: { cart: "a".repeat(64), pricing: "b".repeat(64), availability: "c".repeat(64) }, total: "1.00" }),
+    headers: { "content-type": "application/json" },
+  });
+  await assert.rejects(() => app.readRequest(monetary), /unsupported fields/i);
 });
