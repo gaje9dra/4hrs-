@@ -157,3 +157,5 @@ No fake external provider call is used.
 ## Phase 11.4 requirements
 The next phase may add a real provider adapter only behind the existing interface. It must preserve server-authoritative Checkout amount/currency, durable idempotency, PaymentAttempt auditability, normalized status mapping, event deduplication, centralized transitions, and the existing security/error boundaries.
 No provider SDK or credential is part of Phase 11.3.
+
+Validation target: npm test, npm run lint, npm run typecheck, npm run build, and CI-equivalent PostgreSQL migration validation.
