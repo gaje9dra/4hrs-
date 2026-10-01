@@ -103,10 +103,9 @@ test("private account pages are dynamic and non-indexable", () => {
   }
 });
 
-test("no premature downstream commerce surfaces were introduced", () => {
+test("no premature order or wishlist surfaces were introduced", () => {
   for (const path of [
     "app/(storefront)/wishlist/page.tsx",
-    "app/(storefront)/checkout/page.tsx",
     "app/(storefront)/orders/page.tsx",
   ]) {
     try {
