@@ -1,10 +1,17 @@
-import { Prisma } from "@prisma/client";
+import { createHash } from "node:crypto";
 import type { CartDto } from "@/lib/cart/contracts";
 import { CartServiceError } from "@/lib/cart/errors";
 import type { CustomerAddressDto, CustomerDto } from "@/lib/customer/contracts";
 import { CustomerAddressError } from "@/lib/customer/errors";
 import { CheckoutError, type CheckoutErrorCode } from "@/lib/checkout/errors";
-import { toCheckoutCustomer, type CheckoutDto, type CheckoutIssue, type CheckoutRequest, type CheckoutTotals } from "@/lib/checkout/contracts";
+import {
+  toCheckoutCustomer,
+  type CheckoutDto,
+  type CheckoutIssue,
+  type CheckoutRequest,
+  type CheckoutTotals,
+  type CheckoutRevision,
+} from "@/lib/checkout/contracts";
 import { logCheckoutObservation } from "@/lib/checkout/observability";
 
 type CheckoutDependencies = {
@@ -14,26 +21,57 @@ type CheckoutDependencies = {
   customer: CustomerDto;
 };
 
-function money(value: string) { return new Prisma.Decimal(value); }
-
 function issue(code: CheckoutIssue["code"], message: string, itemId?: string): CheckoutIssue {
   return itemId === undefined ? { code, message } : { code, message, itemId };
 }
 
-function calculateTotals(cart: CartDto): CheckoutTotals {
-  const available = cart.items.filter((item) => item.availability === "AVAILABLE" && item.subtotal !== null);
-  const subtotal = available.reduce((sum, item) => sum.add(money(item.subtotal!)), new Prisma.Decimal(0)).toFixed(2);
-  return { merchandiseSubtotal: subtotal, adjustments: [], charges: [], total: subtotal, currency: cart.currency };
+function digest(value: string): string {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+function revisionForCart(cart: CartDto): CheckoutRevision {
+  const items = [...cart.items].sort((a, b) => a.id.localeCompare(b.id));
+  const structure = items.map((item) =>
+    [item.id, item.product?.id ?? "", item.variant?.id ?? "", item.quantity].join("|"),
+  ).join("\n");
+  const pricing = items.map((item) =>
+    [item.id, item.unitPrice ?? "", item.subtotal ?? "", item.currency ?? ""].join("|"),
+  ).join("\n");
+  const availability = items.map((item) =>
+    [item.id, item.availability, item.quantity, item.product?.id ?? "", item.variant?.id ?? ""].join("|"),
+  ).join("\n");
+
+  return {
+    cart: digest([cart.id, structure].join("\n")),
+    pricing: digest([cart.currency ?? "", pricing].join("\n")),
+    availability: digest(availability),
+  };
+}
+
+function compareRevision(current: CheckoutRevision, expected?: CheckoutRevision): CheckoutIssue | null {
+  if (!expected) return null;
+  if (expected.cart !== current.cart) {
+    return issue("CART_CHANGED", "Your Cart changed while Checkout was open.");
+  }
+  if (expected.availability !== current.availability) {
+    return issue("VARIANT_UNAVAILABLE", "Cart availability changed while Checkout was open.");
+  }
+  if (expected.pricing !== current.pricing) {
+    return issue("PRICE_CHANGED", "A Cart price changed while Checkout was open.");
+  }
+  return null;
 }
 
 function validateCart(cart: CartDto): CheckoutIssue[] {
-  if (!cart || typeof cart.id !== "string" || !cart.id) return [issue("CART_MISSING", "Your Cart could not be loaded.")];
+  if (!cart || typeof cart.id !== "string" || !cart.id) {
+    return [issue("CART_MISSING", "Your Cart could not be loaded.")];
+  }
   if (cart.items.length === 0) return [issue("CART_EMPTY", "Your Cart is empty.")];
 
   const issues: CheckoutIssue[] = [];
   const currencies = new Set<string>();
 
-  for (const item of cart.items) {
+  for (const item of [...cart.items].sort((a, b) => a.id.localeCompare(b.id))) {
     if (!Number.isSafeInteger(item.quantity) || item.quantity < 1) {
       issues.push(issue("INVALID_QUANTITY", "Cart quantity is invalid.", item.id));
       continue;
@@ -46,22 +84,34 @@ function validateCart(cart: CartDto): CheckoutIssue[] {
       issues.push(issue("VARIANT_UNAVAILABLE", "A selected item is no longer available in the requested quantity.", item.id));
       continue;
     }
-    if (!item.unitPrice || !item.currency || !item.subtotal) {
+    if (!item.product || !item.unitPrice || !item.currency || !item.subtotal) {
       issues.push(issue("INVALID_CART_ITEM", "A Cart item could not be validated.", item.id));
       continue;
     }
     currencies.add(item.currency);
-    const expectedSubtotal = money(item.unitPrice).mul(item.quantity).toFixed(2);
-    if (expectedSubtotal !== item.subtotal) {
-      issues.push(issue("PRICE_CHANGED", "A Cart item price is no longer consistent with the authoritative price.", item.id));
-    }
   }
 
-  if (currencies.size > 1) issues.push(issue("CURRENCY_CHANGED", "Cart items use incompatible currencies."));
-  if (cart.currency && currencies.size === 1 && !currencies.has(cart.currency)) {
-    issues.push(issue("CURRENCY_CHANGED", "Cart currency is no longer consistent."));
+  if (currencies.size > 1 || (currencies.size === 1 && !currencies.has(cart.currency ?? ""))) {
+    issues.push(issue("CURRENCY_CHANGED", "Cart items use incompatible currencies."));
   }
+  if (cart.items.some((item) => item.availability !== "AVAILABLE") && !cart.hasUnavailableItems) {
+    issues.push(issue("INVALID_CART_ITEM", "Cart availability state is inconsistent."));
+  }
+  if (currencies.size === 1 && cart.currency === null) {
+    issues.push(issue("CURRENCY_CHANGED", "Cart currency is missing."));
+  }
+
   return issues;
+}
+
+function totalsForCart(cart: CartDto): CheckoutTotals {
+  return {
+    merchandiseSubtotal: cart.subtotal,
+    adjustments: [],
+    charges: [],
+    total: cart.subtotal,
+    currency: cart.currency,
+  };
 }
 
 function mapAddressError(error: unknown): CheckoutIssue {
@@ -77,9 +127,14 @@ function mapAddressError(error: unknown): CheckoutIssue {
 export function createCheckoutService(dependencies: CheckoutDependencies) {
   async function validate(input: CheckoutRequest = {}): Promise<CheckoutDto> {
     const startedAt = Date.now();
+
     try {
       const cart = await dependencies.getCart();
+      const currentRevision = revisionForCart(cart);
       const issues = validateCart(cart);
+      const staleIssue = compareRevision(currentRevision, input.expectedRevision);
+      if (staleIssue) issues.unshift(staleIssue);
+
       let address: CustomerAddressDto | null = null;
       const addressId = input.selectedAddressId?.trim() || null;
 
@@ -92,49 +147,62 @@ export function createCheckoutService(dependencies: CheckoutDependencies) {
       } else {
         const addresses = await dependencies.listAddresses(dependencies.customer.id);
         address = addresses.find((candidate) => candidate.isDefault) ?? null;
-        if (!address && addresses.length > 0) issues.push(issue("INCOMPLETE_CHECKOUT", "Select a delivery address before continuing."));
-        else if (!address) issues.push(issue("INVALID_ADDRESS", "Add a delivery address before continuing."));
+        if (!address && addresses.length > 0) {
+          issues.push(issue("INCOMPLETE_CHECKOUT", "Select a delivery address before continuing."));
+        } else if (!address) {
+          issues.push(issue("INVALID_ADDRESS", "Add a delivery address before continuing."));
+        }
       }
 
+      const validationState = issues[0]?.code ?? "VALID";
       if (issues.length > 0) {
-        const state = issues[0].code;
         logCheckoutObservation({
           operation: "validate",
-          classification: state === "PRODUCT_UNAVAILABLE" || state === "VARIANT_UNAVAILABLE" ||
-            state === "PRICE_CHANGED" || state === "CURRENCY_CHANGED"
-            ? "stale_state"
-            : state === "ADDRESS_NOT_OWNED" || state === "ADDRESS_NOT_FOUND"
-              ? "authorization_failure" : "validation_failure",
+          classification:
+            validationState === "PRODUCT_UNAVAILABLE" ||
+            validationState === "VARIANT_UNAVAILABLE" ||
+            validationState === "INVALID_QUANTITY" ||
+            validationState === "PRICE_CHANGED" ||
+            validationState === "CURRENCY_CHANGED" ||
+            validationState === "CART_CHANGED"
+              ? "stale_state"
+              : validationState === "ADDRESS_NOT_OWNED" || validationState === "ADDRESS_NOT_FOUND"
+                ? "authorization_failure"
+                : "validation_failure",
           durationMs: Date.now() - startedAt,
-          errorCode: ("CHECKOUT_" + state) as CheckoutErrorCode,
+          errorCode: ("CHECKOUT_" + validationState) as CheckoutErrorCode,
         });
-        return {
-          customer: toCheckoutCustomer(dependencies.customer),
-          cart: { id: cart.id, items: cart.items },
-          address,
-          totals: calculateTotals(cart),
-          validation: { state, issues },
-          payment: { ready: false, reason: "PAYMENT_NOT_IMPLEMENTED" },
-        };
       }
 
       return {
         customer: toCheckoutCustomer(dependencies.customer),
         cart: { id: cart.id, items: cart.items },
         address,
-        totals: calculateTotals(cart),
-        validation: { state: "VALID", issues: [] },
+        totals: totalsForCart(cart),
+        revision: currentRevision,
+        validation: { state: validationState, issues },
         payment: { ready: false, reason: "PAYMENT_NOT_IMPLEMENTED" },
       };
     } catch (error) {
       if (error instanceof CheckoutError) throw error;
       if (error instanceof CartServiceError) {
-        if (error.code === "CART_NOT_FOUND") throw new CheckoutError("CHECKOUT_CART_MISSING", "Your Cart could not be loaded.");
-        if (error.code === "CART_UNAUTHORIZED") throw new CheckoutError("CHECKOUT_INVALID_CART", "Your Cart could not be validated.");
+        if (error.code === "CART_NOT_FOUND") {
+          throw new CheckoutError("CHECKOUT_CART_MISSING", "Your Cart could not be loaded.");
+        }
+        if (error.code === "CART_UNAUTHORIZED") {
+          throw new CheckoutError("CHECKOUT_INVALID_CART", "Your Cart could not be validated.");
+        }
       }
-      throw new CheckoutError("CHECKOUT_DATABASE_ERROR", "Checkout validation is temporarily unavailable.", undefined, { cause: error });
+      throw new CheckoutError(
+        "CHECKOUT_DATABASE_ERROR",
+        "Checkout validation is temporarily unavailable.",
+        undefined,
+        { cause: error },
+      );
     }
   }
+
   return { validate };
 }
+
 export type CheckoutService = ReturnType<typeof createCheckoutService>;
