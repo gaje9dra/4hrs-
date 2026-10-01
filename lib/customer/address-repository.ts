@@ -77,7 +77,7 @@ export function createCustomerAddressRepository(client?: CustomerAddressReposito
   const database = clientOrDefault(client);
 
   return {
-    withTransaction<T>(work) {
+    withTransaction<T>(work: (repository: CustomerAddressRepository) => Promise<T>) {
       if ("$transaction" in database) {
         return database.$transaction((tx) => work(createCustomerAddressRepository(tx)), {
           isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
