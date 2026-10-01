@@ -106,11 +106,13 @@ test("Payment errors use provider-neutral categories", () => {
 test("Checkout remains the amount authority and payment is not an order", async () => {
   const fs = await import("node:fs/promises");
   const checkoutContracts = await fs.readFile("lib/checkout/contracts.ts", "utf8");
-  const paymentApplication = await fs.readFile("lib/payments/application.ts",
-    "lib/payments/checkout.ts",
-    "lib/payments/http.ts", "utf8");
+  const paymentApplication = await fs.readFile("lib/payments/application.ts", "utf8");
+  const paymentCheckout = await fs.readFile("lib/payments/checkout.ts", "utf8");
+  const paymentHttp = await fs.readFile("lib/payments/http.ts", "utf8");
   assert.match(checkoutContracts, /checkoutReference/);
   assert.match(paymentApplication, /createPaymentFromCheckout/);
+  assert.match(paymentCheckout, /createCheckoutPaymentReference/);
+  assert.match(paymentHttp, /paymentErrorResponse/);
   assert.doesNotMatch(paymentApplication, /orderId|createOrder|shipping|reserveInventory|razorpay|payu|stripe/i);
 });
 
