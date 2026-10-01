@@ -136,7 +136,7 @@ export function createOrderApplication(
             const existingCheckoutOrder = await txOrders.getOrderByCheckout(checkout.checkoutReference);
             if (existingCheckoutOrder) {
               if (existingCheckoutOrder.customerId !== customer!.id) {
-                throw new OrderDomainError("CHECKOUT_ACCESS_DENIED" as never, "Checkout is not available to this customer.");
+                throw new OrderDomainError("CHECKOUT_ALREADY_CONVERTED", "Checkout has already been converted into an Order.");
               }
               if (existingCheckoutOrder.paymentId === payment.id) return toResult(existingCheckoutOrder);
               throw new OrderDomainError("CHECKOUT_ALREADY_CONVERTED", "Checkout has already been converted into an Order.");
