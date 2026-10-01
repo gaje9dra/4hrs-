@@ -166,7 +166,7 @@ test("currency inconsistency is rejected", async () => {
     ...base,
     items: [
       base.items[0],
-      { ...base.items[0], id: "99999999-9999-4999-8999-999999999999", currency: "USD", subtotal: "9.00" },
+      { ...base.items[0], id: "99999999-9999-4999-8999-999999999999", currency: "USD", unitPrice: "4.50", subtotal: "9.00" },
     ],
   })).validate({ selectedAddressId: address.id });
   assert.equal(result.validation.state, "CURRENCY_CHANGED");
@@ -197,7 +197,7 @@ test("unexpected Cart failures are mapped without ORM or SQL leakage", async () 
 });
 
 test("Checkout never performs inventory reservation", async () => {
-  let reservationCalls = 0;
+  const reservationCalls = 0;
   const result = await service(async () => cart()).validate({ selectedAddressId: address.id });
   assert.equal(result.validation.state, "VALID");
   assert.equal(reservationCalls, 0);
