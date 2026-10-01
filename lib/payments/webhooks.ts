@@ -1,15 +1,6 @@
-import type { PaymentStatus } from "@/lib/payments/domain";
+import type { NormalizedPaymentEvent } from "@/lib/payments/provider";
 
-export type NormalizedPaymentEvent = {
-  providerId: string;
-  providerEventReference: string;
-  providerPaymentReference: string | null;
-  internalPaymentReference: string | null;
-  normalizedEventType: string;
-  status: PaymentStatus;
-  occurredAt: string;
-  metadata?: Readonly<Record<string, string>>;
-};
+export type { NormalizedPaymentEvent };
 
 export type PaymentWebhookEvent = NormalizedPaymentEvent;
 
