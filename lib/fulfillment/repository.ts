@@ -14,7 +14,7 @@ export type FulfillmentRepository = {
   getByIdempotencyKey(idempotencyKey: string): Promise<FulfillmentWithItems | null>;
   getOrderForFulfillment(orderId: string): Promise<FulfillmentOrderSource | null>;
   createWithItems(input: { orderId: string; provider: string; idempotencyKey: string; items: readonly { orderItemId: string; quantity: number; providerSku?: string | null; providerVariantReference?: string | null }[] }): Promise<FulfillmentWithItems>;
-  transitionStatus(input: { id: string; expectedStatus: PrismaFulfillmentStatus; nextStatus: PrismaFulfillmentStatus; timestamps?: { submittedAt?: Date; completedAt?: Date; failedAt?: Date } }): Promise<FulfillmentWithItems | null>;
+  transitionStatus(input: { id: string; expectedStatus: PrismaFulfillmentStatus; nextStatus: PrismaFulfillmentStatus; timestamps?: { submittedAt?: Date; acceptedAt?: Date; completedAt?: Date; failedAt?: Date }; providerFulfillmentReference?: string | null; errorCode?: string | null; errorMessage?: string | null; reconciliationMetadata?: Prisma.InputJsonValue | typeof Prisma.DbNull }): Promise<FulfillmentWithItems | null>;
 };
 
 function clientOrDefault(client?: FulfillmentRepositoryClient): FulfillmentRepositoryClient { return client ?? db; }
@@ -36,7 +36,7 @@ export function createFulfillmentRepository(client?: FulfillmentRepositoryClient
     },
     getByIdempotencyKey(idempotencyKey) { return database.fulfillment.findUnique({ where: { idempotencyKey }, include: { items: true } }); },
     getOrderForFulfillment(orderId) {
-      return database.order.findUnique({ where: { id: orderId }, include: { items: true, shippingAddress: true, payment: true, fulfillment: true } });
+      return database.order.findUnique({ where: { id: orderId }, include: { items: true, shippingAddress: true, payment: true, fulfillment: true, customer: true } });
     },
     async createWithItems(input) {
       assertNonEmpty(input.orderId, "orderId");
@@ -59,8 +59,13 @@ export function createFulfillmentRepository(client?: FulfillmentRepositoryClient
         data: {
           status: input.nextStatus,
           ...(input.timestamps?.submittedAt ? { submittedAt: input.timestamps.submittedAt } : {}),
+          ...(input.timestamps?.acceptedAt ? { acceptedAt: input.timestamps.acceptedAt } : {}),
           ...(input.timestamps?.completedAt ? { completedAt: input.timestamps.completedAt } : {}),
           ...(input.timestamps?.failedAt ? { failedAt: input.timestamps.failedAt } : {}),
+          ...(input.providerFulfillmentReference !== undefined ? { providerFulfillmentReference: input.providerFulfillmentReference } : {}),
+          ...(input.errorCode !== undefined ? { errorCode: input.errorCode } : {}),
+          ...(input.errorMessage !== undefined ? { errorMessage: input.errorMessage } : {}),
+          ...(input.reconciliationMetadata !== undefined ? { reconciliationMetadata: input.reconciliationMetadata } : {}),
         },
       });
       if (result.count !== 1) return null;
