@@ -135,6 +135,25 @@ test("browser price, total, currency, customer and Cart IDs are not accepted as 
   await assert.rejects(() => app.readRequest(request), /unsupported fields/i);
 });
 
+test("Checkout rejects every browser-controlled business authority field", async () => {
+  const app = createCheckoutApplication({
+    resolveCustomer: async () => customer,
+    getCart: async () => cart(),
+    getAddress: async () => address,
+    listAddresses: async () => [address],
+  });
+  const fields = ["customerId", "cartId", "productId", "variantId", "quantity", "unitPrice", "price", "subtotal", "discount", "tax", "shipping", "shippingCharge", "total", "currency", "availability"];
+  for (const field of fields) {
+    const request = new Request("https://example.test/api/checkout", {
+      method: "POST",
+      body: JSON.stringify({ selectedAddressId: address.id, [field]: field === "quantity" ? 1 : "attacker-value" }),
+      headers: { "content-type": "application/json" },
+    });
+    await assert.rejects(() => app.readRequest(request), /unsupported fields/i, field);
+  }
+});
+});
+
 test("another customer's address is rejected without leaking ownership", async () => {
   const result = await serviceFactory(async () => cart()).validate({
     selectedAddressId: "88888888-8888-4888-8888-888888888888",
