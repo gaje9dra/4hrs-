@@ -154,12 +154,13 @@ export function createOrderRepository(client?: OrderRepositoryClient): OrderRepo
         if (item.currency !== input.currency) throw new Error("Order item currency must match Order currency.");
       }
 
-      const order = await repository.createOrder(input);
-      for (const item of input.items) await repository.createOrderItem(order.id, item);
-      if (input.shippingAddress) await repository.createOrderAddressSnapshot(order.id, input.shippingAddress);
-      return repository.getOrderById(order.id).then((record) => {
-        if (!record) throw new Error("Order was not found after creation.");
-        return record;
+      return repository.withTransaction(async (tx) => {
+        const order = await tx.createOrder(input);
+        for (const item of input.items) await tx.createOrderItem(order.id, item);
+        if (input.shippingAddress) await tx.createOrderAddressSnapshot(order.id, input.shippingAddress);
+        const created = await tx.getOrderById(order.id);
+        if (!created) throw new Error("Order was not found after creation.");
+        return created;
       });
     },
 
