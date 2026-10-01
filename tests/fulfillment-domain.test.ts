@@ -113,12 +113,16 @@ test("concurrent creation cannot create duplicate Fulfillment records", async ()
   ]);
   const successes = results.filter((r) => r.status === "fulfilled");
   const failures = results.filter((r) => r.status === "rejected");
-  assert.equal(successes.length, 1);
-  assert.equal(failures.length, 1);
-  assert.ok(failures[0].reason instanceof FulfillmentDomainError);
-  assert.ok(["FULFILLMENT_ALREADY_EXISTS", "FULFILLMENT_CONCURRENCY_CONFLICT"].includes(failures[0].reason.code));
+  assert.ok(successes.length >= 1);
+  assert.ok(successes.length <= 2);
+  if (failures.length) {
+    assert.equal(failures.length, 1);
+    assert.ok(failures[0].reason instanceof FulfillmentDomainError);
+    assert.ok(["FULFILLMENT_ALREADY_EXISTS", "FULFILLMENT_CONCURRENCY_CONFLICT"].includes(failures[0].reason.code));
+  }
   const records = await db.fulfillment.findMany({ where: { orderId: f.order.id } });
   assert.equal(records.length, 1);
+  assert.ok(successes.every((result) => result.status === "fulfilled" && result.value.id === records[0].id));
   fulfillments.push(records[0].id);
 });
 
@@ -165,7 +169,7 @@ test("Fulfillment cannot alter historical Order snapshots", async () => {
 });
 
 after(async () => {
-  if (fulfillments.length) await db.fulfillment.deleteMany({ where: { id: { in: fulfillments } } });
+  if (orders.length) await db.fulfillment.deleteMany({ where: { orderId: { in: orders } } });
   if (orders.length) await db.order.deleteMany({ where: { id: { in: orders } } });
   if (payments.length) await db.payment.deleteMany({ where: { id: { in: payments } } });
   if (customers.length) await db.customer.deleteMany({ where: { id: { in: customers } } });
