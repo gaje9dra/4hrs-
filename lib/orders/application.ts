@@ -10,6 +10,9 @@ import {
   assertOrderTransition,
   isOrderLifecycleStatus,
   type OrderLifecycleStatus,
+  assertOrderTransition,
+  isOrderLifecycleStatus,
+  type OrderLifecycleStatus,
   type OrderCreationResult,
 } from "@/lib/orders/domain";
 import { resolveOrderCheckout, type OrderCheckoutResolverClient } from "@/lib/orders/checkout-resolver";
@@ -54,6 +57,7 @@ export type OrderApplicationService = {
   createOrderFromVerifiedPayment(input: CreateOrderFromVerifiedPaymentInput): Promise<OrderCreationResult>;
   getCustomerOrder(input: OrderLookupInput): Promise<PublicOrderDto>;
   listCustomerOrders(input: OrderListInput): Promise<PublicOrderListDto>;
+  transitionOrderLifecycle(input: { orderId: string; expectedStatus: OrderLifecycleStatus; nextStatus: OrderLifecycleStatus }): Promise<OrderCreationResult>;
   transitionOrderLifecycle(input: { orderId: string; expectedStatus: OrderLifecycleStatus; nextStatus: OrderLifecycleStatus }): Promise<OrderCreationResult>;
 };
 
@@ -271,6 +275,68 @@ export function createOrderApplication(
         const updated = await tx.transitionOrderStatus({
           orderId: current.id,
           expectedStatus: input.expectedStatus,
+          nextStatus: input.nextStatus,
+        });
+        if (!updated) throw new OrderDomainError("ORDER_CONCURRENCY_CONFLICT", "Order state changed concurrently.");
+        return updated;
+      });
+
+      logOrderLifecycleObservation({
+        operation: "transition",
+        orderId: transitioned.id,
+        orderNumber: transitioned.orderNumber,
+        from: input.expectedStatus,
+        to: input.nextStatus,
+        actor: "SYSTEM",
+        result: "success",
+      });
+      const full = await orderRepository.getOrderById(transitioned.id);
+      return toResult(full);
+    } catch (error) {
+      const code = error instanceof OrderDomainError ? error.code : "ORDER_CONCURRENCY_CONFLICT";
+      logOrderLifecycleObservation({
+        operation: "transition",
+        orderId: input.orderId,
+        from: input.expectedStatus,
+        to: input.nextStatus,
+        actor: "SYSTEM",
+        result: code === "ORDER_CONCURRENCY_CONFLICT" ? "concurrency-conflict" : "rejected",
+        failureCode: code,
+      });
+      if (error instanceof OrderDomainError) throw error;
+      throw new OrderDomainError("ORDER_CONCURRENCY_CONFLICT", "Order state changed concurrently.", undefined, { cause: error });
+    }
+  }
+
+  async function transitionOrderLifecycle(input: { orderId: string; expectedStatus: OrderLifecycleStatus; nextStatus: OrderLifecycleStatus }): Promise<OrderCreationResult> {
+    const order = await orderRepository.getOrderById(input.orderId);
+    if (!order) throw new OrderDomainError("ORDER_NOT_FOUND", "Order could not be found.");
+    if (!isOrderLifecycleStatus(order.status)) throw new OrderDomainError("ORDER_INVALID_STATE", "Order state is invalid.");
+    if (order.status !== input.expectedStatus) {
+      throw new OrderDomainError("ORDER_CONCURRENCY_CONFLICT", "Order state changed concurrently.");
+    }
+    assertOrderTransition(order.status, input.nextStatus);
+
+    const payment = await paymentRepository.getPaymentById(order.paymentId, order.customerId);
+    if (!payment || payment.status !== "SUCCEEDED" || !payment.completedAt) {
+      throw new OrderDomainError("ORDER_PAYMENT_NOT_ELIGIBLE", "The Order payment is not eligible for this lifecycle transition.");
+    }
+
+    try {
+      const transitioned = await orderRepository.withTransaction(async (tx) => {
+        const current = await tx.getOrderById(input.orderId);
+        if (!current) throw new OrderDomainError("ORDER_NOT_FOUND", "Order could not be found.");
+        if (!isOrderLifecycleStatus(current.status)) throw new OrderDomainError("ORDER_INVALID_STATE", "Order state is invalid.");
+        assertOrderTransition(current.status, input.nextStatus);
+
+        const currentPayment = await createPaymentRepository(tx).getPaymentById(current.paymentId, current.customerId);
+        if (!currentPayment || currentPayment.status !== "SUCCEEDED" || !currentPayment.completedAt) {
+          throw new OrderDomainError("ORDER_PAYMENT_NOT_ELIGIBLE", "The Order payment is not eligible for this lifecycle transition.");
+        }
+
+        const updated = await tx.transitionOrderStatus({
+          orderId: current.id,
+          expectedStatus: current.status,
           nextStatus: input.nextStatus,
         });
         if (!updated) throw new OrderDomainError("ORDER_CONCURRENCY_CONFLICT", "Order state changed concurrently.");
