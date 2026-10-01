@@ -48,7 +48,7 @@ function fakeRepository(initial = payment()): PaymentRepository {
     getPaymentById: async (id: string, owner: string) => id === current.id && owner === current.customerId ? current : null,
     getPaymentsByCustomer: async () => [current],
     getPaymentByCheckout: async (owner: string, reference: string) =>
-      owner === current.customerId && reference === current.checkoutReference ? current : null,
+      idempotency.size > 0 && owner === current.customerId && reference === current.checkoutReference ? current : null,
     getPaymentByInternalReference: async (reference: string) =>
       reference === current.internalReference ? current : null,
     getPaymentByProviderReference: async () => null,
