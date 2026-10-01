@@ -1,33 +1,23 @@
 import type { PaymentStatus } from "@/lib/payments/domain";
 
-export type PaymentWebhookEvent = {
+export type NormalizedPaymentEvent = {
   providerId: string;
-  externalEventId: string;
-  type: string;
-  paymentReference: string | null;
+  providerEventReference: string;
+  providerPaymentReference: string | null;
+  internalPaymentReference: string | null;
+  normalizedEventType: string;
   status: PaymentStatus;
-  receivedAt: string;
-  occurredAt: string | null;
+  occurredAt: string;
+  metadata?: Readonly<Record<string, string>>;
 };
+
+export type PaymentWebhookEvent = NormalizedPaymentEvent;
 
 export type PaymentWebhookVerificationContext = {
   signatureVerified: boolean;
   replaySafe: boolean;
 };
 
-export interface PaymentWebhookEventStore {
-  hasProcessed(providerId: string, externalEventId: string): Promise<boolean>;
-  recordReceived(event: PaymentWebhookEvent): Promise<void>;
-  markProcessed(providerId: string, externalEventId: string): Promise<void>;
-  markFailed(
-    providerId: string,
-    externalEventId: string,
-    reason: string,
-  ): Promise<void>;
-}
-
-export function isWebhookReplaySafe(
-  context: PaymentWebhookVerificationContext,
-): boolean {
+export function isWebhookReplaySafe(context: PaymentWebhookVerificationContext): boolean {
   return context.signatureVerified && context.replaySafe;
 }
