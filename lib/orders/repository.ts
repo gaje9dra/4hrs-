@@ -69,6 +69,7 @@ export type OrderRepository = {
   getOrdersByCustomer(customerId: string): Promise<OrderWithRelations[]>;
   getOrderByCheckout(checkoutReference: string): Promise<OrderWithRelations | null>;
   getOrderByPayment(paymentId: string): Promise<OrderWithRelations | null>;
+  transitionOrderStatus(input: { orderId: string; expectedStatus: PrismaOrderStatus; nextStatus: PrismaOrderStatus }): Promise<OrderRecord | null>;
 };
 
 function clientOrDefault(client?: OrderRepositoryClient): OrderRepositoryClient {
@@ -287,6 +288,17 @@ export function createOrderRepository(client?: OrderRepositoryClient): OrderRepo
         where: { paymentId },
         include: { items: true, shippingAddress: true },
       });
+    },
+
+    async transitionOrderStatus({ orderId, expectedStatus, nextStatus }) {
+      assertNonEmpty(orderId, "orderId");
+      if (expectedStatus === nextStatus) throw new Error("Order transition must change state.");
+      const result = await database.order.updateMany({
+        where: { id: orderId, status: expectedStatus },
+        data: { status: nextStatus },
+      });
+      if (result.count !== 1) return null;
+      return database.order.findUnique({ where: { id: orderId } });
     },
   };
 
