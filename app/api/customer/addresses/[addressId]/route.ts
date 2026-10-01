@@ -118,13 +118,6 @@ export async function POST(
     assertSameOrigin(request);
     const current = await requireCurrentCustomer(request);
     const { addressId } = await context.params;
-    const body = await readBody(request);
-    if (Object.keys(body).length !== 0) {
-      throw new CustomerAddressError(
-        "CUSTOMER_ADDRESS_INVALID",
-        "Default-address request must not contain a body.",
-      );
-    }
     return authJson({ address: await addresses.setDefaultAddress(current.customer.id, addressId) });
   } catch (error) {
     return errorResponse(error);
