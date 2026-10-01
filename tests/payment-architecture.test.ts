@@ -33,18 +33,10 @@ test("idempotency scope is customer and operation scoped", () => {
     paymentIdempotencyScope("customer-1", "create-intent"),
     "customer:customer-1:payment:create-intent",
   );
-  const record = {
-    scope: "customer:customer-1:payment:create-intent",
-    key: "idem-1",
-    requestFingerprint: "fingerprint-a",
-    paymentId: "payment-1",
-    response: { status: "CREATED" },
-    createdAt: "2026-10-01T00:00:00.000Z",
-    expiresAt: null,
-  };
-  assert.doesNotThrow(() => assertIdempotencyFingerprint(record, "fingerprint-a"));
+  const recordFingerprint = "fingerprint-a";
+  assert.doesNotThrow(() => assertIdempotencyFingerprint(recordFingerprint, "fingerprint-a"));
   assert.throws(
-    () => assertIdempotencyFingerprint(record, "fingerprint-b"),
+    () => assertIdempotencyFingerprint(recordFingerprint, "fingerprint-b"),
     /idempotency conflict/i,
   );
 });
