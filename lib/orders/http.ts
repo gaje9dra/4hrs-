@@ -1,6 +1,5 @@
-import { AuthenticationError, isAuthenticationError } from "@/lib/auth/errors";
+import { isAuthenticationError } from "@/lib/auth/errors";
 import { OrderDomainError, type OrderErrorCode } from "@/lib/orders/errors";
-import { logOrderCreationObservation } from "@/lib/orders/observability";
 
 const STATUS: Record<OrderErrorCode, number> = {
   PAYMENT_NOT_FOUND: 404,
@@ -48,15 +47,6 @@ export function orderErrorResponse(error: unknown, operation: "create" | "get" |
       ? error.message
       : "Order information is temporarily unavailable.";
 
-  if (isOrder && operation === "create") {
-    logOrderCreationObservation({
-      operation: "create-from-payment",
-      result: "failure",
-      failureCode: error.code,
-      durationMs: 0,
-    });
-  }
-
   return orderJson({ error: { code, message } }, status);
 }
 
@@ -71,11 +61,3 @@ export function orderMethodNotAllowed(allowed: string[]): Response {
   });
 }
 
-export function assertOrderSameOrigin(request: Request): void {
-  const origin = request.headers.get("origin");
-  if (!origin) return;
-  const requestUrl = new URL(request.url);
-  if (origin !== requestUrl.origin) {
-    throw new AuthenticationError("CSRF_REJECTED", "The Order request is not allowed.");
-  }
-}
