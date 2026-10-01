@@ -69,6 +69,12 @@ test("provider adapter contract stays provider-neutral", () => {
     async verifyPayment() {
       return { providerId: "test-provider", providerPaymentReference: "external-1", providerAttemptReference: "attempt-1", status: "SUCCEEDED", clientAction: { type: "NONE" } };
     },
+    normalizeStatus(status) {
+      return status === "SUCCEEDED" ? "SUCCEEDED" : "PROCESSING";
+    },
+    normalizeError() {
+      return "PROVIDER_UNKNOWN_ERROR";
+    },
     async verifyWebhook() {
       return {
         verified: true,
