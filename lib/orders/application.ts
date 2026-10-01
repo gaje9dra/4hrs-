@@ -255,8 +255,9 @@ export function createOrderApplication(
     }
 
     try {
-      const transitioned = await orderRepository.withTransaction(async (tx) => {
-        const current = await tx.getOrderById(input.orderId);
+      const transitioned = await database.$transaction(async (tx) => {
+        const txOrders = createOrderRepository(tx);
+        const current = await txOrders.getOrderById(input.orderId);
         if (!current) throw new OrderDomainError("ORDER_NOT_FOUND", "Order could not be found.");
         if (!isOrderLifecycleStatus(current.status)) throw new OrderDomainError("ORDER_INVALID_STATE", "Order state is invalid.");
         assertOrderTransition(current.status, input.nextStatus);
@@ -266,14 +267,14 @@ export function createOrderApplication(
           throw new OrderDomainError("ORDER_PAYMENT_NOT_ELIGIBLE", "The Order payment is not eligible for this lifecycle transition.");
         }
 
-        const updated = await tx.transitionOrderStatus({
+        const updated = await txOrders.transitionOrderStatus({
           orderId: current.id,
           expectedStatus: current.status,
           nextStatus: input.nextStatus,
         });
         if (!updated) throw new OrderDomainError("ORDER_CONCURRENCY_CONFLICT", "Order state changed concurrently.");
         return updated;
-      });
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 
       logOrderLifecycleObservation({
         operation: "transition",
