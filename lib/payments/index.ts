@@ -6,6 +6,7 @@ export * from "@/lib/payments/idempotency";
 export * from "@/lib/payments/provider";
 export * from "@/lib/payments/config";
 export * from "@/lib/payments/resolver";
+export * from "@/lib/payments/registry";
 export * from "@/lib/payments/client-action";
 export * from "@/lib/payments/webhooks";
 export * from "@/lib/payments/repository";
