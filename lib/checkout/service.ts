@@ -14,6 +14,7 @@ import {
   type CheckoutRevision,
 } from "@/lib/checkout/contracts";
 import { logCheckoutObservation } from "@/lib/checkout/observability";
+import { createCheckoutPaymentReference, isCheckoutPayable } from "@/lib/payments/checkout";
 
 type CheckoutDependencies = {
   getCart: () => Promise<CartDto>;
@@ -183,14 +184,22 @@ export function createCheckoutService(dependencies: CheckoutDependencies) {
         });
       }
 
-      return {
+      const result = {
         customer: toCheckoutCustomer(dependencies.customer),
         cart: { id: cart.id, items: cart.items },
         address,
         totals: totalsForCart(cart),
         revision: currentRevision,
         validation: { state: validationState, issues },
-        payment: { ready: false, reason: "PAYMENT_NOT_IMPLEMENTED" },
+      };
+      const checkoutReference = createCheckoutPaymentReference(dependencies.customer.id, result);
+      return {
+        ...result,
+        payment: {
+          ready: isCheckoutPayable(result),
+          checkoutReference,
+          reason: isCheckoutPayable(result) ? "PAYMENT_READY" as const : "CHECKOUT_NOT_PAYABLE" as const,
+        },
       };
     } catch (error) {
       if (error instanceof CheckoutError) throw error;
