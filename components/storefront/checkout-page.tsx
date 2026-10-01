@@ -68,7 +68,7 @@ function AddressCard({ address, selected, disabled, onSelect }: { address: Custo
   );
 }
 
-function AddAddressForm({ disabled, onCreated }: { disabled: boolean; onCreated: (address: CustomerAddressDto) => void }) {
+function AddAddressForm({ disabled, onCreated, onSessionExpired }: { disabled: boolean; onCreated: (address: CustomerAddressDto) => void; onSessionExpired: () => void }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [values, setValues] = useState({ recipientName: "", phone: "", addressLine1: "", addressLine2: "", city: "", stateOrProvince: "", postalCode: "", countryCode: "IN", label: "Home" });
@@ -214,7 +214,7 @@ export function CheckoutPage({ customer }: { customer: CustomerDto }) {
             <div><p className="text-xs font-900 uppercase tracking-[.2em] text-primary-blue">Delivery</p><h2 id="address-heading" className="mt-2 text-3xl">Choose an address</h2><p className="mt-2 text-sm">The selected address is revalidated against your account on the server.</p></div>
             {issues.length ? <Alert variant={state === "valid" ? "success" : "error"} title={state === "address_required" ? "Address required" : "Checkout validation"}>{issues.map((item) => <span key={item.code + (item.itemId ?? "")} className="block">{item.message}</span>)}</Alert> : null}
             {addresses.length ? <div className="grid gap-3" role="radiogroup" aria-labelledby="address-heading">{addresses.map((address) => <AddressCard key={address.id} address={address} selected={selectedAddressId === address.id} disabled={pending} onSelect={() => void validateSelection(address.id)} />)}</div> : <Alert variant="error" title="No saved address">Add a delivery address before continuing.</Alert>}
-            <AddAddressForm disabled={pending} onCreated={addressCreated} />
+            <AddAddressForm disabled={pending} onCreated={addressCreated} onSessionExpired={() => setState("session_expired")} />
           </section>
 
           {stateMessage ? <section aria-labelledby="cart-state"><Alert variant="error" title={state === "price_changed" ? "Price changed" : state === "cart_changed" ? "Cart changed" : "Availability changed"}>{stateMessage}</Alert><div className="mt-4"><Button href="/cart" variant="yellow">Review Cart</Button></div></section> : null}
