@@ -72,6 +72,7 @@ export type PaymentRepository = {
   getPaymentById(paymentId: string, customerId: string): Promise<PaymentRecord | null>;
   getPaymentsByCustomer(customerId: string): Promise<PaymentRecord[]>;
   getPaymentByCheckout(customerId: string, checkoutReference: string): Promise<PaymentRecord | null>;
+  getPaymentByInternalReference(internalReference: string): Promise<PaymentRecord | null>;
   getPaymentByProviderReference(
     providerId: string,
     providerReference: string,
@@ -213,6 +214,10 @@ export function createPaymentRepository(client?: PaymentRepositoryClient): Payme
       return database.payment.findFirst({
         where: { customerId, checkoutReference },
       });
+    },
+
+    getPaymentByInternalReference(internalReference) {
+      return database.payment.findUnique({ where: { internalReference } });
     },
 
     getPaymentByProviderReference(providerId, providerReference) {
