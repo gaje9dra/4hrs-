@@ -13,6 +13,7 @@ const carts: string[] = [];
 const cartItems: string[] = [];
 const products: string[] = [];
 const variants: string[] = [];
+const inventories: string[] = [];
 const payments: string[] = [];
 const orders: string[] = [];
 
@@ -67,6 +68,10 @@ async function fixture(options: {
   });
   products.push(product.id);
   variants.push(product.variants[0].id);
+  const inventory = await db.inventory.create({
+    data: { variantId: product.variants[0].id, trackingEnabled: true, onHand: 10, reserved: 0 },
+  });
+  inventories.push(inventory.id);
 
   const cart = await db.cart.create({
     data: {
@@ -214,7 +219,7 @@ test("rejects an invalid ProductVariant and an invalid quantity", async () => {
   );
 
   const quantity = await fixture();
-  await db.cartItem.update({ where: { id: quantity.cart.items[0].id }, data: { quantity: 0 } });
+  await db.cartItem.update({ where: { id: quantity.cart.items[0].id }, data: { quantity: 11 } });
   await expectCode(
     () => appFor(quantity.customer.id).createOrderFromVerifiedPayment({ paymentId: quantity.payment.id }),
     "INVALID_ORDER_ITEM",
@@ -307,6 +312,7 @@ after(async () => {
   if (carts.length) await db.cart.deleteMany({ where: { id: { in: carts } } });
   if (addresses.length) await db.customerAddress.deleteMany({ where: { id: { in: addresses } } });
   if (payments.length) await db.payment.deleteMany({ where: { id: { in: payments } } });
+  if (inventories.length) await db.inventory.deleteMany({ where: { id: { in: inventories } } });
   if (variants.length) await db.productVariant.deleteMany({ where: { id: { in: variants } } });
   if (products.length) await db.product.deleteMany({ where: { id: { in: products } } });
   if (customers.length) await db.customer.deleteMany({ where: { id: { in: customers } } });
