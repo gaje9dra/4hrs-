@@ -366,6 +366,8 @@ model Customer {
   sessions        CustomerSession[]
   cart            Cart?
   addresses       CustomerAddress[]
+  payments        Payment[]
+  paymentIdempotencyRecords PaymentIdempotency[]
   @@index([status])
 }
 
