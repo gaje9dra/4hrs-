@@ -483,6 +483,7 @@ model Order {
   payment          Payment     @relation(fields: [paymentId], references: [id], onDelete: Restrict)
   items            OrderItem[]
   shippingAddress  OrderAddressSnapshot?
+  fulfillment      Fulfillment?
 
   @@index([customerId, createdAt])
   @@index([status, createdAt])
@@ -506,6 +507,7 @@ model OrderItem {
   order                Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product              Product?        @relation(fields: [productId], references: [id], onDelete: SetNull)
   variant              ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+  fulfillmentItems     FulfillmentItem[]
 
   @@index([orderId])
   @@index([productId])
@@ -528,6 +530,58 @@ model OrderAddressSnapshot {
   order            Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
 }
 
+
+
+enum FulfillmentStatus {
+  PENDING
+  SUBMITTED
+  FAILED
+  COMPLETED
+}
+
+model Fulfillment {
+  id                    String             @id @default(uuid()) @db.Uuid
+  orderId               String             @unique @db.Uuid
+  provider              String             @db.VarChar(64)
+  providerFulfillmentReference String?      @unique @db.VarChar(255)
+  status                FulfillmentStatus  @default(PENDING)
+  idempotencyKey        String             @unique @db.VarChar(255)
+  requestedAt           DateTime           @default(now())
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+  submittedAt           DateTime?
+  acceptedAt            DateTime?
+  completedAt           DateTime?
+  failedAt              DateTime?
+  errorCode             String?            @db.VarChar(100)
+  errorMessage          String?            @db.VarChar(500)
+  reconciliationMetadata Json?
+  order                 Order              @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  items                 FulfillmentItem[]
+
+  @@index([provider, createdAt])
+  @@index([provider, providerFulfillmentReference])
+  @@index([status, createdAt])
+  @@index([orderId, status])
+}
+
+model FulfillmentItem {
+  id                        String       @id @default(uuid()) @db.Uuid
+  fulfillmentId             String       @db.Uuid
+  orderItemId               String       @unique @db.Uuid
+  quantity                  Int
+  providerItemReference     String?      @db.VarChar(255)
+  providerSku               String?      @db.VarChar(120)
+  providerVariantReference  String?      @db.VarChar(255)
+  status                    String?      @db.VarChar(64)
+  createdAt                 DateTime     @default(now())
+  fulfillment               Fulfillment  @relation(fields: [fulfillmentId], references: [id], onDelete: Cascade)
+  orderItem                 OrderItem    @relation(fields: [orderItemId], references: [id], onDelete: Restrict)
+
+  @@index([fulfillmentId])
+  @@index([orderItemId])
+  @@index([providerItemReference])
+}
 
 model Payment {
   id                 String        @id @default(uuid()) @db.Uuid
