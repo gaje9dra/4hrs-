@@ -35,6 +35,7 @@ export type CheckoutDto = {
   cart: { id: string; items: CheckoutItemDto[] };
   address: CustomerAddressDto | null;
   totals: CheckoutTotals;
+  revision: CheckoutRevision;
   validation: { state: CheckoutValidationState; issues: CheckoutIssue[] };
   payment: { ready: false; reason: "PAYMENT_NOT_IMPLEMENTED" };
 };
