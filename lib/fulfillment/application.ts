@@ -266,7 +266,7 @@ export function createFulfillmentApplication(
             providerFulfillmentReference: response.providerFulfillmentReference,
             errorCode: null,
             errorMessage: null,
-            reconciliationMetadata: null,
+            reconciliationMetadata: Prisma.DbNull,
             timestamps: {
               submittedAt: response.status === "SUBMITTED" ? new Date() : undefined,
               acceptedAt: response.providerFulfillmentReference ? new Date() : undefined,
