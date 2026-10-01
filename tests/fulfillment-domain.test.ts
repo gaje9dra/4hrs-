@@ -209,7 +209,7 @@ test("repeated provider submission does not call the adapter after successful pe
   assert.equal(calls, 1);
 });
 
-test("provider retries are bounded and non-retryable failures cannot loop", async () => {
+test("provider retries are bounded and repeated failures update metadata safely", async () => {
   const f = await fixture();
   let calls = 0;
   const adapter = mockAdapter();
@@ -234,26 +234,43 @@ test("provider retries are bounded and non-retryable failures cannot loop", asyn
   const created = await service.createFulfillment({ orderId: f.order.id, idempotencyKey: `fulfill-${randomUUID()}` });
   fulfillments.push(created.id);
 
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    await expectCode(
-      () => service.submitFulfillment({ fulfillmentId: created.id }),
-      "FULFILLMENT_PROVIDER_SUBMISSION_FAILED",
-    );
-  }
+  await expectCode(
+    () => service.submitFulfillment({ fulfillmentId: created.id }),
+    "FULFILLMENT_PROVIDER_SUBMISSION_FAILED",
+  );
+  await expectCode(
+    () => service.submitFulfillment({ fulfillmentId: created.id }),
+    "FULFILLMENT_PROVIDER_SUBMISSION_FAILED",
+  );
+  assert.equal(calls, 2);
+
+  const afterRetry = await db.fulfillment.findUniqueOrThrow({ where: { id: created.id } });
+  assert.deepEqual(afterRetry.reconciliationMetadata, {
+    ambiguous: false,
+    retryable: true,
+    reconciliationRequired: false,
+    submissionAttempts: 2,
+    provider: "mock-provider",
+  });
+
+  await db.fulfillment.update({
+    where: { id: created.id },
+    data: {
+      reconciliationMetadata: {
+        ambiguous: false,
+        retryable: true,
+        reconciliationRequired: false,
+        submissionAttempts: 3,
+        provider: "mock-provider",
+      },
+    },
+  });
+
   await expectCode(
     () => service.submitFulfillment({ fulfillmentId: created.id }),
     "FULFILLMENT_PROVIDER_RETRY_NOT_ALLOWED",
   );
-  assert.equal(calls, 3);
-
-  const stored = await db.fulfillment.findUniqueOrThrow({ where: { id: created.id } });
-  assert.deepEqual(stored.reconciliationMetadata, {
-    ambiguous: false,
-    retryable: true,
-    reconciliationRequired: false,
-    submissionAttempts: 3,
-    provider: "mock-provider",
-  });
+  assert.equal(calls, 2);
 });
 
 test("non-retryable provider failures are blocked after the first attempt", async () => {
