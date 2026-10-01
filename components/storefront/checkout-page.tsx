@@ -68,7 +68,7 @@ function AddressCard({ address, selected, disabled, onSelect }: { address: Custo
   );
 }
 
-function AddAddressForm({ disabled, onCreated }: { disabled: boolean; onCreated: (address: CustomerAddressDto) => void }) {
+function AddAddressForm({ disabled, onCreated, onSessionExpired }: { disabled: boolean; onCreated: (address: CustomerAddressDto) => void; onSessionExpired: () => void }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [values, setValues] = useState({ recipientName: "", phone: "", addressLine1: "", addressLine2: "", city: "", stateOrProvince: "", postalCode: "", countryCode: "IN", label: "Home" });
@@ -85,7 +85,12 @@ function AddAddressForm({ disabled, onCreated }: { disabled: boolean; onCreated:
       setValues({ recipientName: "", phone: "", addressLine1: "", addressLine2: "", city: "", stateOrProvince: "", postalCode: "", countryCode: "IN", label: "Home" });
       onCreated(body.address);
     } catch (reason) {
-      setError(reason instanceof Error && reason.message !== "SESSION_EXPIRED" ? reason.message : "Your session expired. Please sign in again.");
+      if (reason instanceof Error && reason.message === "SESSION_EXPIRED") {
+        onSessionExpired();
+        setError(null);
+      } else {
+        setError(reason instanceof Error ? reason.message : "Address could not be saved.");
+      }
     } finally { setPending(false); }
   }
 
@@ -117,6 +122,7 @@ export function CheckoutPage({ customer }: { customer: CustomerDto }) {
   const [state, setState] = useState<UiState>("loading");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const pendingRef = useRef(false);
   const requestVersion = useRef(0);
   const selectedAddressRef = useRef<string | null>(null);
   const revisionRef = useRef<CheckoutDto["revision"] | undefined>(undefined);
@@ -144,6 +150,7 @@ export function CheckoutPage({ customer }: { customer: CustomerDto }) {
       .then(([nextCheckout, nextAddresses]) => {
         if (version !== requestVersion.current) return;
         setCheckout(nextCheckout);
+        revisionRef.current = nextCheckout.revision;
         setAddresses(nextAddresses);
         const serverAddress = nextCheckout.address?.id ?? null;
         const nextSelected = selectedAddressRef.current && nextAddresses.some((item) => item.id === selectedAddressRef.current)
@@ -161,7 +168,8 @@ export function CheckoutPage({ customer }: { customer: CustomerDto }) {
   }, []);
 
   async function validateSelection(addressId: string | null) {
-    if (pending) return;
+    if (pendingRef.current) return;
+    pendingRef.current = true;
     const version = ++requestVersion.current;
     selectedAddressRef.current = addressId;
     setSelectedAddressId(addressId); setPending(true); setState("validating"); setError(null);
@@ -174,7 +182,7 @@ export function CheckoutPage({ customer }: { customer: CustomerDto }) {
       if (version !== requestVersion.current) return;
       setState(reason instanceof Error && reason.message === "SESSION_EXPIRED" ? "session_expired" : "server_error");
       setError("Checkout validation could not be completed. Please try again.");
-    } finally { if (version === requestVersion.current) setPending(false); }
+    } finally { if (version === requestVersion.current) { pendingRef.current = false; setPending(false); } }
   }
 
   function addressCreated(address: CustomerAddressDto) {
@@ -208,7 +216,7 @@ export function CheckoutPage({ customer }: { customer: CustomerDto }) {
             <div><p className="text-xs font-900 uppercase tracking-[.2em] text-primary-blue">Delivery</p><h2 id="address-heading" className="mt-2 text-3xl">Choose an address</h2><p className="mt-2 text-sm">The selected address is revalidated against your account on the server.</p></div>
             {issues.length ? <Alert variant={state === "valid" ? "success" : "error"} title={state === "address_required" ? "Address required" : "Checkout validation"}>{issues.map((item) => <span key={item.code + (item.itemId ?? "")} className="block">{item.message}</span>)}</Alert> : null}
             {addresses.length ? <div className="grid gap-3" role="radiogroup" aria-labelledby="address-heading">{addresses.map((address) => <AddressCard key={address.id} address={address} selected={selectedAddressId === address.id} disabled={pending} onSelect={() => void validateSelection(address.id)} />)}</div> : <Alert variant="error" title="No saved address">Add a delivery address before continuing.</Alert>}
-            <AddAddressForm disabled={pending} onCreated={addressCreated} />
+            <AddAddressForm disabled={pending} onCreated={addressCreated} onSessionExpired={() => setState("session_expired")} />
           </section>
 
           {stateMessage ? <section aria-labelledby="cart-state"><Alert variant="error" title={state === "price_changed" ? "Price changed" : state === "cart_changed" ? "Cart changed" : "Availability changed"}>{stateMessage}</Alert><div className="mt-4"><Button href="/cart" variant="yellow">Review Cart</Button></div></section> : null}

@@ -44,3 +44,27 @@ test("Checkout uses customer-owned address API rather than ORM access", async ()
   assert.match(source, /\/api\/customer\/addresses/);
   assert.doesNotMatch(source, /@prisma|PrismaClient|from ["']prisma/);
 });
+
+
+test("Checkout UI retains the server revision before the first address validation", async () => {
+  const fs = await import("node:fs/promises");
+  const source = await fs.readFile("components/storefront/checkout-page.tsx", "utf8");
+  assert.match(source, /revisionRef\.current\s*=\s*nextCheckout\.revision/);
+  assert.match(source, /checkoutRequest\("POST",\s*addressId,\s*revisionRef\.current\)/);
+});
+
+test("Checkout UI guards validation against duplicate submission", async () => {
+  const fs = await import("node:fs/promises");
+  const source = await fs.readFile("components/storefront/checkout-page.tsx", "utf8");
+  assert.match(source, /pendingRef\.current/);
+  assert.match(source, /if \(pendingRef\.current\) return/);
+});
+
+test("Checkout API response is private and payment remains an explicit future boundary", async () => {
+  const fs = await import("node:fs/promises");
+  const http = await fs.readFile("lib/checkout/http.ts", "utf8");
+  const contracts = await fs.readFile("lib/checkout/contracts.ts", "utf8");
+  assert.match(http, /private, no-store/);
+  assert.match(contracts, /PAYMENT_NOT_IMPLEMENTED/);
+  assert.doesNotMatch(contracts, /paymentIntent|transactionId|orderId/);
+});
