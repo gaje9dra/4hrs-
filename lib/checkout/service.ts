@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import type { CartDto } from "@/lib/cart/contracts";
+import { CartServiceError } from "@/lib/cart/errors";
 import type { CustomerAddressDto, CustomerDto } from "@/lib/customer/contracts";
 import { CustomerAddressError } from "@/lib/customer/errors";
 import { CheckoutError, type CheckoutErrorCode } from "@/lib/checkout/errors";
@@ -50,6 +51,10 @@ function validateCart(cart: CartDto): CheckoutIssue[] {
       continue;
     }
     currencies.add(item.currency);
+    const expectedSubtotal = money(item.unitPrice).mul(item.quantity).toFixed(2);
+    if (expectedSubtotal !== item.subtotal) {
+      issues.push(issue("PRICE_CHANGED", "A Cart item price is no longer consistent with the authoritative price.", item.id));
+    }
   }
 
   if (currencies.size > 1) issues.push(issue("CURRENCY_CHANGED", "Cart items use incompatible currencies."));
@@ -123,6 +128,10 @@ export function createCheckoutService(dependencies: CheckoutDependencies) {
       };
     } catch (error) {
       if (error instanceof CheckoutError) throw error;
+      if (error instanceof CartServiceError) {
+        if (error.code === "CART_NOT_FOUND") throw new CheckoutError("CHECKOUT_CART_MISSING", "Your Cart could not be loaded.");
+        if (error.code === "CART_UNAUTHORIZED") throw new CheckoutError("CHECKOUT_INVALID_CART", "Your Cart could not be validated.");
+      }
       throw new CheckoutError("CHECKOUT_DATABASE_ERROR", "Checkout validation is temporarily unavailable.", undefined, { cause: error });
     }
   }
