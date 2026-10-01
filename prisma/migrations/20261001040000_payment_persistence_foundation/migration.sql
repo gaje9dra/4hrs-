@@ -27,7 +27,6 @@ CREATE TABLE "Payment" (
   "status" "PaymentStatus" NOT NULL DEFAULT 'CREATED',
   "amount" DECIMAL(12,2) NOT NULL,
   "currency" VARCHAR(3) NOT NULL,
-  "idempotencyKey" VARCHAR(255),
   "completedAt" TIMESTAMP(3),
   "expiresAt" TIMESTAMP(3),
   "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -84,7 +83,6 @@ CREATE TABLE "PaymentIdempotency" (
 
 CREATE UNIQUE INDEX "Payment_internalReference_key" ON "Payment"("internalReference");
 CREATE UNIQUE INDEX "Payment_customerId_checkoutReference_key" ON "Payment"("customerId", "checkoutReference");
-CREATE UNIQUE INDEX "Payment_customerId_idempotencyKey_key" ON "Payment"("customerId", "idempotencyKey");
 CREATE INDEX "Payment_customerId_createdAt_idx" ON "Payment"("customerId", "createdAt");
 CREATE INDEX "Payment_checkoutReference_idx" ON "Payment"("checkoutReference");
 CREATE INDEX "Payment_providerId_providerReference_idx" ON "Payment"("providerId", "providerReference");
