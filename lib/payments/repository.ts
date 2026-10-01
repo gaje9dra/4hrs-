@@ -3,10 +3,10 @@ import { db } from "@/lib/db/client";
 
 export type PaymentRepositoryClient = PrismaClient | Prisma.TransactionClient;
 
-type PaymentRecord = Prisma.PaymentGetPayload<Record<string, never>>;
-type PaymentAttemptRecord = Prisma.PaymentAttemptGetPayload<Record<string, never>>;
-type PaymentEventRecord = Prisma.PaymentEventGetPayload<Record<string, never>>;
-type PaymentIdempotencyRecord = Prisma.PaymentIdempotencyGetPayload<Record<string, never>>;
+export type PaymentRecord = Prisma.PaymentGetPayload<Record<string, never>>;
+export type PaymentAttemptRecord = Prisma.PaymentAttemptGetPayload<Record<string, never>>;
+export type PaymentEventRecord = Prisma.PaymentEventGetPayload<Record<string, never>>;
+export type PaymentIdempotencyRecord = Prisma.PaymentIdempotencyGetPayload<Record<string, never>>;
 
 export type CreatePaymentInput = {
   customerId: string;
