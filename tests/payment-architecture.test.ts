@@ -60,28 +60,16 @@ test("provider adapter contract stays provider-neutral", () => {
       cancellation: false,
       authorizationCapture: false,
     },
-    async createPaymentIntent() {
-      return { providerReference: "external-1", status: "PROCESSING" };
+    async createPayment() {
+      return { providerId: "test-provider", providerPaymentReference: "external-1", providerAttemptReference: "attempt-1", status: "PROCESSING", clientAction: { type: "NONE" } };
     },
-    async retrievePaymentStatus() {
-      return {
-        paymentId: "payment-1",
-        status: "PROCESSING",
-        amount: { value: "499.00", currency: "INR" },
-        providerId: "test-provider",
-        providerReference: "external-1",
-      };
+    async retrievePayment() {
+      return { providerId: "test-provider", providerPaymentReference: "external-1", providerAttemptReference: "attempt-1", status: "PROCESSING", clientAction: { type: "NONE" } };
     },
     async verifyPayment() {
-      return {
-        paymentId: "payment-1",
-        status: "SUCCEEDED",
-        amount: { value: "499.00", currency: "INR" },
-        providerId: "test-provider",
-        providerReference: "external-1",
-      };
+      return { providerId: "test-provider", providerPaymentReference: "external-1", providerAttemptReference: "attempt-1", status: "SUCCEEDED", clientAction: { type: "NONE" } };
     },
-    async normalizeWebhookEvent() {
+    async verifyWebhook() {
       return {
         providerId: "test-provider",
         providerEventReference: "event-1",
@@ -96,6 +84,7 @@ test("provider adapter contract stays provider-neutral", () => {
 
   assert.equal(adapter.id, "test-provider");
   assert.equal(adapter.capabilities.partialRefunds, false);
+  assert.equal(adapter.capabilities.webhookVerification, true);
 });
 
 test("Payment errors use provider-neutral categories", () => {
@@ -127,6 +116,8 @@ test("Phase 11.1 does not install or reference provider SDKs in payment code", a
     "lib/payments/idempotency.ts",
     "lib/payments/webhooks.ts",
     "lib/payments/errors.ts",
+    "lib/payments/config.ts",
+    "lib/payments/resolver.ts",
   ];
   for (const file of files) {
     const source = await fs.readFile(file, "utf8");
