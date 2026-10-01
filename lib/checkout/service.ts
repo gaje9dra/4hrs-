@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { Prisma } from "@prisma/client";
 import type { CartDto } from "@/lib/cart/contracts";
 import { CartServiceError } from "@/lib/cart/errors";
 import type { CustomerAddressDto, CustomerDto } from "@/lib/customer/contracts";
@@ -89,6 +90,14 @@ function validateCart(cart: CartDto): CheckoutIssue[] {
       continue;
     }
     currencies.add(item.currency);
+    try {
+      const expectedSubtotal = new Prisma.Decimal(item.unitPrice).mul(item.quantity).toFixed(2);
+      if (expectedSubtotal !== item.subtotal) {
+        issues.push(issue("PRICE_CHANGED", "A Cart item price is no longer internally consistent.", item.id));
+      }
+    } catch {
+      issues.push(issue("INVALID_CART_ITEM", "A Cart item could not be validated.", item.id));
+    }
   }
 
   if (currencies.size > 1 || (currencies.size === 1 && !currencies.has(cart.currency ?? ""))) {
