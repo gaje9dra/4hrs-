@@ -41,7 +41,7 @@ export function orderErrorResponse(error: unknown, operation: "create" | "get" |
   const isAuth = isAuthenticationError(error);
   const isOrder = error instanceof OrderDomainError;
   const code = isAuth ? "SESSION_INVALID" : isOrder ? error.code : "ORDER_DATABASE_ERROR";
-  const status = isAuth ? 401 : STATUS[code];
+  const status = isAuth ? 401 : STATUS[code as OrderErrorCode];
   const message = isAuth
     ? "Authentication is required."
     : isOrder
