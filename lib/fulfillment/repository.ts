@@ -15,6 +15,7 @@ export type FulfillmentRepository = {
   getOrderForFulfillment(orderId: string): Promise<FulfillmentOrderSource | null>;
   createWithItems(input: { orderId: string; provider: string; idempotencyKey: string; items: readonly { orderItemId: string; quantity: number; providerSku?: string | null; providerVariantReference?: string | null }[] }): Promise<FulfillmentWithItems>;
   transitionStatus(input: { id: string; expectedStatus: PrismaFulfillmentStatus; nextStatus: PrismaFulfillmentStatus; timestamps?: { submittedAt?: Date; acceptedAt?: Date; completedAt?: Date; failedAt?: Date }; providerFulfillmentReference?: string | null; errorCode?: string | null; errorMessage?: string | null; reconciliationMetadata?: Prisma.InputJsonValue | typeof Prisma.DbNull }): Promise<FulfillmentWithItems | null>;
+  updateReconciliationMetadata(input: { id: string; expectedStatus: PrismaFulfillmentStatus; metadata: Prisma.InputJsonValue | typeof Prisma.DbNull }): Promise<FulfillmentWithItems | null>;
 };
 
 function clientOrDefault(client?: FulfillmentRepositoryClient): FulfillmentRepositoryClient { return client ?? db; }
@@ -67,6 +68,15 @@ export function createFulfillmentRepository(client?: FulfillmentRepositoryClient
           ...(input.errorMessage !== undefined ? { errorMessage: input.errorMessage } : {}),
           ...(input.reconciliationMetadata !== undefined ? { reconciliationMetadata: input.reconciliationMetadata } : {}),
         },
+      });
+      if (result.count !== 1) return null;
+      return database.fulfillment.findUnique({ where: { id: input.id }, include: { items: true } });
+    },
+
+    async updateReconciliationMetadata(input) {
+      const result = await database.fulfillment.updateMany({
+        where: { id: input.id, status: input.expectedStatus },
+        data: { reconciliationMetadata: input.metadata },
       });
       if (result.count !== 1) return null;
       return database.fulfillment.findUnique({ where: { id: input.id }, include: { items: true } });
