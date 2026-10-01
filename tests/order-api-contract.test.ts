@@ -52,17 +52,18 @@ function fakeOrder(customerId = "customer-a"): OrderWithRelations {
 }
 
 function repository(order: OrderWithRelations | null): OrderRepository {
+  const candidate = order;
   return {
-    getOrderById: async () => order,
-    getOrderByNumberForCustomer: async (number, customerId) =>
-      order?.orderNumber === number && order.customerId === customerId ? order : null,
-    getOrderByCustomer: async (id, customerId) =>
-      order?.id === id && order.customerId === customerId ? order : null,
-    listOrdersByCustomer: async (customerId) => ({
-      orders: order && order.customerId === customerId ? [order] : [],
+    getOrderById: async () => candidate,
+    getOrderByNumberForCustomer: async (number: string, customerId: string) =>
+      candidate?.orderNumber === number && candidate.customerId === customerId ? candidate : null,
+    getOrderByCustomer: async (id: string, customerId: string) =>
+      candidate?.id === id && candidate.customerId === customerId ? candidate : null,
+    listOrdersByCustomer: async (customerId: string) => ({
+      orders: candidate && candidate.customerId === customerId ? [candidate] : [],
       page: 1,
       pageSize: 20,
-      total: order && order.customerId === customerId ? 1 : 0,
+      total: candidate && candidate.customerId === customerId ? 1 : 0,
       totalPages: 1,
       hasNextPage: false,
     }),
