@@ -203,8 +203,11 @@ export function CartPage() {
               <span className="text-2xl font-900">{cart?.subtotal ?? "0.00"}{cart?.currency ? ` ${cart.currency}` : ""}</span>
             </div>
             <p className="mt-4 text-xs font-700 uppercase">Prices and availability are confirmed by the server Cart response.</p>
-            <button type="button" disabled={pending === "clear"} onClick={() => void mutate("clear", "/api/cart", { method: "DELETE" })} className="motion-press mt-6 inline-flex min-h-12 w-full items-center justify-center border-2 border-border bg-white px-4 py-3 text-sm font-900 uppercase hover:bg-primary-red hover:text-white disabled:cursor-not-allowed disabled:bg-muted">Clear cart</button>
-            <p className="mt-4 text-xs font-700 uppercase">Checkout is not available yet.</p>
+            <div className="mt-6 grid gap-3">
+              <Button href="/checkout" variant="primary" className="w-full">Continue to Checkout</Button>
+              <button type="button" disabled={pending === "clear"} onClick={() => void mutate("clear", "/api/cart", { method: "DELETE" })} className="motion-press inline-flex min-h-12 w-full items-center justify-center border-2 border-border bg-white px-4 py-3 text-sm font-900 uppercase hover:bg-primary-red hover:text-white disabled:cursor-not-allowed disabled:bg-muted">Clear cart</button>
+            </div>
+            <p className="mt-4 text-xs font-700 uppercase">Checkout revalidates Cart, pricing, availability and address ownership on the server.</p>
           </aside>
         </div>
       )}
