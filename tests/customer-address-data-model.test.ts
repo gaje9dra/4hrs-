@@ -126,7 +126,9 @@ test("address validation rejects missing required fields and malformed country c
   );
   assert.throws(
     () => validateCustomerAddressInput({ ...validInput, countryCode: "IND" }),
-    /Country code is invalid/,
+    (error: unknown) =>
+      error instanceof CustomerAddressError &&
+      error.code === "CUSTOMER_ADDRESS_INVALID",
   );
 });
 
