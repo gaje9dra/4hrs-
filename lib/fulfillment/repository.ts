@@ -4,7 +4,7 @@ import { db } from "@/lib/db/client";
 export type FulfillmentRepositoryClient = PrismaClient | Prisma.TransactionClient;
 export type FulfillmentRecord = Prisma.FulfillmentGetPayload<Record<string, never>>;
 export type FulfillmentWithItems = Prisma.FulfillmentGetPayload<{ include: { items: true } }>;
-export type FulfillmentOrderSource = Prisma.OrderGetPayload<{ include: { items: true; shippingAddress: true; payment: true; fulfillment: true } }>;
+export type FulfillmentOrderSource = Prisma.OrderGetPayload<{ include: { items: true; shippingAddress: true; payment: true; fulfillment: true; customer: true } }>;
 
 export type FulfillmentRepository = {
   withTransaction<T>(work: (repository: FulfillmentRepository) => Promise<T>): Promise<T>;
