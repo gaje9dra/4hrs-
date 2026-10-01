@@ -64,6 +64,8 @@ export type OrderRepository = {
   getOrderById(orderId: string): Promise<OrderWithRelations | null>;
   getOrderByNumber(orderNumber: string): Promise<OrderWithRelations | null>;
   getOrderByCustomer(orderId: string, customerId: string): Promise<OrderWithRelations | null>;
+  getOrderByNumberForCustomer(orderNumber: string, customerId: string): Promise<OrderWithRelations | null>;
+  listOrdersByCustomer(customerId: string, options?: { page?: number; pageSize?: number }): Promise<{ orders: OrderWithRelations[]; page: number; pageSize: number; total: number; totalPages: number; hasNextPage: boolean }>;
   getOrdersByCustomer(customerId: string): Promise<OrderWithRelations[]>;
   getOrderByCheckout(checkoutReference: string): Promise<OrderWithRelations | null>;
   getOrderByPayment(paymentId: string): Promise<OrderWithRelations | null>;
@@ -235,6 +237,34 @@ export function createOrderRepository(client?: OrderRepositoryClient): OrderRepo
         where: { id: orderId, customerId },
         include: { items: true, shippingAddress: true },
       });
+    },
+
+    getOrderByNumberForCustomer(orderNumber, customerId) {
+      return database.order.findFirst({
+        where: { orderNumber, customerId },
+        include: { items: true, shippingAddress: true },
+      });
+    },
+
+    async listOrdersByCustomer(customerId, options = {}) {
+      assertNonEmpty(customerId, "customerId");
+      const page = options.page ?? 1;
+      const pageSize = options.pageSize ?? 20;
+      if (!Number.isSafeInteger(page) || page < 1) throw new Error("Order page must be a positive integer.");
+      if (!Number.isSafeInteger(pageSize) || pageSize < 1 || pageSize > 50) throw new Error("Order page size must be between 1 and 50.");
+
+      const [total, orders] = await Promise.all([
+        database.order.count({ where: { customerId } }),
+        database.order.findMany({
+          where: { customerId },
+          orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+          skip: (page - 1) * pageSize,
+          take: pageSize,
+          include: { items: true, shippingAddress: true },
+        }),
+      ]);
+      const totalPages = Math.max(1, Math.ceil(total / pageSize));
+      return { orders, page, pageSize, total, totalPages, hasNextPage: page < totalPages };
     },
 
     getOrdersByCustomer(customerId) {
