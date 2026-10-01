@@ -332,22 +332,33 @@ export function createFulfillmentApplication(
           const current = await txRepository.getById(existing.id);
           if (!current) throw new FulfillmentDomainError("FULFILLMENT_INVALID_STATE", "Fulfillment could not be found.");
           if (current.status === "SUBMITTED" || current.status === "COMPLETED") return current;
-          assertFulfillmentTransition(current.status, "FAILED");
-          const updated = await txRepository.transitionStatus({
-            id: current.id,
-            expectedStatus: current.status,
-            nextStatus: "FAILED",
-            errorCode: providerCode,
-            errorMessage: failureMessage,
-            reconciliationMetadata: {
-              ambiguous,
-              retryable,
-              reconciliationRequired: ambiguous,
-              submissionAttempts,
-              provider: adapter.id,
-            },
-            timestamps: { failedAt: new Date() },
-          });
+          const failureMetadata = {
+            ambiguous,
+            retryable,
+            reconciliationRequired: ambiguous,
+            submissionAttempts,
+            provider: adapter.id,
+          };
+          const updated = current.status === "FAILED"
+            ? await txRepository.recordProviderSubmissionFailure({
+                id: current.id,
+                expectedStatus: "FAILED",
+                errorCode: providerCode,
+                errorMessage: failureMessage,
+                reconciliationMetadata: failureMetadata,
+              })
+            : (
+                assertFulfillmentTransition(current.status, "FAILED"),
+                await txRepository.transitionStatus({
+                  id: current.id,
+                  expectedStatus: current.status,
+                  nextStatus: "FAILED",
+                  errorCode: providerCode,
+                  errorMessage: failureMessage,
+                  reconciliationMetadata: failureMetadata,
+                  timestamps: { failedAt: new Date() },
+                })
+              );
           if (!updated) throw new FulfillmentDomainError("FULFILLMENT_CONCURRENCY_CONFLICT", "Fulfillment state changed concurrently.");
           return updated;
         }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
