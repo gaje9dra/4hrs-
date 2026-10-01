@@ -117,6 +117,7 @@ export function CheckoutPage({ customer }: { customer: CustomerDto }) {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const requestVersion = useRef(0);
+  const selectedAddressRef = useRef<string | null>(null);
 
   const load = useCallback(async (preserveSelection: boolean) => {
     const version = ++requestVersion.current;
@@ -126,26 +127,27 @@ export function CheckoutPage({ customer }: { customer: CustomerDto }) {
       if (version !== requestVersion.current) return;
       setCheckout(nextCheckout); setAddresses(nextAddresses);
       const serverAddress = nextCheckout.address?.id ?? null;
-      setSelectedAddressId(preserveSelection && selectedAddressId && nextAddresses.some((item) => item.id === selectedAddressId) ? selectedAddressId : serverAddress);
+      setSelectedAddressId(preserveSelection && selectedAddressRef.current && nextAddresses.some((item) => item.id === selectedAddressRef.current) ? selectedAddressRef.current : serverAddress);
       setState(classify(nextCheckout));
     } catch (reason) {
       if (version !== requestVersion.current) return;
       setState(reason instanceof Error && reason.message === "SESSION_EXPIRED" ? "session_expired" : "server_error");
       setError("Checkout could not be loaded. Please try again.");
     }
-  }, [selectedAddressId]);
+  }, []);
 
   useEffect(() => { void load(false); }, [load]);
 
   async function validateSelection(addressId: string | null) {
     if (pending) return;
     const version = ++requestVersion.current;
+    selectedAddressRef.current = addressId;
     setSelectedAddressId(addressId); setPending(true); setState("validating"); setError(null);
     try {
       const next = await checkoutRequest("POST", addressId);
       if (version !== requestVersion.current) return;
       setCheckout(next); setState(classify(next));
-      if (next.address?.id) setSelectedAddressId(next.address.id);
+      if (next.address?.id) { selectedAddressRef.current = next.address.id; setSelectedAddressId(next.address.id); }
     } catch (reason) {
       if (version !== requestVersion.current) return;
       setState(reason instanceof Error && reason.message === "SESSION_EXPIRED" ? "session_expired" : "server_error");
@@ -159,7 +161,7 @@ export function CheckoutPage({ customer }: { customer: CustomerDto }) {
   }
 
   const issues = checkout?.validation.issues ?? [];
-  const affectedItems = useMemo(() => new Set(issues.flatMap((item) => item.itemId ? [item.itemId] : [])), [issues]);
+  const affectedItems = new Set(issues.flatMap((item) => item.itemId ? [item.itemId] : []));
   const canContinue = state === "valid" && Boolean(checkout?.address) && !pending;
 
   if (state === "loading") return <div className="border-4 border-border bg-white p-6 shadow-hard-md" aria-busy="true" aria-live="polite"><p className="text-xs font-900 uppercase tracking-[.25em] text-primary-blue">Checkout</p><h1 className="mt-3">Loading Checkout</h1></div>;
