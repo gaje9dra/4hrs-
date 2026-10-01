@@ -23,7 +23,7 @@ function assertNonEmpty(value: string, field: string): void { if (!value.trim())
 export function createFulfillmentRepository(client?: FulfillmentRepositoryClient): FulfillmentRepository {
   const database = clientOrDefault(client);
   return {
-    withTransaction<T>(work) {
+    withTransaction<T>(work: (repository: FulfillmentRepository) => Promise<T>) {
       if ("$transaction" in database) {
         return database.$transaction(async (tx) => work(createFulfillmentRepository(tx)), { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
       }
