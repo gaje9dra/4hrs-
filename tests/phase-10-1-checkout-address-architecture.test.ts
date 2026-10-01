@@ -66,9 +66,8 @@ test("private customer surfaces remain non-indexable and cache-safe", () => {
   assert.match(cartHttp, /private, no-store/);
 });
 
-test("final Checkout UI and downstream payment/order/shipping integrations remain deferred", () => {
+test("downstream payment/order/shipping integrations remain deferred", () => {
   for (const path of [
-    "app/(storefront)/checkout/page.tsx",
     "app/api/payment/route.ts",
     "app/api/orders/route.ts",
   ]) {
