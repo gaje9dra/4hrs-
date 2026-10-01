@@ -152,7 +152,6 @@ test("Checkout rejects every browser-controlled business authority field", async
     await assert.rejects(() => app.readRequest(request), /unsupported fields/i, field);
   }
 });
-});
 
 test("another customer's address is rejected without leaking ownership", async () => {
   const result = await serviceFactory(async () => cart()).validate({
