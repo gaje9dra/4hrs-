@@ -14,7 +14,13 @@ export type CheckoutIssue = {
   itemId?: string;
 };
 
-export type CheckoutRevision = {\n  cart: string;\n  pricing: string;\n  availability: string;\n};\n\nexport type CheckoutTotals = {
+export type CheckoutRevision = {
+  cart: string;
+  pricing: string;
+  availability: string;
+};
+
+export type CheckoutTotals = {
   merchandiseSubtotal: string;
   adjustments: Array<{ code: string; amount: string }>;
   charges: Array<{ code: string; amount: string }>;
