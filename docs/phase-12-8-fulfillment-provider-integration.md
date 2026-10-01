@@ -184,3 +184,5 @@ A future provider can implement the same `FulfillmentProviderAdapter` contract a
 No second provider is implemented in Phase 12.8.
 
 Qikink remains the only registered production provider adapter in this phase.
+
+<!-- CI validation: fulfillment typecheck/test fixes applied. -->
