@@ -16,6 +16,8 @@ import {
 } from "@/lib/payments/repository";
 import type { NormalizedPaymentEvent, PaymentProviderAdapter, PaymentProviderResolver } from "@/lib/payments/provider";
 import { normalizeClientAction } from "@/lib/payments/client-action";
+import { getPaymentProviderRegistry } from "@/lib/payments/registry";
+import { createPaymentProviderResolver } from "@/lib/payments/resolver";
 
 export type ValidatedCheckoutPaymentContext = {
   customerId: string;
@@ -100,7 +102,7 @@ export function createPaymentApplication(
   dependencies: PaymentApplicationDependencies = {},
 ): PaymentApplicationService {
   const repository = dependencies.repository ?? createPaymentRepository();
-  const providerResolver = dependencies.providerResolver;
+  const providerResolver = dependencies.providerResolver ?? createPaymentProviderResolver({ registry: getPaymentProviderRegistry() });
 
   async function createPaymentFromCheckout(input: CreatePaymentFromCheckoutInput): Promise<PaymentDto> {
     assertValidIdempotencyKey(input.idempotencyKey);
