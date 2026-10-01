@@ -10,7 +10,7 @@ function digest(value: string): string {
   return createHash("sha256").update(value).digest("hex");
 }
 
-function revisionForItems(items: OrderCheckoutItem[]) {
+function revisionForItems(cartId: string, items: OrderCheckoutItem[]) {
   const sorted = [...items].sort((a, b) => a.id.localeCompare(b.id));
   const structure = sorted.map((item) =>
     [item.id, item.productId, item.variantId ?? "", item.quantity].join("|"),
@@ -23,7 +23,7 @@ function revisionForItems(items: OrderCheckoutItem[]) {
   ).join("\n");
 
   return {
-    cart: digest([sorted.length ? "cart" : "", structure].join("\n")),
+    cart: digest([cartId, structure].join("\n")),
     pricing: digest([sorted[0]?.currency ?? "", pricing].join("\n")),
     availability: digest(availability),
   };
@@ -99,7 +99,7 @@ export async function resolveOrderCheckout(
       throw new OrderDomainError("INVALID_ORDER_ITEM", "Checkout contains an invalid product price.");
     }
 
-    const availability = availabilityFor(variant?.inventory ?? null);
+    if (!variant) {\n      throw new OrderDomainError("INVALID_ORDER_ITEM", "A purchasable Checkout item requires a valid ProductVariant.");\n    }\n\n    const availability = availabilityFor(variant.inventory);
     if (!availability.available || (availability.availableQuantity !== null && cartItem.quantity > availability.availableQuantity)) {
       throw new OrderDomainError("INVALID_ORDER_ITEM", "A Checkout item is no longer available in the requested quantity.");
     }
@@ -139,7 +139,7 @@ export async function resolveOrderCheckout(
   const subtotal = items
     .reduce((sum, item) => sum.add(new Prisma.Decimal(item.lineTotal)), new Prisma.Decimal(0))
     .toFixed(2);
-  const revision = revisionForItems(items);
+  const revision = revisionForItems(cart.id, items);
 
   const addresses = await client.customerAddress.findMany({
     where: { customerId },
