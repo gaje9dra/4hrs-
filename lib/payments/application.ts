@@ -15,6 +15,7 @@ import {
   type PaymentRepository,
 } from "@/lib/payments/repository";
 import type { NormalizedPaymentEvent, PaymentProviderAdapter, PaymentProviderResolver } from "@/lib/payments/provider";
+import { normalizeClientAction } from "@/lib/payments/client-action";
 
 export type ValidatedCheckoutPaymentContext = {
   customerId: string;
@@ -49,7 +50,7 @@ export type PaymentApplicationService = {
     processed: boolean;
     payment: PaymentDto | null;
   }>;
-  startProviderPayment(paymentId: string, customerId: string): Promise<never>;
+  startProviderPayment(paymentId: string, customerId: string): Promise<PaymentDto>;
 };
 
 function toPaymentDto(payment: PaymentRecord): PaymentDto {
@@ -301,19 +302,76 @@ export function createPaymentApplication(
     }
   }
 
-  async function startProviderPayment(paymentId: string, customerId: string): Promise<never> {
+  async function startProviderPayment(paymentId: string, customerId: string): Promise<PaymentDto> {
     const payment = await repository.getPaymentById(paymentId, customerId);
     if (!payment) throw new PaymentError("PAYMENT_NOT_FOUND", "Payment could not be found.");
-    if (!providerResolver) {
-      throw new PaymentError("PROVIDER_CONFIGURATION_MISSING", "No payment provider is configured.");
-    }
+    if (!providerResolver) throw new PaymentError("PROVIDER_CONFIGURATION_MISSING", "No payment provider is configured.");
+
     const adapter: PaymentProviderAdapter | undefined = providerResolver.resolve({
       customerId,
       checkoutReference: payment.checkoutReference,
       currency: payment.currency,
     });
     if (!adapter) throw new PaymentError("PROVIDER_UNAVAILABLE", "Payment provider is currently unavailable.");
-    throw new PaymentError("PROVIDER_UNAVAILABLE", "Provider execution is reserved for the next payment-integration phase.");
+    if (!adapter.capabilities.createPayment) {
+      throw new PaymentError("PROVIDER_UNAVAILABLE", "The configured provider does not support payment creation.");
+    }
+
+    const attempts = await repository.getPaymentAttempts(payment.id);
+    const attempt = attempts.at(-1);
+    if (!attempt) throw new PaymentError("PAYMENT_INTERNAL_ERROR", "Payment attempt could not be resolved.");
+
+    const idempotencyReference = `payment:${payment.id}:attempt:${attempt.id}`;
+    try {
+      const result = await adapter.createPayment({
+        paymentReference: payment.internalReference,
+        attemptReference: attempt.id,
+        amount: { value: payment.amount.toFixed(2), currency: payment.currency },
+        idempotencyReference,
+      });
+
+      if (result.providerId !== adapter.id) {
+        throw new PaymentError("PROVIDER_CONFIGURATION_ERROR", "Provider response identity is invalid.");
+      }
+
+      const nextStatus = result.status;
+      assertPaymentTransition(payment.status, nextStatus);
+
+      const safeAction = normalizeClientAction(result.clientAction);
+      if (safeAction.type !== "NONE") {
+        // Client-action data is normalized here; the current Payment DTO intentionally remains secret-safe.
+      }
+
+      const updated = await repository.withTransaction(async (tx) => {
+        await tx.updatePaymentProviderReferences(
+          payment.id,
+          attempt.id,
+          result.providerId,
+          result.providerPaymentReference,
+          result.providerAttemptReference,
+        );
+        return tx.updatePaymentStatus(
+          payment.id,
+          asPrismaStatus(payment.status),
+          asPrismaStatus(nextStatus),
+          nextStatus === "SUCCEEDED" ? new Date() : undefined,
+        );
+      });
+      return toPaymentDto(updated);
+    } catch (error) {
+      if (error instanceof PaymentError) throw error;
+      const category = adapter.normalizeError(error);
+      if (category === "PROVIDER_TIMEOUT") {
+        throw new PaymentError("PROVIDER_TIMEOUT", "Payment provider response timed out.", { cause: error });
+      }
+      if (category === "PROVIDER_NETWORK_ERROR") {
+        throw new PaymentError("PROVIDER_NETWORK_ERROR", "Payment provider could not be reached.", { cause: error });
+      }
+      if (category === "PAYMENT_DECLINED") {
+        throw new PaymentError("PAYMENT_DECLINED", "Payment was declined.", { cause: error });
+      }
+      throw new PaymentError("PROVIDER_REJECTED", "Payment provider rejected the request.", { cause: error });
+    }
   }
 
   return {
