@@ -64,8 +64,8 @@ test("profile API uses the private auth response boundary", () => {
   assert.doesNotMatch(source, /public,\s*max-age|s-maxage/i);
 });
 
-test("downstream commerce routes remain deferred", () => {
-  for (const route of ["app/(storefront)/orders/page.tsx", "app/(storefront)/wishlist/page.tsx", "app/(storefront)/checkout/page.tsx"]) {
+test("orders and wishlist remain deferred while Checkout is now implemented", () => {
+  for (const route of ["app/(storefront)/orders/page.tsx", "app/(storefront)/wishlist/page.tsx"]) {
     assert.equal(existsSync(route), false, route + " must remain deferred");
   }
 });
