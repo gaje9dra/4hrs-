@@ -1,7 +1,7 @@
 import type { FulfillmentErrorCode } from "@/lib/fulfillment/errors";
 
 export type FulfillmentObservation = Readonly<{
-  operation: "eligibility" | "create" | "transition" | "provider-resolution" | "mapping";
+  operation: "eligibility" | "create" | "transition" | "provider-resolution" | "mapping" | "reconcile";
   fulfillmentId?: string;
   orderId?: string;
   provider?: string;
