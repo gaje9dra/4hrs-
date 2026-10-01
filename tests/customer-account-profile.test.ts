@@ -48,7 +48,8 @@ test("account navigation contains only implemented destinations", () => {
   assert.match(source, /\/account/);
   assert.match(source, /\/account\/profile/);
   assert.match(source, /\/cart/);
-  assert.doesNotMatch(source, /\/orders|\/wishlist|\/checkout/i);
+  assert.match(source, /\/account\/orders/);
+  assert.doesNotMatch(source, /\/wishlist|\/checkout/i);
 });
 
 test("authenticated header links to account and keeps logout server-backed", () => {
