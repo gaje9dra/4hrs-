@@ -44,7 +44,8 @@ async function addressRequest(): Promise<CustomerAddressDto[]> {
 function classify(dto: CheckoutDto): UiState {
   const state = dto.validation.state;
   if (state === "VALID") return "valid";
-  if (state === "PRICE_CHANGED") return "price_changed";\n  if (state === "CART_CHANGED") return "cart_changed";
+  if (state === "PRICE_CHANGED") return "price_changed";
+  if (state === "CART_CHANGED") return "cart_changed";
   if (availabilityStates.has(state)) return "availability_changed";
   if (addressStates.has(state)) return "address_required";
   if (state === "CART_EMPTY" || state === "CART_MISSING") return "cart_changed";
@@ -117,7 +118,8 @@ export function CheckoutPage({ customer }: { customer: CustomerDto }) {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const requestVersion = useRef(0);
-  const selectedAddressRef = useRef<string | null>(null);\n  const revisionRef = useRef<CheckoutDto["revision"] | undefined>(undefined);
+  const selectedAddressRef = useRef<string | null>(null);
+  const revisionRef = useRef<CheckoutDto["revision"] | undefined>(undefined);
 
   const load = useCallback(async (preserveSelection: boolean) => {
     const version = ++requestVersion.current;
