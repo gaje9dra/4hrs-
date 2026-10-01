@@ -4,6 +4,7 @@ import { db } from "@/lib/db/client";
 
 export type OrderRepositoryClient = PrismaClient | Prisma.TransactionClient;
 export type OrderRecord = Prisma.OrderGetPayload<Record<string, never>>;
+export type OrderWithRelations = Prisma.OrderGetPayload<{ include: { items: true; shippingAddress: true } }>;
 export type OrderItemRecord = Prisma.OrderItemGetPayload<Record<string, never>>;
 export type OrderAddressSnapshotRecord = Prisma.OrderAddressSnapshotGetPayload<Record<string, never>>;
 
@@ -54,18 +55,18 @@ export type OrderRepository = {
     options?: { maxWait?: number; timeout?: number },
   ): Promise<T>;
   createOrder(input: CreateOrderInput): Promise<OrderRecord>;
-  createOrderWithItems(input: CreateOrderWithItemsInput): Promise<OrderRecord>;
+  createOrderWithItems(input: CreateOrderWithItemsInput): Promise<OrderWithRelations>;
   createOrderItem(orderId: string, input: CreateOrderItemInput): Promise<OrderItemRecord>;
   createOrderAddressSnapshot(
     orderId: string,
     input: CreateOrderAddressSnapshotInput,
   ): Promise<OrderAddressSnapshotRecord>;
-  getOrderById(orderId: string): Promise<OrderRecord | null>;
-  getOrderByNumber(orderNumber: string): Promise<OrderRecord | null>;
-  getOrderByCustomer(orderId: string, customerId: string): Promise<OrderRecord | null>;
-  getOrdersByCustomer(customerId: string): Promise<OrderRecord[]>;
-  getOrderByCheckout(checkoutReference: string): Promise<OrderRecord | null>;
-  getOrderByPayment(paymentId: string): Promise<OrderRecord | null>;
+  getOrderById(orderId: string): Promise<OrderWithRelations | null>;
+  getOrderByNumber(orderNumber: string): Promise<OrderWithRelations | null>;
+  getOrderByCustomer(orderId: string, customerId: string): Promise<OrderWithRelations | null>;
+  getOrdersByCustomer(customerId: string): Promise<OrderWithRelations[]>;
+  getOrderByCheckout(checkoutReference: string): Promise<OrderWithRelations | null>;
+  getOrderByPayment(paymentId: string): Promise<OrderWithRelations | null>;
 };
 
 function clientOrDefault(client?: OrderRepositoryClient): OrderRepositoryClient {
@@ -116,7 +117,7 @@ export function createOrderRepository(client?: OrderRepositoryClient): OrderRepo
   const database = clientOrDefault(client);
 
   const repository: OrderRepository = {
-    withTransaction<T>(work, options) {
+    withTransaction<T>(\n      work: (repository: OrderRepository) => Promise<T>,\n      options?: { maxWait?: number; timeout?: number },\n    ) {
       if ("$transaction" in database) {
         return database.$transaction(
           async (tx) => work(createOrderRepository(tx)),
