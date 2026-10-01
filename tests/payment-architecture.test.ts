@@ -114,10 +114,12 @@ test("Payment errors use provider-neutral categories", () => {
 test("Checkout remains the amount authority and payment is not an order", async () => {
   const fs = await import("node:fs/promises");
   const checkoutContracts = await fs.readFile("lib/checkout/contracts.ts", "utf8");
-  const paymentApplication = await fs.readFile("lib/payments/application.ts", "utf8");
-  assert.match(checkoutContracts, /PAYMENT_NOT_IMPLEMENTED/);
-  assert.match(paymentApplication, /ValidatedCheckoutPaymentContext/);
-  assert.doesNotMatch(paymentApplication, /orderId|createOrder|shipping|reserveInventory/);
+  const paymentApplication = await fs.readFile("lib/payments/application.ts",
+    "lib/payments/checkout.ts",
+    "lib/payments/http.ts", "utf8");
+  assert.match(checkoutContracts, /checkoutReference/);
+  assert.match(paymentApplication, /createPaymentFromCheckout/);
+  assert.doesNotMatch(paymentApplication, /orderId|createOrder|shipping|reserveInventory|razorpay|payu|stripe/i);
 });
 
 test("Phase 11.1 does not install or reference provider SDKs in payment code", async () => {
