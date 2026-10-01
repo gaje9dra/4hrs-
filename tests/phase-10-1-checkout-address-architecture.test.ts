@@ -66,16 +66,10 @@ test("private customer surfaces remain non-indexable and cache-safe", () => {
   assert.match(cartHttp, /private, no-store/);
 });
 
-test("downstream payment/order/shipping integrations remain deferred", () => {
-  for (const path of [
-    "app/api/payment/route.ts",
-    "app/api/orders/route.ts",
-  ]) {
-    try {
-      readFileSync(path, "utf8");
-      assert.fail(path + " must remain deferred");
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
-    }
-  }
+test("payment application exists while provider/order integrations remain deferred", () => {
+  const paymentRoute = readFileSync("app/api/payment/route.ts", "utf8");
+  assert.match(paymentRoute, /createPaymentApplication|createPaymentFromCheckout/);
+  assert.doesNotMatch(paymentRoute, /razorpay|payu|stripe|providerSdk/i);
+  assert.doesNotMatch(paymentRoute, /createOrder|shipping|fulfillment|reserveInventory/i);
+  assert.throws(() => readFileSync("app/api/orders/route.ts", "utf8"), /ENOENT/);
 });
