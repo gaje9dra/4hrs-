@@ -32,7 +32,7 @@ function fakeRepository(initial: CustomerAddressRecord[] = []): CustomerAddressR
   const rows = [...initial];
 
   return {
-    async withTransaction<T>(work) {
+    async withTransaction<T>(work: (repository: CustomerAddressRepository) => Promise<T>) {
       return work(this);
     },
     async countCustomerAddresses(customerId) {
