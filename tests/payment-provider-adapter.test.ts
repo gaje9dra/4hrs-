@@ -163,24 +163,8 @@ test("provider-neutral request contract does not expose ORM or credential fields
   assert.doesNotMatch(source, /password|cvv|cvc|pin|cardNumber|database|prisma|secret/i);
 });
 
-test("payment application invokes only the resolved adapter and maps normalized result", async () => {
-  let called = 0;
-  const testAdapter = adapter({
-    async createPayment(request) {
-      called += 1;
-      assert.equal(request.amount.currency, "INR");
-      assert.equal(request.amount.value, "998.00");
-      assert.match(request.idempotencyReference, /^payment:/);
-      return {
-        providerId: "test-provider",
-        providerPaymentReference: "pp-1",
-        providerAttemptReference: "pa-1",
-        status: "PROCESSING",
-        clientAction: { type: "NONE" },
-      };
-    },
-  });
-  const registry = createPaymentProviderRegistry([testAdapter]);
+test("resolver output is the only adapter entry point", () => {
+  const registry = createPaymentProviderRegistry([adapter()]);
   const resolver = createPaymentProviderResolver({
     registry,
     configuration: {
@@ -194,9 +178,7 @@ test("payment application invokes only the resolved adapter and maps normalized 
       capabilities: {},
     },
   });
-
-  const repository = (await import("./payment-domain-service.test")).default;
-  void repository;
-  assert.equal(called, 0);
-  assert.ok(resolver.resolve({ customerId: "c", checkoutReference: "x", currency: "INR" }));
+  const resolved = resolver.resolve({ customerId: "customer-1", checkoutReference: "a".repeat(64), currency: "INR" });
+  assert.equal(resolved?.id, "test-provider");
+  assert.equal(resolved?.capabilities.createPayment, true);
 });
