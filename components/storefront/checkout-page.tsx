@@ -26,7 +26,10 @@ async function checkoutRequest(method: "GET" | "POST", selectedAddressId?: strin
   });
   const body = await response.json().catch(() => null) as CheckoutDto | ApiError | null;
   if (response.status === 401) throw new Error("SESSION_EXPIRED");
-  if (!response.ok) throw new Error(("error" in (body ?? {}) ? body?.error?.message : undefined) || "Checkout validation failed.");
+  if (!response.ok) {
+    const apiError = body && typeof body === "object" && "error" in body ? (body as ApiError).error?.message : undefined;
+    throw new Error(apiError || "Checkout validation failed.");
+  }
   return body as CheckoutDto;
 }
 
@@ -194,7 +197,7 @@ export function CheckoutPage({ customer }: { customer: CustomerDto }) {
           <div className="mt-5 grid gap-4">{checkout.cart.items.map((item) => <article key={item.id} className={"border-2 border-border bg-white p-3 " + (affectedItems.has(item.id) ? "ring-2 ring-primary-red" : "")}><div className="flex gap-3"><div className="relative size-16 shrink-0 overflow-hidden border-2 border-border bg-muted">{item.product?.media?.url ? <Image src={item.product.media.url} alt={item.product.media.altText ?? item.product.title} fill sizes="4rem" className="object-cover" /> : <span className="flex h-full items-center justify-center text-[9px] font-900 uppercase">No image</span>}</div><div className="min-w-0 flex-1"><h3 className="break-words text-sm font-900 uppercase">{item.product?.title ?? "Unavailable product"}</h3>{item.variant ? <p className="mt-1 text-xs font-700">{[item.variant.displayName, item.variant.size, item.variant.color].filter(Boolean).join(" · ")}</p> : null}<p className="mt-2 text-xs font-800 uppercase">Qty {item.quantity}</p></div><p className="text-sm font-900">{money(item.subtotal ?? "—", item.currency)}</p></div></article>)}</div>
           <dl className="mt-6 grid gap-3 border-t-2 border-border pt-4 text-sm"><div className="flex justify-between gap-4"><dt className="font-900 uppercase">Merchandise</dt><dd>{money(checkout.totals.merchandiseSubtotal, checkout.totals.currency)}</dd></div>{checkout.totals.adjustments.map((item) => <div key={item.code} className="flex justify-between gap-4"><dt>{item.code}</dt><dd>{money(item.amount, checkout.totals.currency)}</dd></div>)}{checkout.totals.charges.map((item) => <div key={item.code} className="flex justify-between gap-4"><dt>{item.code}</dt><dd>{money(item.amount, checkout.totals.currency)}</dd></div>)}<div className="flex justify-between gap-4 border-t-2 border-border pt-3 text-xl font-900"><dt className="uppercase">Total</dt><dd>{money(checkout.totals.total, checkout.totals.currency)}</dd></div></dl>
           <div className="mt-5"><Button type="button" disabled={!canContinue} loading={state === "validating"} className="w-full">Continue to payment</Button><p className="mt-3 text-xs font-700 uppercase">Payment will become available in a future phase.</p></div>
-          <a href="/cart" className="mt-4 block text-center text-xs font-900 uppercase underline underline-offset-4">Return to Cart</a>
+          <Button href="/cart" variant="ghost" className="mt-4 w-full text-xs">Return to Cart</Button>
         </aside>
       </div>
     </div>
