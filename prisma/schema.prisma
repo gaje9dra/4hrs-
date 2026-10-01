@@ -371,7 +371,6 @@ model Customer {
   payments        Payment[]
   paymentIdempotencyRecords PaymentIdempotency[]
   orders          Order[]
-  fulfillments     Fulfillment[]
   @@index([status])
 }
 
