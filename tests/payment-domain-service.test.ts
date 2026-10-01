@@ -77,7 +77,12 @@ function fakeRepository(initial = payment()): PaymentRepository {
       return { record, created: true };
     },
     findPaymentEventByProviderEventId: async () => null,
-    markPaymentEventProcessed: async (id: string) => ({ id, processingStatus: "PROCESSED" }),
+    markPaymentEventProcessed: async (id: string) => {
+      for (const record of events.values()) {
+        if (record.id === id) record.processingStatus = "PROCESSED";
+      }
+      return { id, processingStatus: "PROCESSED" };
+    },
     markPaymentEventFailed: async (id: string, reason: string) => ({ id, processingStatus: "FAILED", processingError: reason }),
     lookupByIdempotencyKey: async (owner: string, operation: string, key: string) => {
       const record = idempotency.get(`${owner}:${operation}:${key}`);
