@@ -86,7 +86,7 @@ function AddAddressForm({ disabled, onCreated, onSessionExpired }: { disabled: b
       onCreated(body.address);
     } catch (reason) {
       if (reason instanceof Error && reason.message === "SESSION_EXPIRED") {
-        setState("session_expired");
+        onSessionExpired();
         setError(null);
       } else {
         setError(reason instanceof Error ? reason.message : "Address could not be saved.");
@@ -122,6 +122,7 @@ export function CheckoutPage({ customer }: { customer: CustomerDto }) {
   const [state, setState] = useState<UiState>("loading");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const pendingRef = useRef(false);
   const requestVersion = useRef(0);
   const selectedAddressRef = useRef<string | null>(null);
   const revisionRef = useRef<CheckoutDto["revision"] | undefined>(undefined);
@@ -167,7 +168,8 @@ export function CheckoutPage({ customer }: { customer: CustomerDto }) {
   }, []);
 
   async function validateSelection(addressId: string | null) {
-    if (pending) return;
+    if (pendingRef.current) return;
+    pendingRef.current = true;
     const version = ++requestVersion.current;
     selectedAddressRef.current = addressId;
     setSelectedAddressId(addressId); setPending(true); setState("validating"); setError(null);
