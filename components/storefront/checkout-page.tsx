@@ -16,13 +16,13 @@ type UiState = "loading" | "ready" | "address_required" | "validating" | "valid"
 const availabilityStates = new Set(["PRODUCT_UNAVAILABLE", "VARIANT_UNAVAILABLE", "INVALID_QUANTITY", "INSUFFICIENT_AVAILABILITY"]);
 const addressStates = new Set(["INVALID_ADDRESS", "ADDRESS_NOT_OWNED", "ADDRESS_NOT_FOUND", "INCOMPLETE_CHECKOUT"]);
 
-async function checkoutRequest(method: "GET" | "POST", selectedAddressId?: string | null): Promise<CheckoutDto> {
+async function checkoutRequest(method: "GET" | "POST", selectedAddressId?: string | null, expectedRevision?: CheckoutDto["revision"]): Promise<CheckoutDto> {
   const response = await fetch("/api/checkout", {
     method,
     cache: "no-store",
     credentials: "same-origin",
     headers: { Accept: "application/json", ...(method === "POST" ? { "Content-Type": "application/json" } : {}) },
-    body: method === "POST" ? JSON.stringify({ selectedAddressId }) : undefined,
+    body: method === "POST" ? JSON.stringify({ selectedAddressId, ...(expectedRevision ? { expectedRevision } : {}) }) : undefined,
   });
   const body = await response.json().catch(() => null) as CheckoutDto | ApiError | null;
   if (response.status === 401) throw new Error("SESSION_EXPIRED");
@@ -45,6 +45,7 @@ function classify(dto: CheckoutDto): UiState {
   const state = dto.validation.state;
   if (state === "VALID") return "valid";
   if (state === "PRICE_CHANGED") return "price_changed";
+  if (state === "CART_CHANGED") return "cart_changed";
   if (availabilityStates.has(state)) return "availability_changed";
   if (addressStates.has(state)) return "address_required";
   if (state === "CART_EMPTY" || state === "CART_MISSING") return "cart_changed";
@@ -118,6 +119,7 @@ export function CheckoutPage({ customer }: { customer: CustomerDto }) {
   const [pending, setPending] = useState(false);
   const requestVersion = useRef(0);
   const selectedAddressRef = useRef<string | null>(null);
+  const revisionRef = useRef<CheckoutDto["revision"] | undefined>(undefined);
 
   const load = useCallback(async (preserveSelection: boolean) => {
     const version = ++requestVersion.current;
@@ -125,7 +127,7 @@ export function CheckoutPage({ customer }: { customer: CustomerDto }) {
     try {
       const [nextCheckout, nextAddresses] = await Promise.all([checkoutRequest("GET"), addressRequest()]);
       if (version !== requestVersion.current) return;
-      setCheckout(nextCheckout); setAddresses(nextAddresses);
+      setCheckout(nextCheckout); revisionRef.current = nextCheckout.revision; setAddresses(nextAddresses);
       const serverAddress = nextCheckout.address?.id ?? null;
       setSelectedAddressId(preserveSelection && selectedAddressRef.current && nextAddresses.some((item) => item.id === selectedAddressRef.current) ? selectedAddressRef.current : serverAddress);
       setState(classify(nextCheckout));
@@ -164,9 +166,9 @@ export function CheckoutPage({ customer }: { customer: CustomerDto }) {
     selectedAddressRef.current = addressId;
     setSelectedAddressId(addressId); setPending(true); setState("validating"); setError(null);
     try {
-      const next = await checkoutRequest("POST", addressId);
+      const next = await checkoutRequest("POST", addressId, revisionRef.current);
       if (version !== requestVersion.current) return;
-      setCheckout(next); setState(classify(next));
+      setCheckout(next); revisionRef.current = next.revision; setState(classify(next));
       if (next.address?.id) { selectedAddressRef.current = next.address.id; setSelectedAddressId(next.address.id); }
     } catch (reason) {
       if (version !== requestVersion.current) return;
