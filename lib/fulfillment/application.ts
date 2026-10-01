@@ -3,7 +3,7 @@ import { db } from "@/lib/db/client";
 import { createFulfillmentRepository, type FulfillmentRepository, type FulfillmentWithItems, type FulfillmentOrderSource } from "@/lib/fulfillment/repository";
 import { assertOrderFulfillmentEligibility, assertFulfillmentTransition, mapOrderItemsToFulfillment, type FulfillmentLifecycleStatus } from "@/lib/fulfillment/domain";
 import { FulfillmentDomainError } from "@/lib/fulfillment/errors";
-import type { FulfillmentProviderErrorCode, FulfillmentProviderRequest, FulfillmentProviderResolver } from "@/lib/fulfillment/provider";
+import type { FulfillmentProviderRequest, FulfillmentProviderResolver } from "@/lib/fulfillment/provider";
 import { createConfiguredFulfillmentProviderRegistry, createFulfillmentProviderResolver } from "@/lib/fulfillment/resolver";
 import { loadFulfillmentProviderConfiguration } from "@/lib/fulfillment/config";
 import { logFulfillmentObservation } from "@/lib/fulfillment/observability";
@@ -83,14 +83,6 @@ function isAmbiguousProviderFailure(error: unknown): boolean {
     && "category" in error
     && ((error as { category?: unknown }).category === "PROVIDER_TIMEOUT"
       || (error as { category?: unknown }).category === "PROVIDER_NETWORK_ERROR");
-}
-
-function providerErrorCode(error: unknown): FulfillmentProviderErrorCode {
-  if (typeof error === "object" && error !== null && "category" in error) {
-    const category = (error as { category?: unknown }).category;
-    if (typeof category === "string") return category as FulfillmentProviderErrorCode;
-  }
-  return "PROVIDER_UNKNOWN_ERROR";
 }
 
 function isRetryableProviderErrorCode(code: FulfillmentProviderErrorCode): boolean {
