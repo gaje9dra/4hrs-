@@ -124,3 +124,33 @@ export function buildOrderItems(checkout: OrderCheckoutSnapshot): CreateOrderIte
 export function buildAddressSnapshot(checkout: OrderCheckoutSnapshot): CreateOrderAddressSnapshotInput {
   return { ...checkout.address };
 }
+
+
+export type OrderLifecycleStatus = "PENDING" | "CONFIRMED";
+export type OrderCustomerStatus = "Pending" | "Confirmed";
+
+const ALLOWED_TRANSITIONS: Readonly<Record<OrderLifecycleStatus, readonly OrderLifecycleStatus[]>> = {
+  PENDING: ["CONFIRMED"],
+  CONFIRMED: [],
+};
+
+export function assertOrderTransition(
+  current: OrderLifecycleStatus,
+  next: OrderLifecycleStatus,
+): void {
+  if (!ALLOWED_TRANSITIONS[current]?.includes(next)) {
+    if (current === "CONFIRMED") {
+      throw new OrderDomainError("ORDER_TERMINAL", "The Order cannot transition from its current terminal state.");
+    }
+    throw new OrderDomainError("ORDER_INVALID_TRANSITION", "The requested Order state transition is not allowed.");
+  }
+}
+
+export function customerStatusForOrder(status: OrderLifecycleStatus): OrderCustomerStatus {
+  if (status === "PENDING") return "Pending";
+  return "Confirmed";
+}
+
+export function isOrderLifecycleStatus(value: string): value is OrderLifecycleStatus {
+  return value === "PENDING" || value === "CONFIRMED";
+}
