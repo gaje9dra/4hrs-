@@ -29,3 +29,32 @@ export function logOrderCreationObservation(observation: OrderCreationObservatio
   if (observation.result === "failure") console.warn("[order]", payload);
   else console.info("[order]", payload);
 }
+
+
+export type OrderLifecycleObservation = {
+  operation: "transition";
+  orderId: string;
+  orderNumber?: string;
+  from: "PENDING" | "CONFIRMED";
+  to: "PENDING" | "CONFIRMED";
+  actor: "SYSTEM";
+  result: "success" | "rejected" | "concurrency-conflict";
+  failureCode?: string;
+};
+
+export function logOrderLifecycleObservation(observation: OrderLifecycleObservation): void {
+  if (process.env.NODE_ENV === "test") return;
+  const payload = {
+    scope: "order",
+    operation: observation.operation,
+    orderId: observation.orderId,
+    orderNumber: observation.orderNumber,
+    from: observation.from,
+    to: observation.to,
+    actor: observation.actor,
+    result: observation.result,
+    failureCode: observation.failureCode,
+  };
+  if (observation.result === "success") console.info("[order]", payload);
+  else console.warn("[order]", payload);
+}
