@@ -104,11 +104,14 @@ test("Checkout and Payment references each allow only one Order", async () => {
   const first = await repository.createOrder(await orderInput(c.id, checkoutReference, p.id));
   orderIds.push(first.id);
 
-  await assert.rejects(
-    () => repository.createOrder({
-      ...(await orderInput(c.id, checkoutReference, p.id)),
-    }),
-  );
+  await assert.rejects(() => repository.createOrder({
+    customerId: c.id,
+    checkoutReference,
+    paymentId: p.id,
+    subtotal: "499.00",
+    total: "499.00",
+    currency: "INR",
+  }));
 });
 
 test("Customer-scoped lookup prevents cross-customer Order access", async () => {
@@ -184,8 +187,13 @@ test("Persistence rejects invalid quantities and monetary values", async () => {
   const c = await customer();
   const p = await payment(c.id, `checkout-${randomUUID()}`);
 
-  await assert.rejects(() => repository.createOrderWithItems({
-    ...(await orderInput(c.id, p.checkoutReference, p.id)),
+  await assert.rejects(async () => repository.createOrderWithItems({
+    customerId: c.id,
+    checkoutReference: p.checkoutReference,
+    paymentId: p.id,
+    subtotal: "499.00",
+    total: "499.00",
+    currency: "INR",
     items: [{
       productTitleSnapshot: "Invalid Quantity",
       quantity: 0,
@@ -195,9 +203,13 @@ test("Persistence rejects invalid quantities and monetary values", async () => {
     }],
   }));
 
-  await assert.rejects(() => repository.createOrder({
-    ...(await orderInput(c.id, `checkout-${randomUUID()}`, p.id)),
+  await assert.rejects(async () => repository.createOrder({
+    customerId: c.id,
+    checkoutReference: `checkout-${randomUUID()}`,
+    paymentId: p.id,
     subtotal: "-1.00",
+    total: "499.00",
+    currency: "INR",
   }));
 });
 
