@@ -60,11 +60,11 @@ test("Checkout UI guards validation against duplicate submission", async () => {
   assert.match(source, /if \(pendingRef\.current\) return/);
 });
 
-test("Checkout API response is private and payment remains an explicit future boundary", async () => {
+test("Checkout API response is private and exposes only safe payment readiness metadata", async () => {
   const fs = await import("node:fs/promises");
   const http = await fs.readFile("lib/checkout/http.ts", "utf8");
   const contracts = await fs.readFile("lib/checkout/contracts.ts", "utf8");
   assert.match(http, /private, no-store/);
-  assert.match(contracts, /PAYMENT_NOT_IMPLEMENTED/);
-  assert.doesNotMatch(contracts, /paymentIntent|transactionId|orderId/);
+  assert.match(contracts, /checkoutReference/);
+  assert.doesNotMatch(contracts, /paymentIntent|transactionId|orderId|providerSecret|cardNumber|cvv|pin/);
 });
