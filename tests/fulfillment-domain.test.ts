@@ -146,7 +146,7 @@ test("unsupported provider configuration fails safely", async () => {
 
 test("provider request contains only fulfillment-required historical snapshot data", async () => {
   const f = await fixture();
-  const request = providerRequest({ ...f.order, payment: f.payment, fulfillment: null });
+  const request = providerRequest({ ...f.order, payment: f.payment, fulfillment: null }, f.order.id);
   assert.equal(request.orderReference, f.order.id);
   assert.equal(request.orderNumber, f.order.orderNumber);
   assert.equal(request.items[0].sku, "TEE-M");
