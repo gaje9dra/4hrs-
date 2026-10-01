@@ -2,48 +2,28 @@
 
 ## Result
 
-**NOT READY FOR PHASE 12.8 — FULFILLMENT PROVIDER NOT DETERMINED**
+**Qikink is now the explicitly selected provider for Phase 12.8.**
 
-## Repository evidence
+The repository previously had a provider-neutral Phase 12.7 boundary with zero production adapters. Phase 12.8 now registers exactly one production adapter: Qikink.
 
-The Phase 12.7 fulfillment foundation is present on the Phase 12.7 branch:
+## Evidence
 
-- `lib/fulfillment/provider.ts` defines the provider-neutral adapter contract.
-- `lib/fulfillment/resolver.ts` resolves a provider from trusted server configuration.
-- `lib/fulfillment/config.ts` reads `FULFILLMENT_PROVIDER_ID`, `FULFILLMENT_PROVIDER_ENABLED`, `FULFILLMENT_PROVIDER_MODE`, `FULFILLMENT_PROVIDER_SECRET_REFERENCE`, and `FULFILLMENT_PROVIDER_TIMEOUT_MS`.
-- `lib/fulfillment/application.ts` consumes the resolver and does not select a vendor from client input.
-- The Phase 12.7 documentation states that there are currently zero production adapters and no approved external fulfillment integration.
+- `lib/fulfillment/providers/qikink.ts` implements `FulfillmentProviderAdapter`.
+- `lib/fulfillment/resolver.ts` registers Qikink behind the existing provider registry.
+- `lib/fulfillment/config.ts` selects `qikink` as the repository default provider identifier while keeping enablement opt-in.
+- `.env.example` documents the server-only Qikink credential.
+- `lib/fulfillment/application.ts` performs local intent creation transactionally, calls the provider outside the transaction, and persists the normalized provider result.
+- Provider-specific request/response/status/error logic remains isolated to the Qikink adapter.
+- Qikink contract tests do not require real credentials.
 
-## Provider-selection audit
+## External contract basis
 
-No repository evidence establishes exactly one selected fulfillment provider:
-
-- No production fulfillment adapter is registered.
-- No provider-specific fulfillment SDK/client is present.
-- `.env.example` does not select a fulfillment provider.
-- No provider-specific fulfillment configuration is documented.
-- No provider-specific fulfillment test fixture establishes a selected provider.
-- No deployment configuration establishes a selected provider.
-- The Phase 12.7 documentation explicitly states that no real external fulfillment provider integration was implemented.
-
-## Required action
-
-Phase 12.8 must not invent or automatically select Qikink, Printrove, Printful, Printify, or another provider.
-
-Once the repository has an explicitly selected provider, Phase 12.8 can implement exactly one adapter behind the existing resolver contract and then complete provider configuration, request/response/status/error normalization, idempotency, retry/timeout handling, persistence, security, tests, and CI validation.
-
-No provider credentials or external API calls are introduced by this audit.
+The adapter uses Qikink's documented create-order API and its documented order-status vocabulary. citeturn9search0turn6search0
 
 ## Scope protection
 
-This audit does not add:
+Phase 12.8 does not add a second provider, shipping/carrier integration, tracking UI, returns, refunds, exchanges, cancellation workflows, inventory redesign, checkout/payment/cart redesign, admin fulfillment UI, or provider-specific fields to the canonical Order model.
 
-- a second fulfillment provider
-- shipping/tracking integration
-- returns/refunds/exchanges
-- customer fulfillment UI
-- inventory reservation redesign
-- checkout/payment/cart redesign
-- provider-specific fields in the canonical Order domain
-- provider credentials
+## Validation status
 
+The implementation must pass the repository's complete CI-equivalent validation before Phase 12.8 can be declared ready.
