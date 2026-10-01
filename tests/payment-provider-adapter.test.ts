@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createPaymentApplication } from "@/lib/payments/application";
-import { loadPaymentProviderConfiguration, publicPaymentProviderConfiguration } from "@/lib/payments/config";
+import { assertPrivatePaymentConfiguration, loadPaymentProviderConfiguration, publicPaymentProviderConfiguration } from "@/lib/payments/config";
 import { normalizeClientAction } from "@/lib/payments/client-action";
 import { createPaymentProviderRegistry, createPaymentProviderResolver } from "@/lib/payments/resolver";
 import type { PaymentProviderAdapter, PaymentProviderCapabilities } from "@/lib/payments/provider";
@@ -128,7 +128,7 @@ test("configuration has private and public boundaries", () => {
     mode: "live",
     publicKey: "public-key",
   });
-  assert.throws(() => loadPaymentProviderConfiguration({ providerId: "NEXT_PUBLIC_BAD" }), /private/i);
+  assert.throws(() => assertPrivatePaymentConfiguration({ ...config!, secretReference: "NEXT_PUBLIC_BAD", webhookSecretReference: null }), /private/i);
 });
 
 test("client action normalization only permits safe client-action data", () => {
