@@ -127,7 +127,7 @@ export function buildAddressSnapshot(checkout: OrderCheckoutSnapshot): CreateOrd
 
 
 export type OrderLifecycleStatus = "PENDING" | "CONFIRMED";
-export type OrderCustomerStatus = "Pending" | "Confirmed";
+export type OrderCustomerStatus = "PENDING" | "CONFIRMED";
 
 const ALLOWED_TRANSITIONS: Readonly<Record<OrderLifecycleStatus, readonly OrderLifecycleStatus[]>> = {
   PENDING: ["CONFIRMED"],
@@ -147,8 +147,8 @@ export function assertOrderTransition(
 }
 
 export function customerStatusForOrder(status: OrderLifecycleStatus): OrderCustomerStatus {
-  if (status === "PENDING") return "Pending";
-  return "Confirmed";
+  if (status === "PENDING") return "PENDING";
+  return "CONFIRMED";
 }
 
 export function isOrderLifecycleStatus(value: string): value is OrderLifecycleStatus {
