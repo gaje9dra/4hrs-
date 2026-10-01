@@ -196,7 +196,7 @@ test("provider selection is server-controlled and unconfigured execution is safe
   const app = createPaymentApplication({ repository: fakeRepository() });
   await assert.rejects(
     () => app.startProviderPayment("22222222-2222-4222-8222-222222222222", customerId),
-    (error: unknown) => error instanceof PaymentError && error.code === "PROVIDER_CONFIGURATION_MISSING",
+    (error: unknown) => error instanceof PaymentError && error.code === "PROVIDER_UNAVAILABLE",
   );
 });
 
