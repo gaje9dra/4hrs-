@@ -99,7 +99,11 @@ export async function resolveOrderCheckout(
       throw new OrderDomainError("INVALID_ORDER_ITEM", "Checkout contains an invalid product price.");
     }
 
-    if (!variant) {\n      throw new OrderDomainError("INVALID_ORDER_ITEM", "A purchasable Checkout item requires a valid ProductVariant.");\n    }\n\n    const availability = availabilityFor(variant.inventory);
+    if (!variant) {
+      throw new OrderDomainError("INVALID_ORDER_ITEM", "A purchasable Checkout item requires a valid ProductVariant.");
+    }
+
+    const availability = availabilityFor(variant.inventory);
     if (!availability.available || (availability.availableQuantity !== null && cartItem.quantity > availability.availableQuantity)) {
       throw new OrderDomainError("INVALID_ORDER_ITEM", "A Checkout item is no longer available in the requested quantity.");
     }
