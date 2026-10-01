@@ -84,6 +84,13 @@ export type PaymentRepository = {
     completedAt?: Date | null,
   ): Promise<PaymentRecord>;
   createPaymentAttempt(input: CreatePaymentAttemptInput): Promise<PaymentAttemptRecord>;
+  updatePaymentProviderReferences(
+    paymentId: string,
+    attemptId: string,
+    providerId: string,
+    providerReference: string | null,
+    providerAttemptReference: string | null,
+  ): Promise<{ payment: PaymentRecord; attempt: PaymentAttemptRecord }>;
   getPaymentAttempts(paymentId: string): Promise<PaymentAttemptRecord[]>;
   getPaymentAttemptByProviderReference(
     providerId: string,
@@ -263,6 +270,18 @@ export function createPaymentRepository(client?: PaymentRepositoryClient): Payme
           ...(input.metadata !== undefined ? { metadata: input.metadata } : {}),
         },
       });
+    },
+
+    async updatePaymentProviderReferences(paymentId, attemptId, providerId, providerReference, providerAttemptReference) {
+      const attempt = await database.paymentAttempt.update({
+        where: { id: attemptId },
+        data: { providerId, providerAttemptReference },
+      });
+      const payment = await database.payment.update({
+        where: { id: paymentId },
+        data: { providerId, providerReference },
+      });
+      return { payment, attempt };
     },
 
     getPaymentAttempts(paymentId) {

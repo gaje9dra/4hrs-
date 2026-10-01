@@ -51,51 +51,49 @@ test("provider adapter contract stays provider-neutral", () => {
   const adapter: PaymentProviderAdapter = {
     id: "test-provider",
     capabilities: {
-      currencies: ["INR"],
-      paymentMethods: ["test"],
+
+      createPayment: true,
+      clientAction: false,
+      webhookVerification: true,
+      statusLookup: true,
+      cancellation: false,
       refunds: true,
       partialRefunds: false,
-      webhooks: true,
-      asynchronousConfirmation: true,
-      cancellation: false,
-      authorizationCapture: false,
     },
-    async createPaymentIntent() {
-      return { providerReference: "external-1", status: "PROCESSING" };
+    async createPayment() {
+      return { providerId: "test-provider", providerPaymentReference: "external-1", providerAttemptReference: "attempt-1", status: "PROCESSING", clientAction: { type: "NONE" } };
     },
-    async retrievePaymentStatus() {
-      return {
-        paymentId: "payment-1",
-        status: "PROCESSING",
-        amount: { value: "499.00", currency: "INR" },
-        providerId: "test-provider",
-        providerReference: "external-1",
-      };
+    async retrievePayment() {
+      return { providerId: "test-provider", providerPaymentReference: "external-1", providerAttemptReference: "attempt-1", status: "PROCESSING", clientAction: { type: "NONE" } };
     },
     async verifyPayment() {
-      return {
-        paymentId: "payment-1",
-        status: "SUCCEEDED",
-        amount: { value: "499.00", currency: "INR" },
-        providerId: "test-provider",
-        providerReference: "external-1",
-      };
+      return { providerId: "test-provider", providerPaymentReference: "external-1", providerAttemptReference: "attempt-1", status: "SUCCEEDED", clientAction: { type: "NONE" } };
     },
-    async normalizeWebhookEvent() {
+    normalizeStatus(status) {
+      return status === "SUCCEEDED" ? "SUCCEEDED" : "PROCESSING";
+    },
+    normalizeError() {
+      return "PROVIDER_UNKNOWN_ERROR";
+    },
+    async verifyWebhook() {
       return {
-        providerId: "test-provider",
+        verified: true,
+        event: {
+          providerId: "test-provider",
         providerEventReference: "event-1",
         providerPaymentReference: "external-1",
         internalPaymentReference: "payment-1",
         normalizedEventType: "PAYMENT_SUCCEEDED",
         status: "SUCCEEDED",
         occurredAt: "2026-10-01T00:00:00.000Z",
+        },
       };
     },
   };
 
   assert.equal(adapter.id, "test-provider");
   assert.equal(adapter.capabilities.partialRefunds, false);
+  assert.equal(adapter.capabilities.webhookVerification, true);
 });
 
 test("Payment errors use provider-neutral categories", () => {
@@ -127,6 +125,8 @@ test("Phase 11.1 does not install or reference provider SDKs in payment code", a
     "lib/payments/idempotency.ts",
     "lib/payments/webhooks.ts",
     "lib/payments/errors.ts",
+    "lib/payments/config.ts",
+    "lib/payments/resolver.ts",
   ];
   for (const file of files) {
     const source = await fs.readFile(file, "utf8");

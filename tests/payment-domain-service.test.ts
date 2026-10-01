@@ -7,6 +7,8 @@ import {
 } from "@/lib/payments/application";
 import { isTerminalPaymentStatus } from "@/lib/payments/domain";
 import { PaymentError } from "@/lib/payments/errors";
+import { createPaymentProviderRegistry, createPaymentProviderResolver } from "@/lib/payments/resolver";
+import type { PaymentProviderAdapter } from "@/lib/payments/provider";
 import type { PaymentRepository } from "@/lib/payments/repository";
 
 const customerId = "11111111-1111-4111-8111-111111111111";
@@ -56,6 +58,11 @@ function fakeRepository(initial = payment()): PaymentRepository {
       if (current.status !== expected) throw new Error("concurrent");
       current = payment({ ...current, status: next, updatedAt: new Date() });
       return current;
+    },
+    updatePaymentProviderReferences: async (_paymentId: string, _attemptId: string, providerId: string, providerReference: string | null, providerAttemptReference: string | null) => {
+      current = { ...current, providerId, providerReference } as unknown as typeof current;
+      attempts[attempts.length - 1] = { ...attempts[attempts.length - 1], providerId, providerAttemptReference } as unknown as typeof attempts[number];
+      return { payment: current, attempt: attempts[attempts.length - 1] };
     },
     createPaymentAttempt: async (input: Record<string, unknown>) => {
       const record = { ...attempts[0], ...input, id: `attempt-${attempts.length + 1}` };
@@ -189,7 +196,7 @@ test("provider selection is server-controlled and unconfigured execution is safe
   const app = createPaymentApplication({ repository: fakeRepository() });
   await assert.rejects(
     () => app.startProviderPayment("22222222-2222-4222-8222-222222222222", customerId),
-    (error: unknown) => error instanceof PaymentError && error.code === "PROVIDER_CONFIGURATION_MISSING",
+    (error: unknown) => error instanceof PaymentError && error.code === "PROVIDER_UNAVAILABLE",
   );
 });
 
@@ -210,4 +217,37 @@ test("normalized duplicate events do not transition a Payment twice", async () =
   const second = await app.processNormalizedPaymentEvent(event);
   assert.equal(second.duplicate, true);
   assert.equal(second.payment?.status, "SUCCEEDED");
+});
+
+test("configured provider adapter is invoked through the resolver and normalized state is persisted", async () => {
+  let calls = 0;
+  const adapter: PaymentProviderAdapter = {
+    id: "test-provider",
+    capabilities: { createPayment: true, clientAction: false, webhookVerification: true, statusLookup: true, cancellation: false, refunds: false, partialRefunds: false },
+    async createPayment(request) {
+      calls += 1;
+      assert.equal(request.amount.value, "998.00");
+      assert.equal(request.amount.currency, "INR");
+      assert.match(request.idempotencyReference, /^payment:/);
+      return { providerId: "test-provider", providerPaymentReference: "provider-payment-1", providerAttemptReference: "provider-attempt-1", status: "PROCESSING", clientAction: { type: "NONE" } };
+    },
+    async retrievePayment() { throw new Error("not used"); },
+    async verifyPayment() { throw new Error("not used"); },
+    async verifyWebhook() { throw new Error("not used"); },
+    normalizeStatus() { return "PROCESSING"; },
+    normalizeError() { return "PROVIDER_UNKNOWN_ERROR"; },
+  };
+  const resolver = createPaymentProviderResolver({
+    registry: createPaymentProviderRegistry([adapter]),
+    configuration: {
+      id: "test-provider", enabled: true, mode: "test", publicKey: null,
+      secretReference: "SECRET_REF", webhookSecretReference: "WEBHOOK_SECRET_REF",
+      timeoutMs: 10000, capabilities: {},
+    },
+  });
+  const repository = fakeRepository();
+  const app = createPaymentApplication({ repository, providerResolver: resolver });
+  const result = await app.startProviderPayment("22222222-2222-4222-8222-222222222222", customerId);
+  assert.equal(result.status, "PROCESSING");
+  assert.equal(calls, 1);
 });
