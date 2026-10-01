@@ -182,3 +182,5 @@ Live Qikink submission requires the operator to set `QIKINK_AUTH_TOKEN` and expl
 A future provider can implement the same `FulfillmentProviderAdapter` contract and register behind the same resolver without changing Order schema, canonical Fulfillment lifecycle, checkout, payment, cart, or customer Order DTOs.
 
 No second provider is implemented in Phase 12.8.
+
+Qikink remains the only registered production provider adapter in this phase.
