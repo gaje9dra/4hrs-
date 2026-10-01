@@ -19,7 +19,7 @@ Adapter results contain provider identity/reference, normalized canonical Paymen
 ## Resolver and multi-provider support
 `createPaymentProviderResolver()` is the only application-level provider selection boundary. It uses trusted server configuration and a registry. The caller cannot select an arbitrary implementation; an explicit provider identifier must match the configured provider.
 
-A future provider requires an adapter, registry registration, secure configuration, provider-specific tests, and normalization rules. Checkout, Storefront, Cart, Product, and Payment domain models do not need provider-specific branches.
+A future provider requires an adapter, registration in `lib/payments/registry.ts`, secure configuration, provider-specific tests, and normalization rules. The webhook endpoint and Payment service consume this central registry rather than maintaining separate provider lists. Checkout, Storefront, Cart, Product, and Payment domain models do not need provider-specific branches.
 
 ## Configuration
 Configuration is loaded from server-side environment variables: `PAYMENT_PROVIDER_ID`, `PAYMENT_PROVIDER_ENABLED`, `PAYMENT_PROVIDER_MODE`, `PAYMENT_PROVIDER_PUBLIC_KEY`, `PAYMENT_PROVIDER_SECRET_REFERENCE`, `PAYMENT_PROVIDER_WEBHOOK_SECRET_REFERENCE`, and `PAYMENT_PROVIDER_TIMEOUT_MS`.
