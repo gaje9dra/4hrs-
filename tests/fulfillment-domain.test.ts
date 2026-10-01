@@ -18,8 +18,8 @@ function mockAdapter(): FulfillmentProviderAdapter {
     id: "mock-provider",
     capabilities: { createFulfillment: true, statusLookup: true },
     validateConfiguration() {},
-    async createFulfillment() { throw new Error("external provider must not be invoked in Phase 12.7"); },
-    async retrieveFulfillmentStatus() { throw new Error("external provider must not be invoked in Phase 12.7"); },
+    async createFulfillment(request) { return { providerId: "mock-provider", providerFulfillmentReference: `mock-${request.fulfillmentId}`, status: "SUBMITTED" }; },
+    async retrieveFulfillmentStatus() { throw new Error("external provider must not be invoked by this mock."); },
     normalizeStatus(input) {
       if (input === "PENDING" || input === "SUBMITTED" || input === "FAILED" || input === "COMPLETED") return input;
       throw new Error("unsupported mock status");
@@ -146,7 +146,7 @@ test("unsupported provider configuration fails safely", async () => {
 
 test("provider request contains only fulfillment-required historical snapshot data", async () => {
   const f = await fixture();
-  const request = providerRequest({ ...f.order, payment: f.payment, fulfillment: null });
+  const request = providerRequest({ ...f.order, customer: f.customer, payment: f.payment, fulfillment: null }, f.order.id);
   assert.equal(request.orderReference, f.order.id);
   assert.equal(request.orderNumber, f.order.orderNumber);
   assert.equal(request.items[0].sku, "TEE-M");
@@ -154,6 +154,43 @@ test("provider request contains only fulfillment-required historical snapshot da
   assert.equal("customerId" in request, false);
   assert.equal("paymentId" in request, false);
   assert.equal("amount" in request, false);
+});
+
+
+
+test("provider submission happens outside the database transaction and persists the provider reference", async () => {
+  const f = await fixture();
+  const created = await app().createFulfillment({ orderId: f.order.id, idempotencyKey: `fulfill-${randomUUID()}` });
+  fulfillments.push(created.id);
+  const submitted = await app().submitFulfillment({ fulfillmentId: created.id });
+  assert.equal(submitted.status, "SUBMITTED");
+  assert.equal(submitted.providerFulfillmentReference, `mock-${created.id}`);
+  assert.ok(submitted.submittedAt);
+  assert.ok(submitted.acceptedAt);
+});
+
+test("repeated provider submission does not call the adapter after successful persistence", async () => {
+  const f = await fixture();
+  let calls = 0;
+  const adapter = mockAdapter();
+  const countingAdapter: FulfillmentProviderAdapter = {
+    ...adapter,
+    async createFulfillment(request) {
+      calls += 1;
+      return adapter.createFulfillment(request);
+    },
+  };
+  const service = createFulfillmentApplication({
+    providerResolver: createFulfillmentProviderResolver({
+      registry: createFulfillmentProviderRegistry([countingAdapter]),
+      configuration: { id: countingAdapter.id, enabled: true, mode: "test", secretReference: null, timeoutMs: 10000, capabilities: {} },
+    }),
+  });
+  const created = await service.createFulfillment({ orderId: f.order.id, idempotencyKey: `fulfill-${randomUUID()}` });
+  fulfillments.push(created.id);
+  await service.submitFulfillment({ fulfillmentId: created.id });
+  await service.submitFulfillment({ fulfillmentId: created.id });
+  assert.equal(calls, 1);
 });
 
 test("Fulfillment cannot alter historical Order snapshots", async () => {

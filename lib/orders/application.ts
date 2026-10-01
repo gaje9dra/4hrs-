@@ -260,6 +260,9 @@ export function createOrderApplication(
         const current = await txOrders.getOrderById(input.orderId);
         if (!current) throw new OrderDomainError("ORDER_NOT_FOUND", "Order could not be found.");
         if (!isOrderLifecycleStatus(current.status)) throw new OrderDomainError("ORDER_INVALID_STATE", "Order state is invalid.");
+        if (current.status !== input.expectedStatus) {
+          throw new OrderDomainError("ORDER_CONCURRENCY_CONFLICT", "Order state changed concurrently.");
+        }
         assertOrderTransition(current.status, input.nextStatus);
 
         const currentPayment = await createPaymentRepository(tx).getPaymentById(current.paymentId, current.customerId);
