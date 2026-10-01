@@ -17,17 +17,19 @@ export type PaymentAmount = {
   currency: string;
 };
 
-export type PaymentIntent = {
+export type PaymentDto = {
   id: string;
-  customerId: string;
+  reference: string;
   checkoutReference: string;
-  amount: PaymentAmount;
-  providerId: string;
   status: PaymentStatus;
-  idempotencyKey?: string;
+  amount: PaymentAmount;
+  expiresAt: string | null;
+  nextAction: null;
   createdAt: string;
   updatedAt: string;
 };
+
+export type PaymentIntent = PaymentDto;
 
 export type PaymentAttempt = {
   id: string;
@@ -59,32 +61,36 @@ const transitions: Readonly<Record<PaymentStatus, readonly PaymentStatus[]>> = {
   REFUNDED: [],
 };
 
-export function canTransitionPaymentStatus(
-  from: PaymentStatus,
-  to: PaymentStatus,
-): boolean {
+export function canTransitionPaymentStatus(from: PaymentStatus, to: PaymentStatus): boolean {
   return transitions[from].includes(to);
 }
 
-export function assertPaymentTransition(
-  from: PaymentStatus,
-  to: PaymentStatus,
-): void {
+export function assertPaymentTransition(from: PaymentStatus, to: PaymentStatus): void {
   if (!canTransitionPaymentStatus(from, to)) {
     throw new Error(`Invalid payment transition: ${from} -> ${to}`);
   }
 }
 
 export function isTerminalPaymentStatus(status: PaymentStatus): boolean {
-  return status === "CANCELLED" || status === "EXPIRED" || status === "REFUNDED";
+  return status === "SUCCEEDED" || status === "CANCELLED" || status === "EXPIRED" || status === "REFUNDED";
 }
 
 export function canRetryPayment(status: PaymentStatus): boolean {
   return status === "FAILED";
 }
 
-export function normalizePaymentProviderStatus(
-  status: PaymentStatus,
-): PaymentStatus {
+export function validatePaymentAmount(amount: PaymentAmount): void {
+  if (!/^[0-9]+(?:\\.[0-9]{1,2})?$/.test(amount.value)) {
+    throw new Error("Payment amount is invalid.");
+  }
+  if (Number(amount.value) <= 0) throw new Error("Payment amount must be greater than zero.");
+  if (!/^[A-Z]{3}$/.test(amount.currency)) throw new Error("Payment currency is invalid.");
+}
+
+export function normalizePaymentProviderStatus(status: PaymentStatus): PaymentStatus {
   return status;
+}
+
+export function paymentTransitionTable(): Readonly<Record<PaymentStatus, readonly PaymentStatus[]>> {
+  return transitions;
 }
