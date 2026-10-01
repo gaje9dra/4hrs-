@@ -6,3 +6,4 @@ export * from "@/lib/orders/repository";
 
 export * from "@/lib/orders/contracts";
 export * from "@/lib/orders/dto";
+export * from "@/lib/orders/fulfillment-contract";
