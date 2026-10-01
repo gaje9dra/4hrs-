@@ -32,7 +32,8 @@ function parseExpectedRevision(value: unknown): CheckoutRevision | undefined {
     availability: revision.availability as string,
   };
 }
-\nfunction parseSelectedAddressId(value: unknown): string | null | undefined {
+
+function parseSelectedAddressId(value: unknown): string | null | undefined {
   if (value === undefined) return undefined;
   if (value === null) return null;
   if (typeof value !== "string" ||
