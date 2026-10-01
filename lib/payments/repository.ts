@@ -40,7 +40,7 @@ export type CreatePaymentEventInput = {
   normalizedEventType?: string | null;
   paymentId?: string | null;
   occurredAt?: Date | null;
-  metadata?: Prisma.InputJsonValue | null;
+  metadata?: Prisma.InputJsonValue;
 };
 
 export type CreatePaymentIdempotencyInput = {
