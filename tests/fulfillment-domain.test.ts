@@ -19,7 +19,7 @@ function mockAdapter(): FulfillmentProviderAdapter {
     capabilities: { createFulfillment: true, statusLookup: true },
     validateConfiguration() {},
     async createFulfillment() { return { providerId: "mock-provider", providerFulfillmentReference: "mock-fulfillment-1", status: "SUBMITTED" }; },
-    async retrieveFulfillmentStatus() { throw new Error("external provider must not be invoked in Phase 12.7"); },
+    async retrieveFulfillmentStatus() { throw new Error("external provider must not be invoked by this mock."); },
     normalizeStatus(input) {
       if (input === "PENDING" || input === "SUBMITTED" || input === "FAILED" || input === "COMPLETED") return input;
       throw new Error("unsupported mock status");
