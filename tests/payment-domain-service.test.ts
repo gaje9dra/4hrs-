@@ -39,7 +39,7 @@ function fakeRepository(initial = payment()): PaymentRepository {
   const events = new Map<string, Record<string, unknown>>();
 
   const repository = {
-    withTransaction: async <T>(work: (repository: PaymentRepository) => Promise<T>) => work(repository as PaymentRepository),
+    withTransaction: async <T>(work: (repository: PaymentRepository) => Promise<T>) => work(repository as unknown as PaymentRepository),
     createPayment: async () => current,
     createPaymentWithInitialAttempt: async () => {
       current = payment();
