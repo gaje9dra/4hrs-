@@ -117,7 +117,10 @@ export function createOrderRepository(client?: OrderRepositoryClient): OrderRepo
   const database = clientOrDefault(client);
 
   const repository: OrderRepository = {
-    withTransaction<T>(\n      work: (repository: OrderRepository) => Promise<T>,\n      options?: { maxWait?: number; timeout?: number },\n    ) {
+    withTransaction<T>(
+      work: (repository: OrderRepository) => Promise<T>,
+      options?: { maxWait?: number; timeout?: number },
+    ) {
       if ("$transaction" in database) {
         return database.$transaction(
           async (tx) => work(createOrderRepository(tx)),
