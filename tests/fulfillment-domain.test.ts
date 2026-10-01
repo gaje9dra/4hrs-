@@ -18,7 +18,7 @@ function mockAdapter(): FulfillmentProviderAdapter {
     id: "mock-provider",
     capabilities: { createFulfillment: true, statusLookup: true },
     validateConfiguration() {},
-    async createFulfillment() { return { providerId: "mock-provider", providerFulfillmentReference: "mock-fulfillment-1", status: "SUBMITTED" }; },
+    async createFulfillment(request) { return { providerId: "mock-provider", providerFulfillmentReference: `mock-${request.fulfillmentId}`, status: "SUBMITTED" }; },
     async retrieveFulfillmentStatus() { throw new Error("external provider must not be invoked by this mock."); },
     normalizeStatus(input) {
       if (input === "PENDING" || input === "SUBMITTED" || input === "FAILED" || input === "COMPLETED") return input;
@@ -146,7 +146,7 @@ test("unsupported provider configuration fails safely", async () => {
 
 test("provider request contains only fulfillment-required historical snapshot data", async () => {
   const f = await fixture();
-  const request = providerRequest({ ...f.order, payment: f.payment, fulfillment: null }, f.order.id);
+  const request = providerRequest({ ...f.order, customer: f.customer, payment: f.payment, fulfillment: null }, f.order.id);
   assert.equal(request.orderReference, f.order.id);
   assert.equal(request.orderNumber, f.order.orderNumber);
   assert.equal(request.items[0].sku, "TEE-M");
@@ -164,7 +164,7 @@ test("provider submission happens outside the database transaction and persists 
   fulfillments.push(created.id);
   const submitted = await app().submitFulfillment({ fulfillmentId: created.id });
   assert.equal(submitted.status, "SUBMITTED");
-  assert.equal(submitted.providerFulfillmentReference, "mock-fulfillment-1");
+  assert.equal(submitted.providerFulfillmentReference, `mock-${created.id}`);
   assert.ok(submitted.submittedAt);
   assert.ok(submitted.acceptedAt);
 });
