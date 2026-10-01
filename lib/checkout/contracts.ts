@@ -37,7 +37,11 @@ export type CheckoutDto = {
   totals: CheckoutTotals;
   revision: CheckoutRevision;
   validation: { state: CheckoutValidationState; issues: CheckoutIssue[] };
-  payment: { ready: false; reason: "PAYMENT_NOT_IMPLEMENTED" };
+  payment: {
+    ready: boolean;
+    checkoutReference: string | null;
+    reason: "CHECKOUT_NOT_PAYABLE" | "PAYMENT_READY";
+  };
 };
 
 export type CheckoutRequest = { selectedAddressId?: string | null; expectedRevision?: CheckoutRevision };

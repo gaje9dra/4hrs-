@@ -366,6 +366,8 @@ model Customer {
   sessions        CustomerSession[]
   cart            Cart?
   addresses       CustomerAddress[]
+  payments        Payment[]
+  paymentIdempotencyRecords PaymentIdempotency[]
   @@index([status])
 }
 
@@ -435,4 +437,112 @@ model CartItem {
   @@index([productId])
   @@index([variantId])
   @@index([cartId, productId, variantId])
+}
+
+
+enum PaymentStatus {
+  CREATED
+  REQUIRES_ACTION
+  PROCESSING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+  EXPIRED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+enum PaymentEventProcessingStatus {
+  RECEIVED
+  PROCESSED
+  FAILED
+}
+
+model Payment {
+  id                 String        @id @default(uuid()) @db.Uuid
+  customerId         String        @db.Uuid
+  checkoutReference  String        @db.VarChar(128)
+  internalReference  String        @unique @db.VarChar(64)
+  providerId         String?       @db.VarChar(64)
+  providerReference  String?       @db.VarChar(255)
+  status             PaymentStatus @default(CREATED)
+  amount             Decimal       @db.Decimal(12, 2)
+  currency           String        @db.VarChar(3)
+  completedAt        DateTime?
+  expiresAt          DateTime?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  customer           Customer      @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  attempts           PaymentAttempt[]
+  events             PaymentEvent[]
+  idempotencyRecords PaymentIdempotency[]
+
+  @@unique([customerId, checkoutReference])
+  @@index([customerId, createdAt])
+  @@index([checkoutReference])
+  @@index([providerId, providerReference])
+  @@index([status, createdAt])
+}
+
+model PaymentAttempt {
+  id                    String        @id @default(uuid()) @db.Uuid
+  paymentId             String        @db.Uuid
+  attemptNumber         Int
+  providerId            String?       @db.VarChar(64)
+  providerAttemptReference String?    @db.VarChar(255)
+  status                PaymentStatus @default(CREATED)
+  amount                Decimal       @db.Decimal(12, 2)
+  currency              String        @db.VarChar(3)
+  failureCode           String?       @db.VarChar(100)
+  failureCategory       String?       @db.VarChar(100)
+  metadata              Json?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  payment               Payment       @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+
+  @@unique([paymentId, attemptNumber])
+  @@index([paymentId, createdAt])
+  @@index([providerId, providerAttemptReference])
+  @@index([status, createdAt])
+}
+
+model PaymentEvent {
+  id                    String                     @id @default(uuid()) @db.Uuid
+  providerId            String                     @db.VarChar(64)
+  providerEventId       String                     @db.VarChar(255)
+  eventType             String                     @db.VarChar(120)
+  normalizedEventType   String?                    @db.VarChar(120)
+  paymentId             String?                    @db.Uuid
+  receivedAt             DateTime                   @default(now())
+  occurredAt            DateTime?
+  processedAt           DateTime?
+  processingStatus      PaymentEventProcessingStatus @default(RECEIVED)
+  processingError       String?                    @db.VarChar(500)
+  metadata              Json?
+  payment               Payment?                   @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+
+  @@unique([providerId, providerEventId])
+  @@index([paymentId, receivedAt])
+  @@index([providerId, receivedAt])
+  @@index([processingStatus, receivedAt])
+}
+
+model PaymentIdempotency {
+  id                String   @id @default(uuid()) @db.Uuid
+  customerId        String   @db.Uuid
+  checkoutReference String   @db.VarChar(128)
+  operation         String   @db.VarChar(64)
+  key               String   @db.VarChar(255)
+  requestFingerprint String  @db.VarChar(128)
+  paymentId         String   @db.Uuid
+  response           Json?
+  createdAt         DateTime @default(now())
+  expiresAt         DateTime?
+  customer          Customer @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  payment           Payment  @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+
+  @@unique([customerId, operation, key])
+  @@index([paymentId])
+  @@index([customerId, checkoutReference])
+  @@index([expiresAt])
 }

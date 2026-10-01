@@ -72,7 +72,8 @@ test("valid checkout uses authoritative Cart totals and owned address", async ()
   assert.equal(result.validation.state, "VALID");
   assert.equal(result.totals.total, "998.00");
   assert.equal(result.address?.id, address.id);
-  assert.equal(result.payment.ready, false);
+  assert.equal(result.payment.ready, true);
+  assert.match(result.payment.checkoutReference ?? "", /^[0-9a-f]{64}$/);
 });
 
 test("missing Cart is a structured validation error", async () => {
