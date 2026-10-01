@@ -163,6 +163,8 @@ No test requires a real Qikink credential.
 
 ## CI
 
+The Phase 12.8 branch is validated through the repository GitHub Actions CI workflow before readiness is declared.
+
 Normal CI remains independent of Qikink credentials. `FULFILLMENT_PROVIDER_ENABLED` defaults to false, while the adapter contract can be fully tested with mocked HTTP responses.
 
 Live Qikink submission requires the operator to set `QIKINK_AUTH_TOKEN` and explicitly enable the provider in the deployment environment.
