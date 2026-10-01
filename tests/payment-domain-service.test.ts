@@ -109,7 +109,7 @@ const checkout: ValidatedCheckoutPaymentContext = {
 
 test("creates a Payment only from an authoritative Checkout context", async () => {
   const app = createPaymentApplication({ repository: fakeRepository() });
-  const result = await app.createPaymentFromCheckout({ checkout, idempotencyKey: "idem-key-123456" });
+  const result = await app.createPaymentFromCheckout({ checkout, idempotencyKey: "idem-key-1234567890" });
   assert.equal(result.amount.value, "998.00");
   assert.equal(result.amount.currency, "INR");
   assert.equal(result.status, "CREATED");
@@ -119,19 +119,19 @@ test("creates a Payment only from an authoritative Checkout context", async () =
 test("same idempotency key replays the existing Payment", async () => {
   const repository = fakeRepository();
   const app = createPaymentApplication({ repository });
-  const first = await app.createPaymentFromCheckout({ checkout, idempotencyKey: "idem-key-123456" });
-  const second = await app.createPaymentFromCheckout({ checkout, idempotencyKey: "idem-key-123456" });
+  const first = await app.createPaymentFromCheckout({ checkout, idempotencyKey: "idem-key-1234567890" });
+  const second = await app.createPaymentFromCheckout({ checkout, idempotencyKey: "idem-key-1234567890" });
   assert.equal(second.id, first.id);
 });
 
 test("idempotency conflict is deterministic", async () => {
   const repository = fakeRepository();
   const app = createPaymentApplication({ repository });
-  await app.createPaymentFromCheckout({ checkout, idempotencyKey: "idem-key-123456" });
+  await app.createPaymentFromCheckout({ checkout, idempotencyKey: "idem-key-1234567890" });
   await assert.rejects(
     () => app.createPaymentFromCheckout({
       checkout: { ...checkout, amount: { value: "999.00", currency: "INR" } },
-      idempotencyKey: "idem-key-123456",
+      idempotencyKey: "idem-key-1234567890",
     }),
     (error: unknown) => error instanceof PaymentError && error.code === "IDEMPOTENCY_CONFLICT",
   );
