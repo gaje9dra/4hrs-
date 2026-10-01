@@ -57,6 +57,11 @@ function fakeRepository(initial = payment()): PaymentRepository {
       current = payment({ ...current, status: next, updatedAt: new Date() });
       return current;
     },
+    updatePaymentProviderReferences: async (_paymentId: string, _attemptId: string, providerId: string, providerReference: string | null, providerAttemptReference: string | null) => {
+      current = payment({ ...current, providerId, providerReference });
+      attempts[attempts.length - 1] = { ...attempts[attempts.length - 1], providerId, providerAttemptReference };
+      return { payment: current, attempt: attempts[attempts.length - 1] };
+    },
     createPaymentAttempt: async (input: Record<string, unknown>) => {
       const record = { ...attempts[0], ...input, id: `attempt-${attempts.length + 1}` };
       attempts.push(record as typeof attempts[number]);
