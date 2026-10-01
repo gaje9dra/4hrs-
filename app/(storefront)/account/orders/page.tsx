@@ -4,7 +4,6 @@ import { Container } from "@/components/layout/container";
 import { OrderList } from "@/components/storefront/order-list";
 import { OrderPagination } from "@/components/storefront/order-pagination";
 import { createOrderApplication } from "@/lib/orders/application";
-import { OrderDomainError } from "@/lib/orders/errors";
 import { requireCurrentCustomer } from "@/lib/auth/context";
 
 export const dynamic = "force-dynamic";
