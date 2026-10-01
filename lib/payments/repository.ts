@@ -30,7 +30,7 @@ export type CreatePaymentAttemptInput = {
   status?: PaymentStatus;
   failureCode?: string | null;
   failureCategory?: string | null;
-  metadata?: Prisma.InputJsonValue | null;
+  metadata?: Prisma.InputJsonValue;
 };
 
 export type CreatePaymentEventInput = {
@@ -50,7 +50,7 @@ export type CreatePaymentIdempotencyInput = {
   key: string;
   requestFingerprint: string;
   paymentId: string;
-  response?: Prisma.InputJsonValue | null;
+  response?: Prisma.InputJsonValue;
   expiresAt?: Date | null;
 };
 
@@ -134,7 +134,10 @@ export function createPaymentRepository(client?: PaymentRepositoryClient): Payme
   const database = clientOrDefault(client);
 
   return {
-    withTransaction<T>(work, options) {
+    withTransaction<T>(
+      work: (repository: PaymentRepository) => Promise<T>,
+      options?: PaymentRepositoryTransactionOptions,
+    ) {
       if ("$transaction" in database) {
         return database.$transaction(
           async (tx) => work(createPaymentRepository(tx)),
@@ -170,17 +173,27 @@ export function createPaymentRepository(client?: PaymentRepositoryClient): Payme
     },
 
     async createPaymentWithInitialAttempt(paymentInput, attemptInput) {
-      return database.$transaction(async (tx) => {
-        const repository = createPaymentRepository(tx);
-        const payment = await repository.createPayment(paymentInput);
-        const attempt = await repository.createPaymentAttempt({
-          ...attemptInput,
-          paymentId: payment.id,
-        });
-        return { payment, attempt };
-      }, {
-        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      if ("$transaction" in database) {
+        return database.$transaction(
+          async (tx: Prisma.TransactionClient) => {
+            const repository = createPaymentRepository(tx);
+            const payment = await repository.createPayment(paymentInput);
+            const attempt = await repository.createPaymentAttempt({
+              ...attemptInput,
+              paymentId: payment.id,
+            });
+            return { payment, attempt };
+          },
+          { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+        );
+      }
+
+      const payment = await createPaymentRepository(database).createPayment(paymentInput);
+      const attempt = await createPaymentRepository(database).createPaymentAttempt({
+        ...attemptInput,
+        paymentId: payment.id,
       });
+      return { payment, attempt };
     },
 
     getPaymentById(paymentId, customerId) {
@@ -280,7 +293,7 @@ export function createPaymentRepository(client?: PaymentRepositoryClient): Payme
             ...(input.normalizedEventType !== undefined
               ? { normalizedEventType: input.normalizedEventType }
               : {}),
-            ...(input.paymentId !== undefined ? { paymentId: input.paymentId } : {}),
+            ...(input.paymentId ? { paymentId: input.paymentId } : {}),
             ...(input.occurredAt !== undefined ? { occurredAt: input.occurredAt } : {}),
             ...(input.metadata !== undefined ? { metadata: input.metadata } : {}),
           },
