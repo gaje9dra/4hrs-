@@ -1,3 +1,5 @@
+export type PublicOrderStatus = "PENDING" | "CONFIRMED";
+
 export type PublicOrderItemDto = {
   productId: string | null;
   variantId: string | null;
@@ -26,7 +28,7 @@ export type PublicOrderAddressDto = {
 export type PublicOrderDto = {
   id: string;
   orderNumber: string;
-  status: "PENDING" | "CONFIRMED";
+  status: PublicOrderStatus;
   createdAt: string;
   currency: string;
   subtotal: string;

@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import type { OrderWithRelations } from "@/lib/orders/repository";
 import type { PublicOrderDto, PublicOrderListDto } from "@/lib/orders/contracts";
+import { customerStatusForOrder } from "@/lib/orders/domain";
 
 function selectedOptions(value: Prisma.JsonValue | null): Record<string, string> | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
@@ -15,7 +16,7 @@ export function toPublicOrderDto(order: OrderWithRelations): PublicOrderDto {
   return {
     id: order.id,
     orderNumber: order.orderNumber,
-    status: order.status,
+    status: customerStatusForOrder(order.status),
     createdAt: order.createdAt.toISOString(),
     currency: order.currency,
     subtotal: order.subtotal.toFixed(2),
