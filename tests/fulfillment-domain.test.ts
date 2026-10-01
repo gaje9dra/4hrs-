@@ -192,7 +192,8 @@ test("repeated provider submission does not call the adapter after successful pe
   await service.submitFulfillment({ fulfillmentId: created.id });
   assert.equal(calls, 1);
 });
-\ntest("Fulfillment cannot alter historical Order snapshots", async () => {
+
+test("Fulfillment cannot alter historical Order snapshots", async () => {
   const f = await fixture();
   const before = await db.order.findUniqueOrThrow({ where: { id: f.order.id }, include: { items: true, shippingAddress: true } });
   const created = await app().createFulfillment({ orderId: f.order.id, idempotencyKey: `fulfill-${randomUUID()}` });
