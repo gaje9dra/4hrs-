@@ -10,8 +10,9 @@ const ACTIONS=new Set(["review_cancellation","review_return","fulfillment_retry"
 
 function text(value:unknown,max=255){return typeof value==="string"&&value.trim().length>0&&value.length<=max?value.trim():undefined;}
 function actionBody(body:Record<string,unknown>):AdminOrderAction{
-  const action=text(body.action,64);
-  if(!action || !ACTIONS.has(action)) throw new Error("INVALID_ACTION");
+  const actionValue=text(body.action,64);
+  if(!actionValue || !ACTIONS.has(actionValue)) throw new Error("INVALID_ACTION");
+  const action=actionValue as AdminOrderAction["action"];
   const reason=text(body.reason,1000);
   if(action==="review_cancellation"){
     const reference=text(body.cancellationReference,64);
