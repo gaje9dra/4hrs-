@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { Prisma, type PaymentStatus as PrismaPaymentStatus } from "@prisma/client";
+import { Prisma, type PaymentStatus as PrismaPaymentStatus, type PaymentRefundReason, PaymentRefundStatus } from "@prisma/client";
 import {
   assertPaymentTransition,
   canRetryPayment,
@@ -314,13 +314,13 @@ export function createPaymentApplication(
       if (current.status !== "SUCCEEDED" && current.status !== "PARTIALLY_REFUNDED") throw new PaymentError("INVALID_STATE_TRANSITION", "Payment is not eligible for refund.");
       const reservedNow = current.refunds.reduce((sum, item) => item.status === "SUCCEEDED" || item.status === "PENDING" || item.status === "AMBIGUOUS" ? sum.plus(item.amount) : sum, new Prisma.Decimal(0));
       if (amount.gt(current.amount.minus(reservedNow))) throw new PaymentError("INVALID_AMOUNT", "Refund amount exceeds the remaining refundable balance.");
-      const created = await tx.createPaymentRefund({ paymentId: current.id, idempotencyKey: input.idempotencyKey, amount, currency: current.currency, reason, note: input.note ?? null });
+      const created = await tx.createPaymentRefund({ paymentId: current.id, idempotencyKey: input.idempotencyKey, amount, currency: current.currency, reason: reason as PaymentRefundReason, note: input.note ?? null });
       await tx.createPaymentIdempotency({ customerId: current.customerId, checkoutReference: current.checkoutReference, operation: "admin-refund", key: input.idempotencyKey, requestFingerprint: fingerprintValue, paymentId: current.id, response: { refundId: created.id } });
       return created;
     });
 
     if (!payment.providerId || !payment.providerReference) {
-      refund = await repository.updatePaymentRefund({ id: refund.id, status: "FAILED", failureCode: "PROVIDER_REFERENCE_MISSING" });
+      refund = await repository.updatePaymentRefund({ id: refund.id, status: PaymentRefundStatus.FAILED, failureCode: "PROVIDER_REFERENCE_MISSING" });
       throw new PaymentError("PROVIDER_UNAVAILABLE", "Payment provider reference is unavailable; no refund was executed.");
     }
     const adapter = createPaymentProviderResolver({ registry: getPaymentProviderRegistry() }).resolve({ customerId: payment.customerId, checkoutReference: payment.checkoutReference, currency: payment.currency, providerId: payment.providerId });
@@ -335,13 +335,13 @@ export function createPaymentApplication(
       if (result.status !== "REFUNDED" && result.status !== "PARTIALLY_REFUNDED") throw new PaymentError("INVALID_STATE_TRANSITION", "Provider did not confirm a valid refund state.");
       providerConfirmed = true;
       refund = await repository.withTransaction(async (tx) => {
-        const updatedRefund = await tx.updatePaymentRefund({ id: refund.id, status: "SUCCEEDED", providerId: result.providerId, providerReference: result.providerPaymentReference, completedAt: new Date() });
+        const updatedRefund = await tx.updatePaymentRefund({ id: refund.id, status: PaymentRefundStatus.SUCCEEDED, providerId: result.providerId, providerReference: result.providerPaymentReference, completedAt: new Date() });
         if (result.status !== payment.status) await tx.updatePaymentStatus(payment.id, asPrismaStatus(payment.status), asPrismaStatus(result.status));
         return updatedRefund;
       });
     } catch (error) {
       if (providerConfirmed) {
-        refund = await repository.updatePaymentRefund({ id: refund.id, status: "AMBIGUOUS", failureCode: "LOCAL_FINALIZATION_FAILED" });
+        refund = await repository.updatePaymentRefund({ id: refund.id, status: PaymentRefundStatus.AMBIGUOUS, failureCode: "LOCAL_FINALIZATION_FAILED" });
         throw new PaymentError("PAYMENT_INTERNAL_ERROR", "The provider accepted the refund but local state could not be finalized; reconcile the payment before retrying.", { cause: error });
       }
       if (error instanceof PaymentError) {
