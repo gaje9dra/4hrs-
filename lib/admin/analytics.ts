@@ -136,7 +136,7 @@ export function calculateRate(numerator: number, denominator: number): number | 
   if (denominator === 0) return null;
   return Number(((numerator / denominator) * 100).toFixed(2));
 }
-export function calculateAov(grossSales: Prisma.Decimal.Value, paidOrders: number): string | null {
+export function calculateAov(grossSales: Prisma.Decimal | string | number, paidOrders: number): string | null {
   if (paidOrders === 0) return null;
   return new Prisma.Decimal(grossSales).div(paidOrders).toFixed(2);
 }
