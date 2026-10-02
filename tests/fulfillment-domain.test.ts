@@ -12,6 +12,7 @@ const customers: string[] = [];
 const payments: string[] = [];
 const orders: string[] = [];
 const fulfillments: string[] = [];
+const products: string[] = [];
 
 function mockAdapter(): FulfillmentProviderAdapter {
   return {
@@ -53,6 +54,35 @@ async function fixture(status: "CONFIRMED" | "PENDING" = "CONFIRMED") {
     },
   });
   payments.push(payment.id);
+  const product = await db.product.create({
+    data: {
+      title: "Snapshot Tee",
+      slug: `snapshot-tee-${randomUUID()}`,
+      status: "ACTIVE",
+      price: new Prisma.Decimal("499.00"),
+      currency: "INR",
+    },
+  });
+  products.push(product.id);
+  const variant = await db.productVariant.create({
+    data: {
+      productId: product.id,
+      sku: "TEE-M-" + randomUUID().slice(0, 8),
+      displayName: "Black / M",
+      size: "M",
+      color: "Black",
+      status: "ACTIVE",
+    },
+  });
+  await db.fulfillmentProviderMapping.create({
+    data: {
+      variantId: variant.id,
+      providerId: "mock-provider",
+      providerSku: "MOCK-TEE-M-" + randomUUID().slice(0, 8),
+      providerVariantReference: "mock-variant",
+      active: true,
+    },
+  });
   const order = await db.order.create({
     data: {
       customerId: customer.id,
@@ -63,7 +93,7 @@ async function fixture(status: "CONFIRMED" | "PENDING" = "CONFIRMED") {
       subtotal: new Prisma.Decimal("499.00"),
       total: new Prisma.Decimal("499.00"),
       currency: "INR",
-      items: { create: { productTitleSnapshot: "Snapshot Tee", variantTitleSnapshot: "Black / M", skuSnapshot: "TEE-M", variantId: null, quantity: 2, unitPrice: new Prisma.Decimal("249.50"), lineTotal: new Prisma.Decimal("499.00"), currency: "INR" } },
+      items: { create: { productId: product.id, variantId: variant.id, productTitleSnapshot: "Snapshot Tee", variantTitleSnapshot: "Black / M", skuSnapshot: variant.sku, quantity: 2, unitPrice: new Prisma.Decimal("249.50"), lineTotal: new Prisma.Decimal("499.00"), currency: "INR" } },
       shippingAddress: { create: { recipientName: "Customer", phone: "9999999999", addressLine1: "1 Test Street", city: "Jaipur", stateOrProvince: "Rajasthan", postalCode: "302001", countryCode: "IN" } },
     },
     include: { items: true, shippingAddress: true },
@@ -162,7 +192,11 @@ test("unsupported provider configuration fails safely", async () => {
 
 test("provider request contains only fulfillment-required historical snapshot data", async () => {
   const f = await fixture();
-  const request = providerRequest({ ...f.order, customer: f.customer, payment: f.payment, fulfillment: null }, f.order.id);
+  const orderWithMappings = await db.order.findUniqueOrThrow({
+    where: { id: f.order.id },
+    include: { items: { include: { variant: { include: { providerMappings: true } } } }, shippingAddress: true, payment: true, fulfillment: true, customer: true },
+  });
+  const request = providerRequest(orderWithMappings, f.order.id, "mock-provider");
   assert.equal(request.orderReference, f.order.id);
   assert.equal(request.orderNumber, f.order.orderNumber);
   assert.equal(request.items[0].sku, "TEE-M");
@@ -308,6 +342,7 @@ after(async () => {
   if (orders.length) await db.fulfillment.deleteMany({ where: { orderId: { in: orders } } });
   if (orders.length) await db.order.deleteMany({ where: { id: { in: orders } } });
   if (payments.length) await db.payment.deleteMany({ where: { id: { in: payments } } });
+  if (products.length) await db.product.deleteMany({ where: { id: { in: products } } });
   if (customers.length) await db.customer.deleteMany({ where: { id: { in: customers } } });
   await db.$disconnect();
 });
