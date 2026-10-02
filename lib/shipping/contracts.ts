@@ -92,3 +92,24 @@ export type ShippingProviderSnapshot = Readonly<{
   providerStatus: string | null;
   normalizedStatus: ShipmentStatus;
 }>;
+
+
+export type NormalizedTrackingEvent = Readonly<{
+  providerId: string;
+  providerEventId: string | null;
+  providerStatus: string;
+  normalizedStatus: ShipmentStatus;
+  eventTimestamp: Date;
+  location: string | null;
+  description: string | null;
+}>;
+
+export type ShippingProviderAdapter = Readonly<{
+  id: string;
+  capabilities: ShippingProviderCapabilities;
+  normalizeTrackingEvent(input: unknown): NormalizedTrackingEvent;
+}>;
+
+export type ShippingProviderResolver = Readonly<{
+  resolve(providerId: string): ShippingProviderAdapter | undefined;
+}>;
