@@ -6,6 +6,7 @@ import {
   isTerminalPaymentStatus,
   validatePaymentAmount,
   type PaymentDto,
+  type PaymentAmount,
   type PaymentStatus,
 } from "@/lib/payments/domain";
 import { PaymentError } from "@/lib/payments/errors";
