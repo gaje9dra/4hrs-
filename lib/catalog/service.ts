@@ -496,6 +496,12 @@ export function createCatalogService(
         }
       }
 
+      let expectedUpdatedAt: Date | undefined;
+      if (input.expectedUpdatedAt !== undefined) {
+        expectedUpdatedAt = new Date(input.expectedUpdatedAt);
+        if (Number.isNaN(expectedUpdatedAt.getTime())) throw new CatalogServiceError("INVALID_PRODUCT", "expectedUpdatedAt is invalid.");
+      }
+
       try {
         const updated = await repo.withTransaction(async (tx) => {
           if (merged.status === "ACTIVE") {
@@ -538,17 +544,31 @@ export function createCatalogService(
             if (readiness.length) validationError(readiness, "PRODUCT_NOT_PUBLISHABLE");
           }
 
-          const result = expectedUpdatedAt ? await repo.updateProductIfFresh(input.id, expectedUpdatedAt, {
-            title: merged.title,
-            slug: merged.slug,
-            description: merged.description,
-            shortDescription: merged.shortDescription,
-            price: decimalValue(merged.price)!,
-            compareAtPrice: decimalValue(merged.compareAtPrice) ?? null,
-            currency: merged.currency,
-            seoTitle: merged.seoTitle,
-            seoDescription: merged.seoDescription,
-          }, tx);
+          const result = expectedUpdatedAt
+            ? await repo.updateProductIfFresh(input.id, expectedUpdatedAt, {
+                title: merged.title,
+                slug: merged.slug,
+                description: merged.description,
+                shortDescription: merged.shortDescription,
+                price: decimalValue(merged.price)!,
+                compareAtPrice: decimalValue(merged.compareAtPrice) ?? null,
+                currency: merged.currency,
+                seoTitle: merged.seoTitle,
+                seoDescription: merged.seoDescription,
+              }, tx)
+            : await repo.updateProduct(input.id, {
+                title: merged.title,
+                slug: merged.slug,
+                description: merged.description,
+                shortDescription: merged.shortDescription,
+                price: decimalValue(merged.price)!,
+                compareAtPrice: decimalValue(merged.compareAtPrice) ?? null,
+                currency: merged.currency,
+                seoTitle: merged.seoTitle,
+                seoDescription: merged.seoDescription,
+              }, tx);
+
+          if (!result) throw new CatalogServiceError("CATALOG_CONFLICT", "Product changed concurrently. Refresh before saving again.");
 
           if (input.categoryIds || input.collectionIds || input.tagIds) {
             const beforeRelationships = await repo.getProductDetails(input.id, tx);
@@ -808,7 +828,9 @@ export function createCatalogService(
       requireId(id, "VARIANT_NOT_FOUND", "Variant ID");
       const existing = await repo.getVariantById(id);
       if (!existing) throw new CatalogServiceError("VARIANT_NOT_FOUND", "Variant was not found.");
-      const expectedUpdatedAt = patch.expectedUpdatedAt === undefined ? undefined : new Date(patch.expectedUpdatedAt);\n      if (expectedUpdatedAt && Number.isNaN(expectedUpdatedAt.getTime())) throw new CatalogServiceError("INVALID_VARIANT", "expectedUpdatedAt is invalid.");\n      const merged: VariantInput = {
+      const expectedUpdatedAt = patch.expectedUpdatedAt === undefined ? undefined : new Date(patch.expectedUpdatedAt);
+      if (expectedUpdatedAt && Number.isNaN(expectedUpdatedAt.getTime())) throw new CatalogServiceError("INVALID_VARIANT", "expectedUpdatedAt is invalid.");
+      const merged: VariantInput = {
         productId: existing.productId,
         id: existing.id,
         sku: patch.sku ?? existing.sku,
@@ -856,15 +878,26 @@ export function createCatalogService(
       if (issues.length) validationError(issues, "INVALID_VARIANT");
       try {
         const updated = await repo.withTransaction(async (tx) => {
-          const result = expectedUpdatedAt ? await repo.updateVariantIfFresh(id, expectedUpdatedAt, {
-          sku: merged.sku,
-          displayName: merged.displayName,
-          size: merged.size,
-          color: merged.color,
-          price: decimalValue(merged.price) ?? null,
-          compareAtPrice: decimalValue(merged.compareAtPrice) ?? null,
-          status: merged.status,
-        }, tx);
+          const result = expectedUpdatedAt
+            ? await repo.updateVariantIfFresh(id, expectedUpdatedAt, {
+                sku: merged.sku,
+                displayName: merged.displayName,
+                size: merged.size,
+                color: merged.color,
+                price: decimalValue(merged.price) ?? null,
+                compareAtPrice: decimalValue(merged.compareAtPrice) ?? null,
+                status: merged.status,
+              }, tx)
+            : await repo.updateVariant(id, {
+                sku: merged.sku,
+                displayName: merged.displayName,
+                size: merged.size,
+                color: merged.color,
+                price: decimalValue(merged.price) ?? null,
+                compareAtPrice: decimalValue(merged.compareAtPrice) ?? null,
+                status: merged.status,
+              }, tx);
+          if (!result) throw new CatalogServiceError("CATALOG_CONFLICT", "Variant changed concurrently. Refresh before saving again.");
           await repo.replaceVariantOptionValues(id, optionCheck.optionValueIds, tx);
           await audit({
             entityType: "VARIANT",
