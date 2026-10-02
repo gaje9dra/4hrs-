@@ -324,7 +324,7 @@ export function createPaymentApplication(
       refund = await repository.updatePaymentRefund({ id: refund.id, status: PaymentRefundStatus.FAILED, failureCode: "PROVIDER_REFERENCE_MISSING" });
       throw new PaymentError("PROVIDER_UNAVAILABLE", "Payment provider reference is unavailable; no refund was executed.");
     }
-    const adapter = createPaymentProviderResolver({ registry: getPaymentProviderRegistry() }).resolve({ customerId: payment.customerId, checkoutReference: payment.checkoutReference, currency: payment.currency, providerId: payment.providerId });
+    const adapter = providerResolver.resolve({ customerId: payment.customerId, checkoutReference: payment.checkoutReference, currency: payment.currency, providerId: payment.providerId });
     if (!adapter || !adapter.capabilities.refunds || !adapter.refundPayment) {
       refund = await repository.updatePaymentRefund({ id: refund.id, status: "FAILED", failureCode: "REFUND_UNSUPPORTED" });
       throw new PaymentError("PROVIDER_UNAVAILABLE", "The configured payment provider does not support refunds.");
@@ -366,7 +366,7 @@ export function createPaymentApplication(
     const payment = await repository.getPaymentById(paymentId, customerId);
     if (!payment) throw new PaymentError("PAYMENT_NOT_FOUND", "Payment could not be found.");
     if (!payment.providerId || !payment.providerReference) throw new PaymentError("PROVIDER_UNAVAILABLE", "Payment provider reference is unavailable.");
-    const adapter = createPaymentProviderResolver({ registry: getPaymentProviderRegistry() }).resolve({ customerId, checkoutReference: payment.checkoutReference, currency: payment.currency, providerId: payment.providerId });
+    const adapter = providerResolver.resolve({ customerId, checkoutReference: payment.checkoutReference, currency: payment.currency, providerId: payment.providerId });
     if (!adapter || !adapter.capabilities.statusLookup) throw new PaymentError("PROVIDER_UNAVAILABLE", "The configured payment provider does not support reconciliation.");
     const result = await adapter.retrievePayment({ providerPaymentReference: payment.providerReference, paymentReference: payment.internalReference });
     if (result.providerId !== adapter.id) throw new PaymentError("PROVIDER_CONFIGURATION_ERROR", "Provider response identity is invalid.");
