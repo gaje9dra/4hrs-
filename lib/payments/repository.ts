@@ -155,7 +155,7 @@ export function createPaymentRepository(client?: PaymentRepositoryClient): Payme
       options?: PaymentRepositoryTransactionOptions,
     ) {
       if ("$transaction" in database) {
-        return database.$transaction(
+        return (database as PrismaClient).$transaction(
           async (tx) => work(createPaymentRepository(tx)),
           {
             ...(options?.maxWait !== undefined ? { maxWait: options.maxWait } : {}),
