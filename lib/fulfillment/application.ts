@@ -1,4 +1,4 @@
-import { Prisma, type PrismaClient } from "@prisma/client";
+import { Prisma, type PrismaClient, type FulfillmentOperationType, type FulfillmentOperationStatus } from "@prisma/client";
 import { db } from "@/lib/db/client";
 import { createFulfillmentRepository, type FulfillmentRepository, type FulfillmentWithItems, type FulfillmentOrderSource } from "@/lib/fulfillment/repository";
 import { assertOrderFulfillmentEligibility, assertFulfillmentTransition, mapOrderItemsToFulfillment, type FulfillmentLifecycleStatus } from "@/lib/fulfillment/domain";
@@ -7,6 +7,7 @@ import type { FulfillmentProviderErrorCode, FulfillmentProviderRequest, Fulfillm
 import { createConfiguredFulfillmentProviderRegistry, createFulfillmentProviderResolver } from "@/lib/fulfillment/resolver";
 import { loadFulfillmentProviderConfiguration } from "@/lib/fulfillment/config";
 import { logFulfillmentObservation } from "@/lib/fulfillment/observability";
+import { randomUUID } from "node:crypto";
 
 export type FulfillmentApplicationDependencies = {
   database?: PrismaClient;
@@ -18,8 +19,8 @@ export type CreateFulfillmentInput = { orderId: string; idempotencyKey: string }
 
 export type FulfillmentApplicationService = {
   createFulfillment(input: CreateFulfillmentInput): Promise<FulfillmentWithItems>;
-  submitFulfillment(input: { fulfillmentId: string }): Promise<FulfillmentWithItems>;
-  reconcileFulfillment(input: { fulfillmentId: string }): Promise<FulfillmentWithItems>;
+  submitFulfillment(input: { fulfillmentId: string; idempotencyKey?: string; operation?: "SUBMIT" | "RETRY" }): Promise<FulfillmentWithItems>;
+  reconcileFulfillment(input: { fulfillmentId: string; idempotencyKey?: string }): Promise<FulfillmentWithItems>;
   transitionFulfillment(input: {
     fulfillmentId: string;
     expectedStatus: FulfillmentLifecycleStatus;
@@ -241,7 +242,7 @@ export function createFulfillmentApplication(
     throw new FulfillmentDomainError("FULFILLMENT_CONCURRENCY_CONFLICT", "Fulfillment creation conflicted with a concurrent operation.");
   }
 
-  async function submitFulfillment(input: { fulfillmentId: string }): Promise<FulfillmentWithItems> {
+  async function submitFulfillmentUnsafe(input: { fulfillmentId: string }): Promise<FulfillmentWithItems> {
     const existing = await repository.getById(input.fulfillmentId);
     if (!existing) throw new FulfillmentDomainError("FULFILLMENT_INVALID_STATE", "Fulfillment could not be found.");
     if (existing.status === "SUBMITTED" || existing.status === "COMPLETED") return existing;
@@ -409,7 +410,7 @@ export function createFulfillmentApplication(
     }
   }
 
-  async function reconcileFulfillment(input: { fulfillmentId: string }): Promise<FulfillmentWithItems> {
+  async function reconcileFulfillmentUnsafe(input: { fulfillmentId: string }): Promise<FulfillmentWithItems> {
     const existing = await repository.getById(input.fulfillmentId);
     if (!existing) throw new FulfillmentDomainError("FULFILLMENT_INVALID_STATE", "Fulfillment could not be found.");
 
@@ -525,6 +526,75 @@ export function createFulfillmentApplication(
         { cause: error },
       );
     }
+  }
+
+  async function executeIdempotentOperation(
+    fulfillmentId: string,
+    operation: FulfillmentOperationType,
+    idempotencyKey: string,
+    work: () => Promise<FulfillmentWithItems>,
+  ): Promise<FulfillmentWithItems> {
+    validateIdempotencyKey(idempotencyKey);
+    const existing = await repository.getOperationIdempotency(idempotencyKey);
+    if (existing) {
+      if (existing.fulfillmentId !== fulfillmentId || existing.operation !== operation) {
+        throw new FulfillmentDomainError("FULFILLMENT_IDEMPOTENCY_CONFLICT", "The idempotency key is already bound to another Fulfillment operation.");
+      }
+      if (existing.status === "SUCCEEDED" || existing.status === "FAILED") {
+        const current = await repository.getById(fulfillmentId);
+        if (!current) throw new FulfillmentDomainError("FULFILLMENT_INVALID_STATE", "Fulfillment could not be found.");
+        return current;
+      }
+      throw new FulfillmentDomainError(
+        existing.status === "AMBIGUOUS" ? "FULFILLMENT_PROVIDER_RECONCILIATION_REQUIRED" : "FULFILLMENT_IDEMPOTENCY_CONFLICT",
+        existing.status === "AMBIGUOUS"
+          ? "The previous provider operation has an ambiguous outcome and must be reconciled."
+          : "The same idempotency key is already being processed.",
+      );
+    }
+
+    let operationRecord: { id: string; fulfillmentId: string; operation: FulfillmentOperationType; status: FulfillmentOperationStatus };
+    try {
+      operationRecord = await repository.createOperationIdempotency({ fulfillmentId, operation, idempotencyKey });
+    } catch (error) {
+      if (isUniqueConflict(error)) {
+        const raced = await repository.getOperationIdempotency(idempotencyKey);
+        if (raced) {
+          if (raced.fulfillmentId !== fulfillmentId || raced.operation !== operation) {
+            throw new FulfillmentDomainError("FULFILLMENT_IDEMPOTENCY_CONFLICT", "The idempotency key is already bound to another Fulfillment operation.");
+          }
+          if (raced.status === "SUCCEEDED" || raced.status === "FAILED") {
+            const current = await repository.getById(fulfillmentId);
+            if (!current) throw new FulfillmentDomainError("FULFILLMENT_INVALID_STATE", "Fulfillment could not be found.");
+            return current;
+          }
+        }
+      }
+      throw error;
+    }
+
+    try {
+      const result = await work();
+      await repository.updateOperationIdempotency({ id: operationRecord.id, status: "SUCCEEDED" });
+      return result;
+    } catch (error) {
+      const status: FulfillmentOperationStatus =
+        error instanceof FulfillmentDomainError && (
+          error.code === "FULFILLMENT_PROVIDER_RECONCILIATION_REQUIRED"
+          || error.code === "FULFILLMENT_PROVIDER_SUBMISSION_FAILED" && error.message.toLowerCase().includes("ambiguous")
+        ) ? "AMBIGUOUS" : "FAILED";
+      try { await repository.updateOperationIdempotency({ id: operationRecord.id, status }); } catch { /* preserve original operational failure */ }
+      throw error;
+    }
+  }
+
+  async function submitFulfillment(input: { fulfillmentId: string; idempotencyKey: string; operation?: "SUBMIT" | "RETRY" }): Promise<FulfillmentWithItems> {
+    const operation = input.operation ?? "SUBMIT";
+    return executeIdempotentOperation(input.fulfillmentId, operation, input.idempotencyKey ?? `legacy-${operation.toLowerCase()}-${input.fulfillmentId}-${randomUUID()}`, () => submitFulfillmentUnsafe({ fulfillmentId: input.fulfillmentId }));
+  }
+
+  async function reconcileFulfillment(input: { fulfillmentId: string; idempotencyKey: string }): Promise<FulfillmentWithItems> {
+    return executeIdempotentOperation(input.fulfillmentId, "RECONCILE", input.idempotencyKey ?? `legacy-reconcile-${input.fulfillmentId}-${randomUUID()}`, () => reconcileFulfillmentUnsafe({ fulfillmentId: input.fulfillmentId }));
   }
 
   async function transitionFulfillment(input: {

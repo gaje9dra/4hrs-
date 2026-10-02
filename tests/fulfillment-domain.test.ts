@@ -243,6 +243,29 @@ test("repeated provider submission does not call the adapter after successful pe
   assert.equal(calls, 1);
 });
 
+test("same provider operation idempotency key does not execute a second provider call", async () => {
+  const f = await fixture();
+  let calls = 0;
+  const adapter = mockAdapter();
+  const countingAdapter: FulfillmentProviderAdapter = {
+    ...adapter,
+    async createFulfillment(request) { calls += 1; return adapter.createFulfillment(request); },
+  };
+  const service = createFulfillmentApplication({
+    providerResolver: createFulfillmentProviderResolver({
+      registry: createFulfillmentProviderRegistry([countingAdapter]),
+      configuration: { id: countingAdapter.id, enabled: true, mode: "test", secretReference: null, timeoutMs: 10000, capabilities: {} },
+    }),
+  });
+  const created = await service.createFulfillment({ orderId: f.order.id, idempotencyKey: `fulfill-${randomUUID()}` });
+  fulfillments.push(created.id);
+  const key = `submit-${randomUUID()}`;
+  await service.submitFulfillment({ fulfillmentId: created.id, idempotencyKey: key });
+  await service.submitFulfillment({ fulfillmentId: created.id, idempotencyKey: key });
+  assert.equal(calls, 1);
+  assert.equal(await db.fulfillmentOperationIdempotency.count({ where: { fulfillmentId: created.id, idempotencyKey: key, status: "SUCCEEDED" } }), 1);
+});
+
 test("provider retries are bounded and non-retryable failures cannot loop", async () => {
   const f = await fixture();
   let calls = 0;
