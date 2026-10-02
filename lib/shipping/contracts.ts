@@ -61,11 +61,6 @@ export type ShippingProviderCapabilities = Readonly<{
   webhooks: boolean;
 }>;
 
-export type ShippingProviderAdapter = Readonly<{
-  id: string;
-  capabilities: ShippingProviderCapabilities;
-}>;
-
 export type ShipmentCreationContext = Readonly<{
   orderId: string;
   fulfillmentId: string;
