@@ -1,0 +1,3 @@
+import type { CaseCategory,CasePriority,CaseResolutionType,CaseStatus } from "@/lib/cases/domain";
+export type CustomerCaseDto={caseReference:string;category:CaseCategory;status:CaseStatus;statusLabel:string;title:string;description:string|null;orderReference:string|null;shipmentReference:string|null;returnReference:string|null;createdAt:string;updatedAt:string;resolvedAt:string|null;closedAt:string|null;};
+export type InternalCaseDto=CustomerCaseDto&{priority:CasePriority;source:string;sourceReference:string|null;assignedOperatorId:string|null;resolutionType:CaseResolutionType|null;resolutionSummary:string|null;correlationId:string|null;version:number;notes:readonly {id:string;body:string;authorId:string;createdAt:string}[];};
