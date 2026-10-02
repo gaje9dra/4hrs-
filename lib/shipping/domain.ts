@@ -53,10 +53,9 @@ export function shouldApplyTrackingEvent(
   if (currentStatus === eventStatus) return "HISTORY_ONLY";
   if (isShipmentTerminal(currentStatus)) return "HISTORY_ONLY";
   if (latestEventTimestamp && eventTimestamp.getTime() < latestEventTimestamp.getTime()) {
-    return ORDER[eventStatus] > ORDER[currentStatus] ? "HISTORY_ONLY" : "HISTORY_ONLY";
+    return "HISTORY_ONLY";
   }
   if (canTransitionShipmentStatus(currentStatus, eventStatus)) return "APPLY";
-  if (ORDER[eventStatus] > ORDER[currentStatus]) return "APPLY";
   return "HISTORY_ONLY";
 }
 
@@ -71,7 +70,7 @@ export function assertTrackingEventTransition(
     );
   }
   if (currentStatus === nextStatus) return;
-  if (!canTransitionShipmentStatus(currentStatus, nextStatus) && ORDER[nextStatus] <= ORDER[currentStatus]) {
+  if (!canTransitionShipmentStatus(currentStatus, nextStatus)) {
     throw new ShippingDomainError(
       "INVALID_SHIPMENT_TRANSITION",
       `Tracking event cannot transition Shipment from ${currentStatus} to ${nextStatus}.`,
