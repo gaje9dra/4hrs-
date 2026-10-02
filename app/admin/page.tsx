@@ -20,16 +20,18 @@ export default function AdminCatalogPage() {
   const [sku, setSku] = useState("");
   const [qikinkSku, setQikinkSku] = useState("");
 
-  async function load() {
-    try {
-      const data = await api("/api/admin/catalog?status=DRAFT");
-      setProducts(data.items ?? []);
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Unable to load catalog.");
-    }
+  async function loadProducts(): Promise<Product[]> {
+    const data = await api("/api/admin/catalog?status=DRAFT");
+    return data.items ?? [];
   }
 
-  useEffect(() => { void load(); }, []);
+  useEffect(() => {
+    let cancelled = false;
+    void loadProducts()
+      .then((items) => { if (!cancelled) setProducts(items); })
+      .catch((error) => { if (!cancelled) setMessage(error instanceof Error ? error.message : "Unable to load catalog."); });
+    return () => { cancelled = true; };
+  }, []);
 
   async function createProduct(event: FormEvent) {
     event.preventDefault();
@@ -65,7 +67,7 @@ export default function AdminCatalogPage() {
       });
       setTitle(""); setSlug(""); setPrice(""); setSku("");
       setMessage("Product and variant created. Add the Qikink mapping before publishing.");
-      await load();
+      setProducts(await loadProducts());
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Unable to create product.");
     }
@@ -88,7 +90,7 @@ export default function AdminCatalogPage() {
     try {
       await api("/api/admin/catalog/publish", { method: "POST", body: JSON.stringify({ productId, action: "publish" }) });
       setMessage("Product published.");
-      await load();
+      setProducts(await loadProducts());
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Unable to publish product.");
     }
