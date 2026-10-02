@@ -233,7 +233,7 @@ export async function getAdminAnalytics(query: AnalyticsQuery, options: {
 
   const casesPromise = db.$queryRaw<CaseRow[]>(Prisma.sql`
     SELECT
-      COUNT(*) FILTER (WHERE "status" IN ('OPEN','IN_PROGRESS','WAITING_FOR_CUSTOMER','WAITING_FOR_INTERNAL'))::bigint AS "openCases",
+      COUNT(*) FILTER (WHERE "status" IN ('OPEN','IN_PROGRESS','WAITING'))::bigint AS "openCases",
       COUNT(*)::bigint AS "newCases",
       COUNT(*) FILTER (WHERE "status" IN ('RESOLVED','CLOSED'))::bigint AS "resolvedCases"
     FROM "Case"
@@ -286,22 +286,16 @@ export async function getAdminAnalytics(query: AnalyticsQuery, options: {
     range: { ...query, endExclusive: addDays(query.to, 1) },
     freshness: { generatedAt: new Date().toISOString(), model: "live-canonical-aggregation", cacheTtlSeconds: 0 },
     currency: "INR",
-    sales: {
-      orderCount: int(summary?.orderCount ?? 0),
-      paidOrderCount: paidOrders,
-      grossSales: money(summary?.grossSales),
-      refundAmount: money(summary?.refundAmount),
-      netSales: money(summary?.netSales),
-      averageOrderValue: paidOrders === 0 ? "0.00" : new Prisma.Decimal(summary?.grossSales ?? 0).div(paidOrders).toFixed(2),
-    },
-    payments: {
-      successfulPayments: int(payment?.successfulPayments ?? 0),
-      failedPayments: int(payment?.failedPayments ?? 0),
-      pendingPayments: int(payment?.pendingPayments ?? 0),
+    sales: options.financial ? {
+      orderCount: int(summary?.orderCount ?? 0), paidOrderCount: paidOrders,
+      grossSales: money(summary?.grossSales), refundAmount: money(summary?.refundAmount),
+      netSales: money(summary?.netSales), averageOrderValue: paidOrders === 0 ? "0.00" : new Prisma.Decimal(summary?.grossSales ?? 0).div(paidOrders).toFixed(2),
+    } : { orderCount: int(summary?.orderCount ?? 0), paidOrderCount: null, grossSales: null, refundAmount: null, netSales: null, averageOrderValue: null },
+    payments: options.financial ? {
+      successfulPayments: int(payment?.successfulPayments ?? 0), failedPayments: int(payment?.failedPayments ?? 0), pendingPayments: int(payment?.pendingPayments ?? 0),
       paymentSuccessRate: attemptDenominator === 0 ? null : Number(((successfulAttempts / attemptDenominator) * 100).toFixed(2)),
-      refundCount: options.financial ? await countSuccessfulRefunds(query) : null,
-      refundAmount: options.financial ? money(summary?.refundAmount) : null,
-    },
+      refundCount: await countSuccessfulRefunds(query), refundAmount: money(summary?.refundAmount),
+    } : null,
     fulfillment: {
       attempts: int(fulfillment?.attempts ?? 0),
       success: int(fulfillment?.success ?? 0),
@@ -341,9 +335,9 @@ export async function getAdminAnalytics(query: AnalyticsQuery, options: {
       bucket: row.bucket,
       orderCount: int(row.orderCount),
       paidOrderCount: int(row.paidOrderCount),
-      grossSales: money(row.grossSales),
-      refundAmount: money(row.refundAmount),
-      netSales: money(row.netSales),
+      grossSales: options.financial ? money(row.grossSales) : null,
+      refundAmount: options.financial ? money(row.refundAmount) : null,
+      netSales: options.financial ? money(row.netSales) : null,
     })),
   };
 }
