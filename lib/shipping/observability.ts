@@ -16,6 +16,8 @@ export type ShippingObservation = Readonly<{
   to?: string;
   errorCode?: ShippingErrorCode;
   durationMs?: number;
+  correlationId?: string;
+  retryClassification?: string;
 }>;
 
 export function logShippingObservation(observation: ShippingObservation): void {
@@ -32,6 +34,8 @@ export function logShippingObservation(observation: ShippingObservation): void {
     to: observation.to,
     errorCode: observation.errorCode,
     durationMs: observation.durationMs === undefined ? undefined : Math.round(observation.durationMs),
+    correlationId: observation.correlationId,
+    retryClassification: observation.retryClassification,
   };
   if (observation.result === "success" || observation.result === "duplicate" || observation.result === "history-only") {
     console.info("[shipping]", payload);

@@ -661,11 +661,15 @@ model Shipment {
   status                     ShipmentStatus @default(CREATED)
   shippedAt                  DateTime?
   deliveredAt               DateTime?
+  reconciliationRequired    Boolean        @default(false)
+  reconciliationReason      String?        @db.VarChar(500)
+  reconciliationRequestedAt DateTime?
   createdAt                 DateTime       @default(now())
   updatedAt                 DateTime       @updatedAt
   fulfillment                Fulfillment    @relation(fields: [fulfillmentId], references: [id], onDelete: Restrict)
   order                      Order          @relation(fields: [orderId], references: [id], onDelete: Restrict)
   trackingEvents             TrackingEvent[]
+  recoveryActions            ShipmentRecoveryAction[]
 
   @@index([fulfillmentId, createdAt])
   @@index([orderId, createdAt])
@@ -673,6 +677,19 @@ model Shipment {
   @@index([providerId, providerReference])
   @@index([trackingNumber])
   @@index([status, updatedAt])
+  @@index([reconciliationRequired, updatedAt])
+}
+
+model ShipmentRecoveryAction {
+  id             String   @id @default(uuid()) @db.Uuid
+  shipmentId     String   @db.Uuid
+  operatorId     String   @db.VarChar(128)
+  reason         String   @db.VarChar(500)
+  idempotencyKey String   @unique @db.VarChar(128)
+  createdAt      DateTime @default(now())
+  shipment       Shipment @relation(fields: [shipmentId], references: [id], onDelete: Restrict)
+
+  @@index([shipmentId, createdAt])
 }
 
 model TrackingEvent {

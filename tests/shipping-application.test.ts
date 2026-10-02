@@ -11,6 +11,7 @@ const paymentIds: string[] = [];
 const orderIds: string[] = [];
 const fulfillmentIds: string[] = [];
 const shipmentIds: string[] = [];
+const recoveryActionIds: string[] = [];
 
 async function fixture(status: "SUBMITTED" | "PENDING" = "SUBMITTED", providerReference = `QIK-${randomUUID()}`) {
   const customer = await db.customer.create({
@@ -240,6 +241,56 @@ test("Customer ownership prevents IDOR", async () => {
   );
 });
 
+test("Operational reconciliation recovery requires authorization and is idempotent", async () => {
+  const { order, fulfillment } = await fixture("SUBMITTED");
+  const denied = createShippingApplication({
+    authorizeOperationalRecovery: async () => false,
+  });
+  const shipment = await denied.createShipmentFromFulfillment({
+    orderId: order.id,
+    fulfillmentId: fulfillment.id,
+  });
+  assert.ok(shipment);
+  if (!shipment) return;
+  shipmentIds.push(shipment.id);
+
+  await assert.rejects(
+    () => denied.requestShipmentReconciliation({
+      shipmentId: shipment.id,
+      operatorId: "ops-denied",
+      reason: "Ambiguous external response",
+      idempotencyKey: "recovery-denied-key",
+    }),
+    (error: unknown) => error instanceof ShippingDomainError && error.code === "UNAUTHORIZED_SHIPMENT_ACCESS",
+  );
+
+  const app = createShippingApplication({
+    authorizeOperationalRecovery: async ({ operatorId }) => operatorId === "ops-1",
+  });
+  const key = "recovery-approved-key";
+  const first = await app.requestShipmentReconciliation({
+    shipmentId: shipment.id,
+    operatorId: "ops-1",
+    reason: "Provider response timed out after transmission",
+    idempotencyKey: key,
+  });
+  assert.equal(first?.reconciliationRequired, true);
+  assert.equal(first?.reconciliationReason, "Provider response timed out after transmission");
+
+  const action = await db.shipmentRecoveryAction.findUnique({ where: { idempotencyKey: key } });
+  assert.ok(action);
+  if (action) recoveryActionIds.push(action.id);
+
+  const repeated = await app.requestShipmentReconciliation({
+    shipmentId: shipment.id,
+    operatorId: "ops-1",
+    reason: "Different reason must not create a second action",
+    idempotencyKey: key,
+  });
+  assert.equal(repeated?.id, shipment.id);
+  assert.equal(await db.shipmentRecoveryAction.count({ where: { idempotencyKey: key } }), 1);
+});
+
 test("Qikink reconciliation is bounded by verified capabilities", async () => {
   const { order, fulfillment } = await fixture("SUBMITTED");
   const app = createShippingApplication();
@@ -256,7 +307,7 @@ test("Qikink reconciliation is bounded by verified capabilities", async () => {
 });
 
 after(async () => {
-  if (shipmentIds.length) await db.trackingEvent.deleteMany({ where: { shipmentId: { in: shipmentIds } } });
+  if (recoveryActionIds.length) await db.shipmentRecoveryAction.deleteMany({ where: { id: { in: recoveryActionIds } } });
   if (shipmentIds.length) await db.trackingEvent.deleteMany({ where: { shipmentId: { in: shipmentIds } } });
   if (shipmentIds.length) await db.shipment.deleteMany({ where: { id: { in: shipmentIds } } });
   if (fulfillmentIds.length) await db.fulfillment.deleteMany({ where: { id: { in: fulfillmentIds } } });

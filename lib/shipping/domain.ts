@@ -53,7 +53,7 @@ export function shouldApplyTrackingEvent(
   if (currentStatus === eventStatus) return "HISTORY_ONLY";
   if (isShipmentTerminal(currentStatus)) return "HISTORY_ONLY";
   if (latestEventTimestamp && eventTimestamp.getTime() < latestEventTimestamp.getTime()) {
-    return ORDER[eventStatus] > ORDER[currentStatus] ? "HISTORY_ONLY" : "HISTORY_ONLY";
+    return "HISTORY_ONLY";
   }
   if (canTransitionShipmentStatus(currentStatus, eventStatus)) return "APPLY";
   if (ORDER[eventStatus] > ORDER[currentStatus]) return "APPLY";

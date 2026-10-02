@@ -24,6 +24,8 @@ export type ShipmentReference = Readonly<{
   createdAt: string;
   updatedAt: string;
   deliveredAt: string | null;
+  reconciliationRequired: boolean;
+  reconciliationReason: string | null;
 }>;
 
 export type TrackingEvent = Readonly<{
@@ -97,6 +99,7 @@ export type NormalizedTrackingEvent = Readonly<{
   eventTimestamp: Date;
   location: string | null;
   description: string | null;
+  source?: "WEBHOOK" | "POLLING" | "MANUAL" | "PROVIDER";
 }>;
 
 export type ShippingProviderAdapter = Readonly<{
