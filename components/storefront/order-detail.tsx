@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { OrderStatusBadge } from "@/components/storefront/order-status-badge";
 import type { PublicOrderDto } from "@/lib/orders/contracts";
+import type { ExceptionSummary } from "@/lib/returns/contracts";
+import { OrderExceptionActions } from "@/components/storefront/order-exception-actions";
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en-IN", { dateStyle: "long", timeStyle: "short" }).format(new Date(value));
@@ -12,7 +14,7 @@ function money(value: string, currency: string) {
   return `${value} ${currency}`;
 }
 
-export function OrderDetail({ order }: { order: PublicOrderDto }) {
+export function OrderDetail({ order, exceptionSummary }: { order: PublicOrderDto; exceptionSummary: ExceptionSummary }) {
   return (
     <div className="grid gap-8">
       <header className="border-b-4 border-border pb-6">
@@ -79,12 +81,12 @@ export function OrderDetail({ order }: { order: PublicOrderDto }) {
             <div className="flex justify-between gap-4 border-t-4 border-border pt-4 text-xl font-900"><dt className="uppercase">Total</dt><dd>{money(order.total, order.currency)}</dd></div>
           </dl>
           <p className="mt-5 border-t-2 border-border pt-4 text-xs font-700 leading-5">
-            This page shows the historical Order record. Shipping, tracking, returns, refunds, and cancellation are not represented unless supported by the Order lifecycle.
+            This page shows the historical Order record. Shipping, tracking, returns, refunds, and cancellation are shown only when the server-authoritative exception policy permits them.
           </p>
         </Card>
       </div>
 
-      <div className="flex flex-wrap gap-3">
+      <OrderExceptionActions order={order} summary={exceptionSummary} />\n\n      <div className="flex flex-wrap gap-3">
         <Button href="/account/orders" variant="outline">Back to Orders</Button>
         <Button href="/shop" variant="yellow">Continue Shopping</Button>
       </div>

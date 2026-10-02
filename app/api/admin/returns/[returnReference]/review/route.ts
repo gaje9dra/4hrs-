@@ -1,0 +1,2 @@
+import { createReturnsApplication } from "@/lib/returns/application";import { returnsError,returnsJson,readReturnsJson } from "@/lib/returns/http";
+export async function POST(request:Request,{params}:{params:Promise<{returnReference:string}>}){try{const b=await readReturnsJson(request);const p=await params;return returnsJson({returnRequest:await createReturnsApplication().reviewReturn({reference:p.returnReference,decision:b.decision==="REJECT"?"REJECT":"APPROVE",reason:typeof b.reason==="string"?b.reason:undefined,request})});}catch(e){return returnsError(e);}}

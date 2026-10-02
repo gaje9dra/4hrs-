@@ -5,6 +5,7 @@ import { OrderDetail } from "@/components/storefront/order-detail";
 import { createOrderApplication } from "@/lib/orders/application";
 import { OrderDomainError } from "@/lib/orders/errors";
 import { requireCurrentCustomer } from "@/lib/auth/context";
+import { createReturnsApplication } from "@/lib/returns/application";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -42,7 +43,7 @@ export default async function AccountOrderDetailPage({ params }: { params: Param
 
   return (
     <Container width="standard" className="py-10 sm:py-14 lg:py-20">
-      <OrderDetail order={order} />
+      <OrderDetail order={order} exceptionSummary={await createReturnsApplication().getCustomerExceptionSummary({ orderNumber })} />
     </Container>
   );
 }

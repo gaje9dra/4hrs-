@@ -1,0 +1,2 @@
+import { createReturnsApplication } from "@/lib/returns/application";import { returnsError,returnsJson } from "@/lib/returns/http";
+export async function POST(request:Request,{params}:{params:Promise<{returnReference:string}>}){try{const p=await params;return returnsJson({returnRequest:await createReturnsApplication().markReturnReceived({reference:p.returnReference,request})});}catch(e){return returnsError(e);}}

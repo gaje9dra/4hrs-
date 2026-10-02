@@ -35,6 +35,7 @@ export function toPublicOrderDto(order: OrderWithRelations): PublicOrderDto {
         }
       : null,
     items: order.items.map((item) => ({
+      itemReference: item.id,
       productId: item.productId,
       variantId: item.variantId,
       productTitle: item.productTitleSnapshot,
