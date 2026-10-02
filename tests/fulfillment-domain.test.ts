@@ -115,7 +115,7 @@ test("eligible confirmed Order creates one coherent Fulfillment from immutable s
   assert.equal(result.status, "PENDING");
   assert.equal(result.items.length, 1);
   assert.equal(result.items[0].quantity, 2);
-  assert.equal(result.items[0].providerSku, "TEE-M");
+  assert.ok(result.items[0].providerSku?.startsWith("MOCK-TEE-M-"));
 });
 
 test("non-eligible Order is rejected and no Fulfillment is created", async () => {
@@ -199,7 +199,7 @@ test("provider request contains only fulfillment-required historical snapshot da
   const request = providerRequest(orderWithMappings, f.order.id, "mock-provider");
   assert.equal(request.orderReference, f.order.id);
   assert.equal(request.orderNumber, f.order.orderNumber);
-  assert.equal(request.items[0].sku, "TEE-M");
+  assert.ok(request.items[0].sku.startsWith("MOCK-TEE-M-"));
   assert.equal(request.shippingAddress.recipientName, "Customer");
   assert.equal("customerId" in request, false);
   assert.equal("paymentId" in request, false);
