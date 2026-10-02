@@ -12,7 +12,7 @@ type Sort=typeof SORTS[number];
 type DateRange={from?:Date;to?:Date};
 
 function page(value:string|null){const n=Number(value??1);return Number.isInteger(n)?Math.min(100000,Math.max(1,n)):1;}
-function pageSize(value:string|null){const n=Number(value??25);return Number.isInteger(n)?Math.min(MAX_PAGE_SIZE,Math.max(1,n)):25;}
+function pageSize(value:string|null){if(value===null)return 25;const n=Number(value);if(!Number.isInteger(n)||n<1||n>MAX_PAGE_SIZE)throw new AdminError("INVALID_REQUEST","Page size is invalid.");return n;}
 function clean(value:string|null,max=120){const v=value?.trim()??"";return v?v.slice(0,max):undefined;}
 function parseDate(value:string|null,end=false){if(!value)return undefined;const d=new Date(end?value+"T23:59:59.999Z":value+"T00:00:00.000Z");return Number.isNaN(d.getTime())?undefined:d;}
 function range(url:URL):DateRange{const from=parseDate(url.searchParams.get("from"));const to=parseDate(url.searchParams.get("to"),true);if((url.searchParams.get("from")&&!from)||(url.searchParams.get("to")&&!to)||(from&&to&&from>to))throw new AdminError("INVALID_REQUEST","Date range is invalid.");return {from,to};}
