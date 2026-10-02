@@ -18,7 +18,7 @@ CROSS JOIN "AdminPermission" p
 WHERE r.name IN ('SUPER_ADMIN','ADMIN')
   AND p.key IN ('catalog.category.manage','catalog.collection.manage','catalog.media.manage','catalog.provider_mapping.manage')
   AND NOT EXISTS (
-    SELECT 1 FROM "AdminRolePermission" rp WHERE rp.roleId = r.id AND rp.permissionId = p.id
+    SELECT 1 FROM "AdminRolePermission" rp WHERE rp."roleId" = r.id AND rp."permissionId" = p.id
   );
 
 INSERT INTO "AdminRolePermission" ("roleId","permissionId")
