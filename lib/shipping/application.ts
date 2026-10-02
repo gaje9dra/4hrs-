@@ -216,14 +216,6 @@ export function createShippingApplication(
         errorCode: error instanceof ShippingDomainError ? error.code : "SHIPMENT_CONCURRENCY_CONFLICT",
         correlationId,
       });
-      logShippingObservation({
-        operation: "tracking-event",
-        shipmentId: input.shipmentId,
-        providerId: input.event.providerId,
-        result: "failure",
-        errorCode: error instanceof ShippingDomainError ? error.code : "SHIPMENT_CONCURRENCY_CONFLICT",
-        correlationId,
-      });
       if (error instanceof ShippingDomainError) throw error;
       if (isUniqueConflict(error)) {
         const raced = await repository.getShipmentByCreationIdempotencyKey(idempotencyKey);
@@ -285,7 +277,7 @@ export function createShippingApplication(
         const persisted = await txRepository.createTrackingEventIfNew(trackingInput);
 
         if (!persisted.created) {
-          logShippingObservation({ operation: "tracking-event", shipmentId: shipment.id, providerId: input.event.providerId, result: "duplicate" });
+          logShippingObservation({ operation: "tracking-event", shipmentId: shipment.id, providerId: input.event.providerId, result: "duplicate", correlationId });
           return shipment;
         }
 
@@ -330,6 +322,14 @@ export function createShippingApplication(
         return updated;
       }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
     } catch (error) {
+      logShippingObservation({
+        operation: "tracking-event",
+        shipmentId: input.shipmentId,
+        providerId: input.event.providerId,
+        result: "failure",
+        errorCode: error instanceof ShippingDomainError ? error.code : "SHIPMENT_CONCURRENCY_CONFLICT",
+        correlationId,
+      });
       if (error instanceof ShippingDomainError) throw error;
       if (isUniqueConflict(error)) {
         const existingEvent = await repository.findTrackingEventByInput(trackingInput);
