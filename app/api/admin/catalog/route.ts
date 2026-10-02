@@ -23,7 +23,8 @@ export async function GET(request: Request) {
     await requireAdmin(request);
     const url = new URL(request.url);
     const result = await catalog.listProducts({ filters: { status: url.searchParams.get("status") as "DRAFT" | "ACTIVE" | "ARCHIVED" | undefined }, limit: 100, offset: 0 });
-    return json(result);
+    const items = await Promise.all(result.items.map((item) => catalog.getProductWithVariants(item.id)));
+    return json({ ...result, items });
   } catch (error) {
     return errorResponse(error);
   }
