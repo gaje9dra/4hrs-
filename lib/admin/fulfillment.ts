@@ -68,7 +68,7 @@ export function parseAdminFulfillmentQuery(url:URL):AdminFulfillmentQuery{
   };
 }
 
-function whereFor(query:AdminFulfillmentQuery):Prisma.FulfillmentWhereInput{
+function whereFor(query:AdminFulfillmentQuery,includeSensitive:boolean):Prisma.FulfillmentWhereInput{
   const and:Prisma.FulfillmentWhereInput[]=[];
   if(query.status)and.push({status:query.status});
   if(query.provider)and.push({provider:query.provider});
@@ -79,7 +79,8 @@ function whereFor(query:AdminFulfillmentQuery):Prisma.FulfillmentWhereInput{
   if(query.search){
     const s=query.search;
     const or:Prisma.FulfillmentWhereInput[]=[
-      {id:s},{orderId:s},{providerFulfillmentReference:{contains:s,mode:"insensitive"}},
+      ...(UUID.test(s)?[{id:s},{orderId:s}]:[]),
+      ...(includeSensitive?[{providerFulfillmentReference:{contains:s,mode:"insensitive"}}]:[]),
       {order:{orderNumber:{contains:s,mode:"insensitive"}}},
       {order:{customer:{email:{contains:s,mode:"insensitive"}}}},
       {order:{customer:{displayName:{contains:s,mode:"insensitive"}}}},
@@ -96,7 +97,8 @@ function reconcileRequired(metadata:Prisma.JsonValue|null):boolean{
 
 export async function listAdminFulfillments(query:AdminFulfillmentQuery,context:AdminAuthorizationContext){
   if(query.providerReference&&!context.permissions.has("fulfillment.view_sensitive"))throw new AdminError("FORBIDDEN","Provider references require sensitive fulfillment permission.");
-  const where=whereFor(query);
+  const sensitive=context.permissions.has("fulfillment.view_sensitive");
+  const where=whereFor(query,sensitive);
   const [total,rows]=await Promise.all([
     db.fulfillment.count({where}),
     db.fulfillment.findMany({
@@ -109,7 +111,6 @@ export async function listAdminFulfillments(query:AdminFulfillmentQuery,context:
       },
     }),
   ]);
-  const sensitive=context.permissions.has("fulfillment.view_sensitive");
   return {items:rows.map(row=>({
     id:row.id,orderId:row.orderId,orderNumber:row.order.orderNumber,
     customer:row.order.customer,status:row.status,provider:row.provider,
