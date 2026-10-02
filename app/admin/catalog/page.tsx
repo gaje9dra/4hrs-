@@ -1,0 +1,17 @@
+import Link from "next/link";
+import { requireAdmin } from "@/lib/admin/authorization";
+import { listCatalogProducts, listCatalogCategories, listCatalogCollections } from "@/lib/admin/catalog";
+import { CatalogTaxonomy } from "@/components/admin/catalog/catalog-taxonomy";
+
+export default async function AdminCatalogPage({ searchParams }: { searchParams: Promise<Record<string,string|undefined>> }) {
+ const context=await requireAdmin(undefined,"catalog.read"); const q=await searchParams;
+ const status=q.status&&["DRAFT","ACTIVE","ARCHIVED"].includes(q.status)?q.status:undefined;
+ const result=await listCatalogProducts(context,{filters:{...(status?{status:status as any}:{}),...(q.search?{search:q.search}: {})},sortBy:"updatedAt",sortDirection:"desc",limit:24,offset:0});
+ const categories=await listCatalogCategories(context); const collections=await listCatalogCollections(context);
+ const canManage=context.permissions.has("catalog.category.manage")||context.permissions.has("catalog.collection.manage");
+ return <section className="space-y-8"><header className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-sm font-black uppercase tracking-[0.2em]">Canonical storefront catalog</p><h2 className="text-4xl font-black uppercase">Catalog</h2><p className="mt-2 max-w-2xl">4HRS+ owns the storefront catalog. Provider mappings remain separate fulfillment integration data.</p></div>{context.permissions.has("catalog.create")&&<Link href="/admin/catalog/new" className="border-4 border-black bg-[#f7d51d] px-5 py-3 font-black uppercase shadow-[4px_4px_0_0_#000]">New product</Link>}</header>
+ <form className="grid gap-3 border-4 border-black bg-white p-4 md:grid-cols-[1fr_180px_auto]"><label className="sr-only" htmlFor="catalog-search">Search</label><input id="catalog-search" name="search" defaultValue={q.search??""} placeholder="Search title, slug or description" className="border-2 border-black p-3"/><select name="status" defaultValue={status??""} className="border-2 border-black p-3"><option value="">All statuses</option><option value="DRAFT">Draft</option><option value="ACTIVE">Active</option><option value="ARCHIVED">Archived</option></select><button className="border-2 border-black bg-black px-5 py-3 font-bold uppercase text-white">Filter</button></form>
+ <div className="overflow-x-auto border-4 border-black bg-white"><table className="min-w-[760px] w-full text-left"><thead><tr className="border-b-4 border-black text-xs uppercase"><th className="p-3">Product</th><th className="p-3">Status</th><th className="p-3">Price</th><th className="p-3">Updated</th><th className="p-3">Action</th></tr></thead><tbody>{(result as any).items.map((p:any)=><tr key={p.id} className="border-b-2 border-black last:border-b-0"><td className="p-3"><div className="font-black">{p.title}</div><div className="text-xs">{p.slug}</div></td><td className="p-3 font-bold">{p.status}</td><td className="p-3">{p.price} {p.currency}</td><td className="p-3 text-sm">{new Date(p.updatedAt).toLocaleString("en-IN")}</td><td className="p-3"><Link href={"/admin/catalog/"+p.id} className="font-bold underline">Open</Link></td></tr>)}{(result as any).items.length===0&&<tr><td colSpan={5} className="p-6 text-center font-bold">No products match the current filters.</td></tr>}</tbody></table></div>
+ <CatalogTaxonomy categories={categories as any[]} collections={collections as any[]} canManage={canManage}/>
+ </section>;
+}
