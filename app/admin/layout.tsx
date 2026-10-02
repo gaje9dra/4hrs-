@@ -9,6 +9,7 @@ const nav: Array<{ label: string; href: string; permission?: AdminPermission }> 
   { label: "Dashboard", href: "/admin" },
   { label: "Catalog", href: "/admin/catalog", permission: "catalog.read" },
   { label: "Orders", href: "/admin/orders", permission: "orders.read" },
+  { label: "Customers", href: "/admin/customers", permission: "customers.read" },
   { label: "Payments", href: "/admin/payments", permission: "payments.read" },
   { label: "Fulfillment", href: "/admin/fulfillments", permission: "fulfillment.read" },
   { label: "Shipping", href: "/admin/shipping", permission: "shipping.read" },
