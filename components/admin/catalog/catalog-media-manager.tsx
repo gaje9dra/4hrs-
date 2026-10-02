@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-export function CatalogMediaManager({productId,images,canManage}: {productId:string;images:any[];canManage:boolean}) {
+export function CatalogMediaManager({images,canManage}: {images:any[];canManage:boolean}) {
  const router=useRouter();const [error,setError]=useState("");const [busy,setBusy]=useState(false);
  async function add(e:React.FormEvent<HTMLFormElement>){e.preventDefault();setBusy(true);setError("");const d=Object.fromEntries(new FormData(e.currentTarget).entries());const res=await fetch("/api/admin/catalog/media",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({productId,url:d.url,altText:d.altText||null,isPrimary:d.isPrimary==="on",sortOrder:Number(d.sortOrder||0)})});const b=await res.json().catch(()=>({}));if(!res.ok)setError(b?.error?.message||"Could not add media.");else{e.currentTarget.reset();router.refresh()}setBusy(false)}
  async function remove(id:string){const reason=window.prompt("Reason for removing this media:");if(!reason||reason.trim().length<3)return;setBusy(true);const res=await fetch("/api/admin/catalog/media/"+id,{method:"DELETE",headers:{"content-type":"application/json"},body:JSON.stringify({reason})});const b=await res.json().catch(()=>({}));if(!res.ok)setError(b?.error?.message||"Could not remove media.");else router.refresh();setBusy(false)}
