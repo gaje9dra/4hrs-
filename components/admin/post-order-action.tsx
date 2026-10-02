@@ -1,0 +1,8 @@
+"use client";
+import {useState} from "react";
+import {useRouter} from "next/navigation";
+export function PostOrderAction({endpoint,action,label,reasonRequired=true,children}:{endpoint:string;action:string;label:string;reasonRequired?:boolean;children?:React.ReactNode}){
+ const router=useRouter();const [reason,setReason]=useState("");const [busy,setBusy]=useState(false);const [error,setError]=useState("");
+ async function run(){setBusy(true);setError("");try{if(reasonRequired&&!reason.trim())throw new Error("A reason is required.");const key=crypto.randomUUID().replaceAll("-","")+"postorder";const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json","Idempotency-Key":key},body:JSON.stringify({action,reason, ...(action==="resolve_rejected"?{note:reason}:{}),...(action==="approve"||action==="reject"?{}:{})})});const b=await r.json();if(!r.ok)throw new Error(b.error?.message??"Operation failed.");router.refresh();}catch(e){setError(e instanceof Error?e.message:"Operation failed.");}finally{setBusy(false);}}
+ return <div className="border-2 border-black bg-[#f4efe3] p-3"><button type="button" disabled={busy} onClick={()=>void run()} className="border-2 border-black bg-black px-4 py-2 font-black uppercase text-white disabled:opacity-50">{busy?"Working…":label}</button>{reasonRequired&&<label className="mt-2 block"><span className="sr-only">Operational reason</span><input value={reason} onChange={e=>setReason(e.target.value)} maxLength={1000} placeholder="Operational reason" className="mt-2 w-full border-2 border-black bg-white p-2"/></label>}{children}{error&&<p role="alert" className="mt-2 font-bold">{error}</p>}</div>;
+}
