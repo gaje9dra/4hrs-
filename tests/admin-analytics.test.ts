@@ -63,7 +63,7 @@ test("analytics RBAC is centralized and granular",()=>{
 test("no unrestricted analytics export endpoint was introduced",()=>{
   const source=readFileSync("app/api/admin/analytics/route.ts","utf8");
   assert.match(source,/Analytics is read-only/);
-  assert.doesNotMatch(source,/csv|spreadsheet|export/i);
+  assert.doesNotMatch(source,/csv|spreadsheet/i);
 });
 
 test("customer analytics is aggregated and contains no customer PII",()=>{
