@@ -48,6 +48,7 @@ export type CatalogLifecycleRepository = {
   getProductById: (id: string, client?: CatalogRepositoryClient) => Promise<{
     id: string;
     status: ProductStatus;
+    updatedAt: Date;
   } | null>;
   getProductDetails: (id: string, client?: CatalogRepositoryClient) => Promise<CatalogLifecycleProductDetails | null>;
   transitionProductStatus: (id: string, from: ProductStatus, to: ProductStatus, client?: CatalogRepositoryClient, expectedUpdatedAt?: Date) => Promise<{
