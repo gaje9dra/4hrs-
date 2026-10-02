@@ -1,10 +1,9 @@
 import type { AdminAuthorizationContext } from "@/lib/admin/authorization";
-import { AdminError, type AdminErrorCode } from "@/lib/admin/errors";
+import { AdminError } from "@/lib/admin/errors";
 import { auditAdminAction } from "@/lib/admin/audit";
 import { requireHighRiskReason } from "@/lib/admin/authorization";
 import { createCatalogService } from "@/lib/catalog/service";
 import { CatalogServiceError } from "@/lib/catalog/errors";
-import { createFulfillmentProviderMappingRepository } from "@/lib/fulfillment/mapping";
 import type { CatalogListOptions } from "@/lib/catalog/repository";
 
 function service(context: AdminAuthorizationContext) {
@@ -12,7 +11,7 @@ function service(context: AdminAuthorizationContext) {
     source: "MANUAL",
     actorType: "USER",
     actorId: context.adminUser.id,
-    correlationId: context.correlationId,
+    correlationId: undefined,
   });
 }
 
