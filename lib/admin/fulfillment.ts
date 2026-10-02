@@ -128,13 +128,15 @@ export async function getAdminFulfillment(id:string,context:AdminAuthorizationCo
       id:true,orderId:true,provider:true,providerFulfillmentReference:true,status:true,requestedAt:true,createdAt:true,updatedAt:true,submittedAt:true,acceptedAt:true,completedAt:true,failedAt:true,errorCode:true,errorMessage:true,reconciliationMetadata:true,
       order:{
         select:{
-          orderNumber:true,customer:{select:{id:true,email:true,displayName:true}},
-          items:{select:{id:true,productId:true,variantId:true,productTitle:true,variantTitle:true,skuSnapshot:true,quantity:true},orderBy:{createdAt:"asc"}},
+          orderNumber:true,
+          customer:{select:{id:true,email:true,displayName:true}},
+          items:{select:{id:true,productTitleSnapshot:true,variantTitleSnapshot:true,skuSnapshot:true},orderBy:{createdAt:"asc"}},
+          cancellationRequests:{select:{cancellationReference:true,status:true,reason:true,requestedAt:true}},
+          returnRequests:{select:{returnReference:true,status:true,reasonCode:true,requestedAt:true}},
         },
       },
       items:{select:{id:true,orderItemId:true,quantity:true,providerSku:true,providerVariantReference:true,status:true}},
       shipments:{select:{id:true,shipmentReference:true,providerId:true,providerReference:true,carrier:true,trackingNumber:true,trackingUrl:true,status:true,shippedAt:true,deliveredAt:true,reconciliationRequired:true},orderBy:[{createdAt:"desc"},{id:"desc"}]},
-      order:{select:{orderNumber:true,customer:{select:{id:true,email:true,displayName:true}},items:{select:{id:true,productTitle:true,variantTitle:true,skuSnapshot:true},orderBy:{createdAt:"asc"}},cancellationRequests:{select:{cancellationReference:true,status:true,reason:true,requestedAt:true}},returnRequests:{select:{returnReference:true,status:true,reasonCode:true,requestedAt:true}}}},
     },
   });
   if(!row)throw new AdminError("NOT_FOUND","Fulfillment could not be found.");
@@ -147,7 +149,7 @@ export async function getAdminFulfillment(id:string,context:AdminAuthorizationCo
     providerReference:sensitive?row.providerFulfillmentReference:null,requestedAt:row.requestedAt.toISOString(),createdAt:row.createdAt.toISOString(),updatedAt:row.updatedAt.toISOString(),
     submittedAt:iso(row.submittedAt),acceptedAt:iso(row.acceptedAt),completedAt:iso(row.completedAt),failedAt:iso(row.failedAt),
     failure:{code:row.errorCode,message:row.errorMessage,reconciliationRequired:reconcileRequired(metadata)},
-    items:row.items.map(item=>{const orderItem=row.order.items.find(x=>x.id===item.orderItemId);return {id:item.id,orderItemId:item.orderItemId,productTitle:orderItem?.productTitle??"Unknown product",variantTitle:orderItem?.variantTitle??null,storeSku:orderItem?.skuSnapshot??null,quantity:item.quantity,providerSku:sensitive?item.providerSku:null,providerVariantReference:sensitive?item.providerVariantReference:null,status:item.status};}),
+    items:row.items.map(item=>{const orderItem=row.order.items.find(x=>x.id===item.orderItemId);return {id:item.id,orderItemId:item.orderItemId,productTitle:orderItem?.productTitleSnapshot??"Unknown product",variantTitle:orderItem?.variantTitleSnapshot??null,storeSku:orderItem?.skuSnapshot??null,quantity:item.quantity,providerSku:sensitive?item.providerSku:null,providerVariantReference:sensitive?item.providerVariantReference:null,status:item.status};}),
     attempts:Number.isSafeInteger(attempts)?Array.from({length:Math.min(attempts,20)},(_,i)=>({number:i+1,status:i+1===attempts?row.status:"COMPLETED",occurredAt:row.updatedAt.toISOString(),note:i+1===attempts?(row.errorMessage??"Current operation"):"Historical submission attempt"})):[],
     shipments:row.shipments.map(s=>({id:s.id,reference:s.shipmentReference,providerId:s.providerId,providerReference:sensitive?s.providerReference:null,carrier:s.carrier,trackingNumber:s.trackingNumber,trackingUrl:s.trackingUrl,status:s.status,shippedAt:iso(s.shippedAt),deliveredAt:iso(s.deliveredAt),reconciliationRequired:s.reconciliationRequired})),
     cancellations:row.order.cancellationRequests.map(c=>({reference:c.cancellationReference,status:c.status,reason:c.reason,requestedAt:c.requestedAt.toISOString()})),
