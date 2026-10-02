@@ -81,14 +81,33 @@ function shipmentInclude() {
   return { trackingEvents: { orderBy: { eventTimestamp: "asc" as const } } };
 }
 
-export type ShippingRepository = ReturnType<typeof createShippingRepository>;
+export type TrackingEventRecord = Prisma.TrackingEventGetPayload<{}>;
 
-export function createShippingRepository(client?: ShippingRepositoryClient) {
+export interface ShippingRepository {
+  withTransaction<T>(work: (repository: ShippingRepository) => Promise<T>): Promise<T>;
+  getFulfillmentForShipment(fulfillmentId: string): Promise<FulfillmentShipmentSource | null>;
+  createShipment(input: CreateShipmentInput): Promise<ShipmentWithEvents>;
+  getShipmentByCreationIdempotencyKey(key: string): Promise<ShipmentWithEvents | null>;
+  getShipmentById(id: string): Promise<ShipmentWithEvents | null>;
+  getShipmentByFulfillment(fulfillmentId: string): Promise<ShipmentWithEvents[]>;
+  listShipmentsByOrder(orderId: string): Promise<ShipmentWithEvents[]>;
+  getShipmentByProviderReference(providerId: string, providerReference: string): Promise<ShipmentWithEvents | null>;
+  getShipmentByCustomer(id: string, customerId: string): Promise<ShipmentWithEvents | null>;
+  getShipmentByTrackingNumber(trackingNumber: string): Promise<ShipmentWithEvents | null>;
+  transitionStatus(input: { id: string; expectedStatus: PrismaShipmentStatus; nextStatus: PrismaShipmentStatus; shippedAt?: Date | null; deliveredAt?: Date | null }): Promise<ShipmentWithEvents | null>;
+  transitionFromTrackingEvent(input: { id: string; expectedStatus: PrismaShipmentStatus; nextStatus: PrismaShipmentStatus; eventTimestamp: Date }): Promise<ShipmentWithEvents | null>;
+  createTrackingEventIfNew(input: CreateTrackingEventInput): Promise<{ event: TrackingEventRecord; created: boolean }>;
+  createTrackingEvent(input: CreateTrackingEventInput): Promise<TrackingEventRecord | null>;
+  listTrackingEvents(shipmentId: string, options?: { limit?: number; cursor?: string }): Promise<TrackingEventRecord[]>;
+  findTrackingEventByProviderEventId(providerId: string, providerEventId: string): Promise<TrackingEventRecord | null>;
+}
+
+export function createShippingRepository(client?: ShippingRepositoryClient): ShippingRepository {
   const database = databaseFor(client);
 
   return {
     withTransaction<T>(
-      work: (repository: ReturnType<typeof createShippingRepository>) => Promise<T>,
+      work: (repository: ShippingRepository) => Promise<T>,
     ): Promise<T> {
       if ("$transaction" in database) {
         return database.$transaction(
