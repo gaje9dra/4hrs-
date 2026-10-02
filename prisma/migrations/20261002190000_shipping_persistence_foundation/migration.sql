@@ -38,7 +38,6 @@ CREATE UNIQUE INDEX "Shipment_shipmentReference_key" ON "Shipment"("shipmentRefe
 CREATE INDEX "Shipment_fulfillmentId_createdAt_idx" ON "Shipment"("fulfillmentId", "createdAt");
 CREATE INDEX "Shipment_orderId_createdAt_idx" ON "Shipment"("orderId", "createdAt");
 CREATE UNIQUE INDEX "Shipment_providerId_providerReference_key" ON "Shipment"("providerId", "providerReference");
-CREATE INDEX "Shipment_providerId_providerReference_idx" ON "Shipment"("providerId", "providerReference");
 CREATE INDEX "Shipment_trackingNumber_idx" ON "Shipment"("trackingNumber");
 CREATE INDEX "Shipment_status_updatedAt_idx" ON "Shipment"("status", "updatedAt");
 
