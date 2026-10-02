@@ -16,7 +16,7 @@ function json(data: unknown, status = 200) {
 
 export async function POST(request: Request) {
   try {
-    await requireAdmin(request);
+    await requireAdmin(request,"catalog.publish");
     assertSameOrigin(request);
     const input = await request.json();
     const productId = typeof input?.productId === "string" ? input.productId.trim() : "";
