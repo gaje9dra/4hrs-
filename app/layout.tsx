@@ -23,7 +23,7 @@ export const metadata: Metadata = {
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const navigation = await getStorefrontNavigation()
   const footerGroups = storefrontNavigationToFooterGroups(navigation)
-  const identityJsonLd = [organizationJsonLd(), websiteJsonLd()]
+  const identityJsonLd = process.env.NEXT_PUBLIC_SITE_URL ? [organizationJsonLd(), websiteJsonLd()] : []
   return (
     <html lang="en"><body className={`${outfit.variable} antialiased`}>
       <SkipLink /><Header items={navigation} /><main id="main-content" tabIndex={-1}>{children}</main><Footer navigationGroups={footerGroups} />
