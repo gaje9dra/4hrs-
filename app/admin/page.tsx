@@ -3,7 +3,7 @@ import { requireAdmin } from "@/lib/admin/authorization";
 import type { AdminPermission } from "@/lib/admin/permissions";
 const modules: Array<{name:string;description:string;href:string;permission?:AdminPermission}> = [
   {name:"Catalog",description:"Existing catalog administration routes remain owned by the Catalog domain and are permission-protected.",href:"/admin/catalog",permission:"catalog.read"},
-  {name:"Orders",description:"Order administration is reserved for a later module phase.",href:"/admin/orders",permission:"orders.read"},
+  {name:"Orders",description:"Canonical Order administration is available through the protected Order control plane.",href:"/admin/orders",permission:"orders.read"},
   {name:"Fulfillment",description:"Fulfillment administration is reserved for a later module phase.",href:"/admin/fulfillment",permission:"fulfillment.read"},
   {name:"Shipping",description:"Shipping administration is reserved for a later module phase.",href:"/admin/shipping",permission:"shipping.read"},
   {name:"Returns",description:"Returns administration is reserved for a later module phase.",href:"/admin/returns",permission:"returns.read"},
