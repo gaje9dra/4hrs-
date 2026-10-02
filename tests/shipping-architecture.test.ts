@@ -20,7 +20,6 @@ test("Shipment lifecycle allows forward transitions", () => {
 test("tracking events cannot bypass the canonical lifecycle", () => {
   assert.throws(
     () => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
       assertTrackingEventTransition("CREATED", "DELIVERED");
     },
     /Tracking event cannot transition Shipment from CREATED to DELIVERED/,
