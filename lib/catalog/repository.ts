@@ -1202,6 +1202,13 @@ export async function createProduct(data: Prisma.ProductCreateInput, client?: Ca
   return clientOrDefault(client).product.create({ data });
 }
 
+export async function updateProductIfFresh(id: string, expectedUpdatedAt: Date, data: Prisma.ProductUpdateInput, client?: CatalogRepositoryClient) {
+  const repository = clientOrDefault(client);
+  const result = await repository.product.updateMany({ where: { id, updatedAt: expectedUpdatedAt }, data });
+  if (result.count !== 1) return null;
+  return repository.product.findUnique({ where: { id } });
+}
+
 export async function updateProduct(id: string, data: Prisma.ProductUpdateInput, client?: CatalogRepositoryClient) {
   return clientOrDefault(client).product.update({ where: { id }, data });
 }
@@ -1211,10 +1218,11 @@ export async function transitionProductStatus(
   from: "DRAFT" | "ACTIVE" | "ARCHIVED",
   to: "DRAFT" | "ACTIVE" | "ARCHIVED",
   client?: CatalogRepositoryClient,
+  expectedUpdatedAt?: Date,
 ) {
   const repository = clientOrDefault(client);
   const result = await repository.product.updateMany({
-    where: { id, status: from },
+    where: { id, status: from, ...(expectedUpdatedAt ? { updatedAt: expectedUpdatedAt } : {}) },
     data: { status: to },
   });
   if (result.count !== 1) return null;
@@ -1314,6 +1322,13 @@ export async function getVariantsByProduct(productId: string, client?: CatalogRe
       },
     },
   });
+}
+
+export async function updateVariantIfFresh(id: string, expectedUpdatedAt: Date, data: Prisma.ProductVariantUpdateInput, client?: CatalogRepositoryClient) {
+  const repository = clientOrDefault(client);
+  const result = await repository.productVariant.updateMany({ where: { id, updatedAt: expectedUpdatedAt }, data });
+  if (result.count !== 1) return null;
+  return repository.productVariant.findUnique({ where: { id } });
 }
 
 export async function updateVariant(id: string, data: Prisma.ProductVariantUpdateInput, client?: CatalogRepositoryClient) {
