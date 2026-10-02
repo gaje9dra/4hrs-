@@ -78,13 +78,14 @@ function whereFor(query:AdminFulfillmentQuery,includeSensitive:boolean):Prisma.F
   if(query.shipmentStatus)and.push({shipments:{some:{status:query.shipmentStatus}}});
   if(query.search){
     const s=query.search;
-    const or:Prisma.FulfillmentWhereInput[]=[
-      ...(UUID.test(s)?[{id:s},{orderId:s}]:[]),
-      ...(includeSensitive?[{providerFulfillmentReference:{contains:s,mode:"insensitive"}}]:[]),
+    const or:Prisma.FulfillmentWhereInput[]=[];
+    if(UUID.test(s)) or.push({id:s},{orderId:s});
+    if(includeSensitive) or.push({providerFulfillmentReference:{contains:s,mode:"insensitive"}});
+    or.push(
       {order:{orderNumber:{contains:s,mode:"insensitive"}}},
       {order:{customer:{email:{contains:s,mode:"insensitive"}}}},
       {order:{customer:{displayName:{contains:s,mode:"insensitive"}}}},
-    ];
+    );
     and.push({OR:or});
   }
   return and.length?{AND:and}:{};
