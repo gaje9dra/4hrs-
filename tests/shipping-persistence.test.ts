@@ -101,6 +101,7 @@ test("Shipment persistence enforces Fulfillment and Order consistency", async ()
 
   assert.equal(shipment.orderId, order.id);
   assert.equal(shipment.fulfillmentId, fulfillment.id);
+  assert.match(shipment.shipmentReference, /^SHP-[0-9A-F]{32}$/);
   assert.equal((await repository.getShipmentByCustomer(shipment.id, customer.id))?.id, shipment.id);
 
   await assert.rejects(
