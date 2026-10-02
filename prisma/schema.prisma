@@ -374,6 +374,11 @@ model Customer {
   orders          Order[]
   cancellationRequests CancellationRequest[]
   returnRequests ReturnRequest[]
+  cases Case[]
+  assignedCases Case[] @relation("CaseAssignee")
+  authoredCaseNotes CaseNote[]
+  caseAssignments CaseAssignment[]
+  caseAuditActors CaseAuditEvent[] @relation("CaseAuditActor")
   @@index([status])
 }
 
@@ -515,6 +520,7 @@ model OrderItem {
   variant              ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
   fulfillmentItems     FulfillmentItem[]
   returnItems ReturnItem[]
+  cases Case[]
 
   @@index([orderId])
   @@index([productId])
@@ -599,6 +605,7 @@ model Fulfillment {
   order                 Order              @relation(fields: [orderId], references: [id], onDelete: Restrict)
   items                 FulfillmentItem[]
   shipments             Shipment[]
+  cases                 Case[]
 
   @@index([provider, createdAt])
   @@index([provider, providerFulfillmentReference])
@@ -643,6 +650,7 @@ model Payment {
   events             PaymentEvent[]
   idempotencyRecords PaymentIdempotency[]
   order            Order?
+  cases            Case[]
 
   @@unique([customerId, checkoutReference])
   @@index([customerId, createdAt])
@@ -675,6 +683,7 @@ model Shipment {
   order                      Order          @relation(fields: [orderId], references: [id], onDelete: Restrict)
   trackingEvents             TrackingEvent[]
   recoveryActions            ShipmentRecoveryAction[]
+  cases                      Case[]
   returnShipments ReturnShipment[]
 
   @@index([fulfillmentId, createdAt])
@@ -889,6 +898,7 @@ model CancellationRequest {
   updatedAt      DateTime         @updatedAt
   customer       Customer         @relation(fields: [customerId], references: [id], onDelete: Restrict)
   order          Order            @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  cases          Case[]
   @@unique([orderId])
   @@index([customerId, createdAt])
   @@index([status, updatedAt])
@@ -914,6 +924,7 @@ model ReturnRequest {
   shipment       ReturnShipment?
   inspection     ReturnInspection?
   resolution     ReturnResolution?
+  cases          Case[]
   @@index([customerId, createdAt])
   @@index([orderId, createdAt])
   @@index([status, updatedAt])
@@ -1011,4 +1022,158 @@ model NotificationEvent {
   @@index([customerId, createdAt])
   @@index([orderId, createdAt])
   @@index([returnRequestId, createdAt])
+}
+
+
+enum CaseStatus {
+  OPEN
+  TRIAGED
+  ASSIGNED
+  IN_PROGRESS
+  WAITING
+  RESOLVED
+  CLOSED
+}
+
+enum CaseCategory {
+  ORDER_ISSUE
+  PAYMENT_ISSUE
+  FULFILLMENT_ISSUE
+  SHIPPING_ISSUE
+  DELIVERY_ISSUE
+  TRACKING_ISSUE
+  CANCELLATION_REVIEW
+  RETURN_REVIEW
+  RETURN_INSPECTION
+  REFUND_ISSUE
+  PROVIDER_EXCEPTION
+  RECONCILIATION_EXCEPTION
+  CUSTOMER_SUPPORT
+}
+
+enum CasePriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum CaseSource {
+  CUSTOMER
+  SYSTEM
+  OPERATOR
+}
+
+enum CaseResolutionType {
+  INFORMATION_PROVIDED
+  CUSTOMER_ACTION_REQUIRED
+  PROVIDER_RECONCILED
+  ORDER_CANCELLED
+  RETURN_APPROVED
+  RETURN_REJECTED
+  REFUND_REQUESTED
+  REFUND_COMPLETED
+  SHIPMENT_RECONCILED
+  FULFILLMENT_RESOLVED
+  NO_ACTION_REQUIRED
+  DUPLICATE
+  ESCALATED
+}
+
+enum CaseAuditAction {
+  CREATED
+  ASSIGNED
+  PRIORITY_CHANGED
+  NOTE_ADDED
+  TRANSITIONED
+  DOMAIN_ACTION_EXECUTED
+  RESOLVED
+  CLOSED
+  CUSTOMER_UPDATED
+}
+
+model Case {
+  id                 String            @id @default(uuid()) @db.Uuid
+  caseReference      String            @unique @db.VarChar(64)
+  customerId         String?           @db.Uuid
+  orderId            String?           @db.Uuid
+  orderItemId        String?           @db.Uuid
+  shipmentId         String?           @db.Uuid
+  fulfillmentId      String?           @db.Uuid
+  returnRequestId    String?           @db.Uuid
+  cancellationRequestId String?        @db.Uuid
+  paymentId          String?           @db.Uuid
+  category           CaseCategory
+  status             CaseStatus        @default(OPEN)
+  priority           CasePriority      @default(NORMAL)
+  source             CaseSource
+  sourceReference    String?           @db.VarChar(255)
+  deduplicationKey   String?           @unique @db.VarChar(255)
+  title              String            @db.VarChar(200)
+  customerDescription String?          @db.VarChar(4000)
+  resolutionType     CaseResolutionType?
+  resolutionSummary  String?           @db.VarChar(1000)
+  assignedOperatorId String?           @db.Uuid
+  correlationId      String?           @db.VarChar(128)
+  version            Int               @default(1)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  resolvedAt         DateTime?
+  closedAt           DateTime?
+  customer           Customer?         @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  order              Order?            @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  orderItem          OrderItem?        @relation(fields: [orderItemId], references: [id], onDelete: Restrict)
+  shipment           Shipment?         @relation(fields: [shipmentId], references: [id], onDelete: Restrict)
+  fulfillment        Fulfillment?      @relation(fields: [fulfillmentId], references: [id], onDelete: Restrict)
+  returnRequest      ReturnRequest?    @relation(fields: [returnRequestId], references: [id], onDelete: Restrict)
+  cancellationRequest CancellationRequest? @relation(fields: [cancellationRequestId], references: [id], onDelete: Restrict)
+  payment            Payment?          @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  assignedOperator   Customer?         @relation("CaseAssignee", fields: [assignedOperatorId], references: [id], onDelete: Restrict)
+  notes              CaseNote[]
+  audits             CaseAuditEvent[]
+  assignments        CaseAssignment[]
+  @@index([customerId, createdAt])
+  @@index([orderId, createdAt])
+  @@index([status, priority, updatedAt])
+  @@index([assignedOperatorId, status, updatedAt])
+  @@index([category, createdAt])
+  @@index([source, sourceReference])
+}
+
+model CaseNote {
+  id        String   @id @default(uuid()) @db.Uuid
+  caseId    String   @db.Uuid
+  authorId  String   @db.Uuid
+  body      String   @db.VarChar(4000)
+  createdAt DateTime @default(now())
+  case      Case     @relation(fields: [caseId], references: [id], onDelete: Restrict)
+  author    Customer @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  @@index([caseId, createdAt])
+}
+
+model CaseAssignment {
+  id         String   @id @default(uuid()) @db.Uuid
+  caseId     String   @db.Uuid
+  operatorId String   @db.Uuid
+  assignedAt DateTime @default(now())
+  case       Case     @relation(fields: [caseId], references: [id], onDelete: Restrict)
+  operator   Customer @relation(fields: [operatorId], references: [id], onDelete: Restrict)
+  @@index([caseId, assignedAt])
+  @@index([operatorId, assignedAt])
+}
+
+model CaseAuditEvent {
+  id          String          @id @default(uuid()) @db.Uuid
+  caseId      String          @db.Uuid
+  actorId     String?         @db.Uuid
+  action      CaseAuditAction
+  previousState String?
+  newState   String?
+  reason      String?         @db.VarChar(1000)
+  correlationId String?       @db.VarChar(128)
+  createdAt   DateTime        @default(now())
+  case        Case             @relation(fields: [caseId], references: [id], onDelete: Restrict)
+  actor       Customer?        @relation("CaseAuditActor", fields: [actorId], references: [id], onDelete: Restrict)
+  @@index([caseId, createdAt])
+  @@index([actorId, createdAt])
 }
