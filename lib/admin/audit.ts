@@ -52,6 +52,6 @@ export async function recordAdminAudit(input: {
     },
   });
 }
-export async function auditAdminAction(context: AdminAuthorizationContext, input: Omit<Parameters<typeof recordAdminAudit>[0],"actorAdminId">) {
-  return recordAdminAudit({ ...input, actorAdminId: context.adminUser.id });
+export async function auditAdminAction(context: AdminAuthorizationContext, input: Omit<Parameters<typeof recordAdminAudit>[0],"actorAdminId">, client: Prisma.TransactionClient | typeof db = db) {
+  return recordAdminAudit({ ...input, actorAdminId: context.adminUser.id }, client);
 }
