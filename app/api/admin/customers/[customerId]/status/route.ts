@@ -1,5 +1,5 @@
-import { requireAdmin } from "@/lib/admin/authorization";
-import { auditAdminAction, requireHighRiskReason } from "@/lib/admin/audit";
+import { requireAdmin, requireHighRiskReason } from "@/lib/admin/authorization";
+import { auditAdminAction } from "@/lib/admin/audit";
 import { adminErrorResponse, adminJson, readAdminJson } from "@/lib/admin/http";
 import { updateAdminCustomerStatus } from "@/lib/admin/customer-detail";
 
