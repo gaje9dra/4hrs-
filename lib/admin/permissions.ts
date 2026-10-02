@@ -17,7 +17,7 @@ export type AdminRoleName = typeof ADMIN_ROLES[number];
 export const HIGH_RISK_ADMIN_PERMISSIONS = new Set<AdminPermission>([
   "payments.refund","payments.refund_partial","payments.verify","payments.capture","payments.reconcile","payments.retry",
   "fulfillment.submit","fulfillment.retry","fulfillment.reconcile","fulfillment.cancel","fulfillment.provider.manage",
-  "customers.manage","shipping.create","cancellation.execute","return.resolve","return.shipment.manage","return.refund","cases.resolve","cases.assign","shipping.reconcile","shipping.recovery","shipping.manage","admin.users.manage","system.settings.manage",
+  "customers.manage","shipping.create","cancellation.execute","return.resolve","return.shipment.manage","return.refund","case.resolve","case.assign","shipping.reconcile","shipping.recovery","shipping.manage","admin.users.manage","system.settings.manage",
 ]);
 export function isAdminPermission(value: unknown): value is AdminPermission {
   return typeof value === "string" && (ADMIN_PERMISSIONS as readonly string[]).includes(value);
