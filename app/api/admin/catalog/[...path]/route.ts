@@ -55,12 +55,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ pat
     if (p[0] === "products" && p[1] === "variants") {
       const context = await requireAdmin(request, "catalog.update");
       if (typeof body.productId !== "string" || !isValidAdminId(body.productId)) return bad("Product ID is invalid.");
-      return adminJson({ variant: await createCatalogVariant(context, { ...(body as never) }) }, { status: 201 });
+      return adminJson({ variant: await createCatalogVariant(context, body as unknown as Parameters<typeof createCatalogVariant>[1]) }, { status: 201 });
     }
     if (p[0] === "variants" && p[1] && p[2] === "provider-mappings") {
       if (!isValidAdminId(p[1])) return bad("Variant ID is invalid.");
       const context = await requireAdmin(request, "catalog.provider_mapping.manage");
-      return adminJson({ mapping: await upsertVariantProviderMapping(context, { ...(body as never), variantId: p[1] }, body.reason) }, { status: 201 });
+      return adminJson({ mapping: await upsertVariantProviderMapping(context, { ...(body as unknown as Parameters<typeof upsertVariantProviderMapping>[1]), variantId: p[1] }, body.reason) }, { status: 201 });
     }
     if (p[0] === "media") {
       const context = await requireAdmin(request, "catalog.media.manage");
@@ -83,17 +83,17 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ pa
     if (p[0] === "variants" && p[1] && !p[2]) {
       if (!isValidAdminId(p[1])) return bad("Variant ID is invalid.");
       const context = await requireAdmin(request, "catalog.update");
-      return adminJson({ variant: await updateCatalogVariant(context, p[1], body as never) });
+      return adminJson({ variant: await updateCatalogVariant(context, p[1], body as unknown as Parameters<typeof updateCatalogVariant>[2]) });
     }
     if (p[0] === "categories" && p[1]) {
       if (!isValidAdminId(p[1])) return bad("Category ID is invalid.");
       const context = await requireAdmin(request, "catalog.category.manage");
-      return adminJson({ category: await updateCatalogCategory(context, p[1], body as never) });
+      return adminJson({ category: await updateCatalogCategory(context, p[1], body as unknown as Parameters<typeof updateCatalogCategory>[2]) });
     }
     if (p[0] === "collections" && p[1]) {
       if (!isValidAdminId(p[1])) return bad("Collection ID is invalid.");
       const context = await requireAdmin(request, "catalog.collection.manage");
-      return adminJson({ collection: await updateCatalogCollection(context, p[1], body as never) });
+      return adminJson({ collection: await updateCatalogCollection(context, p[1], body as unknown as Parameters<typeof updateCatalogCollection>[2]) });
     }
     return bad("Catalog resource is not supported.");
   } catch (error) { return adminErrorResponse(error); }
