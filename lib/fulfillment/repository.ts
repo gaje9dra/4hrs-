@@ -1,4 +1,4 @@
-import { Prisma, type PrismaClient, type FulfillmentStatus as PrismaFulfillmentStatus } from "@prisma/client";
+import { Prisma, type PrismaClient, type FulfillmentStatus as PrismaFulfillmentStatus, type FulfillmentOperationStatus, type FulfillmentOperationType } from "@prisma/client";
 import { db } from "@/lib/db/client";
 
 export type FulfillmentRepositoryClient = PrismaClient | Prisma.TransactionClient;
@@ -17,6 +17,9 @@ export type FulfillmentRepository = {
   transitionStatus(input: { id: string; expectedStatus: PrismaFulfillmentStatus; nextStatus: PrismaFulfillmentStatus; timestamps?: { submittedAt?: Date; acceptedAt?: Date; completedAt?: Date; failedAt?: Date }; providerFulfillmentReference?: string | null; errorCode?: string | null; errorMessage?: string | null; reconciliationMetadata?: Prisma.InputJsonValue | typeof Prisma.DbNull }): Promise<FulfillmentWithItems | null>;
   updateReconciliationMetadata(input: { id: string; expectedStatus: PrismaFulfillmentStatus; metadata: Prisma.InputJsonValue | typeof Prisma.DbNull }): Promise<FulfillmentWithItems | null>;
   recordProviderSubmissionFailure(input: { id: string; expectedStatus: PrismaFulfillmentStatus; errorCode: string; errorMessage: string; reconciliationMetadata: Prisma.InputJsonValue | typeof Prisma.DbNull }): Promise<FulfillmentWithItems | null>;
+  getOperationIdempotency(key: string): Promise<{ id: string; fulfillmentId: string; operation: FulfillmentOperationType; status: FulfillmentOperationStatus } | null>;
+  createOperationIdempotency(input: { fulfillmentId: string; operation: FulfillmentOperationType; idempotencyKey: string }): Promise<{ id: string; fulfillmentId: string; operation: FulfillmentOperationType; status: FulfillmentOperationStatus }>;
+  updateOperationIdempotency(input: { id: string; status: FulfillmentOperationStatus }): Promise<void>;
 };
 
 function clientOrDefault(client?: FulfillmentRepositoryClient): FulfillmentRepositoryClient { return client ?? db; }
@@ -83,6 +86,21 @@ export function createFulfillmentRepository(client?: FulfillmentRepositoryClient
       return database.fulfillment.findUnique({ where: { id: input.id }, include: { items: true } });
     },
 
+    getOperationIdempotency(key) {
+      return database.fulfillmentOperationIdempotency.findUnique({
+        where: { idempotencyKey: key },
+        select: { id: true, fulfillmentId: true, operation: true, status: true },
+      });
+    },
+    async createOperationIdempotency(input) {
+      return database.fulfillmentOperationIdempotency.create({
+        data: { fulfillmentId: input.fulfillmentId, operation: input.operation, idempotencyKey: input.idempotencyKey },
+        select: { id: true, fulfillmentId: true, operation: true, status: true },
+      });
+    },
+    async updateOperationIdempotency(input) {
+      await database.fulfillmentOperationIdempotency.update({ where: { id: input.id }, data: { status: input.status } });
+    },
     async recordProviderSubmissionFailure(input) {
       const result = await database.fulfillment.updateMany({
         where: { id: input.id, status: input.expectedStatus },
