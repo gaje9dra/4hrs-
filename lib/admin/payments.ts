@@ -68,12 +68,12 @@ export async function getAdminPayment(paymentId:string, canViewSensitive:boolean
  if(!payment)throw new AdminError("NOT_FOUND","Payment was not found.");
  const audit=canReadAudit?await db.adminAuditLog.findMany({where:{resourceType:"Payment",resourceId:payment.id},orderBy:[{createdAt:"asc"},{id:"asc"}],select:{action:true,success:true,reason:true,createdAt:true,actorAdminId:true,correlationId:true}}):[];
  const reserved=payment.refunds.reduce((sum,r)=>r.status==="SUCCEEDED"||r.status==="PENDING"||r.status==="AMBIGUOUS"?sum.plus(r.amount):sum,new Prisma.Decimal(0));
- const refundable=payment.amount.minus(reserved).max(0);
+ const refundableRaw=payment.amount.minus(reserved); const refundable=refundableRaw.lt(0)?new Prisma.Decimal(0):refundableRaw;
  return {id:payment.id,reference:payment.internalReference,checkoutReference:payment.checkoutReference,status:payment.status,amount:decimal(payment.amount),refundableAmount:decimal(refundable),currency:payment.currency,providerId:payment.providerId,providerReference:canViewSensitive?payment.providerReference:null,completedAt:iso(payment.completedAt),expiresAt:iso(payment.expiresAt),createdAt:payment.createdAt.toISOString(),updatedAt:payment.updatedAt.toISOString(),customer:payment.customer,order:payment.order?{id:payment.order.id,orderNumber:payment.order.orderNumber,total:decimal(payment.order.total),currency:payment.order.currency,createdAt:payment.order.createdAt.toISOString()}:null,attempts:payment.attempts.map(a=>({id:a.id,attemptNumber:a.attemptNumber,status:a.status,amount:decimal(a.amount),currency:a.currency,providerId:a.providerId,providerReference:canViewSensitive?a.providerAttemptReference:null,failureCode:a.failureCode,failureCategory:a.failureCategory,createdAt:a.createdAt.toISOString(),updatedAt:a.updatedAt.toISOString()})),events:payment.events.map(e=>({id:e.id,providerId:e.providerId,providerEventId:canViewSensitive?e.providerEventId:null,eventType:e.eventType,normalizedEventType:e.normalizedEventType,processingStatus:e.processingStatus,occurredAt:iso(e.occurredAt),receivedAt:e.receivedAt.toISOString(),processingError:e.processingError})),refunds:payment.refunds.map(r=>({id:r.id,amount:decimal(r.amount),currency:r.currency,status:r.status,reason:r.reason,note:r.note,providerId:r.providerId,providerReference:canViewSensitive?r.providerReference:null,failureCode:r.failureCode,createdAt:r.createdAt.toISOString(),updatedAt:r.updatedAt.toISOString(),completedAt:iso(r.completedAt),idempotencyKey:canViewSensitive?r.idempotencyKey:null})),audit};
 }
 
 export type AdminPaymentAction=
- | {action:"refund";amount:string;currency:string;reason:AdminRefundReason;note?:string|null;idempotencyKey:string}
+ | {action:"refund";amount:string;currency:string;refundReason:AdminRefundReason;reason:unknown;note?:string|null;idempotencyKey:string}
  | {action:"reconcile";reason:unknown}
  | {action:"verify";reason:unknown}
  | {action:"retry";reason:unknown;idempotencyKey:string};
@@ -89,7 +89,7 @@ export async function executeAdminPaymentAction(context:AdminAuthorizationContex
    if(!current)throw new AdminError("NOT_FOUND","Payment was not found.");
    let full=false; try{full=new Prisma.Decimal(input.amount).eq(current.amount);}catch{throw new AdminError("INVALID_REQUEST","Refund amount is invalid.");}
    requirePermission(context,full?"payments.refund":"payments.refund_partial");
-   const result=await paymentApp.refundPayment({paymentId,amount:input.amount,currency:input.currency,reason,note:input.note??null,idempotencyKey:input.idempotencyKey});
+   const result=await paymentApp.refundPayment({paymentId,amount:input.amount,currency:input.currency,reason:input.refundReason,note:input.note??null,idempotencyKey:input.idempotencyKey});
    await auditAdminAction(context,{action:"PAYMENT_REFUND",resourceType:"Payment",resourceId:paymentId,success:true,reason,correlationId,metadata:{refundId:result.refundId,amount:result.amount.value,currency:result.currency,status:result.status}});
    return {action:input.action,result};
   }
