@@ -43,14 +43,17 @@ function auditState(mapping: {
     : null;
 }
 
-async function writeMappingAudit(input: {
-  variantId: string;
-  operation: "CREATE" | "UPDATE" | "DELETE";
-  actorId?: string | null;
-  beforeState: ReturnType<typeof auditState>;
-  afterState: ReturnType<typeof auditState>;
-}) {
-  await db.catalogAuditEvent.create({
+async function writeMappingAudit(
+  client: Prisma.TransactionClient,
+  input: {
+    variantId: string;
+    operation: "CREATE" | "UPDATE" | "DELETE";
+    actorId?: string | null;
+    beforeState: ReturnType<typeof auditState>;
+    afterState: ReturnType<typeof auditState>;
+  },
+) {
+  await client.catalogAuditEvent.create({
     data: {
       entityType: "VARIANT",
       entityId: input.variantId,
@@ -87,22 +90,25 @@ export function createProviderMappingService() {
       auditActorId?: string | null;
     }) {
       validateProviderMappingInput(input);
-      const variant = await repository.getVariantPublicationState(input.variantId);
-      if (!variant) throw new Error("ProductVariant was not found.");
-      if (variant.product.status === "ACTIVE" && input.active === false) {
-        throw new Error("Cannot deactivate a fulfillment mapping for a published ProductVariant.");
-      }
-
       const providerId = normalizeProviderId(input.providerId);
-      const before = await repository.getByVariantAndProvider(input.variantId, providerId);
       try {
-        const mapping = await repository.upsert({ ...input, providerId });
-        await writeMappingAudit({
-          variantId: input.variantId,
-          operation: before ? "UPDATE" : "CREATE",
-          actorId: input.auditActorId,
-          beforeState: auditState(before),
-          afterState: auditState(mapping),
+        const mapping = await db.$transaction(async (tx) => {
+          const txRepository = createFulfillmentProviderMappingRepository(tx);
+          const variant = await txRepository.getVariantPublicationState(input.variantId);
+          if (!variant) throw new Error("ProductVariant was not found.");
+          if (variant.product.status === "ACTIVE" && input.active === false) {
+            throw new Error("Cannot deactivate a fulfillment mapping for a published ProductVariant.");
+          }
+          const before = await txRepository.getByVariantAndProvider(input.variantId, providerId);
+          const saved = await txRepository.upsert({ ...input, providerId });
+          await writeMappingAudit(tx, {
+            variantId: input.variantId,
+            operation: before ? "UPDATE" : "CREATE",
+            actorId: input.auditActorId,
+            beforeState: auditState(before),
+            afterState: auditState(saved),
+          });
+          return saved;
         });
         return toFulfillmentProviderMappingDto(mapping);
       } catch (error) {
@@ -114,21 +120,31 @@ export function createProviderMappingService() {
     },
     async removeVariantMapping(variantId: string, providerId: string, auditActorId?: string | null) {
       const normalizedProvider = normalizeProviderId(providerId);
-      const variant = await repository.getVariantPublicationState(variantId);
-      if (!variant) throw new Error("ProductVariant was not found.");
-      if (variant.product.status === "ACTIVE") {
-        throw new Error("Cannot remove a fulfillment mapping from a published ProductVariant.");
+      try {
+        await db.$transaction(async (tx) => {
+          const txRepository = createFulfillmentProviderMappingRepository(tx);
+          const variant = await txRepository.getVariantPublicationState(variantId);
+          if (!variant) throw new Error("ProductVariant was not found.");
+          if (variant.product.status === "ACTIVE") {
+            throw new Error("Cannot remove a fulfillment mapping from a published ProductVariant.");
+          }
+          const before = await txRepository.getByVariantAndProvider(variantId, normalizedProvider);
+          const deleted = await txRepository.deleteByVariantAndProvider(variantId, normalizedProvider);
+          await writeMappingAudit(tx, {
+            variantId,
+            operation: "DELETE",
+            actorId: auditActorId,
+            beforeState: auditState(before),
+            afterState: null,
+          });
+          return deleted;
+        });
+      } catch (error) {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+          throw new Error("Provider mapping was not found.");
+        }
+        throw error;
       }
-      const before = await repository.getByVariantAndProvider(variantId, normalizedProvider);
-      const deleted = await repository.deleteByVariantAndProvider(variantId, normalizedProvider);
-      await writeMappingAudit({
-        variantId,
-        operation: "DELETE",
-        actorId: auditActorId,
-        beforeState: auditState(before),
-        afterState: null,
-      });
-      return deleted;
     },
   };
 }
