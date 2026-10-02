@@ -1,0 +1,14 @@
+export const RETURN_ERROR_CODES = [
+  "AUTHENTICATION_REQUIRED","ORDER_NOT_FOUND","ORDER_ACCESS_DENIED","INVALID_REQUEST",
+  "CANCELLATION_NOT_ELIGIBLE","CANCELLATION_ALREADY_REQUESTED","CANCELLATION_INVALID_TRANSITION",
+  "CANCELLATION_NOT_AUTHORIZED","RETURN_NOT_ELIGIBLE","RETURN_ALREADY_REQUESTED","RETURN_INVALID_TRANSITION",
+  "RETURN_QUANTITY_INVALID","RETURN_QUANTITY_EXCEEDED","RETURN_ITEM_INVALID","RETURN_NOT_FOUND",
+  "RETURN_NOT_AUTHORIZED","RETURN_INSPECTION_INVALID","RETURN_RESOLUTION_INVALID","REFUND_UNAVAILABLE",
+  "ADMIN_REQUIRED","CONCURRENCY_CONFLICT","DATABASE_ERROR"
+] as const;
+export type ReturnErrorCode = (typeof RETURN_ERROR_CODES)[number];
+export class ReturnDomainError extends Error {
+  constructor(public readonly code: ReturnErrorCode, message: string, public readonly details?: Record<string,string|number|boolean|null>, options?: {cause?: unknown}) {
+    super(message, options); this.name = "ReturnDomainError";
+  }
+}
