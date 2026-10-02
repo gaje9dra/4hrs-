@@ -1,5 +1,6 @@
 import { assertSameOrigin, authErrorResponse } from "@/lib/auth/http";
 import { requireAdmin } from "@/lib/auth/admin";
+import { AuthenticationError } from "@/lib/auth/errors";
 import { createProviderMappingService } from "@/lib/fulfillment/mapping-service";
 
 export const dynamic = "force-dynamic";
@@ -12,7 +13,8 @@ function json(data: unknown, status = 200) {
 }
 
 function errorResponse(error: unknown) {
-  return authErrorResponse(error);
+  if (error instanceof AuthenticationError) return authErrorResponse(error);
+  return json({ error: error instanceof Error ? error.message : "Provider mapping operation failed." }, 400);
 }
 
 export async function GET(request: Request) {
