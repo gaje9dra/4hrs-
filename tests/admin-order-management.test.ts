@@ -35,7 +35,7 @@ async function cleanup(f:Awaited<ReturnType<typeof fixture>>){
 }
 
 test("admin order query rejects unsupported parameters",()=>{
- assert.throws(()=>parseAdminOrderQuery(new URL("https://example.test/admin/orders?sort=customerPassword")),/Unsupported order list parameter/);
+ assert.throws(()=>parseAdminOrderQuery(new URL("https://example.test/admin/orders?sort=customerPassword")),/Invalid sort field/);
 });
 test("admin order query validates bounded pagination and whitelisted sorting",()=>{
  const query=parseAdminOrderQuery(new URL("https://example.test/admin/orders?page=2&pageSize=100&sort=total&direction=asc&status=CONFIRMED"));
