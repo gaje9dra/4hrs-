@@ -243,13 +243,8 @@ export async function getAdminAnalytics(query: AnalyticsQuery, options: {
 
   const customerPromise = options.customer ? db.$queryRaw<CustomerRow[]>(Prisma.sql`
     SELECT
-      COUNT(*)::bigint AS "newCustomers",
-      COUNT(DISTINCT c.id) FILTER (WHERE EXISTS (
-        SELECT 1 FROM "Order" o JOIN "Payment" p ON p.id = o."paymentId"
-        WHERE o."customerId" = c.id AND p.status IN ('SUCCEEDED','REFUNDED','PARTIALLY_REFUNDED') AND o."createdAt" >= (${query.from}::date::timestamp AT TIME ZONE ${query.timezone}) AND o."createdAt" < (${addDays(query.to, 1)}::date::timestamp AT TIME ZONE ${query.timezone})
-      ))::bigint AS "customersWithPaidOrders"
-    FROM "Customer" c
-    WHERE ${range}
+      (SELECT COUNT(*) FROM "Customer" c WHERE ${range})::bigint AS "newCustomers",
+      (SELECT COUNT(DISTINCT o."customerId") FROM "Order" o JOIN "Payment" p ON p.id = o."paymentId" WHERE p.status IN ('SUCCEEDED','REFUNDED','PARTIALLY_REFUNDED') AND o.${Prisma.raw('"createdAt"')} >= (${query.from}::date::timestamp AT TIME ZONE ${query.timezone}) AND o."createdAt" < (${addDays(query.to, 1)}::date::timestamp AT TIME ZONE ${query.timezone}))::bigint AS "customersWithPaidOrders"
   `) : Promise.resolve([{newCustomers: 0, customersWithPaidOrders: 0}]);
 
   const trendsPromise = db.$queryRaw<TrendRow[]>(Prisma.sql`
