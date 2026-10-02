@@ -153,6 +153,7 @@ function bucketLabelSql(query: AnalyticsQuery) {
 
 export async function getAdminAnalytics(query: AnalyticsQuery, options: {
   financial: boolean;
+  operations: boolean;
   customer: boolean;
 }) {
   const range = rangeSql(query);
@@ -296,23 +297,23 @@ export async function getAdminAnalytics(query: AnalyticsQuery, options: {
       paymentSuccessRate: attemptDenominator === 0 ? null : Number(((successfulAttempts / attemptDenominator) * 100).toFixed(2)),
       refundCount: await countSuccessfulRefunds(query), refundAmount: money(summary?.refundAmount),
     } : null,
-    fulfillment: {
+    fulfillment: options.operations ? {
       attempts: int(fulfillment?.attempts ?? 0),
       success: int(fulfillment?.success ?? 0),
       failure: int(fulfillment?.failure ?? 0),
       pending: int(fulfillment?.pending ?? 0),
       retries: int(fulfillment?.retries ?? 0),
       reconciliations: int(fulfillment?.reconciliations ?? 0),
-    },
-    shipping: {
+    } : null,
+    shipping: options.operations ? {
       shipmentCount: int(shipping?.shipmentCount ?? 0),
       deliveryFailures: int(shipping?.deliveryFailures ?? 0),
       trackingAvailable: int(shipping?.trackingAvailable ?? 0),
       delivered: int(shipping?.delivered ?? 0),
       inTransit: int(shipping?.inTransit ?? 0),
       pending: int(shipping?.pending ?? 0),
-    },
-    returns: {
+    } : null,
+    returns: options.operations ? {
       requests: int(returns?.requests ?? 0),
       approved: int(returns?.approved ?? 0),
       rejected: int(returns?.rejected ?? 0),
@@ -321,12 +322,12 @@ export async function getAdminAnalytics(query: AnalyticsQuery, options: {
       cancellations: int(returns?.cancellations ?? 0),
       completedCancellations: int(returns?.completedCancellations ?? 0),
       cancellationRate: paidOrders === 0 ? null : Number(((int(returns?.completedCancellations ?? 0) / paidOrders) * 100).toFixed(2)),
-    },
-    cases: {
+    } : null,
+    cases: options.operations ? {
       openCases: int(cases?.openCases ?? 0),
       newCases: int(cases?.newCases ?? 0),
       resolvedCases: int(cases?.resolvedCases ?? 0),
-    },
+    } : null,
     customers: options.customer ? {
       newCustomers: int(customer?.newCustomers ?? 0),
       customersWithPaidOrders: int(customer?.customersWithPaidOrders ?? 0),
