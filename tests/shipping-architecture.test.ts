@@ -6,6 +6,7 @@ import {
   canTransitionShipmentStatus,
   isShipmentTerminal,
   shouldApplyTrackingEvent,
+  assertTrackingEventTransition,
 } from "@/lib/shipping/domain";
 
 test("Shipment lifecycle allows forward transitions", () => {
@@ -14,6 +15,16 @@ test("Shipment lifecycle allows forward transitions", () => {
   assert.throws(() => assertShipmentTransition("CREATED", "DELIVERED"), /transition .* is not allowed/);
   assert.equal(canTransitionShipmentStatus("IN_TRANSIT", "OUT_FOR_DELIVERY"), true);
   assert.equal(canTransitionShipmentStatus("OUT_FOR_DELIVERY", "DELIVERED"), true);
+});
+
+test("tracking events cannot bypass the canonical lifecycle", () => {
+  assert.throws(
+    () => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+      assertTrackingEventTransition("CREATED", "DELIVERED");
+    },
+    /Tracking event cannot transition Shipment from CREATED to DELIVERED/,
+  );
 });
 
 test("terminal Shipment states cannot transition", () => {
