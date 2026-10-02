@@ -1,4 +1,6 @@
 import type { MetadataRoute } from "next";
+
+export const dynamic = "force-dynamic";
 import { db } from "@/lib/db/client";
 import { getProductionSiteOrigin } from "@/config/site";
 import { categoryPath, collectionPath, productPath } from "@/lib/catalog/routes";
