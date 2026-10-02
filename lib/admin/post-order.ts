@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { Prisma, type FulfillmentStatus, type ShipmentStatus, type PaymentStatus } from "@prisma/client";
 import { db } from "@/lib/db/client";
 import { AdminError } from "@/lib/admin/errors";
 import { auditAdminAction } from "@/lib/admin/audit";
@@ -20,7 +20,7 @@ function sort(url:URL):Sort{const value=clean(url.searchParams.get("sort"))??"cr
 function order(sortValue:Sort){switch(sortValue){case"createdAt_asc":return[{createdAt:"asc" as const},{id:"asc" as const}];case"updatedAt_desc":return[{updatedAt:"desc" as const},{id:"desc" as const}];case"updatedAt_asc":return[{updatedAt:"asc" as const},{id:"asc" as const}];default:return[{createdAt:"desc" as const},{id:"desc" as const}];}}
 function errorMap(error:unknown):never{if(error instanceof AdminError)throw error;const code=typeof error==="object"&&error&&"code" in error?(error as {code?:unknown}).code:null;if(code==="RETURN_NOT_FOUND"||code==="ORDER_NOT_FOUND")throw new AdminError("NOT_FOUND","The requested post-order resource was not found.");if(code==="CANCELLATION_INVALID_TRANSITION"||code==="RETURN_INVALID_TRANSITION"||code==="RETURN_RESOLUTION_INVALID"||code==="CONCURRENCY_CONFLICT")throw new AdminError("CONFLICT","The post-order resource changed or is not in a valid state.");if(code==="REFUND_UNAVAILABLE")throw new AdminError("INVALID_REQUEST","This return resolution is not supported by the current Payment/Return architecture.");if(error instanceof Error&&error.name==="CaseDomainError")throw new AdminError("CONFLICT",error.message);throw new AdminError("DATABASE_ERROR","The post-order operation could not be completed safely.",{cause:error});}
 function iso(d:Date|null|undefined){return d?.toISOString()??null;}
-function eligibilityForOrder(row:{status:Prisma.OrderGetPayload<{select:{status:true}}>["status"];fulfillment:{status:string}|null;shipments:Array<{status:string;deliveredAt:Date|null;updatedAt:Date}>;payment:{status:string;completedAt:Date|null}}){
+function eligibilityForOrder(row:{status:Prisma.OrderGetPayload<{select:{status:true}}>["status"];fulfillment:{status:FulfillmentStatus}|null;shipments:Array<{status:ShipmentStatus;deliveredAt:Date|null;updatedAt:Date}>;payment:{status:PaymentStatus;completedAt:Date|null}}){
  const shipment=row.shipments.slice().sort((a,b)=>b.updatedAt.getTime()-a.updatedAt.getTime())[0]??null;
  const state={orderStatus:row.status,fulfillmentStatus:row.fulfillment?.status??null,hasShipment:row.shipments.length>0,shipmentStatus:shipment?.status??null,deliveredAt:shipment?.deliveredAt??null,paymentSucceeded:row.payment.status==="SUCCEEDED"&&!!row.payment.completedAt};
  const configured=Number(process.env.RETURN_WINDOW_DAYS??"7");const returnWindowDays=Number.isInteger(configured)&&configured>=0&&configured<=365?configured:7;return {cancellation:cancellationEligibility(state),return:returnEligibility({...state,now:new Date(),returnWindowDays})};
@@ -37,7 +37,7 @@ export async function listAdminCancellations(q:PostOrderQuery,canReadCustomer:bo
  return {items:rows.map(r=>({id:r.id,reference:r.cancellationReference,status:r.status,reason:r.reason,description:r.customerDescription,customer:canReadCustomer?{id:r.customer.id,email:r.customer.email,displayName:r.customer.displayName}:null,order:r.order,requestedAt:r.requestedAt.toISOString(),reviewedAt:iso(r.reviewedAt),completedAt:iso(r.completedAt)})),pagination:{page:q.page,pageSize:q.pageSize,total,totalPages:Math.max(1,Math.ceil(total/q.pageSize)),hasNextPage:q.page*q.pageSize<total}};
 }
 export async function getAdminCancellation(reference:string,canReadCustomer:boolean,canReadAudit:boolean){
- const row=await db.cancellationRequest.findUnique({where:{cancellationReference:reference},include:{customer:{select:{id:true,email:true,displayName:true}},order:{select:{id:true,orderNumber:true,status:true,customerId:true,payment:{select:{id:true,status:true,amount:true,currency:true}},fulfillment:{select:{id:true,status:true}},shipments:{select:{id:true,status:true,trackingNumber:true,trackingUrl:true,updatedAt:true,deliveredAt:true}}}}}});
+ const row=await db.cancellationRequest.findUnique({where:{cancellationReference:reference},include:{customer:{select:{id:true,email:true,displayName:true}},order:{select:{id:true,orderNumber:true,status:true,customerId:true,payment:{select:{id:true,status:true,amount:true,currency:true,completedAt:true}},fulfillment:{select:{id:true,status:true}},shipments:{select:{id:true,status:true,trackingNumber:true,trackingUrl:true,updatedAt:true,deliveredAt:true}}}}}});
  if(!row)throw new AdminError("NOT_FOUND","Cancellation was not found.");
  const eligibility=eligibilityForOrder(row.order);
  const audit=canReadAudit?await db.adminAuditLog.findMany({where:{resourceType:{in:["CancellationRequest","Order"]},resourceId:{in:[row.id,row.order.id]}},orderBy:[{createdAt:"asc"},{id:"asc"}],select:{action:true,success:true,reason:true,createdAt:true,actorAdminId:true,correlationId:true,resourceId:true}}):[];
@@ -90,7 +90,7 @@ export async function executeAdminPostOrderAction(context:AdminAuthorizationCont
    return result;
   }
   requirePermission(context,"return.resolve");const row=await db.returnRequest.findUnique({where:{returnReference:input.reference},select:{id:true}});if(!row)throw new AdminError("NOT_FOUND","Return was not found.");
-  const result=await createReturnsApplication().resolveReturn({reference:input.reference,type:"REJECTED",note:input.note,reason,idempotencyKey:input.idempotencyKey,request});
+  const result=await createReturnsApplication().resolveReturn({reference:input.reference,type:"REJECTED",note:input.note,idempotencyKey:input.idempotencyKey,request});
   await auditAdminAction(context,{action:"RETURN_RESOLVE_REJECTED",resourceType:"ReturnRequest",resourceId:row.id,success:true,reason,correlationId,metadata:{idempotencyKey:input.idempotencyKey}});
   return result;
  }catch(error){await auditAdminAction(context,{action:"POST_ORDER_"+input.action.toUpperCase()+"_FAILED",resourceType:input.action.startsWith("cancellation")?"CancellationRequest":"ReturnRequest",success:false,reason,correlationId,metadata:{error:error instanceof Error?error.name:"unknown",idempotencyKey:input.idempotencyKey}}).catch(()=>undefined);errorMap(error);}
