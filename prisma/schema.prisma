@@ -379,6 +379,7 @@ model Customer {
   authoredCaseNotes CaseNote[]
   caseAssignments CaseAssignment[]
   caseAuditActors CaseAuditEvent[] @relation("CaseAuditActor")
+  adminUser        AdminUser?
   @@index([status])
 }
 
@@ -1177,4 +1178,82 @@ model CaseAuditEvent {
   actor       Customer?        @relation("CaseAuditActor", fields: [actorId], references: [id], onDelete: Restrict)
   @@index([caseId, createdAt])
   @@index([actorId, createdAt])
+}
+
+enum AdminAccountStatus {
+  ACTIVE
+  DISABLED
+}
+
+model AdminUser {
+  id           String            @id @default(uuid()) @db.Uuid
+  customerId   String            @unique @db.Uuid
+  status       AdminAccountStatus @default(ACTIVE)
+  version      Int               @default(1)
+  lastLoginAt  DateTime?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  customer     Customer          @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  roles        AdminUserRole[]
+  auditLogs    AdminAuditLog[]   @relation("AdminAuditActor")
+  @@index([status])
+  @@index([updatedAt])
+}
+
+model AdminRole {
+  id          String             @id @default(uuid()) @db.Uuid
+  name        String             @unique @db.VarChar(64)
+  description String?            @db.VarChar(255)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  admins      AdminUserRole[]
+  permissions AdminRolePermission[]
+}
+
+model AdminPermission {
+  id          String               @id @default(uuid()) @db.Uuid
+  key         String               @unique @db.VarChar(120)
+  description String?              @db.VarChar(255)
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  roles       AdminRolePermission[]
+  @@index([key])
+}
+
+model AdminUserRole {
+  adminUserId String    @db.Uuid
+  roleId      String    @db.Uuid
+  assignedAt  DateTime  @default(now())
+  adminUser   AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+  role        AdminRole @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  @@id([adminUserId, roleId])
+  @@index([roleId])
+}
+
+model AdminRolePermission {
+  roleId       String          @db.Uuid
+  permissionId String          @db.Uuid
+  assignedAt   DateTime        @default(now())
+  role         AdminRole       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   AdminPermission @relation(fields: [permissionId], references: [id], onDelete: Restrict)
+  @@id([roleId, permissionId])
+  @@index([permissionId])
+}
+
+model AdminAuditLog {
+  id              String    @id @default(uuid()) @db.Uuid
+  actorAdminId    String?   @db.Uuid
+  action          String    @db.VarChar(120)
+  resourceType    String?   @db.VarChar(120)
+  resourceId      String?   @db.VarChar(255)
+  success         Boolean
+  reason          String?   @db.VarChar(1000)
+  correlationId   String?   @db.VarChar(128)
+  metadata        Json?
+  createdAt       DateTime  @default(now())
+  actor           AdminUser? @relation("AdminAuditActor", fields: [actorAdminId], references: [id], onDelete: SetNull)
+  @@index([actorAdminId, createdAt])
+  @@index([resourceType, resourceId, createdAt])
+  @@index([action, createdAt])
+  @@index([createdAt])
 }

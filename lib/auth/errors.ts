@@ -7,7 +7,11 @@ export type AuthenticationErrorCode =
   | "SESSION_EXPIRED"
   | "CSRF_REJECTED"
   | "RATE_LIMITED"
-  | "AUTH_DATABASE_ERROR";
+  | "AUTH_DATABASE_ERROR"
+  | "ADMIN_REQUIRED"
+  | "FORBIDDEN"
+  | "INVALID_REQUEST"
+  | "CONFLICT";
 
 export class AuthenticationError extends Error {
   constructor(

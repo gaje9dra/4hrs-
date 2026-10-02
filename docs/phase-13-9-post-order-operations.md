@@ -55,7 +55,7 @@ No customer can assign cases, change internal priority, add internal notes, invo
 Added case lifecycle/taxonomy tests. Full repository CI remains the final gate for Prisma generation/migration validation, typecheck, tests, lint, and production build.
 
 ## Known limitations
-- Existing admin authorization is email-based via `ADMIN_EMAILS`; the repository does not currently expose a separate role/permission framework, so no parallel RBAC system was introduced.
+- Historical note: Phase 13.9 used the then-existing `ADMIN_EMAILS` boundary. Phase 14.1 supersedes that administrative authorization with explicit AdminUser authority and centralized RBAC; the Case domain now consumes that foundation.
 - Payment refund execution is still owned by Payment and is not implemented by Cases.
 - No additional shipping or fulfillment provider is introduced.
 - Qikink remains fulfillment-only.

@@ -1,5 +1,5 @@
 import { assertSameOrigin, authErrorResponse } from "@/lib/auth/http";
-import { requireAdmin } from "@/lib/auth/admin";
+import { adminErrorResponse } from "@/lib/admin/http";import { AdminError } from "@/lib/admin/errors";import { requireAdmin } from "@/lib/auth/admin";
 import { createCatalogService } from "@/lib/catalog/service";
 import { CatalogServiceError } from "@/lib/catalog/errors";
 import { createFulfillmentProviderMappingRepository } from "@/lib/fulfillment/mapping";
@@ -16,7 +16,7 @@ function json(data: unknown, status = 200) {
 
 export async function POST(request: Request) {
   try {
-    await requireAdmin(request);
+    await requireAdmin(request,"catalog.publish");
     assertSameOrigin(request);
     const input = await request.json();
     const productId = typeof input?.productId === "string" ? input.productId.trim() : "";
@@ -37,6 +37,7 @@ export async function POST(request: Request) {
 
     return json({ product: await catalog.unpublishProduct(productId) });
   } catch (error) {
+    if (error instanceof AdminError) return adminErrorResponse(error);
     if (error instanceof CatalogServiceError) return json({ error: error.message }, 400);
     return authErrorResponse(error);
   }

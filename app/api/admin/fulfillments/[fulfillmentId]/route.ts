@@ -1,5 +1,5 @@
 import { assertSameOrigin, authErrorResponse } from "@/lib/auth/http";
-import { requireAdmin } from "@/lib/auth/admin";
+import { adminErrorResponse } from "@/lib/admin/http";import { AdminError } from "@/lib/admin/errors";import { requireAdmin } from "@/lib/auth/admin";
 import { AuthenticationError } from "@/lib/auth/errors";
 import { FulfillmentDomainError } from "@/lib/fulfillment/errors";
 import { createFulfillmentApplication } from "@/lib/fulfillment/application";
@@ -21,6 +21,7 @@ function json(data: unknown, status = 200) {
 }
 
 function errorResponse(error: unknown) {
+  if (error instanceof AdminError) return adminErrorResponse(error);
   if (error instanceof AuthenticationError) return authErrorResponse(error);
   if (error instanceof FulfillmentDomainError) {
     const status =
@@ -38,7 +39,7 @@ export async function GET(
   context: { params: Promise<{ fulfillmentId: string }> },
 ) {
   try {
-    await requireAdmin(request);
+    await requireAdmin(request,"fulfillment.read");
     const fulfillmentId = (await context.params).fulfillmentId.trim();
     if (!fulfillmentId) return json({ error: { code: "INVALID_REQUEST", message: "Fulfillment ID is required." } }, 400);
     const diagnostics = await getFulfillmentOperationalDiagnostics(fulfillmentId);
@@ -54,7 +55,7 @@ export async function POST(
   context: { params: Promise<{ fulfillmentId: string }> },
 ) {
   try {
-    await requireAdmin(request);
+    await requireAdmin(request,"fulfillment.manage");
     assertSameOrigin(request);
     const fulfillmentId = (await context.params).fulfillmentId.trim();
     if (!fulfillmentId) return json({ error: { code: "INVALID_REQUEST", message: "Fulfillment ID is required." } }, 400);

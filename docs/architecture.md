@@ -41,7 +41,7 @@ docs/               architecture and phase documentation
 The customer-facing route boundary is reserved under app/(storefront). The route group does not change public URLs. Customer features belong under features/ rather than coupling route components to infrastructure.
 
 ### Admin
-app/admin is reserved for future administrative routes. It is separate from the customer storefront and must not become a second copy of storefront business logic.
+app/admin is the protected administrative control plane established in Phase 14.1. It uses the existing customer session plus explicit AdminUser authority and centralized role-to-permission authorization. Admin routes must remain a thin control-plane boundary and must invoke canonical domain/application services rather than duplicating storefront business logic.
 
 ### API
 app/api is reserved for server-side API handlers. API handlers should delegate to feature/domain services rather than contain business rules or raw infrastructure access.
