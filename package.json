@@ -10,7 +10,7 @@
     "typecheck": "prisma generate && next typegen && tsc --noEmit",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy",
-    "test": "prisma migrate deploy && tsx --test",
+    "test": "prisma migrate deploy && tsx --test --test-concurrency=1",
     "postinstall": "prisma generate"
   },
   "dependencies": {
