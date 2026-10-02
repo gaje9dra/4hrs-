@@ -1389,6 +1389,13 @@ export async function getCategoryById(id: string, client?: CatalogRepositoryClie
   return clientOrDefault(client).category.findUnique({ where: { id } });
 }
 
+export async function listCategories(client?: CatalogRepositoryClient) {
+  return clientOrDefault(client).category.findMany({
+    orderBy: [{ status: "asc" }, { name: "asc" }, { id: "asc" }],
+    include: { _count: { select: { products: true } } },
+  });
+}
+
 export async function getCategoryHierarchy(client?: CatalogRepositoryClient) {
   return clientOrDefault(client).category.findMany({
     orderBy: [{ parentId: "asc" }, { name: "asc" }],
@@ -1406,6 +1413,13 @@ export async function archiveCategory(id: string, client?: CatalogRepositoryClie
 
 export async function createCollection(data: Prisma.CollectionCreateInput, client?: CatalogRepositoryClient) {
   return clientOrDefault(client).collection.create({ data });
+}
+
+export async function listCollections(client?: CatalogRepositoryClient) {
+  return clientOrDefault(client).collection.findMany({
+    orderBy: [{ status: "asc" }, { name: "asc" }, { id: "asc" }],
+    include: { _count: { select: { products: true } } },
+  });
 }
 
 export async function getCollectionById(id: string, client?: CatalogRepositoryClient) {
