@@ -51,11 +51,11 @@ export async function GET(request: Request) {
       return adminJson(await listCatalogProducts(context, parseCatalogOptions(request)));
     }
     if (resource === "categories") {
-      const context = await requireAdmin(request, "catalog.category.manage");
+      const context = await requireAdmin(request, "catalog.read");
       return adminJson({ items: await listCatalogCategories(context) });
     }
     if (resource === "collections") {
-      const context = await requireAdmin(request, "catalog.collection.manage");
+      const context = await requireAdmin(request, "catalog.read");
       return adminJson({ items: await listCatalogCollections(context) });
     }
     return badRequest("Unsupported catalog resource.");
