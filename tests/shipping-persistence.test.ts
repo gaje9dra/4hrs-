@@ -95,6 +95,7 @@ test("Shipment persistence enforces Fulfillment and Order consistency", async ()
   const shipment = await repository.createShipment({
     orderId: order.id,
     fulfillmentId: fulfillment.id,
+    creationIdempotencyKey: `handoff-${randomUUID()}`,
     providerId: "qikink",
   });
   shipmentIds.push(shipment.id);
@@ -108,6 +109,7 @@ test("Shipment persistence enforces Fulfillment and Order consistency", async ()
     () => repository.createShipment({
       orderId: randomUUID(),
       fulfillmentId: fulfillment.id,
+        creationIdempotencyKey: `handoff-${randomUUID()}`,
         providerId: "qikink",
     }),
     /Shipment Order does not match the Fulfillment Order/,
@@ -119,6 +121,7 @@ test("TrackingEvent persistence is historical and deduplicated", async () => {
   const shipment = await repository.createShipment({
     orderId: order.id,
     fulfillmentId: fulfillment.id,
+    creationIdempotencyKey: `handoff-${randomUUID()}`,
     providerId: "qikink",
     trackingNumber: "AWB-TEST-1",
     carrier: "Test Carrier",
@@ -145,6 +148,8 @@ test("TrackingEvent persistence is historical and deduplicated", async () => {
     source: "PROVIDER",
   });
 
+  assert.ok(first);
+  assert.ok(duplicate);
   assert.equal(duplicate.id, first.id);
   const events = await repository.listTrackingEvents(shipment.id);
   assert.equal(events.length, 1);
@@ -159,6 +164,7 @@ test("TrackingEvent persistence is historical and deduplicated", async () => {
     eventTimestamp: new Date("2026-10-02T09:00:00.000Z"),
     source: "PROVIDER",
   });
+  assert.ok(older);
   assert.notEqual(older.id, first.id);
   assert.equal((await repository.listTrackingEvents(shipment.id)).length, 2);
 });
@@ -168,6 +174,7 @@ test("Shipment lifecycle uses controlled transitions", async () => {
   const shipment = await repository.createShipment({
     orderId: order.id,
     fulfillmentId: fulfillment.id,
+    creationIdempotencyKey: `handoff-${randomUUID()}`,
     providerId: "qikink",
   });
   shipmentIds.push(shipment.id);
@@ -196,6 +203,7 @@ test("Shipment lifecycle uses controlled transitions", async () => {
 });
 
 after(async () => {
+  if (shipmentIds.length) await db.trackingEvent.deleteMany({ where: { shipmentId: { in: shipmentIds } } });
   if (shipmentIds.length) await db.trackingEvent.deleteMany({ where: { shipmentId: { in: shipmentIds } } });
   if (shipmentIds.length) await db.shipment.deleteMany({ where: { id: { in: shipmentIds } } });
   if (fulfillmentIds.length) await db.fulfillment.deleteMany({ where: { id: { in: fulfillmentIds } } });
