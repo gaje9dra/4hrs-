@@ -72,6 +72,7 @@ export function createShippingRepository(client?: ShippingRepositoryClient) {
       nonEmpty(input.orderId, "orderId");
       nonEmpty(input.fulfillmentId, "fulfillmentId");
       nonEmpty(input.providerId, "providerId");
+      nonEmpty(input.creationIdempotencyKey, "creationIdempotencyKey");
 
       const fulfillment = await database.fulfillment.findUnique({
         where: { id: input.fulfillmentId },
@@ -112,7 +113,14 @@ export function createShippingRepository(client?: ShippingRepositoryClient) {
       }
     },
 
-    getShipmentByCreationIdempotencyKey(key: string): Promise<ShipmentWithEvents | null> {\n      return database.shipment.findUnique({ where: { creationIdempotencyKey: key }, include: { trackingEvents: { orderBy: { eventTimestamp: "asc" } } } });\n    },\n\n    getShipmentById(id: string): Promise<ShipmentWithEvents | null> {
+    getShipmentByCreationIdempotencyKey(key: string): Promise<ShipmentWithEvents | null> {
+      return database.shipment.findUnique({
+        where: { creationIdempotencyKey: key },
+        include: { trackingEvents: { orderBy: { eventTimestamp: "asc" } } },
+      });
+    },
+
+    getShipmentById(id: string): Promise<ShipmentWithEvents | null> {
       return database.shipment.findUnique({
         where: { id },
         include: { trackingEvents: { orderBy: { eventTimestamp: "asc" } } },
