@@ -42,7 +42,7 @@ export function createReturnsApplication(dependencies:ReturnsApplicationDependen
  async function getCustomerExceptionSummary(input:{orderNumber:string;request?:Request}):Promise<ExceptionSummary>{
    const c=await customer(input.request); const order=await orderForCustomer(input.orderNumber,c.id); const state=stateForOrder(order);
    const cancellation=order.cancellationRequests[0] ? "already_requested" : cancellationEligibility(state);
-   const existingActive=order.returnRequests.some((r)=>ACTIVE_RETURN_STATUSES.includes(r.status));
+   const existingActive=order.returnRequests.some((r)=>ACTIVE_RETURN_STATUSES.has(r.status));
    const ret=existingActive ? "already_requested" : returnEligibility({...state,now:new Date(),returnWindowDays:windowDays()});
    return {cancellation,return:ret};
  }
