@@ -1,7 +1,7 @@
 import { requireAdmin } from "@/lib/admin/authorization";
 import { adminCatalogErrorResponse, adminErrorResponse, adminJson, assertAdminSameOrigin, readAdminJson } from "@/lib/admin/http";
 import { isValidAdminId } from "@/lib/admin/http";
-import { createCatalogProduct, createCatalogCategory, createCatalogCollection, listCatalogProducts, listCatalogCategories, listCatalogCollections } from "@/lib/admin/catalog";
+import { createCatalogProduct, updateCatalogProduct, createCatalogCategory, createCatalogCollection, listCatalogProducts, listCatalogCategories, listCatalogCollections } from "@/lib/admin/catalog";
 import type { CatalogSortField, SortDirection } from "@/lib/catalog/repository";
 
 export const dynamic = "force-dynamic";
@@ -85,6 +85,6 @@ export async function PATCH(request: Request) {
     const body = await readAdminJson(request);
     if (typeof body.id !== "string" || !isValidAdminId(body.id)) return badRequest("Product ID is invalid.");
     const { id, ...patch } = body;
-    return adminJson({ product: await import("@/lib/admin/catalog").then((m) => m.updateCatalogProduct(context, { id, ...(patch as Record<string, unknown>) } as Parameters<typeof updateCatalogProduct>[1])) });
+    return adminJson({ product: await updateCatalogProduct(context, { id, ...(patch as Record<string, unknown>) } as Parameters<typeof updateCatalogProduct>[1]) });
   } catch (error) { return adminErrorResponse(error); }
 }
