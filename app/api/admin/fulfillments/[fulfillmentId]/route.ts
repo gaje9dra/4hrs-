@@ -1,68 +1,28 @@
-import { assertSameOrigin, authErrorResponse } from "@/lib/auth/http";
-import { adminErrorResponse } from "@/lib/admin/http";import { AdminError } from "@/lib/admin/errors";import { requireAdmin } from "@/lib/auth/admin";
-import { AuthenticationError } from "@/lib/auth/errors";
-import { FulfillmentDomainError } from "@/lib/fulfillment/errors";
-import { createFulfillmentApplication } from "@/lib/fulfillment/application";
-import { getFulfillmentOperationalDiagnostics } from "@/lib/fulfillment/diagnostics";
+import { requireAdmin } from "@/lib/admin/authorization";
+import { adminErrorResponse, adminJson, assertAdminSameOrigin, readAdminJson } from "@/lib/admin/http";
+import { AdminError } from "@/lib/admin/errors";
+import { executeAdminFulfillmentAction, getAdminFulfillment, type AdminFulfillmentAction } from "@/lib/admin/fulfillment";
 
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
+export const dynamic="force-dynamic";
+export const revalidate=0;
 
-const fulfillment = createFulfillmentApplication();
-
-function json(data: unknown, status = 200) {
-  return Response.json(data, {
-    status,
-    headers: {
-      "Cache-Control": "no-store",
-      "X-Content-Type-Options": "nosniff",
-    },
-  });
+function text(value:unknown,max=255){return typeof value==="string"&&value.trim().length>0&&value.length<=max?value.trim():undefined;}
+function bodyAction(body:Record<string,unknown>,fulfillmentId:string):AdminFulfillmentAction{
+  const action=body.action;
+  if(action!=="submit"&&action!=="retry"&&action!=="reconcile")throw new AdminError("INVALID_REQUEST","Unsupported fulfillment action.");
+  const idempotencyKey=text(body.idempotencyKey,128),reason=text(body.reason,1000);
+  if(!idempotencyKey||!reason)throw new AdminError("INVALID_REQUEST","Fulfillment action request is invalid.");
+  return {action,fulfillmentId,idempotencyKey,reason} as AdminFulfillmentAction;
 }
-
-function errorResponse(error: unknown) {
-  if (error instanceof AdminError) return adminErrorResponse(error);
-  if (error instanceof AuthenticationError) return authErrorResponse(error);
-  if (error instanceof FulfillmentDomainError) {
-    const status =
-      error.code === "FULFILLMENT_INVALID_STATE" || error.code === "FULFILLMENT_ORDER_NOT_FOUND" ? 404 :
-      error.code === "FULFILLMENT_PROVIDER_RECONCILIATION_REQUIRED" ? 409 :
-      error.code === "FULFILLMENT_PROVIDER_NOT_CONFIGURED" ? 503 :
-      400;
-    return json({ error: { code: error.code, message: error.message } }, status);
-  }
-  return json({ error: { code: "FULFILLMENT_DIAGNOSTICS_ERROR", message: "Fulfillment diagnostics operation failed." } }, 500);
+export async function GET(request:Request,{params}:{params:Promise<{fulfillmentId:string}>}){
+  try{const context=await requireAdmin(request,"fulfillment.read");return adminJson(await getAdminFulfillment((await params).fulfillmentId,context));}
+  catch(error){return adminErrorResponse(error);}
 }
-
-export async function GET(
-  request: Request,
-  context: { params: Promise<{ fulfillmentId: string }> },
-) {
-  try {
-    await requireAdmin(request,"fulfillment.read");
-    const fulfillmentId = (await context.params).fulfillmentId.trim();
-    if (!fulfillmentId) return json({ error: { code: "INVALID_REQUEST", message: "Fulfillment ID is required." } }, 400);
-    const diagnostics = await getFulfillmentOperationalDiagnostics(fulfillmentId);
-    if (!diagnostics) return json({ error: { code: "NOT_FOUND", message: "Fulfillment was not found." } }, 404);
-    return json({ diagnostics });
-  } catch (error) {
-    return errorResponse(error);
-  }
-}
-
-export async function POST(
-  request: Request,
-  context: { params: Promise<{ fulfillmentId: string }> },
-) {
-  try {
-    await requireAdmin(request,"fulfillment.manage");
-    assertSameOrigin(request);
-    const fulfillmentId = (await context.params).fulfillmentId.trim();
-    if (!fulfillmentId) return json({ error: { code: "INVALID_REQUEST", message: "Fulfillment ID is required." } }, 400);
-
-    const result = await fulfillment.reconcileFulfillment({ fulfillmentId });
-    return json({ fulfillment: result });
-  } catch (error) {
-    return errorResponse(error);
-  }
+export async function POST(request:Request,{params}:{params:Promise<{fulfillmentId:string}>}){
+  try{
+    assertAdminSameOrigin(request);
+    const context=await requireAdmin(request);
+    const id=(await params).fulfillmentId;
+    return adminJson(await executeAdminFulfillmentAction(context,bodyAction(await readAdminJson(request),id)));
+  }catch(error){return adminErrorResponse(error);}
 }
