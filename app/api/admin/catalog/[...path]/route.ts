@@ -37,6 +37,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ pat
     const p = (await params).path;
     assertAdminSameOrigin(request);
     const body = await readAdminJson(request);
+    if (p[0] === "media" && p[1] && p[2] === "primary") {
+      if (!isValidAdminId(p[1])) return bad("Media ID is invalid.");
+      const context = await requireAdmin(request, "catalog.media.manage");
+      return adminJson({ media: await setCatalogPrimaryMedia(context, p[1]) });
+    }
     if (p[0] === "products" && p[1] && p[2]) {
       if (!isValidAdminId(p[1])) return bad("Product ID is invalid.");
       const context = await requireAdmin(request, p[2] === "publish" ? "catalog.publish" : p[2] === "archive" ? "catalog.archive" : p[2] === "restore" || p[2] === "unpublish" ? "catalog.publish" : "catalog.update");
