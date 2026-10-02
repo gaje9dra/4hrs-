@@ -1,0 +1,6 @@
+import { requireAdmin } from "@/lib/admin/authorization";
+import { adminErrorResponse, adminJson, readAdminJson, assertAdminSameOrigin } from "@/lib/admin/http";
+import { executeAdminPostOrderAction, getAdminCancellation } from "@/lib/admin/post-order";
+export const dynamic="force-dynamic"; export const revalidate=0;
+export async function GET(request:Request,{params}:{params:Promise<{reference:string}>}){try{const context=await requireAdmin(request,"cancellation.read");const p=await params;return adminJson({cancellation:await getAdminCancellation(p.reference,context.permissions.has("customers.read"),context.permissions.has("cancellation.audit.read"))});}catch(e){return adminErrorResponse(e);}}
+export async function POST(request:Request,{params}:{params:Promise<{reference:string}>}){try{assertAdminSameOrigin(request);const context=await requireAdmin(request,"cancellation.approve");const p=await params;const body=await readAdminJson(request);const key=request.headers.get("idempotency-key")??(typeof body.idempotencyKey==="string"?body.idempotencyKey:"");const decision=body.action==="reject"?"REJECT":"APPROVE";const result=await executeAdminPostOrderAction(context,{action:"cancellation_review",reference:p.reference,decision,reason:body.reason,idempotencyKey:key},request);return adminJson({cancellation:result});}catch(e){return adminErrorResponse(e);}}
