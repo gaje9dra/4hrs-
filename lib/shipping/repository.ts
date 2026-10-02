@@ -10,6 +10,7 @@ export type CreateShipmentInput = Readonly<{
   orderId: string;
   fulfillmentId: string;
   providerId: string;
+  creationIdempotencyKey: string;
   providerReference?: string | null;
   carrier?: string | null;
   trackingNumber?: string | null;
@@ -81,11 +82,13 @@ export function createShippingRepository(client?: ShippingRepositoryClient) {
         throw new Error("Shipment Order does not match the Fulfillment Order.");
       }
 
-      return database.shipment.create({
+      try {
+        return await database.shipment.create({
         data: {
           orderId: input.orderId,
           fulfillmentId: input.fulfillmentId,
           shipmentReference: `SHP-${randomUUID().replaceAll("-", "").toUpperCase()}`,
+          creationIdempotencyKey: input.creationIdempotencyKey,
           providerId: input.providerId,
           providerReference: input.providerReference ?? null,
           carrier: input.carrier ?? null,
@@ -96,10 +99,20 @@ export function createShippingRepository(client?: ShippingRepositoryClient) {
           shippedAt: input.shippedAt ?? null,
         },
         include: { trackingEvents: true },
-      });
+        });
+      } catch (error) {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+          const existing = await database.shipment.findUnique({
+            where: { creationIdempotencyKey: input.creationIdempotencyKey },
+            include: { trackingEvents: { orderBy: { eventTimestamp: "asc" } } },
+          });
+          if (existing) return existing;
+        }
+        throw error;
+      }
     },
 
-    getShipmentById(id: string): Promise<ShipmentWithEvents | null> {
+    getShipmentByCreationIdempotencyKey(key: string): Promise<ShipmentWithEvents | null> {\n      return database.shipment.findUnique({ where: { creationIdempotencyKey: key }, include: { trackingEvents: { orderBy: { eventTimestamp: "asc" } } } });\n    },\n\n    getShipmentById(id: string): Promise<ShipmentWithEvents | null> {
       return database.shipment.findUnique({
         where: { id },
         include: { trackingEvents: { orderBy: { eventTimestamp: "asc" } } },
