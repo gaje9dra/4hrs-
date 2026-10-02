@@ -457,10 +457,30 @@ export function createShippingApplication(
     const shipment = await repository.getShipmentById(input.shipmentId);
     if (!shipment) throw new ShippingDomainError("SHIPMENT_NOT_FOUND", "Shipment could not be found.");
 
-    if (!shipment.providerReference) {
+    if (shipment.reconciliationRequired) {
       return {
         status: "RECONCILIATION_REQUIRED" as const,
+        reason: shipment.reconciliationReason ?? "Shipment has an outstanding reconciliation requirement.",
+      };
+    }
+
+    if (!shipment.providerReference) {
+      const marked = await repository.markReconciliationRequired({
+        id: shipment.id,
         reason: "Shipment has no provider reference.",
+      });
+      if (!marked) throw new ShippingDomainError("SHIPMENT_NOT_FOUND", "Shipment could not be found.");
+      logShippingObservation({
+        operation: "reconciliation",
+        shipmentId: marked.id,
+        orderId: marked.orderId,
+        fulfillmentId: marked.fulfillmentId,
+        providerId: marked.providerId,
+        result: "reconciliation-required",
+      });
+      return {
+        status: "RECONCILIATION_REQUIRED" as const,
+        reason: marked.reconciliationReason ?? "Shipment has no provider reference.",
       };
     }
 
