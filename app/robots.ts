@@ -1,4 +1,6 @@
 import type { MetadataRoute } from "next";
+
+export const dynamic = "force-dynamic";
 import { getProductionSiteOrigin } from "@/config/site";
 
 export default function robots(): MetadataRoute.Robots {
