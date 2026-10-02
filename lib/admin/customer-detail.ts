@@ -2,7 +2,7 @@ import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db/client";
 import { AdminError } from "@/lib/admin/errors";
 import { createCustomerApplication } from "@/lib/customer/application";
-import { type CustomerStatus, parseCustomerStatus } from "@/lib/customer/domain";
+import { parseCustomerStatus } from "@/lib/customer/domain";
 
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
