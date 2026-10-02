@@ -117,7 +117,7 @@ export function createShippingRepository(client?: ShippingRepositoryClient) {
       return database.shipment.findFirst({ where: { providerId, providerReference }, include: { trackingEvents: { orderBy: { eventTimestamp: "asc" } } } });
     },
 
-    getShipmentByTrackingNumber(trackingNumber: string): Promise<ShipmentWithEvents | null> {
+    getShipmentByCustomer(id: string, customerId: string): Promise<ShipmentWithEvents | null> {\n      return database.shipment.findFirst({\n        where: { id, order: { customerId } },\n        include: { trackingEvents: { orderBy: { eventTimestamp: "asc" } } },\n      });\n    },\n\n    getShipmentByTrackingNumber(trackingNumber: string): Promise<ShipmentWithEvents | null> {
       return database.shipment.findFirst({ where: { trackingNumber }, include: { trackingEvents: { orderBy: { eventTimestamp: "asc" } } } });
     },
 
@@ -148,7 +148,7 @@ export function createShippingRepository(client?: ShippingRepositoryClient) {
       if (!shipment) throw new Error("Shipment not found.");
 
       const key = deduplicationKey(input);
-      return database.trackingEvent.create({
+      try {\n        return await database.trackingEvent.create({
         data: {
           shipmentId: input.shipmentId,
           providerId: input.providerId,
