@@ -79,7 +79,7 @@ export function createShippingApplication(
 ): ShippingApplicationService {
   const database = dependencies.database ?? db;
   const repository = dependencies.repository ?? createShippingRepository();
-  const providerResolver = dependencies.providerResolver ?? createShippingProviderResolver();
+  const providerResolver = dependencies.providerResolver ?? createShippingProviderResolver([]);
 
   async function createShipmentFromFulfillment(input: {
     fulfillmentId: string;
