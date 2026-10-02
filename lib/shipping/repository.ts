@@ -81,7 +81,7 @@ function shipmentInclude() {
   return { trackingEvents: { orderBy: { eventTimestamp: "asc" as const } } };
 }
 
-export type TrackingEventRecord = Prisma.TrackingEventGetPayload<{}>;
+export type TrackingEventRecord = Prisma.TrackingEventGetPayload<Record<string, never>>;
 
 export interface ShippingRepository {
   withTransaction<T>(work: (repository: ShippingRepository) => Promise<T>): Promise<T>;
@@ -99,7 +99,7 @@ export interface ShippingRepository {
   createTrackingEventIfNew(input: CreateTrackingEventInput): Promise<{ event: TrackingEventRecord; created: boolean }>;
   createTrackingEvent(input: CreateTrackingEventInput): Promise<TrackingEventRecord | null>;
   listTrackingEvents(shipmentId: string, options?: { limit?: number; cursor?: string }): Promise<TrackingEventRecord[]>;
-  findTrackingEventByProviderEventId(providerId: string, providerEventId: string): Promise<TrackingEventRecord | null>;
+  findTrackingEventByProviderEventId(shipmentId: string, providerId: string, providerEventId: string): Promise<TrackingEventRecord | null>;
 }
 
 export function createShippingRepository(client?: ShippingRepositoryClient): ShippingRepository {
