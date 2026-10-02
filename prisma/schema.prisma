@@ -485,6 +485,7 @@ model Order {
   items            OrderItem[]
   shippingAddress  OrderAddressSnapshot?
   fulfillment      Fulfillment?
+  shipments        Shipment[]
 
   @@index([customerId, createdAt])
   @@index([status, createdAt])
@@ -540,6 +541,22 @@ enum FulfillmentStatus {
   COMPLETED
 }
 
+enum ShipmentStatus {
+  CREATED
+  IN_TRANSIT
+  OUT_FOR_DELIVERY
+  DELIVERED
+  DELIVERY_FAILED
+  RETURNED
+}
+
+enum TrackingEventSource {
+  WEBHOOK
+  POLLING
+  MANUAL
+  PROVIDER
+}
+
 model FulfillmentProviderMapping {
   id                       String         @id @default(uuid()) @db.Uuid
   variantId                String         @db.Uuid
@@ -576,6 +593,7 @@ model Fulfillment {
   reconciliationMetadata Json?
   order                 Order              @relation(fields: [orderId], references: [id], onDelete: Restrict)
   items                 FulfillmentItem[]
+  shipments             Shipment[]
 
   @@index([provider, createdAt])
   @@index([provider, providerFulfillmentReference])
@@ -626,6 +644,56 @@ model Payment {
   @@index([checkoutReference])
   @@index([providerId, providerReference])
   @@index([status, createdAt])
+}
+
+model Shipment {
+  id                         String         @id @default(uuid()) @db.Uuid
+  fulfillmentId              String         @db.Uuid
+  orderId                    String         @db.Uuid
+  shipmentReference          String         @unique @db.VarChar(120)
+  providerId                 String         @db.VarChar(64)
+  providerReference          String?        @db.VarChar(255)
+  carrier                    String?        @db.VarChar(120)
+  trackingNumber             String?        @db.VarChar(160)
+  trackingUrl                String?        @db.VarChar(1000)
+  service                    String?        @db.VarChar(120)
+  status                     ShipmentStatus @default(CREATED)
+  shippedAt                  DateTime?
+  deliveredAt               DateTime?
+  createdAt                 DateTime       @default(now())
+  updatedAt                 DateTime       @updatedAt
+  fulfillment                Fulfillment    @relation(fields: [fulfillmentId], references: [id], onDelete: Restrict)
+  order                      Order          @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  trackingEvents             TrackingEvent[]
+
+  @@index([fulfillmentId, createdAt])
+  @@index([orderId, createdAt])
+  @@unique([providerId, providerReference])
+  @@index([providerId, providerReference])
+  @@index([trackingNumber])
+  @@index([status, updatedAt])
+}
+
+model TrackingEvent {
+  id                String             @id @default(uuid()) @db.Uuid
+  shipmentId        String             @db.Uuid
+  providerId        String             @db.VarChar(64)
+  providerEventId   String?            @db.VarChar(255)
+  deduplicationKey  String             @db.VarChar(128)
+  providerStatus    String?            @db.VarChar(120)
+  normalizedStatus  ShipmentStatus
+  eventTimestamp    DateTime
+  location          String?            @db.VarChar(255)
+  description       String?            @db.VarChar(1000)
+  source            TrackingEventSource
+  receivedAt        DateTime           @default(now())
+  createdAt         DateTime           @default(now())
+  shipment          Shipment           @relation(fields: [shipmentId], references: [id], onDelete: Restrict)
+
+  @@unique([shipmentId, providerId, deduplicationKey])
+  @@index([shipmentId, eventTimestamp])
+  @@index([providerId, providerEventId])
+  @@index([normalizedStatus, eventTimestamp])
 }
 
 model PaymentAttempt {

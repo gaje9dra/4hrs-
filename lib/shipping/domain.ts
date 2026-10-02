@@ -1,4 +1,5 @@
-import { SHIPPING_STATUSES, type ShipmentStatus } from "@/lib/shipping/contracts";
+import { ShipmentStatus } from "@prisma/client";
+import { SHIPPING_STATUSES } from "@/lib/shipping/contracts";
 
 const TRANSITIONS: Readonly<Record<ShipmentStatus, readonly ShipmentStatus[]>> = {
   CREATED: ["IN_TRANSIT", "OUT_FOR_DELIVERY", "DELIVERED", "DELIVERY_FAILED", "RETURNED"],
@@ -22,18 +23,13 @@ export function canTransitionShipmentStatus(current: ShipmentStatus, next: Shipm
 }
 
 export function assertShipmentTransition(current: ShipmentStatus, next: ShipmentStatus): void {
-  if (current === next) {
-    throw new Error("Shipment state must change.");
-  }
+  if (current === next) throw new Error("Shipment state must change.");
   if (!canTransitionShipmentStatus(current, next)) {
     throw new Error(`Invalid Shipment transition: ${current} -> ${next}.`);
   }
 }
 
-export function shouldApplyTrackingEvent(
-  currentStatus: ShipmentStatus,
-  eventStatus: ShipmentStatus,
-): boolean {
+export function shouldApplyTrackingEvent(currentStatus: ShipmentStatus, eventStatus: ShipmentStatus): boolean {
   if (currentStatus === eventStatus) return false;
   if (isShipmentTerminal(currentStatus)) return false;
   return canTransitionShipmentStatus(currentStatus, eventStatus);
