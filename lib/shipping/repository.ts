@@ -81,6 +81,8 @@ function shipmentInclude() {
   return { trackingEvents: { orderBy: { eventTimestamp: "asc" as const } } };
 }
 
+export type ShippingRepository = ReturnType<typeof createShippingRepository>;
+
 export function createShippingRepository(client?: ShippingRepositoryClient) {
   const database = databaseFor(client);
 
@@ -262,6 +264,49 @@ export function createShippingRepository(client?: ShippingRepositoryClient) {
       });
       if (result.count !== 1) return null;
       return database.shipment.findUnique({ where: { id: input.id }, include: shipmentInclude() });
+    },
+
+    async createTrackingEventIfNew(input: CreateTrackingEventInput): Promise<{ event: Awaited<ReturnType<typeof database.trackingEvent.create>>; created: boolean }> {
+      nonEmpty(input.shipmentId, "shipmentId");
+      nonEmpty(input.providerId, "providerId");
+      const shipment = await database.shipment.findUnique({
+        where: { id: input.shipmentId },
+        select: { id: true },
+      });
+      if (!shipment) throw new Error("Shipment not found.");
+
+      const key = deduplicationKey(input);
+      try {
+        const event = await database.trackingEvent.create({
+          data: {
+            shipmentId: input.shipmentId,
+            providerId: input.providerId,
+            providerEventId: input.providerEventId?.trim() || null,
+            deduplicationKey: key,
+            providerStatus: input.providerStatus?.trim() || null,
+            normalizedStatus: input.normalizedStatus,
+            eventTimestamp: input.eventTimestamp,
+            location: input.location?.trim() || null,
+            description: input.description?.trim() || null,
+            source: input.source,
+          },
+        });
+        return { event, created: true };
+      } catch (error) {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+          const event = await database.trackingEvent.findUnique({
+            where: {
+              shipmentId_providerId_deduplicationKey: {
+                shipmentId: input.shipmentId,
+                providerId: input.providerId,
+                deduplicationKey: key,
+              },
+            },
+          });
+          if (event) return { event, created: false };
+        }
+        throw error;
+      }
     },
 
     async createTrackingEvent(input: CreateTrackingEventInput) {
