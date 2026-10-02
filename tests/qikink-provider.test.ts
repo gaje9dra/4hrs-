@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createQikinkFulfillmentProvider, providerOrderNumber } from "@/lib/fulfillment/providers/qikink";
 import { assertPrivateFulfillmentConfiguration } from "@/lib/fulfillment/config";
+import { clearQikinkAccessTokenCache } from "@/lib/fulfillment/providers/qikink-auth";
 
 function request() {
   return {
@@ -154,4 +155,59 @@ test("Qikink status lookup remains disabled until a verified status contract is 
     orderReference: request().orderReference,
   }));
   assert.equal(provider.capabilities.statusLookup, false);
+});
+
+
+test("Qikink Open API provider exchanges Client credentials and creates a Live order", async () => {
+  const original = {
+    clientId: process.env.QIKINK_CLIENT_ID,
+    clientSecret: process.env.QIKINK_CLIENT_SECRET,
+    sandboxSecret: process.env.QIKINK_SANDBOX_SECRET,
+    mode: process.env.FULFILLMENT_PROVIDER_MODE,
+  };
+
+  process.env.QIKINK_CLIENT_ID = "live-client";
+  process.env.QIKINK_CLIENT_SECRET = "live-secret";
+  delete process.env.QIKINK_SANDBOX_SECRET;
+  process.env.FULFILLMENT_PROVIDER_MODE = "live";
+  clearQikinkAccessTokenCache();
+
+  try {
+    let calls = 0;
+    const provider = createQikinkFulfillmentProvider({
+      timeoutMs: 5000,
+      fetchImpl: async (url, init) => {
+        calls += 1;
+        if (String(url) === "https://api.qikink.com/api/token") {
+          return response({ Accesstoken: "access-token", expires_in: 3600 });
+        }
+
+        assert.equal(String(url), "https://api.qikink.com/api/order/create");
+        assert.equal(new Headers(init?.headers).get("ClientId"), "live-client");
+        assert.equal(new Headers(init?.headers).get("Accesstoken"), "access-token");
+
+        const body = JSON.parse(String(init?.body));
+        assert.equal(body.order_number, providerOrderNumber(request().fulfillmentId));
+        assert.equal(body.qikink_shipping, "1");
+        assert.equal(body.gateway, "Prepaid");
+        assert.equal(body.line_items[0].search_from_my_products, 1);
+        return response({ status_code: "200", order_id: 7451136, message: "Order created successfully" });
+      },
+    });
+
+    const result = await provider.createFulfillment(request());
+    assert.equal(result.providerFulfillmentReference, "7451136");
+    assert.equal(result.status, "SUBMITTED");
+    assert.equal(calls, 2);
+  } finally {
+    if (original.clientId === undefined) delete process.env.QIKINK_CLIENT_ID;
+    else process.env.QIKINK_CLIENT_ID = original.clientId;
+    if (original.clientSecret === undefined) delete process.env.QIKINK_CLIENT_SECRET;
+    else process.env.QIKINK_CLIENT_SECRET = original.clientSecret;
+    if (original.sandboxSecret === undefined) delete process.env.QIKINK_SANDBOX_SECRET;
+    else process.env.QIKINK_SANDBOX_SECRET = original.sandboxSecret;
+    if (original.mode === undefined) delete process.env.FULFILLMENT_PROVIDER_MODE;
+    else process.env.FULFILLMENT_PROVIDER_MODE = original.mode;
+    clearQikinkAccessTokenCache();
+  }
 });
