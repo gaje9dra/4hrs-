@@ -183,6 +183,7 @@ export async function executeAdminShippingAction(context:AdminAuthorizationConte
   requirePermission(context,"shipping.recovery");const reason=requireHighRiskReason(input.reason);const shipmentId=requireShipmentId(input.shipmentId);
   const app=createShippingApplication({authorizeOperationalRecovery:async ({shipmentId:requested,operatorId})=>requested===shipmentId&&operatorId===context.adminUser.id});
   const result=await app.requestShipmentReconciliation({shipmentId,operatorId:context.adminUser.id,reason,idempotencyKey:input.idempotencyKey});
+  if(!result) throw new AdminError("NOT_FOUND","Shipment recovery did not return a Shipment.");
   await auditAdminAction(context,{action:"SHIPPING_RECOVERY_REQUESTED",resourceType:"Shipment",resourceId:shipmentId,success:true,reason,correlationId,metadata:{idempotencyKey:input.idempotencyKey}});
   return getAdminShipment(result.id,context);
  }catch(error){
