@@ -377,7 +377,7 @@ export function createShippingApplication(
     const idempotencyKey = input.idempotencyKey.trim();
 
     if (!operatorId || operatorId.length > 128 || !reason || reason.length > 500) {
-      throw new ShippingDomainError("INVALID_TRACKING_EVENT", "Operational recovery metadata is invalid.");
+      throw new ShippingDomainError("INVALID_RECOVERY_REQUEST", "Operational recovery metadata is invalid.");
     }
     if (!/^[A-Za-z0-9._~-]{8,128}$/.test(idempotencyKey)) {
       throw new ShippingDomainError("SHIPMENT_IDEMPOTENCY_CONFLICT", "Recovery idempotency key is invalid.");
