@@ -2,7 +2,7 @@
 CREATE TYPE "AdminAccountStatus" AS ENUM ('ACTIVE', 'DISABLED');
 
 CREATE TABLE "AdminUser" (
-  "id" UUID NOT NULL,
+  "id" UUID NOT NULL DEFAULT gen_random_uuid(),
   "customerId" UUID NOT NULL,
   "status" "AdminAccountStatus" NOT NULL DEFAULT 'ACTIVE',
   "version" INTEGER NOT NULL DEFAULT 1,
@@ -13,7 +13,7 @@ CREATE TABLE "AdminUser" (
 );
 
 CREATE TABLE "AdminRole" (
-  "id" UUID NOT NULL,
+  "id" UUID NOT NULL DEFAULT gen_random_uuid(),
   "name" VARCHAR(64) NOT NULL,
   "description" VARCHAR(255),
   "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -22,7 +22,7 @@ CREATE TABLE "AdminRole" (
 );
 
 CREATE TABLE "AdminPermission" (
-  "id" UUID NOT NULL,
+  "id" UUID NOT NULL DEFAULT gen_random_uuid(),
   "key" VARCHAR(120) NOT NULL,
   "description" VARCHAR(255),
   "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -45,7 +45,7 @@ CREATE TABLE "AdminRolePermission" (
 );
 
 CREATE TABLE "AdminAuditLog" (
-  "id" UUID NOT NULL,
+  "id" UUID NOT NULL DEFAULT gen_random_uuid(),
   "actorAdminId" UUID,
   "action" VARCHAR(120) NOT NULL,
   "resourceType" VARCHAR(120),
