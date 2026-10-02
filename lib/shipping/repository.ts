@@ -102,23 +102,47 @@ export function createShippingRepository(client?: ShippingRepositoryClient) {
     },
 
     getShipmentById(id: string): Promise<ShipmentWithEvents | null> {
-      return database.shipment.findUnique({ where: { id }, include: { trackingEvents: { orderBy: { eventTimestamp: "asc" } } } });
+      return database.shipment.findUnique({
+        where: { id },
+        include: { trackingEvents: { orderBy: { eventTimestamp: "asc" } } },
+      });
     },
 
     getShipmentByFulfillment(fulfillmentId: string): Promise<ShipmentWithEvents[]> {
-      return database.shipment.findMany({ where: { fulfillmentId }, include: { trackingEvents: { orderBy: { eventTimestamp: "asc" } } }, orderBy: { createdAt: "asc" } });
+      return database.shipment.findMany({
+        where: { fulfillmentId },
+        include: { trackingEvents: { orderBy: { eventTimestamp: "asc" } } },
+        orderBy: { createdAt: "asc" },
+      });
     },
 
     listShipmentsByOrder(orderId: string): Promise<ShipmentWithEvents[]> {
-      return database.shipment.findMany({ where: { orderId }, include: { trackingEvents: { orderBy: { eventTimestamp: "asc" } } }, orderBy: { createdAt: "asc" } });
+      return database.shipment.findMany({
+        where: { orderId },
+        include: { trackingEvents: { orderBy: { eventTimestamp: "asc" } } },
+        orderBy: { createdAt: "asc" },
+      });
     },
 
     getShipmentByProviderReference(providerId: string, providerReference: string): Promise<ShipmentWithEvents | null> {
-      return database.shipment.findFirst({ where: { providerId, providerReference }, include: { trackingEvents: { orderBy: { eventTimestamp: "asc" } } } });
+      return database.shipment.findFirst({
+        where: { providerId, providerReference },
+        include: { trackingEvents: { orderBy: { eventTimestamp: "asc" } } },
+      });
     },
 
-    getShipmentByCustomer(id: string, customerId: string): Promise<ShipmentWithEvents | null> {\n      return database.shipment.findFirst({\n        where: { id, order: { customerId } },\n        include: { trackingEvents: { orderBy: { eventTimestamp: "asc" } } },\n      });\n    },\n\n    getShipmentByTrackingNumber(trackingNumber: string): Promise<ShipmentWithEvents | null> {
-      return database.shipment.findFirst({ where: { trackingNumber }, include: { trackingEvents: { orderBy: { eventTimestamp: "asc" } } } });
+    getShipmentByCustomer(id: string, customerId: string): Promise<ShipmentWithEvents | null> {
+      return database.shipment.findFirst({
+        where: { id, order: { customerId } },
+        include: { trackingEvents: { orderBy: { eventTimestamp: "asc" } } },
+      });
+    },
+
+    getShipmentByTrackingNumber(trackingNumber: string): Promise<ShipmentWithEvents | null> {
+      return database.shipment.findFirst({
+        where: { trackingNumber },
+        include: { trackingEvents: { orderBy: { eventTimestamp: "asc" } } },
+      });
     },
 
     async transitionStatus(input: {
@@ -144,24 +168,42 @@ export function createShippingRepository(client?: ShippingRepositoryClient) {
     async createTrackingEvent(input: CreateTrackingEventInput) {
       nonEmpty(input.shipmentId, "shipmentId");
       nonEmpty(input.providerId, "providerId");
-      const shipment = await database.shipment.findUnique({ where: { id: input.shipmentId }, select: { id: true } });
+      const shipment = await database.shipment.findUnique({
+        where: { id: input.shipmentId },
+        select: { id: true },
+      });
       if (!shipment) throw new Error("Shipment not found.");
 
       const key = deduplicationKey(input);
-      try {\n        return await database.trackingEvent.create({
-        data: {
-          shipmentId: input.shipmentId,
-          providerId: input.providerId,
-          providerEventId: input.providerEventId?.trim() || null,
-          deduplicationKey: key,
-          providerStatus: input.providerStatus?.trim() || null,
-          normalizedStatus: input.normalizedStatus,
-          eventTimestamp: input.eventTimestamp,
-          location: input.location?.trim() || null,
-          description: input.description?.trim() || null,
-          source: input.source,
-        },
-      });
+      try {
+        return await database.trackingEvent.create({
+          data: {
+            shipmentId: input.shipmentId,
+            providerId: input.providerId,
+            providerEventId: input.providerEventId?.trim() || null,
+            deduplicationKey: key,
+            providerStatus: input.providerStatus?.trim() || null,
+            normalizedStatus: input.normalizedStatus,
+            eventTimestamp: input.eventTimestamp,
+            location: input.location?.trim() || null,
+            description: input.description?.trim() || null,
+            source: input.source,
+          },
+        });
+      } catch (error) {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+          return database.trackingEvent.findUnique({
+            where: {
+              shipmentId_providerId_deduplicationKey: {
+                shipmentId: input.shipmentId,
+                providerId: input.providerId,
+                deduplicationKey: key,
+              },
+            },
+          });
+        }
+        throw error;
+      }
     },
 
     listTrackingEvents(shipmentId: string, options?: { limit?: number; cursor?: string }) {
