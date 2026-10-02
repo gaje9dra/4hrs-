@@ -210,14 +210,7 @@ export function createShippingApplication(
           throw new ShippingDomainError("INVALID_TRACKING_EVENT", "Tracking event provider does not match the Shipment provider.");
         }
 
-        const existingProviderEvent = input.event.providerEventId
-          ? await txRepository.findTrackingEventByProviderEventId(
-            input.event.providerId,
-            input.event.providerEventId,
-          )
-          : null;
-
-        const persistedEvent = await txRepository.createTrackingEvent({
+        const persisted = await txRepository.createTrackingEventIfNew({
           shipmentId: shipment.id,
           providerId: input.event.providerId,
           providerEventId: input.event.providerEventId,
@@ -229,14 +222,14 @@ export function createShippingApplication(
           source: "PROVIDER",
         });
 
-        if (existingProviderEvent || !persistedEvent) {
+        if (!persisted.created) {
           throw new ShippingDomainError("TRACKING_EVENT_DUPLICATE", "Tracking event has already been processed.");
         }
 
         const refreshed = await txRepository.getShipmentById(shipment.id);
         if (!refreshed) throw new ShippingDomainError("SHIPMENT_NOT_FOUND", "Shipment could not be found.");
 
-        const previousEvents = refreshed.trackingEvents.filter((event) => event.id !== persistedEvent.id);
+        const previousEvents = refreshed.trackingEvents.filter((event) => event.id !== persisted.event.id);
         const latestEvent = previousEvents.at(-1);
         const decision = shouldApplyTrackingEvent(
           shipment.status,
