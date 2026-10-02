@@ -379,8 +379,8 @@ export function createShippingRepository(client?: ShippingRepositoryClient): Shi
       });
     },
 
-    findTrackingEventByProviderEventId(providerId: string, providerEventId: string) {
-      return database.trackingEvent.findFirst({ where: { providerId, providerEventId } });
+    findTrackingEventByProviderEventId(shipmentId: string, providerId: string, providerEventId: string) {
+      return database.trackingEvent.findFirst({ where: { shipmentId, providerId, providerEventId } });
     },
   };
 }
