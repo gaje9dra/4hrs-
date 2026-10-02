@@ -1,64 +1,90 @@
-import { assertSameOrigin, authErrorResponse } from "@/lib/auth/http";
-import { requireAdmin } from "@/lib/auth/admin";
-import { createCatalogService } from "@/lib/catalog/service";
-import { CatalogServiceError } from "@/lib/catalog/errors";
-import { AuthenticationError } from "@/lib/auth/errors";
-import { AdminError } from "@/lib/admin/errors";
+import { requireAdmin } from "@/lib/admin/authorization";
+import { adminCatalogErrorResponse, adminErrorResponse, adminJson, assertAdminSameOrigin, readAdminJson } from "@/lib/admin/http";
+import { isValidAdminId } from "@/lib/admin/http";
+import { createCatalogProduct, updateCatalogProduct, createCatalogCategory, createCatalogCollection, listCatalogProducts, listCatalogCategories, listCatalogCollections } from "@/lib/admin/catalog";
+import type { CatalogSortField, SortDirection } from "@/lib/catalog/repository";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-const catalog = createCatalogService();
-
-function json(data: unknown, status = 200) {
-  return Response.json(data, { status, headers: { "Cache-Control": "no-store" } });
+function parseIntParam(value: string | null, fallback: number, min: number, max: number): number {
+  if (value === null) return fallback;
+  if (!/^\d+$/.test(value)) throw new Error("INVALID_PAGINATION");
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < min || parsed > max) throw new Error("INVALID_PAGINATION");
+  return parsed;
 }
 
-function errorResponse(error: unknown) {
-  if (error instanceof CatalogServiceError) return json({ error: error.message }, 400);
-  if (error instanceof AdminError) return Response.json({ error: { code: error.code, message: error.message } }, { status: error.code === "ADMIN_REQUIRED" ? 401 : error.code === "FORBIDDEN" ? 403 : error.code === "CONFLICT" ? 409 : 400, headers: { "Cache-Control": "no-store" } });
-  if (error instanceof AuthenticationError) return authErrorResponse(error);
-  return json({ error: "Catalog operation failed." }, 500);
+function parseCatalogOptions(request: Request) {
+  const q = new URL(request.url).searchParams;
+  const sortByRaw = q.get("sortBy") ?? "createdAt";
+  const sortBy = ["createdAt","updatedAt","title","price"].includes(sortByRaw) ? sortByRaw as CatalogSortField : (() => { throw new Error("INVALID_SORT"); })();
+  const sortDirectionRaw = q.get("sortDirection") ?? "desc";
+  const sortDirection = sortDirectionRaw === "asc" || sortDirectionRaw === "desc" ? sortDirectionRaw as SortDirection : (() => { throw new Error("INVALID_SORT"); })();
+  const status = q.get("status");
+  if (status !== null && !["DRAFT","ACTIVE","ARCHIVED"].includes(status)) throw new Error("INVALID_FILTER");
+  const limit = parseIntParam(q.get("limit"), 24, 1, 100);
+  const page = parseIntParam(q.get("page"), 1, 1, 1000000);
+  const offset = (page - 1) * limit;
+  return {
+    filters: {
+      ...(q.get("search") ? { search: q.get("search")!.trim() } : {}),
+      ...(status ? { status: status as "DRAFT" | "ACTIVE" | "ARCHIVED" } : {}),
+      ...(q.get("categoryId") ? { categoryId: q.get("categoryId")! } : {}),
+      ...(q.get("collectionId") ? { collectionId: q.get("collectionId")! } : {}),
+      ...(q.get("tagId") ? { tagId: q.get("tagId")! } : {}),
+      ...(q.get("minPrice") ? { minPrice: q.get("minPrice")! } : {}),
+      ...(q.get("maxPrice") ? { maxPrice: q.get("maxPrice")! } : {}),
+    },
+    sortBy, sortDirection, limit, offset,
+  };
 }
+
+function badRequest(message: string) { return adminJson({ error: { code: "INVALID_REQUEST", message } }, { status: 400 }); }
 
 export async function GET(request: Request) {
   try {
-    await requireAdmin(request,"catalog.read");
-    const url = new URL(request.url);
-    const rawStatus = url.searchParams.get("status");
-    const status = rawStatus === "DRAFT" || rawStatus === "ACTIVE" || rawStatus === "ARCHIVED" ? rawStatus : undefined;
-    const result = await catalog.listProducts({ filters: { status }, limit: 100, offset: 0 });
-    const items = (await Promise.all(result.items.map((item) => item ? catalog.getProductWithVariants(item.id) : null))).filter((item): item is NonNullable<typeof item> => item !== null);
-    return json({ ...result, items });
+    const q = new URL(request.url).searchParams;
+    const resource = q.get("resource") ?? "products";
+    if (resource === "products") {
+      const context = await requireAdmin(request, "catalog.read");
+      return adminJson(await listCatalogProducts(context, parseCatalogOptions(request)));
+    }
+    if (resource === "categories") {
+      const context = await requireAdmin(request, "catalog.read");
+      return adminJson({ items: await listCatalogCategories(context) });
+    }
+    if (resource === "collections") {
+      const context = await requireAdmin(request, "catalog.read");
+      return adminJson({ items: await listCatalogCollections(context) });
+    }
+    return badRequest("Unsupported catalog resource.");
   } catch (error) {
-    return errorResponse(error);
+    if (error instanceof Error && ["INVALID_PAGINATION","INVALID_SORT","INVALID_FILTER"].includes(error.message)) return badRequest("Catalog query parameters are invalid.");
+    return adminCatalogErrorResponse(error);
   }
 }
 
 export async function POST(request: Request) {
   try {
-    await requireAdmin(request,"catalog.read");
-    assertSameOrigin(request);
-    const input = await request.json();
-    if (!input || typeof input !== "object" || Array.isArray(input)) return json({ error: "Invalid catalog request." }, 400);
-    const product = await catalog.createProduct(input);
-    return json({ product }, 201);
-  } catch (error) {
-    return errorResponse(error);
-  }
+    const q = new URL(request.url).searchParams;
+    const resource = q.get("resource") ?? "products";
+    const context = await requireAdmin(request, resource === "categories" ? "catalog.category.manage" : resource === "collections" ? "catalog.collection.manage" : "catalog.create");
+    assertAdminSameOrigin(request);
+    const body = await readAdminJson(request);
+    if (resource === "categories") return adminJson({ category: await createCatalogCategory(context, body as unknown as Parameters<typeof createCatalogCategory>[1]) }, { status: 201 });
+    if (resource === "collections") return adminJson({ collection: await createCatalogCollection(context, body as unknown as Parameters<typeof createCatalogCollection>[1]) }, { status: 201 });
+    return adminJson({ product: await createCatalogProduct(context, body as unknown as Parameters<typeof createCatalogProduct>[1]) }, { status: 201 });
+  } catch (error) { return adminErrorResponse(error); }
 }
 
 export async function PATCH(request: Request) {
   try {
-    await requireAdmin(request,"catalog.read");
-    assertSameOrigin(request);
-    const input = await request.json();
-    if (!input || typeof input !== "object" || Array.isArray(input) || typeof input.id !== "string") {
-      return json({ error: "Product ID is required." }, 400);
-    }
-    const product = await catalog.updateProduct(input);
-    return json({ product });
-  } catch (error) {
-    return errorResponse(error);
-  }
+    const context = await requireAdmin(request, "catalog.update");
+    assertAdminSameOrigin(request);
+    const body = await readAdminJson(request);
+    if (typeof body.id !== "string" || !isValidAdminId(body.id)) return badRequest("Product ID is invalid.");
+    const { id, ...patch } = body;
+    return adminJson({ product: await updateCatalogProduct(context, { id, ...(patch as Record<string, unknown>) } as Parameters<typeof updateCatalogProduct>[1]) });
+  } catch (error) { return adminErrorResponse(error); }
 }

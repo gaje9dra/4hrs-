@@ -8,7 +8,7 @@ import {
   type CatalogErrorCode,
 } from "@/lib/catalog/errors";
 import * as repository from "@/lib/catalog/repository";
-import { createFulfillmentProviderMappingRepository } from "@/lib/fulfillment/mapping";
+import { createFulfillmentProviderMappingRepository, mapProviderMappingDatabaseError } from "@/lib/fulfillment/mapping";
 import {
   CatalogValidationError,
   validateCategory,
@@ -57,11 +57,13 @@ type CatalogRepository = {
   listPublishedProducts: typeof repository.listPublishedProducts;
   createProduct: typeof repository.createProduct;
   updateProduct: typeof repository.updateProduct;
+  updateProductIfFresh: typeof repository.updateProductIfFresh;
   transitionProductStatus: typeof repository.transitionProductStatus;
   createVariant: typeof repository.createVariant;
   getVariantById: typeof repository.getVariantById;
   getVariantsByProduct: typeof repository.getVariantsByProduct;
   updateVariant: typeof repository.updateVariant;
+  updateVariantIfFresh: typeof repository.updateVariantIfFresh;
   deactivateVariant: typeof repository.deactivateVariant;
   createOptionType: typeof repository.createOptionType;
   getOptionTypeById: typeof repository.getOptionTypeById;
@@ -90,6 +92,8 @@ type CatalogRepository = {
   getCategoryById: typeof repository.getCategoryById;
   getCategoryBySlug: (slug: string, client?: repository.CatalogRepositoryClient) => Promise<{ id: string; status: "ACTIVE" | "DRAFT" | "ARCHIVED"; name: string; slug: string; description: string | null; seoTitle: string | null; seoDescription: string | null; parentId: string | null; createdAt: Date; updatedAt: Date; _count: { products: number } } | null>;
   getCategoryHierarchy: typeof repository.getCategoryHierarchy;
+  listCategories: typeof repository.listCategories;
+  listCollections: typeof repository.listCollections;
   updateCategory: typeof repository.updateCategory;
   archiveCategory: typeof repository.archiveCategory;
   createCollection: typeof repository.createCollection;
@@ -148,6 +152,7 @@ export type CreateProductInput = ProductInput & {
 
 export type UpdateProductInput = Partial<Omit<ProductInput, "id">> & {
   id: string;
+  expectedUpdatedAt?: string;
   categoryIds?: string[];
   collectionIds?: string[];
   tagIds?: string[];
@@ -492,6 +497,12 @@ export function createCatalogService(
         }
       }
 
+      let expectedUpdatedAt: Date | undefined;
+      if (input.expectedUpdatedAt !== undefined) {
+        expectedUpdatedAt = new Date(input.expectedUpdatedAt);
+        if (Number.isNaN(expectedUpdatedAt.getTime())) throw new CatalogServiceError("INVALID_PRODUCT", "expectedUpdatedAt is invalid.");
+      }
+
       try {
         const updated = await repo.withTransaction(async (tx) => {
           if (merged.status === "ACTIVE") {
@@ -534,17 +545,31 @@ export function createCatalogService(
             if (readiness.length) validationError(readiness, "PRODUCT_NOT_PUBLISHABLE");
           }
 
-          const result = await repo.updateProduct(input.id, {
-            title: merged.title,
-            slug: merged.slug,
-            description: merged.description,
-            shortDescription: merged.shortDescription,
-            price: decimalValue(merged.price)!,
-            compareAtPrice: decimalValue(merged.compareAtPrice) ?? null,
-            currency: merged.currency,
-            seoTitle: merged.seoTitle,
-            seoDescription: merged.seoDescription,
-          }, tx);
+          const result = expectedUpdatedAt
+            ? await repo.updateProductIfFresh(input.id, expectedUpdatedAt, {
+                title: merged.title,
+                slug: merged.slug,
+                description: merged.description,
+                shortDescription: merged.shortDescription,
+                price: decimalValue(merged.price)!,
+                compareAtPrice: decimalValue(merged.compareAtPrice) ?? null,
+                currency: merged.currency,
+                seoTitle: merged.seoTitle,
+                seoDescription: merged.seoDescription,
+              }, tx)
+            : await repo.updateProduct(input.id, {
+                title: merged.title,
+                slug: merged.slug,
+                description: merged.description,
+                shortDescription: merged.shortDescription,
+                price: decimalValue(merged.price)!,
+                compareAtPrice: decimalValue(merged.compareAtPrice) ?? null,
+                currency: merged.currency,
+                seoTitle: merged.seoTitle,
+                seoDescription: merged.seoDescription,
+              }, tx);
+
+          if (!result) throw new CatalogServiceError("CATALOG_CONFLICT", "Product changed concurrently. Refresh before saving again.");
 
           if (input.categoryIds || input.collectionIds || input.tagIds) {
             const beforeRelationships = await repo.getProductDetails(input.id, tx);
@@ -586,11 +611,11 @@ export function createCatalogService(
       }
     },
 
-    async archiveProduct(id: string) {
-      return lifecycle.archiveProduct(id);
+    async archiveProduct(id: string, expectedUpdatedAt?: Date) {
+      return lifecycle.archiveProduct(id, expectedUpdatedAt);
     },
 
-    async publishProduct(id: string) {
+    async publishProduct(id: string, expectedUpdatedAt?: Date) {
       if (Object.keys(customRepository).length === 0) {
         const variants = await repo.getVariantsByProduct(id);
         const activeVariants = variants.filter((variant) => variant.status === "ACTIVE");
@@ -605,15 +630,15 @@ export function createCatalogService(
           }
         }
       }
-      return lifecycle.publishProduct(id);
+      return lifecycle.publishProduct(id, expectedUpdatedAt);
     },
 
-    async unpublishProduct(id: string) {
-      return lifecycle.unpublishProduct(id);
+    async unpublishProduct(id: string, expectedUpdatedAt?: Date) {
+      return lifecycle.unpublishProduct(id, expectedUpdatedAt);
     },
 
-    async restoreProduct(id: string) {
-      return lifecycle.restoreProduct(id);
+    async restoreProduct(id: string, expectedUpdatedAt?: Date) {
+      return lifecycle.restoreProduct(id, expectedUpdatedAt);
     },
 
     async createOptionType(input: VariantOptionTypeInput) {
@@ -800,10 +825,12 @@ export function createCatalogService(
       } catch (error) { mapDatabaseError(error); }
     },
 
-    async updateVariant(id: string, patch: Partial<Omit<VariantInput, "id" | "productId">>) {
+    async updateVariant(id: string, patch: Partial<Omit<VariantInput, "id" | "productId">> & { expectedUpdatedAt?: string }) {
       requireId(id, "VARIANT_NOT_FOUND", "Variant ID");
       const existing = await repo.getVariantById(id);
       if (!existing) throw new CatalogServiceError("VARIANT_NOT_FOUND", "Variant was not found.");
+      const expectedUpdatedAt = patch.expectedUpdatedAt === undefined ? undefined : new Date(patch.expectedUpdatedAt);
+      if (expectedUpdatedAt && Number.isNaN(expectedUpdatedAt.getTime())) throw new CatalogServiceError("INVALID_VARIANT", "expectedUpdatedAt is invalid.");
       const merged: VariantInput = {
         productId: existing.productId,
         id: existing.id,
@@ -852,15 +879,26 @@ export function createCatalogService(
       if (issues.length) validationError(issues, "INVALID_VARIANT");
       try {
         const updated = await repo.withTransaction(async (tx) => {
-          const result = await repo.updateVariant(id, {
-          sku: merged.sku,
-          displayName: merged.displayName,
-          size: merged.size,
-          color: merged.color,
-          price: decimalValue(merged.price) ?? null,
-          compareAtPrice: decimalValue(merged.compareAtPrice) ?? null,
-          status: merged.status,
-        }, tx);
+          const result = expectedUpdatedAt
+            ? await repo.updateVariantIfFresh(id, expectedUpdatedAt, {
+                sku: merged.sku,
+                displayName: merged.displayName,
+                size: merged.size,
+                color: merged.color,
+                price: decimalValue(merged.price) ?? null,
+                compareAtPrice: decimalValue(merged.compareAtPrice) ?? null,
+                status: merged.status,
+              }, tx)
+            : await repo.updateVariant(id, {
+                sku: merged.sku,
+                displayName: merged.displayName,
+                size: merged.size,
+                color: merged.color,
+                price: decimalValue(merged.price) ?? null,
+                compareAtPrice: decimalValue(merged.compareAtPrice) ?? null,
+                status: merged.status,
+              }, tx);
+          if (!result) throw new CatalogServiceError("CATALOG_CONFLICT", "Variant changed concurrently. Refresh before saving again.");
           await repo.replaceVariantOptionValues(id, optionCheck.optionValueIds, tx);
           await audit({
             entityType: "VARIANT",
@@ -1158,6 +1196,10 @@ export function createCatalogService(
       if (!category) throw new CatalogServiceError("CATEGORY_NOT_FOUND", "Category was not found.");
       return category;
     },
+
+    async listCategories() { return repo.listCategories(); },
+
+    async listCollections() { return repo.listCollections(); },
 
     async getCategoryHierarchy() { return repo.getCategoryHierarchy(); },
 
@@ -1476,6 +1518,72 @@ export function createCatalogService(
       return repo.listPublishedProducts(options);
     },
 
+    async listProviderMappings(variantId: string) {
+      requireId(variantId, "VARIANT_NOT_FOUND", "Variant ID");
+      const variant = await repo.getVariantById(variantId);
+      if (!variant) throw new CatalogServiceError("VARIANT_NOT_FOUND", "Variant was not found.");
+      return createFulfillmentProviderMappingRepository().getByVariant(variantId);
+    },
+
+    async upsertProviderMapping(input: {
+      variantId: string;
+      providerId: string;
+      providerSku: string;
+      providerVariantReference?: string | null;
+      active?: boolean;
+    }) {
+      requireId(input.variantId, "VARIANT_NOT_FOUND", "Variant ID");
+      const variant = await repo.getVariantById(input.variantId);
+      if (!variant) throw new CatalogServiceError("VARIANT_NOT_FOUND", "Variant was not found.");
+      if (!input.providerId?.trim() || !input.providerSku?.trim()) {
+        throw new CatalogServiceError("INVALID_VARIANT", "Provider and provider SKU are required.");
+      }
+      try {
+        return await repo.withTransaction(async (tx) => {
+          const mappingRepository = createFulfillmentProviderMappingRepository(tx);
+          const before = await mappingRepository.getByVariantAndProvider(input.variantId, input.providerId);
+          const result = await mappingRepository.upsert(input);
+          await audit({
+            entityType: "VARIANT",
+            entityId: input.variantId,
+            operation: "UPDATE",
+            changedFields: ["providerMapping"],
+            beforeState: before,
+            afterState: result,
+            metadata: { providerId: input.providerId.trim().toLowerCase() },
+          }, tx);
+          return result;
+        });
+      } catch (error) {
+        mapProviderMappingDatabaseError(error);
+      }
+    },
+
+    async removeProviderMapping(variantId: string, providerId: string) {
+      requireId(variantId, "VARIANT_NOT_FOUND", "Variant ID");
+      const variant = await repo.getVariantById(variantId);
+      if (!variant) throw new CatalogServiceError("VARIANT_NOT_FOUND", "Variant was not found.");
+      try {
+        return await repo.withTransaction(async (tx) => {
+          const mappingRepository = createFulfillmentProviderMappingRepository(tx);
+          const before = await mappingRepository.getByVariantAndProvider(variantId, providerId);
+          if (!before) throw new CatalogServiceError("INVALID_VARIANT", "Provider mapping was not found.");
+          const result = await mappingRepository.deleteByVariantAndProvider(variantId, providerId);
+          await audit({
+            entityType: "VARIANT",
+            entityId: variantId,
+            operation: "UPDATE",
+            changedFields: ["providerMapping"],
+            beforeState: before,
+            metadata: { providerId: providerId.trim().toLowerCase(), removed: true },
+          }, tx);
+          return result;
+        });
+      } catch (error) {
+        mapProviderMappingDatabaseError(error);
+      }
+    },
+
     async isPublishable(id: string) {
       const readiness = await lifecycle.validatePublicationReadiness(id);
       if (readiness.issues.length || Object.keys(customRepository).length > 0) return readiness;
@@ -1509,6 +1617,7 @@ function hasCycle(categoryId: string, parentById: ReadonlyMap<string, string | n
 function validateListOptions(options: repository.CatalogListOptions): void {
   const issues = [];
   const filters = options.filters;
+  if (filters?.search !== undefined && (filters.search.length > 120 || /[\u0000-\u001f]/.test(filters.search))) issues.push({ field: "filters.search", code: "INVALID_SEARCH", message: "Search is invalid." });
   if (filters?.minPrice !== undefined) issues.push(...validateMoney(filters.minPrice, "filters.minPrice"));
   if (filters?.maxPrice !== undefined) issues.push(...validateMoney(filters.maxPrice, "filters.maxPrice"));
   if (filters?.minPrice !== undefined && filters?.maxPrice !== undefined) {

@@ -15,6 +15,7 @@ export type CatalogSortField = keyof typeof CATALOG_SORT_FIELDS | "merchandising
 export type SortDirection = "asc" | "desc";
 
 export type CatalogListFilters = {
+  search?: string;
   status?: "DRAFT" | "ACTIVE" | "ARCHIVED";
   categoryId?: string;
   collectionId?: string;
@@ -104,6 +105,11 @@ function normalizeOffset(offset?: number): number {
 
 function buildListWhere(filters: CatalogListFilters = {}): Prisma.ProductWhereInput {
   const where: Prisma.ProductWhereInput = {};
+  if (filters.search) where.OR = [
+    { title: { contains: filters.search, mode: "insensitive" } },
+    { slug: { contains: filters.search, mode: "insensitive" } },
+    { description: { contains: filters.search, mode: "insensitive" } },
+  ];
   if (filters.status) where.status = filters.status;
   if (filters.categoryId) where.categories = { some: { categoryId: filters.categoryId } };
   if (filters.collectionId) where.collections = { some: { collectionId: filters.collectionId } };
@@ -1196,6 +1202,13 @@ export async function createProduct(data: Prisma.ProductCreateInput, client?: Ca
   return clientOrDefault(client).product.create({ data });
 }
 
+export async function updateProductIfFresh(id: string, expectedUpdatedAt: Date, data: Prisma.ProductUpdateInput, client?: CatalogRepositoryClient) {
+  const repository = clientOrDefault(client);
+  const result = await repository.product.updateMany({ where: { id, updatedAt: expectedUpdatedAt }, data });
+  if (result.count !== 1) return null;
+  return repository.product.findUnique({ where: { id } });
+}
+
 export async function updateProduct(id: string, data: Prisma.ProductUpdateInput, client?: CatalogRepositoryClient) {
   return clientOrDefault(client).product.update({ where: { id }, data });
 }
@@ -1205,10 +1218,11 @@ export async function transitionProductStatus(
   from: "DRAFT" | "ACTIVE" | "ARCHIVED",
   to: "DRAFT" | "ACTIVE" | "ARCHIVED",
   client?: CatalogRepositoryClient,
+  expectedUpdatedAt?: Date,
 ) {
   const repository = clientOrDefault(client);
   const result = await repository.product.updateMany({
-    where: { id, status: from },
+    where: { id, status: from, ...(expectedUpdatedAt ? { updatedAt: expectedUpdatedAt } : {}) },
     data: { status: to },
   });
   if (result.count !== 1) return null;
@@ -1310,6 +1324,13 @@ export async function getVariantsByProduct(productId: string, client?: CatalogRe
   });
 }
 
+export async function updateVariantIfFresh(id: string, expectedUpdatedAt: Date, data: Prisma.ProductVariantUpdateInput, client?: CatalogRepositoryClient) {
+  const repository = clientOrDefault(client);
+  const result = await repository.productVariant.updateMany({ where: { id, updatedAt: expectedUpdatedAt }, data });
+  if (result.count !== 1) return null;
+  return repository.productVariant.findUnique({ where: { id } });
+}
+
 export async function updateVariant(id: string, data: Prisma.ProductVariantUpdateInput, client?: CatalogRepositoryClient) {
   return clientOrDefault(client).productVariant.update({ where: { id }, data });
 }
@@ -1389,6 +1410,13 @@ export async function getCategoryById(id: string, client?: CatalogRepositoryClie
   return clientOrDefault(client).category.findUnique({ where: { id } });
 }
 
+export async function listCategories(client?: CatalogRepositoryClient) {
+  return clientOrDefault(client).category.findMany({
+    orderBy: [{ status: "asc" }, { name: "asc" }, { id: "asc" }],
+    include: { _count: { select: { products: true } } },
+  });
+}
+
 export async function getCategoryHierarchy(client?: CatalogRepositoryClient) {
   return clientOrDefault(client).category.findMany({
     orderBy: [{ parentId: "asc" }, { name: "asc" }],
@@ -1406,6 +1434,13 @@ export async function archiveCategory(id: string, client?: CatalogRepositoryClie
 
 export async function createCollection(data: Prisma.CollectionCreateInput, client?: CatalogRepositoryClient) {
   return clientOrDefault(client).collection.create({ data });
+}
+
+export async function listCollections(client?: CatalogRepositoryClient) {
+  return clientOrDefault(client).collection.findMany({
+    orderBy: [{ status: "asc" }, { name: "asc" }, { id: "asc" }],
+    include: { _count: { select: { products: true } } },
+  });
 }
 
 export async function getCollectionById(id: string, client?: CatalogRepositoryClient) {

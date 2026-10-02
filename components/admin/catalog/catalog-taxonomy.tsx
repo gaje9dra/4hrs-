@@ -1,0 +1,20 @@
+"use client";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+type TaxonomyItem={id:string;name:string;slug:string;status:string;_count:{products:number}};
+export function CatalogTaxonomy({ categories, collections, canManage }: { categories:TaxonomyItem[]; collections:TaxonomyItem[]; canManage:boolean }) {
+ const router=useRouter(); const [error,setError]=useState(""); const [busy,setBusy]=useState(false);
+ async function submit(resource:"categories"|"collections",method:"POST"|"PATCH",id:string|undefined,form:HTMLFormElement){
+  setBusy(true);setError("");const data=Object.fromEntries(new FormData(form).entries());
+  const url="/api/admin/catalog?resource="+resource+(id?"":""); const endpoint=id?"/api/admin/catalog/"+resource+"/"+id:url;
+  const res=await fetch(endpoint,{method,headers:{"content-type":"application/json"},body:JSON.stringify(data)});
+  const b=await res.json().catch(()=>({}));if(!res.ok)setError(b?.error?.message||"Could not save resource.");else{form.reset();router.refresh();}setBusy(false);
+ }
+ async function archive(resource:"categories"|"collections",id:string){
+  const reason=window.prompt("Reason for archiving this catalog resource:");
+  if(!reason||reason.trim().length<3)return;
+  setBusy(true);setError("");const res=await fetch("/api/admin/catalog/"+resource+"/"+id+"/archive",{method:"DELETE",headers:{"content-type":"application/json"},body:JSON.stringify({reason})});const b=await res.json().catch(()=>({}));if(!res.ok)setError(b?.error?.message||"Could not archive resource.");else router.refresh();setBusy(false);
+ }
+ const list=(resource:"categories"|"collections",items:TaxonomyItem[])=>items.map(item=><li key={item.id} className="border-2 border-black p-3"><form onSubmit={e=>{e.preventDefault();void submit(resource,"PATCH",item.id,e.currentTarget)}} className="grid gap-2"><div className="flex items-center justify-between gap-3"><strong>{item.name}</strong><span className="text-xs font-bold">{item._count?.products??0} products</span></div>{canManage&&<><input name="name" aria-label={"Name for "+item.name} defaultValue={item.name} className="border-2 border-black p-2"/><input name="slug" aria-label={"Slug for "+item.name} defaultValue={item.slug} className="border-2 border-black p-2"/><div className="flex flex-wrap gap-2"><button disabled={busy} className="border-2 border-black bg-[#f7d51d] px-3 py-2 font-bold uppercase">Save</button><button type="button" disabled={busy||item.status==="ARCHIVED"} onClick={()=>void archive(resource,item.id)} className="border-2 border-black bg-[#ff5a36] px-3 py-2 font-bold uppercase">Archive</button></div></>}</form></li>);
+ return <div className="grid gap-5 lg:grid-cols-2"><section className="border-4 border-black bg-white p-5"><h3 className="text-xl font-black uppercase">Categories</h3>{canManage&&<form onSubmit={e=>{e.preventDefault();void submit("categories","POST",undefined,e.currentTarget)}} className="mt-4 grid gap-2"><input name="name" required placeholder="Category name" className="border-2 border-black p-2"/><input name="slug" placeholder="Slug (optional)" className="border-2 border-black p-2"/><button disabled={busy} className="border-2 border-black bg-[#f7d51d] p-2 font-bold uppercase">Add category</button></form>}<ul className="mt-4 grid gap-2">{list("categories",categories)}</ul></section><section className="border-4 border-black bg-white p-5"><h3 className="text-xl font-black uppercase">Collections</h3>{canManage&&<form onSubmit={e=>{e.preventDefault();void submit("collections","POST",undefined,e.currentTarget)}} className="mt-4 grid gap-2"><input name="name" required placeholder="Collection name" className="border-2 border-black p-2"/><input name="slug" placeholder="Slug (optional)" className="border-2 border-black p-2"/><button disabled={busy} className="border-2 border-black bg-[#f7d51d] p-2 font-bold uppercase">Add collection</button></form>}<ul className="mt-4 grid gap-2">{list("collections",collections)}</ul>{error&&<p role="alert" className="mt-3 border-2 border-black bg-[#ff5a36] p-2 font-bold">{error}</p>}</section></div>;
+}

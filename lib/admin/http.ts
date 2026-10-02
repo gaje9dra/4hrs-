@@ -1,5 +1,9 @@
+import { CatalogServiceError } from "@/lib/catalog/errors";
 import { NextResponse } from "next/server";
 import { AdminError } from "@/lib/admin/errors";
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+export function isValidAdminId(value: unknown): value is string { return typeof value === "string" && UUID_PATTERN.test(value.trim()); }
 export function adminJson<T>(data: T, init: ResponseInit = {}) {
   return NextResponse.json(data, { ...init, headers: {
     "cache-control": "private, no-store, max-age=0",
@@ -30,4 +34,14 @@ export async function readAdminJson(request: Request): Promise<Record<string, un
     if (!body || typeof body !== "object" || Array.isArray(body)) throw new Error();
     return body as Record<string, unknown>;
   } catch { throw new AdminError("INVALID_REQUEST", "Request is invalid."); }
+}
+export function adminCatalogErrorResponse(error: unknown) {
+  if (error instanceof CatalogServiceError) {
+    const status = error.code === "PRODUCT_NOT_FOUND" || error.code === "VARIANT_NOT_FOUND" || error.code === "CATEGORY_NOT_FOUND" || error.code === "COLLECTION_NOT_FOUND" || error.code === "IMAGE_NOT_FOUND" ? 404 :
+      error.code === "CATALOG_CONFLICT" ? 409 :
+      error.code.startsWith("DUPLICATE_") || error.code === "PRODUCT_ALREADY_EXISTS" ? 409 :
+      400;
+    return adminJson({ error: { code: error.code, message: error.message } }, { status });
+  }
+  return adminErrorResponse(error);
 }
