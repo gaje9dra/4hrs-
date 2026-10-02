@@ -313,7 +313,6 @@ export function createQikinkFulfillmentProvider(options: {
         "in transit",
         "exception",
         "action required",
-        "processing",
       ].includes(status)) return "SUBMITTED";
       if (["rto initiated", "returned", "cancelled", "canceled"].includes(status)) return "FAILED";
       return "PENDING";
