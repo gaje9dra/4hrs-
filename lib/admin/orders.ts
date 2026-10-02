@@ -8,7 +8,7 @@ import { createFulfillmentApplication } from "@/lib/fulfillment/application";
 import { createShippingApplication } from "@/lib/shipping/application";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const ORDER_NUMBER = /^ORD-[A-F0-9]{24}$/;
+const ORDER_NUMBER = /^ORD-[A-F0-9]{24}$/i;
 const MAX_PAGE_SIZE = 100;
 const LIST_SORTS = ["createdAt","updatedAt","orderNumber","total"] as const;
 type ListSort = typeof LIST_SORTS[number];
