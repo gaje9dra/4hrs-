@@ -1,8 +1,8 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-
-export function CatalogVariantManager({productId,variants,canManage}: {productId:string;variants:any[];canManage:boolean}) {
+type Variant={id:string;sku:string;displayName:string|null;size:string|null;color:string|null;price:string|null;status:"ACTIVE"|"INACTIVE";updatedAt:string};
+export function CatalogVariantManager({productId,variants,canManage}:{productId:string;variants:Variant[];canManage:boolean}) {
  const router=useRouter(); const [error,setError]=useState(""); const [busy,setBusy]=useState(false);
  async function add(e:React.FormEvent<HTMLFormElement>){e.preventDefault();setBusy(true);setError("");const d=Object.fromEntries(new FormData(e.currentTarget).entries());const res=await fetch("/api/admin/catalog/products/variants",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({productId,...d,price:d.price?String(d.price):null})});const b=await res.json().catch(()=>({}));if(!res.ok)setError(b?.error?.message||"Could not create variant.");else{e.currentTarget.reset();router.refresh()}setBusy(false)}
  async function update(id:string,updatedAt:string,e:React.FormEvent<HTMLFormElement>){e.preventDefault();setBusy(true);setError("");const d=Object.fromEntries(new FormData(e.currentTarget).entries());const res=await fetch("/api/admin/catalog/variants/"+id,{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({...d,price:d.price?String(d.price):null,expectedUpdatedAt:updatedAt})});const b=await res.json().catch(()=>({}));if(!res.ok)setError(b?.error?.message||"Could not update variant.");else router.refresh();setBusy(false)}
