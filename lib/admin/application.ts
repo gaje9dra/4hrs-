@@ -78,11 +78,10 @@ export async function updateAdminUser(context: AdminAuthorizationContext, input:
     const nextRoles = roles ?? [...currentRoles] as AdminRoleName[];
     const roleRows = await tx.adminRole.findMany({ where: { name: { in: nextRoles } } });
     if (roleRows.length !== nextRoles.length) throw new AdminError("INVALID_REQUEST", "One or more roles are unavailable.");
-    const updated = await tx.adminUser.update({ where: { id: current.id }, data: {
-      ...(input.status !== undefined ? { status: input.status } : {}),
-      version: { increment: 1 },
-      roles: roles === undefined ? undefined : { deleteMany: {}, create: roleRows.map((role) => ({ roleId: role.id })) },
-    }, include });
+    const updateData: Prisma.AdminUserUpdateInput = { version: { increment: 1 } };
+    if (input.status !== undefined) updateData.status = input.status as "ACTIVE" | "DISABLED";
+    if (roles !== undefined) updateData.roles = { deleteMany: {}, create: roleRows.map((role) => ({ roleId: role.id })) };
+    const updated = await tx.adminUser.update({ where: { id: current.id }, data: updateData, include });
     await auditAdminAction(context, {
       action: "ADMIN_USER_UPDATED", resourceType: "AdminUser", resourceId: updated.id, success: true,
       reason,
