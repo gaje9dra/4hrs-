@@ -85,14 +85,17 @@ async function lifecycle(
   id: string,
   action: "publish" | "unpublish" | "archive" | "restore",
   reason: unknown,
+  expectedUpdatedAt?: unknown,
 ) {
   const cleanReason = requireHighRiskReason(reason);
+  const expected = expectedUpdatedAt === undefined ? undefined : new Date(String(expectedUpdatedAt));
+  if (expected && Number.isNaN(expected.getTime())) throw new AdminError("INVALID_REQUEST", "expectedUpdatedAt is invalid.");
   try {
     const api = service(context);
-    const result = action === "publish" ? await api.publishProduct(id)
-      : action === "unpublish" ? await api.unpublishProduct(id)
-      : action === "archive" ? await api.archiveProduct(id)
-      : await api.restoreProduct(id);
+    const result = action === "publish" ? await api.publishProduct(id, expected)
+      : action === "unpublish" ? await api.unpublishProduct(id, expected)
+      : action === "archive" ? await api.archiveProduct(id, expected)
+      : await api.restoreProduct(id, expected);
     await auditAdminAction(context, {
       action: "CATALOG_PRODUCT_" + action.toUpperCase(),
       resourceType: "Product",
@@ -114,10 +117,10 @@ async function lifecycle(
   }
 }
 
-export const publishCatalogProduct = (c: AdminAuthorizationContext, id: string, reason: unknown) => lifecycle(c, id, "publish", reason);
-export const unpublishCatalogProduct = (c: AdminAuthorizationContext, id: string, reason: unknown) => lifecycle(c, id, "unpublish", reason);
-export const archiveCatalogProduct = (c: AdminAuthorizationContext, id: string, reason: unknown) => lifecycle(c, id, "archive", reason);
-export const restoreCatalogProduct = (c: AdminAuthorizationContext, id: string, reason: unknown) => lifecycle(c, id, "restore", reason);
+export const publishCatalogProduct = (c: AdminAuthorizationContext, id: string, reason: unknown, expectedUpdatedAt?: unknown) => lifecycle(c, id, "publish", reason, expectedUpdatedAt);
+export const unpublishCatalogProduct = (c: AdminAuthorizationContext, id: string, reason: unknown, expectedUpdatedAt?: unknown) => lifecycle(c, id, "unpublish", reason, expectedUpdatedAt);
+export const archiveCatalogProduct = (c: AdminAuthorizationContext, id: string, reason: unknown, expectedUpdatedAt?: unknown) => lifecycle(c, id, "archive", reason, expectedUpdatedAt);
+export const restoreCatalogProduct = (c: AdminAuthorizationContext, id: string, reason: unknown, expectedUpdatedAt?: unknown) => lifecycle(c, id, "restore", reason, expectedUpdatedAt);
 
 export async function createCatalogVariant(context: AdminAuthorizationContext, input: Parameters<ReturnType<typeof createCatalogService>["createVariant"]>[0]) {
   const result = await service(context).createVariant(input);
