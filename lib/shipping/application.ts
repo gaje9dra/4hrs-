@@ -240,13 +240,13 @@ export function createShippingApplication(
     if (input.event.providerId.trim() === "" || input.event.providerId.length > 64) {
       throw new ShippingDomainError("INVALID_TRACKING_EVENT", "Tracking event provider identity is invalid.");
     }
-    if (input.event.providerEventId?.length > 255) {
+    if ((input.event.providerEventId?.length ?? 0) > 255) {
       throw new ShippingDomainError("INVALID_TRACKING_EVENT", "Tracking event identifier is too long.");
     }
     if (!input.event.providerStatus.trim() || input.event.providerStatus.length > 120) {
       throw new ShippingDomainError("INVALID_TRACKING_EVENT", "Tracking event provider status is invalid.");
     }
-    if (input.event.location?.length > 255 || input.event.description?.length > 1000) {
+    if ((input.event.location?.length ?? 0) > 255 || (input.event.description?.length ?? 0) > 1000) {
       throw new ShippingDomainError("INVALID_TRACKING_EVENT", "Tracking event metadata exceeds the supported size.");
     }
     if (Number.isNaN(input.event.eventTimestamp.getTime())) {
