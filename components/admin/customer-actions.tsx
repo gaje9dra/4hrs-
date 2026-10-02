@@ -1,0 +1,13 @@
+"use client";
+import {useState} from "react";
+import {useRouter} from "next/navigation";
+
+export default function CustomerActions({customerId,displayName,status,updatedAt,canUpdate,canStatus}:{customerId:string;displayName:string|null;status:string;updatedAt:string;canUpdate:boolean;canStatus:boolean}){
+ const router=useRouter();const [name,setName]=useState(displayName??"");const [nextStatus,setNextStatus]=useState(status);const [reason,setReason]=useState("");const [busy,setBusy]=useState(false);const [message,setMessage]=useState("");
+ async function send(path:string,body:unknown){setBusy(true);setMessage("");try{const r=await fetch(path,{method:path.endsWith("/profile")?"PATCH":"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});const b=await r.json();if(!r.ok)throw new Error(b.error?.message??"Operation failed.");setMessage("Saved.");router.refresh();}catch(e){setMessage(e instanceof Error?e.message:"Operation failed.");}finally{setBusy(false);}}
+ return <section className="grid gap-5 md:grid-cols-2">
+  {canUpdate&&<form onSubmit={e=>{e.preventDefault();void send("/api/admin/customers/"+customerId+"/profile",{displayName:name,expectedUpdatedAt:updatedAt});}} className="border-4 border-black bg-white p-5 shadow-[6px_6px_0_0_#000]"><h3 className="text-xl font-black uppercase">Profile</h3><label className="mt-4 grid gap-1 text-sm font-bold">Display name<input maxLength={120} value={name} onChange={e=>setName(e.target.value)} className="border-2 border-black p-2"/></label><button disabled={busy} className="mt-4 border-2 border-black bg-[#f7d51d] px-4 py-2 font-black uppercase disabled:opacity-50">Save profile</button></form>}
+  {canStatus&&<form onSubmit={e=>{e.preventDefault();void send("/api/admin/customers/"+customerId+"/status",{status:nextStatus,reason,expectedUpdatedAt:updatedAt});}} className="border-4 border-black bg-white p-5 shadow-[6px_6px_0_0_#000]"><h3 className="text-xl font-black uppercase">Account status</h3><label className="mt-4 grid gap-1 text-sm font-bold">Status<select value={nextStatus} onChange={e=>setNextStatus(e.target.value)} className="border-2 border-black p-2"><option>ACTIVE</option><option>DISABLED</option><option>SUSPENDED</option></select></label><label className="mt-3 grid gap-1 text-sm font-bold">Reason<textarea required minLength={3} maxLength={1000} value={reason} onChange={e=>setReason(e.target.value)} className="border-2 border-black p-2"/></label><button disabled={busy} className="mt-4 border-2 border-black bg-black px-4 py-2 font-black uppercase text-white disabled:opacity-50">Change status</button></form>}
+  {message&&<p role="status" className="md:col-span-2 border-2 border-black bg-white p-3 font-bold">{message}</p>}
+ </section>;
+}
