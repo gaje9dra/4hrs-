@@ -41,16 +41,36 @@ function validateIdempotencyKey(key: string): void {
   }
 }
 
-function providerRequest(order: FulfillmentOrderSource, fulfillmentId: string): FulfillmentProviderRequest {
+function resolveProviderMapping(
+  source: FulfillmentOrderSource["items"][number],
+  providerId: string,
+) {
+  if (!source.variantId || !source.variant) {
+    throw new FulfillmentDomainError("FULFILLMENT_ITEM_INVALID", "Order item is missing its canonical ProductVariant.");
+  }
+  const mapping = source.variant.providerMappings.find(
+    (candidate) => candidate.providerId === providerId && candidate.active,
+  );
+  if (!mapping?.providerSku?.trim()) {
+    throw new FulfillmentDomainError(
+      "FULFILLMENT_ITEM_INVALID",
+      "Order item has no active fulfillment provider mapping.",
+    );
+  }
+  return mapping;
+}
+
+function providerRequest(order: FulfillmentOrderSource, fulfillmentId: string, providerId: string): FulfillmentProviderRequest {
   if (!order.shippingAddress) {
     throw new FulfillmentDomainError("FULFILLMENT_NOT_ELIGIBLE", "Order has no historical shipping address.");
   }
   const items = mapOrderItemsToFulfillment(order.items).map((item) => {
     const source = order.items.find((candidate) => candidate.id === item.orderItemId);
     if (!source) throw new FulfillmentDomainError("FULFILLMENT_ITEM_INVALID", "Fulfillment item source could not be resolved.");
+    const mapping = resolveProviderMapping(source, providerId);
     return {
       orderItemId: item.orderItemId,
-      sku: item.sku!,
+      sku: mapping.providerSku,
       variantId: item.variantId,
       quantity: item.quantity,
       unitPrice: source.unitPrice.toFixed(2),
@@ -163,12 +183,17 @@ export function createFulfillmentApplication(
             orderId: order.id,
             provider: adapter.id,
             idempotencyKey: input.idempotencyKey,
-            items: mapped.map((item) => ({
-              orderItemId: item.orderItemId,
-              quantity: item.quantity,
-              providerSku: item.sku,
-              providerVariantReference: item.variantId,
-            })),
+            items: mapped.map((item) => {
+              const source = order.items.find((candidate) => candidate.id === item.orderItemId);
+              if (!source) throw new FulfillmentDomainError("FULFILLMENT_ITEM_INVALID", "Fulfillment item source could not be resolved.");
+              const mapping = resolveProviderMapping(source, adapter.id);
+              return {
+                orderItemId: item.orderItemId,
+                quantity: item.quantity,
+                providerSku: mapping.providerSku,
+                providerVariantReference: mapping.providerVariantReference,
+              };
+            }),
           });
         }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 
@@ -257,7 +282,7 @@ export function createFulfillmentApplication(
         shippingAddress: order.shippingAddress,
       });
 
-      const request = providerRequest(order, existing.id);
+      const request = providerRequest(order, existing.id, adapter.id);
       const submissionAttempts = submissionAttemptCount(existing.reconciliationMetadata) + 1;
       logFulfillmentObservation({
         operation: "provider-resolution",
