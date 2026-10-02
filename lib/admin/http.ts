@@ -1,3 +1,4 @@
+import { CatalogServiceError } from "@/lib/catalog/errors";
 import { NextResponse } from "next/server";
 import { AdminError } from "@/lib/admin/errors";
 export function adminJson<T>(data: T, init: ResponseInit = {}) {
@@ -30,4 +31,14 @@ export async function readAdminJson(request: Request): Promise<Record<string, un
     if (!body || typeof body !== "object" || Array.isArray(body)) throw new Error();
     return body as Record<string, unknown>;
   } catch { throw new AdminError("INVALID_REQUEST", "Request is invalid."); }
+}
+export function adminCatalogErrorResponse(error: unknown) {
+  if (error instanceof CatalogServiceError) {
+    const status = error.code === "PRODUCT_NOT_FOUND" || error.code === "VARIANT_NOT_FOUND" || error.code === "CATEGORY_NOT_FOUND" || error.code === "COLLECTION_NOT_FOUND" || error.code === "IMAGE_NOT_FOUND" ? 404 :
+      error.code === "CATALOG_CONFLICT" ? 409 :
+      error.code.startsWith("DUPLICATE_") || error.code === "PRODUCT_ALREADY_EXISTS" ? 409 :
+      400;
+    return adminJson({ error: { code: error.code, message: error.message } }, { status });
+  }
+  return adminErrorResponse(error);
 }
