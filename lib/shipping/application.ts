@@ -1,5 +1,4 @@
 import { Prisma, type PrismaClient } from "@prisma/client";
-import { Prisma, type PrismaClient } from "@prisma/client";
 import { db } from "@/lib/db/client";
 import {
   assertFulfillmentEligibleForShipment,
