@@ -1,6 +1,7 @@
 export type PublicOrderStatus = "PENDING" | "CONFIRMED";
 
 export type PublicOrderItemDto = {
+  itemReference: string;
   productId: string | null;
   variantId: string | null;
   productTitle: string;
