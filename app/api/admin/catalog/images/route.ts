@@ -21,7 +21,7 @@ function errorResponse(error: unknown) {
 
 export async function POST(request: Request) {
   try {
-    await requireAdmin(request);
+    await requireAdmin(request,"catalog.update");
     assertSameOrigin(request);
     const input = await request.json();
     const image = await catalog.addImage(input);
@@ -33,7 +33,7 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    await requireAdmin(request);
+    await requireAdmin(request,"catalog.update");
     assertSameOrigin(request);
     const input = await request.json();
     if (!input || typeof input.id !== "string") return json({ error: "Image ID is required." }, 400);
