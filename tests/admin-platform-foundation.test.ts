@@ -100,7 +100,6 @@ test("admin authorization context carries a bounded correlation ID", async () =>
       },
     }));
     assert.equal(context.correlationId, "phase14-correlation-test");
-    void request;
   } finally {
     await cleanup(f);
   }
