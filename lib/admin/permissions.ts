@@ -1,5 +1,5 @@
 export const ADMIN_PERMISSIONS = [
-  "catalog.read","catalog.create","catalog.update","catalog.publish","catalog.archive",
+  "catalog.read","catalog.create","catalog.update","catalog.publish","catalog.archive","catalog.category.manage","catalog.collection.manage","catalog.media.manage","catalog.provider_mapping.manage",
   "orders.read","orders.update","orders.cancel",
   "payments.read","payments.refund",
   "fulfillment.read","fulfillment.manage",
