@@ -28,7 +28,7 @@ export const CUSTOMER_SORT_VALUES = ["createdAt","updatedAt","displayName","emai
 export type CustomerSort = typeof CUSTOMER_SORT_VALUES[number];
 
 export function parseCustomerStatus(value: unknown): CustomerStatus | undefined {
-  if (value === undefined || value === "") return undefined;
+  if (value === undefined || value === null || value === "") return undefined;
   if (typeof value !== "string" || !(CUSTOMER_STATUS_VALUES as readonly string[]).includes(value)) {
     throw new Error("Customer status filter is invalid.");
   }
