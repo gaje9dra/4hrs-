@@ -21,6 +21,7 @@ export type ShippingApplicationDependencies = Readonly<{
   database?: PrismaClient;
   repository?: ShippingRepository;
   providerResolver?: ShippingProviderResolver;
+  authorizeOperationalRecovery?: (input: { shipmentId: string; operatorId: string }) => Promise<boolean>;
 }>;
 
 export type ShippingApplicationService = Readonly<{
@@ -43,6 +44,12 @@ export type ShippingApplicationService = Readonly<{
     status: "MATCHED" | "RECONCILIATION_REQUIRED" | "PROVIDER_UNSUPPORTED";
     reason?: string;
   }>;
+  requestShipmentReconciliation(input: {
+    shipmentId: string;
+    operatorId: string;
+    reason: string;
+    idempotencyKey: string;
+  }): Promise<Awaited<ReturnType<ShippingRepository["getShipmentById"]>>>;
 }>;
 
 function validateIdempotencyKey(key: string): void {
@@ -79,6 +86,7 @@ export function createShippingApplication(
   const database = dependencies.database ?? db;
   const repository = dependencies.repository ?? createShippingRepository();
   const providerResolver = dependencies.providerResolver ?? createShippingProviderResolver([]);
+  const authorizeOperationalRecovery = dependencies.authorizeOperationalRecovery ?? (async () => false);
 
   async function createShipmentFromFulfillment(input: {
     fulfillmentId: string;
@@ -217,8 +225,17 @@ export function createShippingApplication(
     if (!isShipmentStatus(input.event.normalizedStatus)) {
       throw new ShippingDomainError("UNSUPPORTED_PROVIDER_STATUS", "Provider event normalized to an unsupported Shipment status.");
     }
-    if (input.event.providerId.trim() === "") {
-      throw new ShippingDomainError("INVALID_TRACKING_EVENT", "Tracking event provider identity is required.");
+    if (input.event.providerId.trim() === "" || input.event.providerId.length > 64) {
+      throw new ShippingDomainError("INVALID_TRACKING_EVENT", "Tracking event provider identity is invalid.");
+    }
+    if (input.event.providerEventId?.length > 255) {
+      throw new ShippingDomainError("INVALID_TRACKING_EVENT", "Tracking event identifier is too long.");
+    }
+    if (!input.event.providerStatus.trim() || input.event.providerStatus.length > 120) {
+      throw new ShippingDomainError("INVALID_TRACKING_EVENT", "Tracking event provider status is invalid.");
+    }
+    if (input.event.location?.length > 255 || input.event.description?.length > 1000) {
+      throw new ShippingDomainError("INVALID_TRACKING_EVENT", "Tracking event metadata exceeds the supported size.");
     }
     if (Number.isNaN(input.event.eventTimestamp.getTime())) {
       throw new ShippingDomainError("INVALID_TRACKING_EVENT", "Tracking event timestamp is invalid.");
@@ -233,7 +250,7 @@ export function createShippingApplication(
       eventTimestamp: input.event.eventTimestamp,
       location: input.event.location,
       description: input.event.description,
-      source: "PROVIDER" as const,
+      source: input.event.source ?? "PROVIDER",
     };
 
     try {
@@ -349,6 +366,69 @@ export function createShippingApplication(
     return shipment ? safeCustomerDto(shipment) : null;
   }
 
+  async function requestShipmentReconciliation(input: {
+    shipmentId: string;
+    operatorId: string;
+    reason: string;
+    idempotencyKey: string;
+  }) {
+    const operatorId = input.operatorId.trim();
+    const reason = input.reason.trim();
+    const idempotencyKey = input.idempotencyKey.trim();
+
+    if (!operatorId || operatorId.length > 128 || !reason || reason.length > 500) {
+      throw new ShippingDomainError("INVALID_TRACKING_EVENT", "Operational recovery metadata is invalid.");
+    }
+    if (!/^[A-Za-z0-9._~-]{8,128}$/.test(idempotencyKey)) {
+      throw new ShippingDomainError("SHIPMENT_IDEMPOTENCY_CONFLICT", "Recovery idempotency key is invalid.");
+    }
+
+    const authorized = await authorizeOperationalRecovery({ shipmentId: input.shipmentId, operatorId });
+    if (!authorized) {
+      throw new ShippingDomainError("UNAUTHORIZED_SHIPMENT_ACCESS", "Operational shipment recovery is not authorized.");
+    }
+
+    return database.$transaction(async (tx) => {
+      const txRepository = createShippingRepository(tx);
+      const shipment = await txRepository.getShipmentById(input.shipmentId);
+      if (!shipment) throw new ShippingDomainError("SHIPMENT_NOT_FOUND", "Shipment could not be found.");
+
+      const existingAction = await txRepository.getRecoveryActionByIdempotencyKey(idempotencyKey);
+      if (existingAction) {
+        if (existingAction.shipmentId !== shipment.id) {
+          throw new ShippingDomainError(
+            "SHIPMENT_IDEMPOTENCY_CONFLICT",
+            "The recovery idempotency key is already bound to another Shipment.",
+          );
+        }
+        return shipment;
+      }
+
+      const action = await txRepository.createRecoveryAction({
+        shipmentId: shipment.id,
+        operatorId,
+        reason,
+        idempotencyKey,
+      });
+      const updated = await txRepository.markReconciliationRequired({
+        id: shipment.id,
+        reason,
+        requestedAt: action.createdAt,
+      });
+      if (!updated) throw new ShippingDomainError("SHIPMENT_NOT_FOUND", "Shipment could not be found.");
+
+      logShippingObservation({
+        operation: "reconciliation",
+        shipmentId: updated.id,
+        orderId: updated.orderId,
+        fulfillmentId: updated.fulfillmentId,
+        providerId: updated.providerId,
+        result: "reconciliation-required",
+      });
+      return updated;
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  }
+
   async function reconcileShipment(input: { shipmentId: string }) {
     const shipment = await repository.getShipmentById(input.shipmentId);
     if (!shipment) throw new ShippingDomainError("SHIPMENT_NOT_FOUND", "Shipment could not be found.");
@@ -380,5 +460,6 @@ export function createShippingApplication(
     processProviderTrackingEvent,
     getCustomerShipment,
     reconcileShipment,
+    requestShipmentReconciliation,
   };
 }
