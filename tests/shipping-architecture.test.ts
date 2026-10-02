@@ -10,6 +10,7 @@ import {
 
 test("Shipment lifecycle allows forward transitions", () => {
   assert.equal(canTransitionShipmentStatus("CREATED", "IN_TRANSIT"), true);
+  assert.equal(canTransitionShipmentStatus("CREATED", "DELIVERED"), false);
   assert.equal(canTransitionShipmentStatus("IN_TRANSIT", "OUT_FOR_DELIVERY"), true);
   assert.equal(canTransitionShipmentStatus("OUT_FOR_DELIVERY", "DELIVERED"), true);
 });
@@ -22,13 +23,13 @@ test("terminal Shipment states cannot transition", () => {
 });
 
 test("invalid Shipment transitions are rejected", () => {
-  assert.throws(() => assertShipmentTransition("DELIVERED", "IN_TRANSIT"), /Invalid Shipment transition/);
+  assert.throws(() => assertShipmentTransition("DELIVERED", "IN_TRANSIT"), /transition .* is not allowed/);
 });
 
 test("duplicate and stale tracking events do not overwrite canonical state", () => {
-  assert.equal(shouldApplyTrackingEvent("IN_TRANSIT", "IN_TRANSIT"), false);
-  assert.equal(shouldApplyTrackingEvent("DELIVERED", "IN_TRANSIT"), false);
-  assert.equal(shouldApplyTrackingEvent("IN_TRANSIT", "DELIVERED"), true);
+  assert.equal(shouldApplyTrackingEvent("IN_TRANSIT", "IN_TRANSIT", new Date("2026-10-02T10:00:00Z"), new Date("2026-10-02T09:00:00Z")), "HISTORY_ONLY");
+  assert.equal(shouldApplyTrackingEvent("DELIVERED", "IN_TRANSIT", new Date("2026-10-02T10:00:00Z"), new Date("2026-10-02T09:00:00Z")), "HISTORY_ONLY");
+  assert.equal(shouldApplyTrackingEvent("IN_TRANSIT", "DELIVERED", new Date("2026-10-02T10:00:00Z"), new Date("2026-10-02T09:00:00Z")), "APPLY");
 });
 
 test("Shipment remains attached to its canonical Order and Fulfillment", () => {
