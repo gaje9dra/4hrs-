@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { Prisma } from "@prisma/client";
+import { Prisma, type PaymentRefundReason } from "@prisma/client";
 import { createPaymentApplication, type AdminRefundInput } from "@/lib/payments/application";
 import { createPaymentProviderRegistry, createPaymentProviderResolver } from "@/lib/payments/resolver";
 import type { PaymentProviderAdapter } from "@/lib/payments/provider";
@@ -41,7 +41,7 @@ function fakeRefundRepository(initial=makeState()){
   lookupByIdempotencyKey:async(owner:string,operation:string,key:string)=>{const value=idempotency.get(owner+":"+operation+":"+key);return value?{id:key,requestFingerprint:value.requestFingerprint,paymentId:value.paymentId} as never:null;},
   createPaymentIdempotency:async(input:{customerId:string;operation:string;key:string;requestFingerprint:string;paymentId:string})=>{const k=input.customerId+":"+input.operation+":"+input.key;if(idempotency.has(k))throw new Error("P2002");idempotency.set(k,{requestFingerprint:input.requestFingerprint,paymentId:input.paymentId});return {id:k} as never;},
   getRefundByIdempotencyKey:async(key:string)=>refundMap.get(key) as never??null,
-  createPaymentRefund:async(input:{paymentId:string;idempotencyKey:string;amount:Prisma.Decimal|string;currency:string;reason:Prisma.PaymentRefundReason;note?:string|null})=>{const record={id:"refund-"+(++refundCount),paymentId:input.paymentId,idempotencyKey:input.idempotencyKey,amount:new Prisma.Decimal(input.amount),currency:input.currency,status:"PENDING",reason:input.reason,note:input.note??null,providerId:null,providerReference:null,failureCode:null,createdAt:now,updatedAt:now,completedAt:null};refundMap.set(input.idempotencyKey,record);current={...current,refunds:[...current.refunds,record]} as unknown as PaymentAdminRecord;return record as never;},
+  createPaymentRefund:async(input:{paymentId:string;idempotencyKey:string;amount:Prisma.Decimal|string;currency:string;reason:PaymentRefundReason;note?:string|null})=>{const record={id:"refund-"+(++refundCount),paymentId:input.paymentId,idempotencyKey:input.idempotencyKey,amount:new Prisma.Decimal(input.amount),currency:input.currency,status:"PENDING",reason:input.reason,note:input.note??null,providerId:null,providerReference:null,failureCode:null,createdAt:now,updatedAt:now,completedAt:null};refundMap.set(input.idempotencyKey,record);current={...current,refunds:[...current.refunds,record]} as unknown as PaymentAdminRecord;return record as never;},
   updatePaymentRefund:async(input:{id:string;status:string;providerId?:string|null;providerReference?:string|null;failureCode?:string|null;completedAt?:Date|null})=>{const record=[...refundMap.values()].find(x=>x.id===input.id) as Record<string,unknown>;Object.assign(record,input);if(input.status==="SUCCEEDED")current={...current,refunds:current.refunds.map(r=>r.id===input.id?{...r,...input}:r)} as unknown as PaymentAdminRecord;return record as never;},
   getPaymentRefunds:async()=>[],
  };
