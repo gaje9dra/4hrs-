@@ -10,7 +10,7 @@ const catalog = createCatalogService();
 
 export async function GET(request: Request, context: { params: Promise<{ productId: string }> }) {
   try {
-    await requireAdmin(request);
+    await requireAdmin(request,"catalog.read");
     const { productId } = await context.params;
     return Response.json({ product: await catalog.getProductDetails(productId) }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
