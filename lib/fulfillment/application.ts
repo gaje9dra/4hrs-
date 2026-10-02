@@ -7,6 +7,7 @@ import type { FulfillmentProviderErrorCode, FulfillmentProviderRequest, Fulfillm
 import { createConfiguredFulfillmentProviderRegistry, createFulfillmentProviderResolver } from "@/lib/fulfillment/resolver";
 import { loadFulfillmentProviderConfiguration } from "@/lib/fulfillment/config";
 import { logFulfillmentObservation } from "@/lib/fulfillment/observability";
+import { randomUUID } from "node:crypto";
 
 export type FulfillmentApplicationDependencies = {
   database?: PrismaClient;
@@ -18,8 +19,8 @@ export type CreateFulfillmentInput = { orderId: string; idempotencyKey: string }
 
 export type FulfillmentApplicationService = {
   createFulfillment(input: CreateFulfillmentInput): Promise<FulfillmentWithItems>;
-  submitFulfillment(input: { fulfillmentId: string; idempotencyKey: string; operation?: "SUBMIT" | "RETRY" }): Promise<FulfillmentWithItems>;
-  reconcileFulfillment(input: { fulfillmentId: string; idempotencyKey: string }): Promise<FulfillmentWithItems>;
+  submitFulfillment(input: { fulfillmentId: string; idempotencyKey?: string; operation?: "SUBMIT" | "RETRY" }): Promise<FulfillmentWithItems>;
+  reconcileFulfillment(input: { fulfillmentId: string; idempotencyKey?: string }): Promise<FulfillmentWithItems>;
   transitionFulfillment(input: {
     fulfillmentId: string;
     expectedStatus: FulfillmentLifecycleStatus;
@@ -589,11 +590,11 @@ export function createFulfillmentApplication(
 
   async function submitFulfillment(input: { fulfillmentId: string; idempotencyKey: string; operation?: "SUBMIT" | "RETRY" }): Promise<FulfillmentWithItems> {
     const operation = input.operation ?? "SUBMIT";
-    return executeIdempotentOperation(input.fulfillmentId, operation, input.idempotencyKey, () => submitFulfillmentUnsafe({ fulfillmentId: input.fulfillmentId }));
+    return executeIdempotentOperation(input.fulfillmentId, operation, input.idempotencyKey ?? `legacy-${operation.toLowerCase()}-${input.fulfillmentId}-${randomUUID()}`, () => submitFulfillmentUnsafe({ fulfillmentId: input.fulfillmentId }));
   }
 
   async function reconcileFulfillment(input: { fulfillmentId: string; idempotencyKey: string }): Promise<FulfillmentWithItems> {
-    return executeIdempotentOperation(input.fulfillmentId, "RECONCILE", input.idempotencyKey, () => reconcileFulfillmentUnsafe({ fulfillmentId: input.fulfillmentId }));
+    return executeIdempotentOperation(input.fulfillmentId, "RECONCILE", input.idempotencyKey ?? `legacy-reconcile-${input.fulfillmentId}-${randomUUID()}`, () => reconcileFulfillmentUnsafe({ fulfillmentId: input.fulfillmentId }));
   }
 
   async function transitionFulfillment(input: {
