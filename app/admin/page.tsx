@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 
 type Product = { id: string; title: string; slug: string; status: string; price: string | number; variants?: Array<{ id: string; sku: string; size: string | null; color: string | null; status: string }> };
 
@@ -31,7 +31,7 @@ export default function AdminCatalogPage() {
 
   useEffect(() => { void load(); }, []);
 
-  async function createProduct(event: React.FormEvent) {
+  async function createProduct(event: FormEvent) {
     event.preventDefault();
     setMessage("");
     try {
