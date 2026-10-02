@@ -132,6 +132,18 @@ type TrendRow = {
   netSales: Prisma.Decimal | string | number | null;
 };
 
+export function calculateRate(numerator: number, denominator: number): number | null {
+  if (denominator === 0) return null;
+  return Number(((numerator / denominator) * 100).toFixed(2));
+}
+export function calculateAov(grossSales: Prisma.Decimal.Value, paidOrders: number): string | null {
+  if (paidOrders === 0) return null;
+  return new Prisma.Decimal(grossSales).div(paidOrders).toFixed(2);
+}
+export function calculateNetSales(grossSales: Prisma.Decimal.Value, refundAmount: Prisma.Decimal.Value): string {
+  return new Prisma.Decimal(grossSales).minus(refundAmount).toFixed(2);
+}
+
 const int = (value: bigint | number): number => Number(value);
 const money = (value: Prisma.Decimal | string | number | null): string => value === null ? "0.00" : new Prisma.Decimal(value).toFixed(2);
 
@@ -285,11 +297,11 @@ export async function getAdminAnalytics(query: AnalyticsQuery, options: {
     sales: options.financial ? {
       orderCount: int(summary?.orderCount ?? 0), paidOrderCount: paidOrders,
       grossSales: money(summary?.grossSales), refundAmount: money(summary?.refundAmount),
-      netSales: money(summary?.netSales), averageOrderValue: paidOrders === 0 ? "0.00" : new Prisma.Decimal(summary?.grossSales ?? 0).div(paidOrders).toFixed(2),
+      netSales: money(summary?.netSales), averageOrderValue: calculateAov(summary?.grossSales ?? 0, paidOrders),
     } : { orderCount: int(summary?.orderCount ?? 0), paidOrderCount: null, grossSales: null, refundAmount: null, netSales: null, averageOrderValue: null },
     payments: options.financial ? {
       successfulPayments: int(payment?.successfulPayments ?? 0), failedPayments: int(payment?.failedPayments ?? 0), pendingPayments: int(payment?.pendingPayments ?? 0),
-      paymentSuccessRate: attemptDenominator === 0 ? null : Number(((successfulAttempts / attemptDenominator) * 100).toFixed(2)),
+      paymentSuccessRate: calculateRate(successfulAttempts, attemptDenominator),
       refundCount: await countSuccessfulRefunds(query), refundAmount: money(summary?.refundAmount),
     } : null,
     fulfillment: options.operations ? {
@@ -316,7 +328,7 @@ export async function getAdminAnalytics(query: AnalyticsQuery, options: {
       receivedItemQuantity: int(returns?.receivedItemQuantity ?? 0),
       cancellations: int(returns?.cancellations ?? 0),
       completedCancellations: int(returns?.completedCancellations ?? 0),
-      cancellationRate: paidOrders === 0 ? null : Number(((int(returns?.completedCancellations ?? 0) / paidOrders) * 100).toFixed(2)),
+      cancellationRate: calculateRate(int(returns?.completedCancellations ?? 0), paidOrders),
     } : null,
     cases: options.operations ? {
       openCases: int(cases?.openCases ?? 0),
