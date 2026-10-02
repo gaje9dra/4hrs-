@@ -43,7 +43,7 @@ export default async function AccountOrderDetailPage({ params }: { params: Param
 
   return (
     <Container width="standard" className="py-10 sm:py-14 lg:py-20">
-      <OrderDetail order={order} />
+      <OrderDetail order={order} exceptionSummary={await createReturnsApplication().getCustomerExceptionSummary({ orderNumber })} />
     </Container>
   );
 }
