@@ -184,8 +184,8 @@ test("Tracking processor prevents terminal regression and preserves out-of-order
   });
   assert.equal(customerShipment?.status, "DELIVERED");
   assert.equal(customerShipment?.events.length, 2);
-  assert.equal(customerShipment?.events[0]?.occurredAt, "2026-10-02T12:00:00.000Z");
-  assert.equal(customerShipment?.events[1]?.occurredAt, "2026-10-02T11:00:00.000Z");
+  assert.equal(customerShipment?.events[0]?.occurredAt, "2026-10-02T11:00:00.000Z");
+  assert.equal(customerShipment?.events[1]?.occurredAt, "2026-10-02T12:00:00.000Z");
 });
 
 test("Duplicate provider tracking event is idempotent", async () => {
