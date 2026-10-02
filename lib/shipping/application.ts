@@ -132,7 +132,9 @@ export function createShippingApplication(
     }
 
     try {
-      return await database.$transaction(async (tx) => {
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        try {
+          return await database.$transaction(async (tx) => {
         const txRepository = createShippingRepository(tx);
         const raced = await txRepository.getShipmentByCreationIdempotencyKey(idempotencyKey);
         if (raced) {
@@ -181,7 +183,19 @@ export function createShippingApplication(
           result: "success",
         });
         return created;
-      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+          }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+        } catch (error) {
+          if (
+            error instanceof Prisma.PrismaClientKnownRequestError
+            && error.code === "P2034"
+            && attempt < 2
+          ) {
+            continue;
+          }
+          throw error;
+        }
+      }
+      throw new Error("Shipment transaction retry limit reached.");
     } catch (error) {
       if (error instanceof ShippingDomainError) throw error;
       if (isUniqueConflict(error)) {
