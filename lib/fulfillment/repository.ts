@@ -4,7 +4,7 @@ import { db } from "@/lib/db/client";
 export type FulfillmentRepositoryClient = PrismaClient | Prisma.TransactionClient;
 export type FulfillmentRecord = Prisma.FulfillmentGetPayload<Record<string, never>>;
 export type FulfillmentWithItems = Prisma.FulfillmentGetPayload<{ include: { items: true } }>;
-export type FulfillmentOrderSource = Prisma.OrderGetPayload<{ include: { items: true; shippingAddress: true; payment: true; fulfillment: true; customer: true } }>;
+export type FulfillmentOrderSource = Prisma.OrderGetPayload<{ include: { items: { include: { variant: { include: { providerMappings: true } } } }; shippingAddress: true; payment: true; fulfillment: true; customer: true } }>;
 
 export type FulfillmentRepository = {
   withTransaction<T>(work: (repository: FulfillmentRepository) => Promise<T>): Promise<T>;
@@ -38,7 +38,7 @@ export function createFulfillmentRepository(client?: FulfillmentRepositoryClient
     },
     getByIdempotencyKey(idempotencyKey) { return database.fulfillment.findUnique({ where: { idempotencyKey }, include: { items: true } }); },
     getOrderForFulfillment(orderId) {
-      return database.order.findUnique({ where: { id: orderId }, include: { items: true, shippingAddress: true, payment: true, fulfillment: true, customer: true } });
+      return database.order.findUnique({ where: { id: orderId }, include: { items: { include: { variant: { include: { providerMappings: true } } } }, shippingAddress: true, payment: true, fulfillment: true, customer: true } });
     },
     async createWithItems(input) {
       assertNonEmpty(input.orderId, "orderId");
