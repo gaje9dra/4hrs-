@@ -57,11 +57,13 @@ type CatalogRepository = {
   listPublishedProducts: typeof repository.listPublishedProducts;
   createProduct: typeof repository.createProduct;
   updateProduct: typeof repository.updateProduct;
+  updateProductIfFresh: typeof repository.updateProductIfFresh;
   transitionProductStatus: typeof repository.transitionProductStatus;
   createVariant: typeof repository.createVariant;
   getVariantById: typeof repository.getVariantById;
   getVariantsByProduct: typeof repository.getVariantsByProduct;
   updateVariant: typeof repository.updateVariant;
+  updateVariantIfFresh: typeof repository.updateVariantIfFresh;
   deactivateVariant: typeof repository.deactivateVariant;
   createOptionType: typeof repository.createOptionType;
   getOptionTypeById: typeof repository.getOptionTypeById;
@@ -536,7 +538,7 @@ export function createCatalogService(
             if (readiness.length) validationError(readiness, "PRODUCT_NOT_PUBLISHABLE");
           }
 
-          const result = await repo.updateProduct(input.id, {
+          const result = expectedUpdatedAt ? await repo.updateProductIfFresh(input.id, expectedUpdatedAt, {
             title: merged.title,
             slug: merged.slug,
             description: merged.description,
@@ -802,11 +804,11 @@ export function createCatalogService(
       } catch (error) { mapDatabaseError(error); }
     },
 
-    async updateVariant(id: string, patch: Partial<Omit<VariantInput, "id" | "productId">>) {
+    async updateVariant(id: string, patch: Partial<Omit<VariantInput, "id" | "productId">> & { expectedUpdatedAt?: string }) {
       requireId(id, "VARIANT_NOT_FOUND", "Variant ID");
       const existing = await repo.getVariantById(id);
       if (!existing) throw new CatalogServiceError("VARIANT_NOT_FOUND", "Variant was not found.");
-      const merged: VariantInput = {
+      const expectedUpdatedAt = patch.expectedUpdatedAt === undefined ? undefined : new Date(patch.expectedUpdatedAt);\n      if (expectedUpdatedAt && Number.isNaN(expectedUpdatedAt.getTime())) throw new CatalogServiceError("INVALID_VARIANT", "expectedUpdatedAt is invalid.");\n      const merged: VariantInput = {
         productId: existing.productId,
         id: existing.id,
         sku: patch.sku ?? existing.sku,
@@ -854,7 +856,7 @@ export function createCatalogService(
       if (issues.length) validationError(issues, "INVALID_VARIANT");
       try {
         const updated = await repo.withTransaction(async (tx) => {
-          const result = await repo.updateVariant(id, {
+          const result = expectedUpdatedAt ? await repo.updateVariantIfFresh(id, expectedUpdatedAt, {
           sku: merged.sku,
           displayName: merged.displayName,
           size: merged.size,
