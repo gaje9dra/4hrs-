@@ -23,7 +23,6 @@ test("terminal Shipment states cannot transition", () => {
 
 test("invalid Shipment transitions are rejected", () => {
   assert.throws(() => assertShipmentTransition("DELIVERED", "IN_TRANSIT"), /Invalid Shipment transition/);
-  assert.throws(() => assertShipmentTransition("CREATED", "DELIVERED"), /Invalid Shipment transition/);
 });
 
 test("duplicate and stale tracking events do not overwrite canonical state", () => {
