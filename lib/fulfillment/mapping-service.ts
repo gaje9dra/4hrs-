@@ -42,6 +42,11 @@ export function createProviderMappingService() {
       active?: boolean;
     }) {
       validateProviderMappingInput(input);
+      const variant = await repository.getVariantPublicationState(input.variantId);
+      if (!variant) throw new Error("ProductVariant was not found.");
+      if (variant.product.status === "ACTIVE" && input.active === false) {
+        throw new Error("Cannot deactivate a fulfillment mapping for a published ProductVariant.");
+      }
       try {
         const mapping = await repository.upsert({ ...input, providerId: normalizeProviderId(input.providerId) });
         return toFulfillmentProviderMappingDto(mapping);
