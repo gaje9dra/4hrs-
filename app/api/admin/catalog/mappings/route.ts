@@ -30,10 +30,10 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    await requireAdmin(request);
+    const admin = await requireAdmin(request);
     assertSameOrigin(request);
     const input = await request.json();
-    const mapping = await mappings.saveVariantMapping(input);
+    const mapping = await mappings.saveVariantMapping({ ...input, auditActorId: admin.customer.id });
     return json({ mapping }, 201);
   } catch (error) {
     return errorResponse(error);
@@ -42,11 +42,11 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    await requireAdmin(request);
+    const admin = await requireAdmin(request);
     assertSameOrigin(request);
     const input = await request.json();
     if (!input?.variantId || !input?.providerId) return json({ error: "variantId and providerId are required." }, 400);
-    await mappings.removeVariantMapping(input.variantId, input.providerId);
+    await mappings.removeVariantMapping(input.variantId, input.providerId, admin.customer.id);
     return json({ deleted: true });
   } catch (error) {
     return errorResponse(error);
