@@ -1,0 +1,8 @@
+import Link from "next/link";
+import { requireAdmin } from "@/lib/admin/authorization";
+import { listAdminUsers } from "@/lib/admin/application";
+export default async function AdminUsersPage() {
+  const context = await requireAdmin(undefined, "admin.users.read");
+  const users = await listAdminUsers();
+  return <section className="space-y-6"><header className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-sm font-black uppercase tracking-[0.2em]">Administration</p><h2 className="text-4xl font-black uppercase">Admin users</h2></div>{context.permissions.has("admin.users.manage")&&<Link href="/admin/users/new" className="border-4 border-black bg-[#f7d51d] px-4 py-3 font-black uppercase shadow-[4px_4px_0_0_#000]">Add administrator</Link>}</header><div className="overflow-x-auto border-4 border-black bg-white"><table className="min-w-full text-left"><thead><tr className="border-b-4 border-black"><th className="p-3">Email</th><th className="p-3">Status</th><th className="p-3">Roles</th><th className="p-3">Version</th><th className="p-3">Action</th></tr></thead><tbody>{users.map((user)=><tr key={user.id} className="border-b-2 border-black last:border-b-0"><td className="p-3">{user.email}</td><td className="p-3">{user.status}</td><td className="p-3">{user.roles.join(", ")}</td><td className="p-3">{user.version}</td><td className="p-3"><Link className="font-bold underline" href={"/admin/users/"+user.id}>View</Link></td></tr>)}</tbody></table></div></section>;
+}
