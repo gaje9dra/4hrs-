@@ -651,6 +651,7 @@ model Shipment {
   fulfillmentId              String         @db.Uuid
   orderId                    String         @db.Uuid
   shipmentReference          String         @unique @db.VarChar(120)
+  creationIdempotencyKey     String         @unique @db.VarChar(128)
   providerId                 String         @db.VarChar(64)
   providerReference          String?        @db.VarChar(255)
   carrier                    String?        @db.VarChar(120)
