@@ -90,6 +90,8 @@ type CatalogRepository = {
   getCategoryById: typeof repository.getCategoryById;
   getCategoryBySlug: (slug: string, client?: repository.CatalogRepositoryClient) => Promise<{ id: string; status: "ACTIVE" | "DRAFT" | "ARCHIVED"; name: string; slug: string; description: string | null; seoTitle: string | null; seoDescription: string | null; parentId: string | null; createdAt: Date; updatedAt: Date; _count: { products: number } } | null>;
   getCategoryHierarchy: typeof repository.getCategoryHierarchy;
+  listCategories: typeof repository.listCategories;
+  listCollections: typeof repository.listCollections;
   updateCategory: typeof repository.updateCategory;
   archiveCategory: typeof repository.archiveCategory;
   createCollection: typeof repository.createCollection;
@@ -1158,6 +1160,10 @@ export function createCatalogService(
       if (!category) throw new CatalogServiceError("CATEGORY_NOT_FOUND", "Category was not found.");
       return category;
     },
+
+    async listCategories() { return repo.listCategories(); },
+
+    async listCollections() { return repo.listCollections(); },
 
     async getCategoryHierarchy() { return repo.getCategoryHierarchy(); },
 
