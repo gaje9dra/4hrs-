@@ -60,7 +60,7 @@ export function createReturnsApplication(dependencies:ReturnsApplicationDependen
       {assertCancellationTransition("REQUESTED",status);await tx.cancellationRequest.update({where:{id:created.id},data:{status,reviewedAt:new Date()}});await repo.audit({actorType:"SYSTEM",action:"CANCELLATION_APPROVED",previousState:"REQUESTED",newState:status,reason:eligibility==="eligible"?"commercially_eligible":"operational_review_required",orderId:order.id,cancellationRequestId:created.id});}
       return tx.cancellationRequest.findUnique({where:{id:created.id},include:{order:true}});
     }));
-    return toCancellationDto(result);
+    return toCancellationDto(result, input.orderNumber);
    }catch(e){return mapError(e);}
  }
  async function reviewCancellation(input:{reference:string;decision:"APPROVE"|"REJECT";reason?:string;request?:Request}){
@@ -80,7 +80,7 @@ export function createReturnsApplication(dependencies:ReturnsApplicationDependen
    const description=requestText(input.description,2000);if(!Array.isArray(input.items)||input.items.length<1||input.items.length>50)throw new ReturnDomainError("RETURN_ITEM_INVALID","Return items are invalid.");
    return toReturnDto(await retry(()=>database.$transaction(async tx=>{
     const repo=createReturnsRepository(tx);const order=await repo.getOrderByNumber(input.orderNumber,c.id);if(!order)throw new ReturnDomainError("ORDER_NOT_FOUND","Order could not be found.");
-    if(order.returnRequests.some((r)=>ACTIVE_RETURN_STATUSES.includes(r.status)))throw new ReturnDomainError("RETURN_ALREADY_REQUESTED","An active return request already exists.");
+    if(order.returnRequests.some((r)=>ACTIVE_RETURN_STATUSES.has(r.status)))throw new ReturnDomainError("RETURN_ALREADY_REQUESTED","An active return request already exists.");
     const state=stateForOrder(order);const eligibility=returnEligibility({...state,now:new Date(),returnWindowDays:windowDays()});if(eligibility!=="eligible")throw new ReturnDomainError("RETURN_NOT_ELIGIBLE",`Return is not eligible: ${eligibility.replaceAll("_"," ")}.`);
     const seen=new Set<string>();const quantities=new Map<string,number>();
     for(const item of input.items){if(typeof item.orderItemReference!=="string"||seen.has(item.orderItemReference))throw new ReturnDomainError("RETURN_ITEM_INVALID","Return items are invalid.");seen.add(item.orderItemReference);validateReturnQuantity(item.quantity);quantities.set(item.orderItemReference,item.quantity);}
