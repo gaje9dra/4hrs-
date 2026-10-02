@@ -57,7 +57,7 @@ export default async function AnalyticsPage({searchParams}:{searchParams:SearchP
           <label className="grid gap-1 text-sm font-bold">Reporting timezone<input name="timezone" defaultValue={query.timezone} maxLength={64} className="border-2 border-black p-2"/></label>
           <label className="grid gap-1 text-sm font-bold">Grouping<select name="grouping" defaultValue={query.grouping} className="border-2 border-black p-2"><option value="day">Day</option><option value="week">Week</option><option value="month">Month</option></select></label>
         </div>
-        <div className="mt-4 flex flex-wrap items-center gap-3"><button type="submit" className="border-2 border-black bg-black px-5 py-2 font-black uppercase text-white">Refresh report</button><span className="text-sm font-bold">Half-open range: {query.from} ≤ event &lt; {query.endExclusive}</span></div>
+        <div className="mt-4 flex flex-wrap items-center gap-3"><button type="submit" className="border-2 border-black bg-black px-5 py-2 font-black uppercase text-white">Refresh report</button><span className="text-sm font-bold">Half-open range: {query.from} ≤ event &lt; {analytics.range.endExclusive}</span></div>
       </form>
 
       {financial ? <section aria-labelledby="financial-kpis" className="space-y-4"><h3 id="financial-kpis" className="text-2xl font-black uppercase">Sales & payments</h3>
