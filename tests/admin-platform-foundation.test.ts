@@ -76,3 +76,32 @@ test("privileged reasons reject malformed input and audit records exclude secret
     assert.deepEqual(row.metadata, { safe: "ok" });
   } finally { await cleanup(f); }
 });
+
+test("administrative identifier validation rejects malformed IDs before database access", async () => {
+  const { isValidAdminId } = await import("@/lib/admin/http");
+  assert.equal(isValidAdminId("not-a-uuid"), false);
+  assert.equal(isValidAdminId("123"), false);
+  assert.equal(isValidAdminId("550e8400-e29b-41d4-a716-446655440000"), true);
+});
+
+test("admin authorization context carries a bounded correlation ID", async () => {
+  const f = await fixture("VIEWER");
+  try {
+    const request = new Request("https://4hrs.test/admin", {
+      headers: {
+        cookie: `customer_session=${(await db.customerSession.findUnique({ where: { id: f.session.id } })) ? "test-token-placeholder" : "test-token-placeholder"}`,
+        "x-request-id": "phase14-correlation-test",
+      },
+    });
+    const context = await requireAdmin(new Request("https://4hrs.test/admin", {
+      headers: {
+        cookie: f.request().headers.get("cookie")!,
+        "x-request-id": "phase14-correlation-test",
+      },
+    }));
+    assert.equal(context.correlationId, "phase14-correlation-test");
+    void request;
+  } finally {
+    await cleanup(f);
+  }
+});
