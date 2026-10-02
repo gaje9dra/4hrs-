@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { db } from "@/lib/db/client";
 import { AdminError } from "@/lib/admin/errors";
 import { auditAdminAction } from "@/lib/admin/audit";
-import type { AdminAuthorizationContext } from "@/lib/admin/authorization";
+import { requireHighRiskReason, type AdminAuthorizationContext } from "@/lib/admin/authorization";
 import { isAdminRoleName, type AdminRoleName } from "@/lib/admin/permissions";
 import type { AdminAuditDto, AdminUserDto } from "@/lib/admin/contracts";
 
@@ -33,6 +33,7 @@ export async function getAdminUser(id: string): Promise<AdminUserDto> {
   return dto(row);
 }
 export async function createAdminUser(context: AdminAuthorizationContext, input: { email: string; roles?: unknown; reason: unknown }): Promise<AdminUserDto> {
+  const reason = requireHighRiskReason(input.reason);
   const email = input.email.trim().toLowerCase();
   if (!email || email.length > 320 || !/^\S+@\S+\.\S+$/.test(email)) throw new AdminError("INVALID_REQUEST", "Administrator email is invalid.");
   const roles = input.roles === undefined ? ["VIEWER"] as AdminRoleName[] : parseRoles(input.roles);
@@ -47,11 +48,12 @@ export async function createAdminUser(context: AdminAuthorizationContext, input:
     const roleRows = await tx.adminRole.findMany({ where: { name: { in: roles } } });
     if (roleRows.length !== roles.length) throw new AdminError("INVALID_REQUEST", "One or more roles are unavailable.");
     const admin = await tx.adminUser.create({ data: { id: randomUUID(), customerId: customer.id, roles: { create: roleRows.map((role) => ({ roleId: role.id })) } }, include });
-    await auditAdminAction(context, { action: "ADMIN_USER_CREATED", resourceType: "AdminUser", resourceId: admin.id, success: true, reason: typeof input.reason === "string" ? input.reason : null, metadata: { roles } }, tx);
+    await auditAdminAction(context, { action: "ADMIN_USER_CREATED", resourceType: "AdminUser", resourceId: admin.id, success: true, reason, metadata: { roles } }, tx);
     return dto(admin);
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 }
 export async function updateAdminUser(context: AdminAuthorizationContext, input: { id: string; expectedVersion: unknown; status?: unknown; roles?: unknown; reason: unknown }): Promise<AdminUserDto> {
+  const reason = requireHighRiskReason(input.reason);
   if (typeof input.expectedVersion !== "number" || !Number.isInteger(input.expectedVersion) || input.expectedVersion < 1) throw new AdminError("INVALID_REQUEST", "Expected administrator version is invalid.");
   const roles = input.roles === undefined ? undefined : parseRoles(input.roles);
   if (input.status !== undefined && input.status !== "ACTIVE" && input.status !== "DISABLED") throw new AdminError("INVALID_REQUEST", "Administrator status is invalid.");
@@ -64,6 +66,10 @@ export async function updateAdminUser(context: AdminAuthorizationContext, input:
     if (!current) throw new AdminError("NOT_FOUND", "Administrator was not found.");
     const currentRoles = new Set(current.roles.map((x) => x.role.name));
     if (currentRoles.has("SUPER_ADMIN") && !isSuper(context)) throw new AdminError("FORBIDDEN", "Super-administrator accounts require super-administrator authorization.");
+    if (roles && currentRoles.has("SUPER_ADMIN") && !roles.includes("SUPER_ADMIN")) {
+      const activeSuperCount = await tx.adminUser.count({ where: { status: "ACTIVE", roles: { some: { role: { name: "SUPER_ADMIN" } } } } });
+      if (activeSuperCount <= 1) throw new AdminError("CONFLICT", "The final active super administrator cannot lose super-administrator access.");
+    }
     if (input.status === "DISABLED" && currentRoles.has("SUPER_ADMIN")) {
       const activeSuperCount = await tx.adminUser.count({ where: { status: "ACTIVE", roles: { some: { role: { name: "SUPER_ADMIN" } } } } });
       if (activeSuperCount <= 1) throw new AdminError("CONFLICT", "The final active super administrator cannot be disabled.");
@@ -79,7 +85,7 @@ export async function updateAdminUser(context: AdminAuthorizationContext, input:
     }, include });
     await auditAdminAction(context, {
       action: "ADMIN_USER_UPDATED", resourceType: "AdminUser", resourceId: updated.id, success: true,
-      reason: typeof input.reason === "string" ? input.reason : null,
+      reason,
       metadata: { status: input.status, roles: roles ?? undefined, expectedVersion: input.expectedVersion },
     }, tx);
     return dto(updated);
