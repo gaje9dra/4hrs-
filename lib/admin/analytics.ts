@@ -163,11 +163,32 @@ function bucketLabelSql(query: AnalyticsQuery) {
   return Prisma.sql`to_char(${bucketSql(query)}, ${format})`;
 }
 
+async function assertSingleCurrency(query: AnalyticsQuery): Promise<"INR"> {
+  const range = rangeSql(query);
+  const rows = await db.$queryRaw<Array<{ currency: string }>>(Prisma.sql`
+    SELECT DISTINCT currency FROM (
+      SELECT o.currency AS currency FROM "Order" o WHERE ${range}
+      UNION
+      SELECT p.currency AS currency FROM "Payment" p WHERE ${range}
+      UNION
+      SELECT pr.currency AS currency FROM "PaymentRefund" pr WHERE ${range}
+    ) currencies
+    WHERE currency IS NOT NULL
+    LIMIT 3
+  `);
+  const currencies = rows.map((row) => row.currency);
+  if (currencies.some((currency) => currency !== "INR") || currencies.length > 1) {
+    throw new AdminError("INVALID_REQUEST", "Analytics currently supports one reporting currency: INR. Multi-currency aggregation is not enabled.");
+  }
+  return "INR";
+}
+
 export async function getAdminAnalytics(query: AnalyticsQuery, options: {
   financial: boolean;
   operations: boolean;
   customer: boolean;
 }) {
+  const reportingCurrency = await assertSingleCurrency(query);
   const range = rangeSql(query);
   const bucket = bucketSql(query);
   const bucketLabel = bucketLabelSql(query);
@@ -293,7 +314,7 @@ export async function getAdminAnalytics(query: AnalyticsQuery, options: {
   return {
     range: { ...query, endExclusive: addDays(query.to, 1) },
     freshness: { generatedAt: new Date().toISOString(), model: "live-canonical-aggregation", cacheTtlSeconds: 0 },
-    currency: "INR",
+    currency: reportingCurrency,
     sales: options.financial ? {
       orderCount: int(summary?.orderCount ?? 0), paidOrderCount: paidOrders,
       grossSales: money(summary?.grossSales), refundAmount: money(summary?.refundAmount),
