@@ -83,11 +83,9 @@ export async function executeAdminPaymentAction(context:AdminAuthorizationContex
  const paymentApp=createPaymentApplication();
  try{
   if(input.action==="refund"){
-   const permission=input.amount===undefined?"payments.refund":"payments.refund_partial";
-   requirePermission(context,permission);
-   const current=await db.payment.findUnique({where:{id:paymentId},select:{amount:true,status:true}});
+   const current=await db.payment.findUnique({where:{id:paymentId},select:{amount:true,status:true,customerId:true}});
    if(!current)throw new AdminError("NOT_FOUND","Payment was not found.");
-   const full=new Prisma.Decimal(input.amount).eq(current.amount);
+   let full=false; try{full=new Prisma.Decimal(input.amount).eq(current.amount);}catch{throw new AdminError("INVALID_REQUEST","Refund amount is invalid.");}
    requirePermission(context,full?"payments.refund":"payments.refund_partial");
    const result=await paymentApp.refundPayment({paymentId,amount:input.amount,currency:input.currency,reason,note:input.note??null,idempotencyKey:input.idempotencyKey});
    await auditAdminAction(context,{action:"PAYMENT_REFUND",resourceType:"Payment",resourceId:paymentId,success:true,reason,correlationId,metadata:{refundId:result.refundId,amount:result.amount.value,currency:result.currency,status:result.status}});
@@ -95,7 +93,8 @@ export async function executeAdminPaymentAction(context:AdminAuthorizationContex
   }
   if(input.action==="reconcile"){
    requirePermission(context,"payments.reconcile");
-   const result=await paymentApp.reconcilePayment(paymentId,context.customer.id);
+   const owner=await db.payment.findUnique({where:{id:paymentId},select:{customerId:true}}); if(!owner)throw new AdminError("NOT_FOUND","Payment was not found.");
+   const result=await paymentApp.reconcilePayment(paymentId,owner.customerId);
    await auditAdminAction(context,{action:"PAYMENT_RECONCILE",resourceType:"Payment",resourceId:paymentId,success:true,reason,correlationId,metadata:{status:result.status}});
    return {action:input.action,result};
   }
@@ -106,7 +105,8 @@ export async function executeAdminPaymentAction(context:AdminAuthorizationContex
    return {action:input.action,result};
   }
   requirePermission(context,"payments.retry");
-  const result=await paymentApp.retryPayment(paymentId,context.customer.id,input.idempotencyKey);
+  const owner=await db.payment.findUnique({where:{id:paymentId},select:{customerId:true}}); if(!owner)throw new AdminError("NOT_FOUND","Payment was not found.");
+  const result=await paymentApp.retryPayment(paymentId,owner.customerId,input.idempotencyKey);
   await auditAdminAction(context,{action:"PAYMENT_RETRY",resourceType:"Payment",resourceId:paymentId,success:true,reason,correlationId,metadata:{status:result.status}});
   return {action:input.action,result};
  }catch(error){
