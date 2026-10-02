@@ -207,3 +207,13 @@ The full repository regression suite remains mandatory in CI.
 ## Hard stop
 
 Phase 13.9 is not implemented by this change. Payment, Order, Fulfillment, Shipping, Catalog, Checkout and Authentication are not redesigned.
+
+## CI evidence
+
+Validation run #220 passed all repository CI gates on the implementation state immediately before this documentation-only update:
+- Lint: passed
+- Typecheck: passed
+- Test: passed, including migrations
+- Build: passed, including database migration application
+
+The final branch commit after this documentation update must receive a fresh CI run before merge.
