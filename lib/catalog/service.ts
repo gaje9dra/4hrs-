@@ -1581,6 +1581,7 @@ function hasCycle(categoryId: string, parentById: ReadonlyMap<string, string | n
 function validateListOptions(options: repository.CatalogListOptions): void {
   const issues = [];
   const filters = options.filters;
+  if (filters?.search !== undefined && (filters.search.length > 120 || /[\u0000-\u001f]/.test(filters.search))) issues.push({ field: "filters.search", code: "INVALID_SEARCH", message: "Search is invalid." });
   if (filters?.minPrice !== undefined) issues.push(...validateMoney(filters.minPrice, "filters.minPrice"));
   if (filters?.maxPrice !== undefined) issues.push(...validateMoney(filters.maxPrice, "filters.maxPrice"));
   if (filters?.minPrice !== undefined && filters?.maxPrice !== undefined) {
