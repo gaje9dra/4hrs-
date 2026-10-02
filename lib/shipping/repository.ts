@@ -53,7 +53,28 @@ function deduplicationKey(input: CreateTrackingEventInput): string {
   return `fingerprint:${createHash("sha256").update(fingerprint).digest("hex")}`;
 }
 
-export function createShippingRepository(client?: ShippingRepositoryClient) {
+type ShippingRepository = {
+  withTransaction<T>(work: (repository: ShippingRepository) => Promise<T>): Promise<T>;
+  createShipment(input: CreateShipmentInput): Promise<ShipmentWithEvents>;
+  getShipmentById(id: string): Promise<ShipmentWithEvents | null>;
+  getShipmentByFulfillment(fulfillmentId: string): Promise<ShipmentWithEvents[]>;
+  listShipmentsByOrder(orderId: string): Promise<ShipmentWithEvents[]>;
+  getShipmentByProviderReference(providerId: string, providerReference: string): Promise<ShipmentWithEvents | null>;
+  getShipmentByCustomer(id: string, customerId: string): Promise<ShipmentWithEvents | null>;
+  getShipmentByTrackingNumber(trackingNumber: string): Promise<ShipmentWithEvents | null>;
+  transitionStatus(input: {
+    id: string;
+    expectedStatus: PrismaShipmentStatus;
+    nextStatus: PrismaShipmentStatus;
+    shippedAt?: Date | null;
+    deliveredAt?: Date | null;
+  }): Promise<ShipmentWithEvents | null>;
+  createTrackingEvent(input: CreateTrackingEventInput): Promise<Prisma.TrackingEventGetPayload<{}> | null>;
+  listTrackingEvents(shipmentId: string, options?: { limit?: number; cursor?: string }): Promise<Prisma.TrackingEventGetPayload<{}>[]>;
+  findTrackingEventByProviderEventId(providerId: string, providerEventId: string): Promise<Prisma.TrackingEventGetPayload<{}> | null>;
+};
+
+export function createShippingRepository(client?: ShippingRepositoryClient): ShippingRepository {
   const database = databaseFor(client);
 
   return {
