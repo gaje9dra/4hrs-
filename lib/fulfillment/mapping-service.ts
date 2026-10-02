@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import { db } from "@/lib/db/client";
 import { createFulfillmentProviderMappingRepository, toFulfillmentProviderMappingDto } from "@/lib/fulfillment/mapping";
 
 const PROVIDER_ID_PATTERN = /^[a-z0-9][a-z0-9._-]{0,63}$/;
@@ -22,6 +23,49 @@ export function validateProviderMappingInput(input: {
   }
 }
 
+function auditState(mapping: {
+  id: string;
+  variantId: string;
+  providerId: string;
+  providerSku: string;
+  providerVariantReference: string | null;
+  active: boolean;
+} | null) {
+  return mapping
+    ? {
+        id: mapping.id,
+        variantId: mapping.variantId,
+        providerId: mapping.providerId,
+        providerSku: mapping.providerSku,
+        providerVariantReference: mapping.providerVariantReference,
+        active: mapping.active,
+      }
+    : null;
+}
+
+async function writeMappingAudit(input: {
+  variantId: string;
+  operation: "CREATE" | "UPDATE" | "DELETE";
+  actorId?: string | null;
+  beforeState: ReturnType<typeof auditState>;
+  afterState: ReturnType<typeof auditState>;
+}) {
+  await db.catalogAuditEvent.create({
+    data: {
+      entityType: "VARIANT",
+      entityId: input.variantId,
+      operation: input.operation,
+      source: "MANUAL",
+      actorType: input.actorId ? "USER" : "PROCESS",
+      actorId: input.actorId ?? null,
+      changedFields: ["providerMapping"],
+      beforeState: input.beforeState ?? undefined,
+      afterState: input.afterState ?? undefined,
+      metadata: { domain: "fulfillment-provider-mapping" },
+    },
+  });
+}
+
 export function createProviderMappingService() {
   const repository = createFulfillmentProviderMappingRepository();
 
@@ -40,6 +84,7 @@ export function createProviderMappingService() {
       providerSku: string;
       providerVariantReference?: string | null;
       active?: boolean;
+      auditActorId?: string | null;
     }) {
       validateProviderMappingInput(input);
       const variant = await repository.getVariantPublicationState(input.variantId);
@@ -47,8 +92,18 @@ export function createProviderMappingService() {
       if (variant.product.status === "ACTIVE" && input.active === false) {
         throw new Error("Cannot deactivate a fulfillment mapping for a published ProductVariant.");
       }
+
+      const providerId = normalizeProviderId(input.providerId);
+      const before = await repository.getByVariantAndProvider(input.variantId, providerId);
       try {
-        const mapping = await repository.upsert({ ...input, providerId: normalizeProviderId(input.providerId) });
+        const mapping = await repository.upsert({ ...input, providerId });
+        await writeMappingAudit({
+          variantId: input.variantId,
+          operation: before ? "UPDATE" : "CREATE",
+          actorId: input.auditActorId,
+          beforeState: auditState(before),
+          afterState: auditState(mapping),
+        });
         return toFulfillmentProviderMappingDto(mapping);
       } catch (error) {
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
@@ -57,14 +112,23 @@ export function createProviderMappingService() {
         throw error;
       }
     },
-    async removeVariantMapping(variantId: string, providerId: string) {
+    async removeVariantMapping(variantId: string, providerId: string, auditActorId?: string | null) {
       const normalizedProvider = normalizeProviderId(providerId);
       const variant = await repository.getVariantPublicationState(variantId);
       if (!variant) throw new Error("ProductVariant was not found.");
       if (variant.product.status === "ACTIVE") {
         throw new Error("Cannot remove a fulfillment mapping from a published ProductVariant.");
       }
-      return repository.deleteByVariantAndProvider(variantId, normalizedProvider);
+      const before = await repository.getByVariantAndProvider(variantId, normalizedProvider);
+      const deleted = await repository.deleteByVariantAndProvider(variantId, normalizedProvider);
+      await writeMappingAudit({
+        variantId,
+        operation: "DELETE",
+        actorId: auditActorId,
+        beforeState: auditState(before),
+        afterState: null,
+      });
+      return deleted;
     },
   };
 }
