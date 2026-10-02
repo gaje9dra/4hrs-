@@ -34,7 +34,6 @@ export type AdminFulfillmentDetail={
   cancellations:Array<{reference:string;status:CancellationStatus;reason:string;requestedAt:string}>;
   returns:Array<{reference:string;status:ReturnRequestStatus;reasonCode:string;requestedAt:string}>;
   audit:Array<{action:string;success:boolean;reason:string|null;createdAt:string;actorAdminId:string|null;correlationId:string|null}>;
-  provider:{id:string;reference:string|null;reconciliationRequired:boolean}|null;
 };
 
 function iso(value:Date|null|undefined):string|null{return value?value.toISOString():null;}
@@ -143,7 +142,7 @@ export async function getAdminFulfillment(id:string,context:AdminAuthorizationCo
   const audit=await db.adminAuditLog.findMany({where:{resourceType:"Fulfillment",resourceId:id},orderBy:[{createdAt:"asc"},{id:"asc"}],select:{action:true,success:true,reason:true,createdAt:true,actorAdminId:true,correlationId:true}});
   const sensitive=context.permissions.has("fulfillment.view_sensitive");
   const metadata=row.reconciliationMetadata;
-  const attempts=metadata&&typeof metadata==="object"&&!Array.isArray(metadata)?((metadata as Record<string,unknown>).submissionAttempts):0;
+  const attemptsValue=metadata&&typeof metadata==="object"&&!Array.isArray(metadata)?((metadata as Record<string,unknown>).submissionAttempts):0; const attempts=typeof attemptsValue==="number"&&Number.isSafeInteger(attemptsValue)&&attemptsValue>=0?attemptsValue:0;
   return {
     id:row.id,orderId:row.orderId,orderNumber:row.order.orderNumber,customer:row.order.customer,status:row.status,provider:row.provider,
     providerReference:sensitive?row.providerFulfillmentReference:null,requestedAt:row.requestedAt.toISOString(),createdAt:row.createdAt.toISOString(),updatedAt:row.updatedAt.toISOString(),
@@ -155,7 +154,6 @@ export async function getAdminFulfillment(id:string,context:AdminAuthorizationCo
     cancellations:row.order.cancellationRequests.map(c=>({reference:c.cancellationReference,status:c.status,reason:c.reason,requestedAt:c.requestedAt.toISOString()})),
     returns:row.order.returnRequests.map(r=>({reference:r.returnReference,status:r.status,reasonCode:r.reasonCode,requestedAt:r.requestedAt.toISOString()})),
     audit:audit.map(a=>({action:a.action,success:a.success,reason:a.reason,createdAt:a.createdAt.toISOString(),actorAdminId:a.actorAdminId,correlationId:a.correlationId})),
-    provider:sensitive?{id:row.provider,reference:row.providerFulfillmentReference,reconciliationRequired:reconcileRequired(metadata)}:{id:row.provider,reference:null,reconciliationRequired:reconcileRequired(metadata)},
   } satisfies AdminFulfillmentDetail;
 }
 
@@ -170,7 +168,7 @@ function actionPermission(action:AdminFulfillmentAction["action"]):"fulfillment.
 }
 function validateKey(key:string){if(!/^[A-Za-z0-9._~-]{16,128}$/.test(key))throw new AdminError("INVALID_REQUEST","Invalid idempotency key.");return key;}
 function domainError(error:unknown):never{
-  if(error instanceof FulfillmentDomainError)throw new AdminError(error.code,error.message,{cause:error});
+  if(error instanceof FulfillmentDomainError)throw new AdminError(error.code==="FULFILLMENT_ORDER_NOT_FOUND"||error.code==="FULFILLMENT_INVALID_STATE"?"NOT_FOUND":error.code==="FULFILLMENT_PROVIDER_NOT_CONFIGURED"?"CONFLICT":"CONFLICT",error.message,{cause:error});
   throw error;
 }
 
