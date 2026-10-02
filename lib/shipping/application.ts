@@ -15,6 +15,7 @@ import type {
   ShippingProviderResolver,
 } from "@/lib/shipping/contracts";
 import { logShippingObservation } from "@/lib/shipping/observability";
+import { createShippingProviderResolver } from "@/lib/shipping/resolver";
 
 export type ShippingApplicationDependencies = Readonly<{
   database?: PrismaClient;
