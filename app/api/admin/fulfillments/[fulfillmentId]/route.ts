@@ -38,7 +38,7 @@ export async function GET(
   context: { params: Promise<{ fulfillmentId: string }> },
 ) {
   try {
-    await requireAdmin(request);
+    await requireAdmin(request,"fulfillment.read");
     const fulfillmentId = (await context.params).fulfillmentId.trim();
     if (!fulfillmentId) return json({ error: { code: "INVALID_REQUEST", message: "Fulfillment ID is required." } }, 400);
     const diagnostics = await getFulfillmentOperationalDiagnostics(fulfillmentId);
@@ -54,7 +54,7 @@ export async function POST(
   context: { params: Promise<{ fulfillmentId: string }> },
 ) {
   try {
-    await requireAdmin(request);
+    await requireAdmin(request,"fulfillment.manage");
     assertSameOrigin(request);
     const fulfillmentId = (await context.params).fulfillmentId.trim();
     if (!fulfillmentId) return json({ error: { code: "INVALID_REQUEST", message: "Fulfillment ID is required." } }, 400);
