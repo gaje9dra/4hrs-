@@ -56,6 +56,7 @@ export function shouldApplyTrackingEvent(
     return "HISTORY_ONLY";
   }
   if (canTransitionShipmentStatus(currentStatus, eventStatus)) return "APPLY";
+  if (ORDER[eventStatus] > ORDER[currentStatus]) return "APPLY";
   return "HISTORY_ONLY";
 }
 
@@ -70,7 +71,7 @@ export function assertTrackingEventTransition(
     );
   }
   if (currentStatus === nextStatus) return;
-  if (!canTransitionShipmentStatus(currentStatus, nextStatus)) {
+  if (!canTransitionShipmentStatus(currentStatus, nextStatus) && ORDER[nextStatus] <= ORDER[currentStatus]) {
     throw new ShippingDomainError(
       "INVALID_SHIPMENT_TRANSITION",
       `Tracking event cannot transition Shipment from ${currentStatus} to ${nextStatus}.`,
