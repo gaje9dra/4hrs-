@@ -15,6 +15,7 @@ const nav: Array<{label:string;href:string;permission?:AdminPermission}> = [
   {label:"Cases",href:"/admin/cases",permission:"cases.read"},
   {label:"Analytics",href:"/admin/analytics",permission:"analytics.read"},
   {label:"Administration",href:"/admin/users",permission:"admin.users.read"},
+  {label:"Audit log",href:"/admin/audit",permission:"admin.audit.read"},
 ];
 
 export default async function AdminLayout({children}:{children:React.ReactNode}) {
