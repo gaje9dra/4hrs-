@@ -95,6 +95,14 @@ test("same refund idempotency key does not execute a second financial side effec
  await app.refundPayment(input);await app.refundPayment(input);assert.equal(calls,1);
 });
 
+test("reconciliation cannot fabricate a refund state without local refund evidence",async()=>{
+ const repository=fakeRefundRepository();
+ const adapter=refundProvider("REFUNDED");
+ const resolver=createPaymentProviderResolver({registry:createPaymentProviderRegistry([{...adapter,async retrievePayment(){return {providerId:"test-provider",providerPaymentReference:"provider-payment",providerAttemptReference:null,status:"REFUNDED",clientAction:{type:"NONE"}};}}]),configuration:{id:"test-provider",enabled:true,mode:"test",publicKey:null,secretReference:"SERVER_SECRET",webhookSecretReference:"SERVER_WEBHOOK_SECRET",timeoutMs:10000,capabilities:{}}});
+ const app=createPaymentApplication({repository,providerResolver:resolver});
+ await assert.rejects(()=>app.reconcilePayment(paymentId,customerId),/local refund history cannot substantiate/);
+});
+
 test("admin APIs do not expose direct Prisma payment mutations",()=>{
  const route=readFileSync("app/api/admin/payments/[paymentId]/actions/route.ts","utf8");
  assert.doesNotMatch(route,/db\.payment\.(update|updateMany|create|delete)/);
