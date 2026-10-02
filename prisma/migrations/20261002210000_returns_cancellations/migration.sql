@@ -158,3 +158,13 @@ CREATE TABLE "NotificationEvent" (
 CREATE INDEX "NotificationEvent_customerId_createdAt_idx" ON "NotificationEvent"("customerId","createdAt");
 CREATE INDEX "NotificationEvent_orderId_createdAt_idx" ON "NotificationEvent"("orderId","createdAt");
 CREATE INDEX "NotificationEvent_returnRequestId_createdAt_idx" ON "NotificationEvent"("returnRequestId","createdAt");
+
+ALTER TABLE "ReturnItem"
+  ADD CONSTRAINT "ReturnItem_quantity_positive" CHECK ("quantity" > 0);
+ALTER TABLE "ReturnInspection"
+  ADD CONSTRAINT "ReturnInspection_received_nonnegative" CHECK ("receivedQuantity" >= 0),
+  ADD CONSTRAINT "ReturnInspection_accepted_nonnegative" CHECK ("acceptedQuantity" >= 0),
+  ADD CONSTRAINT "ReturnInspection_rejected_nonnegative" CHECK ("rejectedQuantity" >= 0),
+  ADD CONSTRAINT "ReturnInspection_quantity_balance" CHECK ("receivedQuantity" > 0 AND "acceptedQuantity" + "rejectedQuantity" = "receivedQuantity");
+ALTER TABLE "ReturnResolution"
+  ADD CONSTRAINT "ReturnResolution_refund_nonnegative" CHECK ("refundAmount" IS NULL OR "refundAmount" >= 0);
