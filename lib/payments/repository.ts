@@ -221,7 +221,7 @@ export function createPaymentRepository(client?: PaymentRepositoryClient): Payme
     },
 
     async listPaymentsForAdmin(input) {
-      const [rows,total] = await database.$transaction([
+      const [rows,total] = await (database as PrismaClient).$transaction([
         database.payment.findMany({ skip: input.skip, take: input.take, where: input.where, orderBy: input.orderBy, include: { customer: true, order: true, attempts: true, events: true, refunds: true } }),
         database.payment.count({ where: input.where }),
       ]);
