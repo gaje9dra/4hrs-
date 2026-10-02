@@ -3,6 +3,7 @@ import { requireCurrentCustomer } from "@/lib/auth/context";
 import { AuthenticationError } from "@/lib/auth/errors";
 import { AdminError } from "@/lib/admin/errors";
 import type { AdminPermission } from "@/lib/admin/permissions";
+import { recordAdminAudit } from "@/lib/admin/audit";
 
 export type AdminAuthorizationContext = {
   customer: { id: string; email: string; status: string };
@@ -33,6 +34,7 @@ export async function requireAdmin(request?: Request, permission?: AdminPermissi
   const roles = new Set(admin.roles.map((entry) => entry.role.name));
   const permissions = new Set(admin.roles.flatMap((entry) => entry.role.permissions.map((rp) => rp.permission.key))) as Set<AdminPermission>;
   if (permission && !permissions.has(permission)) {
+    await recordAdminAudit({ actorAdminId: admin.id, action: "AUTHORIZATION_DENIED", success: false, reason: `Missing permission: ${permission}`, metadata: { permission } });
     throw new AdminError("FORBIDDEN", "You are not authorized to perform this administrative action.");
   }
   if (!admin.lastLoginAt || Date.now() - admin.lastLoginAt.getTime() > 5 * 60 * 1000) {
