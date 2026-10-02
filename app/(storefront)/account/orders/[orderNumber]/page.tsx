@@ -5,6 +5,7 @@ import { OrderDetail } from "@/components/storefront/order-detail";
 import { createOrderApplication } from "@/lib/orders/application";
 import { OrderDomainError } from "@/lib/orders/errors";
 import { requireCurrentCustomer } from "@/lib/auth/context";
+import { createReturnsApplication } from "@/lib/returns/application";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
