@@ -63,7 +63,7 @@ Admin APIs use centralized requireAdmin() permission checks. Existing Catalog, F
 
 State-changing requests use the existing same-origin request-integrity convention. JSON bodies are size-bounded and validated at the administrative boundary.
 
-Admin responses use private/no-store headers, stable administrative error codes, and never expose Prisma entities, password hashes, session tokens, provider credentials, payment credentials or environment secrets.
+Admin responses use private/no-store headers, stable administrative error codes, and never expose Prisma entities, password hashes, session tokens, provider credentials, payment credentials or environment secrets. Administrator resource identifiers are validated as UUIDs before database access, and request correlation IDs are propagated into centralized audit records when supplied.
 
 ## Error contract
 Administrative errors distinguish:
@@ -80,7 +80,7 @@ Database, filesystem, provider and secret details are not exposed to clients.
 ## Dashboard shell
 The admin UI uses the existing 4HRS+ Bauhaus language: geometric composition, strong typography, thick borders, hard shadows, solid color blocks and minimal radius.
 
-The shell provides protected layout, responsive navigation, administrator identity, role display, permission-aware navigation, logout, dashboard overview and an administration/user-management entry point.
+The shell provides protected layout, responsive/collapsible mobile navigation, administrator identity, role display, permission-aware navigation, logout, dashboard overview and an administration/user-management entry point. Active navigation is presentation-only; the server remains the authorization boundary.
 
 Navigation visibility is only a UX optimization. APIs and routes independently enforce permissions.
 
