@@ -1,0 +1,2 @@
+import {createCaseApplication} from "@/lib/cases/application";import {casesError,casesJson} from "@/lib/cases/http";export const dynamic="force-dynamic";export const revalidate=0;
+export async function GET(request:Request,{params}:{params:Promise<{caseReference:string}>}){try{const p=await params;return casesJson({case:await createCaseApplication().getCustomerCase(p.caseReference,request)});}catch(e){return casesError(e);}}
