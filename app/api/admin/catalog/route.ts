@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/auth/admin";
 import { createCatalogService } from "@/lib/catalog/service";
 import { CatalogServiceError } from "@/lib/catalog/errors";
 import { AuthenticationError } from "@/lib/auth/errors";
+import { AdminError } from "@/lib/admin/errors";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -15,6 +16,7 @@ function json(data: unknown, status = 200) {
 
 function errorResponse(error: unknown) {
   if (error instanceof CatalogServiceError) return json({ error: error.message }, 400);
+  if (error instanceof AdminError) return Response.json({ error: { code: error.code, message: error.message } }, { status: error.code === "ADMIN_REQUIRED" ? 401 : error.code === "FORBIDDEN" ? 403 : error.code === "CONFLICT" ? 409 : 400, headers: { "Cache-Control": "no-store" } });
   if (error instanceof AuthenticationError) return authErrorResponse(error);
   return json({ error: "Catalog operation failed." }, 500);
 }
