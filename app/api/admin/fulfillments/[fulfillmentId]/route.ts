@@ -1,5 +1,5 @@
 import { assertSameOrigin, authErrorResponse } from "@/lib/auth/http";
-import { requireAdmin } from "@/lib/auth/admin";
+import { adminErrorResponse } from "@/lib/admin/http";import { AdminError } from "@/lib/admin/errors";import { requireAdmin } from "@/lib/auth/admin";
 import { AuthenticationError } from "@/lib/auth/errors";
 import { FulfillmentDomainError } from "@/lib/fulfillment/errors";
 import { createFulfillmentApplication } from "@/lib/fulfillment/application";
@@ -21,6 +21,7 @@ function json(data: unknown, status = 200) {
 }
 
 function errorResponse(error: unknown) {
+  if (error instanceof AdminError) return adminErrorResponse(error);
   if (error instanceof AuthenticationError) return authErrorResponse(error);
   if (error instanceof FulfillmentDomainError) {
     const status =
