@@ -196,6 +196,7 @@ test("Shipment lifecycle uses controlled transitions", async () => {
 });
 
 after(async () => {
+  if (shipmentIds.length) await db.trackingEvent.deleteMany({ where: { shipmentId: { in: shipmentIds } } });
   if (shipmentIds.length) await db.shipment.deleteMany({ where: { id: { in: shipmentIds } } });
   if (fulfillmentIds.length) await db.fulfillment.deleteMany({ where: { id: { in: fulfillmentIds } } });
   if (orderIds.length) await db.order.deleteMany({ where: { id: { in: orderIds } } });
