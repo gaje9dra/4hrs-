@@ -78,7 +78,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ pa
     if (p[0] === "products" && p[1] && !p[2]) {
       if (!isValidAdminId(p[1])) return bad("Product ID is invalid.");
       const context = await requireAdmin(request, "catalog.update");
-      return adminJson({ product: await updateCatalogProduct(context, { id: p[1], ...(body as never) }) });
+      return adminJson({ product: await updateCatalogProduct(context, { id: p[1], ...(body as Record<string, unknown>) } as Parameters<typeof updateCatalogProduct>[1]) });
     }
     if (p[0] === "variants" && p[1] && !p[2]) {
       if (!isValidAdminId(p[1])) return bad("Variant ID is invalid.");
