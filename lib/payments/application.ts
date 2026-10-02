@@ -371,6 +371,16 @@ export function createPaymentApplication(
     const result = await adapter.retrievePayment({ providerPaymentReference: payment.providerReference, paymentReference: payment.internalReference });
     if (result.providerId !== adapter.id) throw new PaymentError("PROVIDER_CONFIGURATION_ERROR", "Provider response identity is invalid.");
     if (result.status === payment.status) return toPaymentDto(payment);
+    if (result.status === "PARTIALLY_REFUNDED" || result.status === "REFUNDED") {
+      const refunds = await repository.getPaymentRefunds(payment.id);
+      const succeededRefunded = refunds.reduce((sum, refund) => refund.status === PaymentRefundStatus.SUCCEEDED ? sum.plus(refund.amount) : sum, new Prisma.Decimal(0));
+      const provesState = result.status === "REFUNDED"
+        ? succeededRefunded.eq(payment.amount)
+        : succeededRefunded.gt(0) && succeededRefunded.lt(payment.amount);
+      if (!provesState) {
+        throw new PaymentError("INVALID_STATE_TRANSITION", "Provider refund state cannot be applied because local refund history cannot substantiate the refunded balance.");
+      }
+    }
     assertPaymentTransition(payment.status, result.status);
     return toPaymentDto(await repository.updatePaymentStatus(payment.id, asPrismaStatus(payment.status), asPrismaStatus(result.status), result.status === "SUCCEEDED" ? new Date() : undefined));
   }
