@@ -611,11 +611,11 @@ export function createCatalogService(
       }
     },
 
-    async archiveProduct(id: string) {
-      return lifecycle.archiveProduct(id);
+    async archiveProduct(id: string, expectedUpdatedAt?: Date) {
+      return lifecycle.archiveProduct(id, expectedUpdatedAt);
     },
 
-    async publishProduct(id: string) {
+    async publishProduct(id: string, expectedUpdatedAt?: Date) {
       if (Object.keys(customRepository).length === 0) {
         const variants = await repo.getVariantsByProduct(id);
         const activeVariants = variants.filter((variant) => variant.status === "ACTIVE");
@@ -630,15 +630,15 @@ export function createCatalogService(
           }
         }
       }
-      return lifecycle.publishProduct(id);
+      return lifecycle.publishProduct(id, expectedUpdatedAt);
     },
 
-    async unpublishProduct(id: string) {
-      return lifecycle.unpublishProduct(id);
+    async unpublishProduct(id: string, expectedUpdatedAt?: Date) {
+      return lifecycle.unpublishProduct(id, expectedUpdatedAt);
     },
 
-    async restoreProduct(id: string) {
-      return lifecycle.restoreProduct(id);
+    async restoreProduct(id: string, expectedUpdatedAt?: Date) {
+      return lifecycle.restoreProduct(id, expectedUpdatedAt);
     },
 
     async createOptionType(input: VariantOptionTypeInput) {
