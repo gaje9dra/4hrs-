@@ -35,7 +35,7 @@ function absoluteMediaUrl(value: string): string | null {
 
 export function productJsonLd(input: {
   name: string; description: string; url: string; imageUrls: string[];
-  price: string; currency: string;
+  price: string; currency: string; sku?: string;
   availability: "IN_STOCK" | "LOW_STOCK" | "OUT_OF_STOCK" | "UNTRACKED";
 }): JsonLd {
   const availabilityMap = {
@@ -51,7 +51,7 @@ export function productJsonLd(input: {
   const images = input.imageUrls.map(absoluteMediaUrl).filter((url): url is string => Boolean(url));
   return {
     "@context": "https://schema.org", "@type": "Product", name: input.name,
-    description: input.description, url: input.url,
+    description: input.description, url: input.url,\n    ...(input.sku ? { sku: input.sku } : {}),
     ...(images.length ? { image: images } : {}),
     brand: { "@type": "Brand", name: siteConfig.name }, offers,
   };
