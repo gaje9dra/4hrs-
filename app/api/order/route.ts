@@ -4,12 +4,15 @@ import { createFulfillmentApplication } from "@/lib/fulfillment/application";
 import { loadFulfillmentProviderConfiguration } from "@/lib/fulfillment/config";
 import { OrderDomainError } from "@/lib/orders/errors";
 import { orderErrorResponse, orderJson, orderMethodNotAllowed } from "@/lib/orders/http";
+import { createShippingApplication } from "@/lib/shipping/application";
+import { logShippingObservation } from "@/lib/shipping/observability";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 const application = createOrderApplication();
 const fulfillmentApplication = createFulfillmentApplication();
+const shippingApplication = createShippingApplication();
 const MAX_BODY_BYTES = 16 * 1024;
 
 async function readCreateRequest(request: Request): Promise<{ paymentId: string }> {
@@ -74,6 +77,31 @@ export async function POST(request: Request) {
         });
         const submitted = await fulfillmentApplication.submitFulfillment({ fulfillmentId: created.id });
         fulfillment = { id: submitted.id, status: submitted.status };
+
+        try {
+          const shipment = await shippingApplication.createShipmentFromFulfillment({
+            orderId: result.id,
+            fulfillmentId: submitted.id,
+            idempotencyKey: `fulfillment-${submitted.id}-shipment`,
+          });
+          logShippingObservation({
+            operation: "handoff",
+            shipmentId: shipment?.id,
+            fulfillmentId: submitted.id,
+            orderId: result.id,
+            providerId: submitted.provider,
+            result: "success",
+          });
+        } catch {
+          logShippingObservation({
+            operation: "handoff",
+            fulfillmentId: submitted.id,
+            orderId: result.id,
+            providerId: submitted.provider,
+            result: "reconciliation-required",
+            errorCode: "SHIPMENT_RECONCILIATION_REQUIRED",
+          });
+        }
       } catch {
         // The Order remains authoritative. The fulfillment service persists
         // retryable/ambiguous provider failures independently of payment/order state.

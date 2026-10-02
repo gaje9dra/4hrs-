@@ -61,11 +61,6 @@ export type ShippingProviderCapabilities = Readonly<{
   webhooks: boolean;
 }>;
 
-export type ShippingProviderAdapter = Readonly<{
-  id: string;
-  capabilities: ShippingProviderCapabilities;
-}>;
-
 export type ShipmentCreationContext = Readonly<{
   orderId: string;
   fulfillmentId: string;
@@ -91,4 +86,25 @@ export type ShippingProviderSnapshot = Readonly<{
   trackingUrl: string | null;
   providerStatus: string | null;
   normalizedStatus: ShipmentStatus;
+}>;
+
+
+export type NormalizedTrackingEvent = Readonly<{
+  providerId: string;
+  providerEventId: string | null;
+  providerStatus: string;
+  normalizedStatus: ShipmentStatus;
+  eventTimestamp: Date;
+  location: string | null;
+  description: string | null;
+}>;
+
+export type ShippingProviderAdapter = Readonly<{
+  id: string;
+  capabilities: ShippingProviderCapabilities;
+  normalizeTrackingEvent(input: unknown): NormalizedTrackingEvent;
+}>;
+
+export type ShippingProviderResolver = Readonly<{
+  resolve(providerId: string): ShippingProviderAdapter | undefined;
 }>;
