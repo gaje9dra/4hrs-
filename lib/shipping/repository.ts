@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { Prisma, type PrismaClient, type ShipmentStatus as PrismaShipmentStatus, type TrackingEventSource } from "@prisma/client";
 import { db } from "@/lib/db/client";
 import { assertShipmentTransition } from "@/lib/shipping/domain";
@@ -9,7 +9,6 @@ export type ShipmentWithEvents = Prisma.ShipmentGetPayload<{ include: { tracking
 export type CreateShipmentInput = Readonly<{
   orderId: string;
   fulfillmentId: string;
-  shipmentReference: string;
   providerId: string;
   providerReference?: string | null;
   carrier?: string | null;
@@ -71,7 +70,6 @@ export function createShippingRepository(client?: ShippingRepositoryClient) {
     async createShipment(input: CreateShipmentInput): Promise<ShipmentWithEvents> {
       nonEmpty(input.orderId, "orderId");
       nonEmpty(input.fulfillmentId, "fulfillmentId");
-      nonEmpty(input.shipmentReference, "shipmentReference");
       nonEmpty(input.providerId, "providerId");
 
       const fulfillment = await database.fulfillment.findUnique({
@@ -87,7 +85,7 @@ export function createShippingRepository(client?: ShippingRepositoryClient) {
         data: {
           orderId: input.orderId,
           fulfillmentId: input.fulfillmentId,
-          shipmentReference: input.shipmentReference,
+          shipmentReference: `SHP-${randomUUID().replaceAll("-", "").toUpperCase()}`,
           providerId: input.providerId,
           providerReference: input.providerReference ?? null,
           carrier: input.carrier ?? null,
