@@ -194,7 +194,7 @@ const DETAIL_SELECT = {
   cancellationRequests:{select:{id:true,cancellationReference:true,status:true,reason:true,customerDescription:true,operationalReason:true,requestedAt:true,reviewedAt:true,completedAt:true},orderBy:[{createdAt:"asc"},{id:"asc"}]},
   returnRequests:{select:{id:true,returnReference:true,status:true,reasonCode:true,customerDescription:true,operationalReason:true,requestedAt:true,reviewedAt:true,resolvedAt:true,items:{select:{orderItemId:true,quantity:true}},shipment:{select:{reference:true,status:true,carrier:true,trackingNumber:true,trackingUrl:true}},inspection:{select:{receivedQuantity:true,acceptedQuantity:true,rejectedQuantity:true,outcome:true,inspectedAt:true}},resolution:{select:{type:true,refundAmount:true,currency:true,paymentRefundIntentReference:true,resolvedAt:true}}},orderBy:[{createdAt:"asc"},{id:"asc"}]},
   cases:{select:{id:true,caseReference:true,category:true,status:true,priority:true,title:true,createdAt:true,updatedAt:true,resolvedAt:true},orderBy:[{createdAt:"asc"},{id:"asc"}]},
-} as const;
+} satisfies Prisma.OrderSelect;
 
 export async function getAdminOrder(idOrNumber: string): Promise<AdminOrderDetail> {
   const value=idOrNumber.trim();
