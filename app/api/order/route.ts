@@ -1,5 +1,7 @@
 import { assertSameOrigin } from "@/lib/auth/http";
 import { createOrderApplication } from "@/lib/orders/application";
+import { createFulfillmentApplication } from "@/lib/fulfillment/application";
+import { loadFulfillmentProviderConfiguration } from "@/lib/fulfillment/config";
 import { OrderDomainError } from "@/lib/orders/errors";
 import { orderErrorResponse, orderJson, orderMethodNotAllowed } from "@/lib/orders/http";
 
@@ -7,6 +9,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 const application = createOrderApplication();
+const fulfillmentApplication = createFulfillmentApplication();
 const MAX_BODY_BYTES = 16 * 1024;
 
 async function readCreateRequest(request: Request): Promise<{ paymentId: string }> {
@@ -49,15 +52,50 @@ export async function POST(request: Request) {
     assertSameOrigin(request);
     const input = await readCreateRequest(request);
     const result = await application.createOrderFromVerifiedPayment({ paymentId: input.paymentId, request });
+
+    // Payment success creates the Order first. Once the Order is confirmed,
+    // fulfillment is a separate provider-neutral step. It is deliberately
+    // best-effort here: a provider failure must not roll back a paid Order.
+    const providerConfiguration = loadFulfillmentProviderConfiguration();
+    let fulfillment: { id: string; status: string } | null = null;
+    if (providerConfiguration?.enabled) {
+      if (result.status === "PENDING") {
+        await application.transitionOrderLifecycle({
+          orderId: result.id,
+          expectedStatus: "PENDING",
+          nextStatus: "CONFIRMED",
+        });
+      }
+
+      try {
+        const created = await fulfillmentApplication.createFulfillment({
+          orderId: result.id,
+          idempotencyKey: `order-${result.id}-fulfillment`,
+        });
+        const submitted = await fulfillmentApplication.submitFulfillment({ fulfillmentId: created.id });
+        fulfillment = { id: submitted.id, status: submitted.status };
+      } catch {
+        // The Order remains authoritative. The fulfillment service persists
+        // retryable/ambiguous provider failures independently of payment/order state.
+      }
+    } else if (result.status === "PENDING") {
+      await application.transitionOrderLifecycle({
+        orderId: result.id,
+        expectedStatus: "PENDING",
+        nextStatus: "CONFIRMED",
+      });
+    }
+
     return orderJson({
       order: {
         id: result.id,
         orderNumber: result.orderNumber,
-        status: result.status,
+        status: "CONFIRMED",
         total: result.total,
         currency: result.currency,
         createdAt: result.createdAt,
       },
+      fulfillment,
     }, 201);
   } catch (error) {
     return orderErrorResponse(error, "create");
