@@ -289,7 +289,7 @@ export function createPaymentApplication(
     const payment = await repository.getPaymentForAdmin(input.paymentId);
     if (!payment) throw new PaymentError("PAYMENT_NOT_FOUND", "Payment could not be found.");
     if (input.currency !== payment.currency) throw new PaymentError("INVALID_CURRENCY", "Refund currency does not match the payment currency.");
-    if (!/^\\d+(?:\\.\\d{1,2})?$/.test(input.amount)) throw new PaymentError("INVALID_AMOUNT", "Refund amount is invalid.");
+    if (!/^\d+(?:\.\d{1,2})?$/.test(input.amount)) throw new PaymentError("INVALID_AMOUNT", "Refund amount is invalid.");
     const amount = new Prisma.Decimal(input.amount);
     if (!amount.isFinite() || amount.lte(0)) throw new PaymentError("INVALID_AMOUNT", "Refund amount is invalid.");
     const reason = validateRefundReason(input.reason);
