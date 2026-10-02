@@ -3,7 +3,7 @@ export const ADMIN_PERMISSIONS = [
   "orders.read","orders.update","orders.cancel",
   "payments.read","payments.view_sensitive","payments.verify","payments.capture","payments.refund","payments.refund_partial","payments.reconcile","payments.retry","payments.audit.read",
   "fulfillment.read","fulfillment.view_sensitive","fulfillment.create","fulfillment.submit","fulfillment.retry","fulfillment.reconcile","fulfillment.cancel","fulfillment.provider.manage","fulfillment.audit.read","fulfillment.manage",
-  "shipping.read","shipping.manage",
+  "shipping.read","shipping.view_sensitive","shipping.create","shipping.reconcile","shipping.recovery","shipping.tracking.read","shipping.audit.read","shipping.manage",
   "returns.read","returns.manage",
   "customers.read","customers.manage",
   "cases.read","cases.manage",
@@ -17,7 +17,7 @@ export type AdminRoleName = typeof ADMIN_ROLES[number];
 export const HIGH_RISK_ADMIN_PERMISSIONS = new Set<AdminPermission>([
   "payments.refund","payments.refund_partial","payments.verify","payments.capture","payments.reconcile","payments.retry",
   "fulfillment.submit","fulfillment.retry","fulfillment.reconcile","fulfillment.cancel","fulfillment.provider.manage",
-  "customers.manage","shipping.manage","admin.users.manage","system.settings.manage",
+  "customers.manage","shipping.create","shipping.reconcile","shipping.recovery","shipping.manage","admin.users.manage","system.settings.manage",
 ]);
 export function isAdminPermission(value: unknown): value is AdminPermission {
   return typeof value === "string" && (ADMIN_PERMISSIONS as readonly string[]).includes(value);
