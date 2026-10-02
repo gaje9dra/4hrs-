@@ -32,7 +32,7 @@ function orderBy(sort:CustomerSort,d:"asc"|"desc"){const dir=d.toUpperCase();if(
 export async function listAdminCustomers(q:AdminCustomerQuery){
  const where:string[]=[];const values:unknown[]=[];
  const add=(sql:string,v?:unknown)=>{values.push(v);where.push(sql.replace("?", "$"+values.length));};
- if(q.search){if(UUID.test(q.search))add('c."id" = ?::uuid',q.search);else{const p=like(q.search);values.push(p+"%");const n="$"+values.length;where.push('(c."email" ILIKE '+n+' ESCAPE E\\'\\\\\\' OR c."displayName" ILIKE '+n+' ESCAPE E\\'\\\\\\')');}}
+ if(q.search){if(UUID.test(q.search))add('c."id" = ?::uuid',q.search);else{const p=like(q.search);values.push(p+"%");const n="$"+values.length;where.push("(c.\"email\" ILIKE "+n+" ESCAPE '\\\\' OR c.\"displayName\" ILIKE "+n+" ESCAPE '\\\\')");}}
  if(q.status)add('c."status" = ?::"CustomerAccountStatus"',q.status);
  if(q.verified==="verified")where.push('c."emailVerifiedAt" IS NOT NULL');if(q.verified==="unverified")where.push('c."emailVerifiedAt" IS NULL');
  if(q.createdFrom)add('c."createdAt" >= ?::date',q.createdFrom);if(q.createdTo)add('c."createdAt" < (?::date + INTERVAL \'1 day\')',q.createdTo);
