@@ -281,18 +281,18 @@ export async function executeAdminOrderAction(context:AdminAuthorizationContext,
   try {
     if(input.action==="review_cancellation"){
       requirePermission(context,"orders.cancel");
-      requirePermission(context,"returns.manage");
+      requirePermission(context,"cancellation.approve");
       const row=await db.cancellationRequest.findFirst({where:{cancellationReference:input.cancellationReference,orderId:order.id},select:{id:true}});
       if(!row) throw new AdminError("NOT_FOUND","Cancellation request was not found for this order.");
-      const result=await createReturnsApplication().reviewCancellation({reference:input.cancellationReference,decision:input.decision,reason:cleanReason,request});
+      const result=await createReturnsApplication().reviewCancellation({reference:input.cancellationReference,decision:input.decision,reason:cleanReason,idempotencyKey:request?.headers.get("idempotency-key")??undefined,request});
       await auditAdminAction(context,{action:"ORDER_CANCELLATION_REVIEWED",resourceType:"Order",resourceId:order.id,success:true,reason:cleanReason,correlationId,metadata:{decision:input.decision}});
       return {action:input.action,result};
     }
     if(input.action==="review_return"){
-      requirePermission(context,"returns.manage");
+      requirePermission(context,input.decision==="APPROVE"?"return.approve":"return.reject");
       const row=await db.returnRequest.findFirst({where:{returnReference:input.returnReference,orderId:order.id},select:{id:true}});
       if(!row) throw new AdminError("NOT_FOUND","Return request was not found for this order.");
-      const result=await createReturnsApplication().reviewReturn({reference:input.returnReference,decision:input.decision,reason:cleanReason,request});
+      const result=await createReturnsApplication().reviewReturn({reference:input.returnReference,decision:input.decision,reason:cleanReason,idempotencyKey:request?.headers.get("idempotency-key")??undefined,request});
       await auditAdminAction(context,{action:"ORDER_RETURN_REVIEWED",resourceType:"Order",resourceId:order.id,success:true,reason:cleanReason,correlationId,metadata:{decision:input.decision}});
       return {action:input.action,result};
     }
