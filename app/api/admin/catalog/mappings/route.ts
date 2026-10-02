@@ -19,7 +19,7 @@ function errorResponse(error: unknown) {
 
 export async function GET(request: Request) {
   try {
-    await requireAdmin(request);
+    await requireAdmin(request,"catalog.update");
     const variantId = new URL(request.url).searchParams.get("variantId")?.trim();
     if (!variantId) return json({ error: "variantId is required." }, 400);
     return json({ mappings: await mappings.getVariantMappings(variantId) });
@@ -30,7 +30,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const admin = await requireAdmin(request);
+    const admin = await requireAdmin(request,"catalog.update");
     assertSameOrigin(request);
     const input = await request.json();
     const mapping = await mappings.saveVariantMapping({ ...input, auditActorId: admin.customer.id });
@@ -42,7 +42,7 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    const admin = await requireAdmin(request);
+    const admin = await requireAdmin(request,"catalog.update");
     assertSameOrigin(request);
     const input = await request.json();
     if (!input?.variantId || !input?.providerId) return json({ error: "variantId and providerId are required." }, 400);
