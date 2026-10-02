@@ -1,8 +1,8 @@
-import { assertSameOrigin } from "@/lib/auth/http";
+import { assertSameOrigin, authErrorResponse } from "@/lib/auth/http";
 import { requireAdmin } from "@/lib/auth/admin";
 import { createCatalogService } from "@/lib/catalog/service";
 import { CatalogServiceError } from "@/lib/catalog/errors";
-import { authErrorResponse } from "@/lib/auth/http";
+import { AuthenticationError } from "@/lib/auth/errors";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -15,14 +15,17 @@ function json(data: unknown, status = 200) {
 
 function errorResponse(error: unknown) {
   if (error instanceof CatalogServiceError) return json({ error: error.message }, 400);
-  return authErrorResponse(error);
+  if (error instanceof AuthenticationError) return authErrorResponse(error);
+  return json({ error: "Catalog operation failed." }, 500);
 }
 
 export async function GET(request: Request) {
   try {
     await requireAdmin(request);
     const url = new URL(request.url);
-    const result = await catalog.listProducts({ filters: { status: url.searchParams.get("status") as "DRAFT" | "ACTIVE" | "ARCHIVED" | undefined }, limit: 100, offset: 0 });
+    const rawStatus = url.searchParams.get("status");
+    const status = rawStatus === "DRAFT" || rawStatus === "ACTIVE" || rawStatus === "ARCHIVED" ? rawStatus : undefined;
+    const result = await catalog.listProducts({ filters: { status }, limit: 100, offset: 0 });
     const items = await Promise.all(result.items.map((item) => catalog.getProductWithVariants(item.id)));
     return json({ ...result, items });
   } catch (error) {
