@@ -678,6 +678,7 @@ model TrackingEvent {
   shipmentId        String             @db.Uuid
   providerId        String             @db.VarChar(64)
   providerEventId   String?            @db.VarChar(255)
+  deduplicationKey  String             @db.VarChar(128)
   providerStatus    String?            @db.VarChar(120)
   normalizedStatus  ShipmentStatus
   eventTimestamp    DateTime
@@ -688,7 +689,7 @@ model TrackingEvent {
   createdAt         DateTime           @default(now())
   shipment          Shipment           @relation(fields: [shipmentId], references: [id], onDelete: Restrict)
 
-  @@unique([shipmentId, providerId, providerEventId])
+  @@unique([shipmentId, providerId, deduplicationKey])
   @@index([shipmentId, eventTimestamp])
   @@index([providerId, providerEventId])
   @@index([normalizedStatus, eventTimestamp])
