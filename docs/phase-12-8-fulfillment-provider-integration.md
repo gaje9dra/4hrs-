@@ -35,13 +35,13 @@ Server-only environment variables:
 - `FULFILLMENT_PROVIDER_TIMEOUT_MS=10000`
 - `QIKINK_AUTH_TOKEN=<server-only secret>`
 
-The real token must be configured in local/Netlify server environment variables and must never be committed or exposed through `NEXT_PUBLIC_*`.
+The preferred credential path is Qikink Open API Client ID + Client Secret, kept server-side. The adapter exchanges those credentials for a short-lived access token at the Qikink API token endpoint and sends the resulting token only from the server. The legacy `QIKINK_AUTH_TOKEN` remains supported for backward compatibility.
 
-The adapter uses Qikink's documented create-order endpoint:
+For the Sandbox credentials shown in Qikink's Custom API integration, use `FULFILLMENT_PROVIDER_MODE=test` and the Sandbox Client ID/Secret. Live order fulfillment requires Live API credentials and `FULFILLMENT_PROVIDER_MODE=live`.
 
-`https://qikink.com/erp2/index.php/api/createOrder`
+The Open API create-order endpoint is `/api/order/create` on the configured Qikink API base URL. The adapter sends `ClientId` and `Accesstoken` as server-side headers and never exposes either credential/token to browser code.
 
-The current official API documentation describes `auth_token` as the Qikink credential and shows the token in the server-side JSON request. citeturn9search0
+Qikink's public legacy documentation also documents its older `auth_token` create-order endpoint; that path remains supported as a compatibility fallback. citeturn3view0
 
 ## Request mapping
 
