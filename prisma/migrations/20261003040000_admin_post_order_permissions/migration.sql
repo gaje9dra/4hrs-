@@ -10,7 +10,7 @@ FROM (VALUES
 
 INSERT INTO "AdminRolePermission" ("roleId","permissionId")
 SELECT r.id,p.id FROM "AdminRole" r JOIN "AdminPermission" p ON p.key IN (
-'cancellation.read','cancellation.approve','cancellation.execute','cancellation.audit.read','return.read','return.review','return.approve','return.reject','return.inspect','return.resolve','return.shipment.manage','return.refund','return.audit.read','case.create','case.update','case.assign','case.respond','case.resolve','case.reopen','case.audit.read')
+'cancellation.read','cancellation.approve','cancellation.execute','cancellation.audit.read','return.read','return.review','return.approve','return.reject','return.inspect','return.resolve','return.shipment.manage','return.refund','return.audit.read','case.read','case.create','case.update','case.assign','case.respond','case.resolve','case.reopen','case.audit.read')
 WHERE r.name='SUPER_ADMIN' AND NOT EXISTS (SELECT 1 FROM "AdminRolePermission" rp WHERE rp."roleId"=r.id AND rp."permissionId"=p.id);
 
 INSERT INTO "AdminRolePermission" ("roleId","permissionId")
