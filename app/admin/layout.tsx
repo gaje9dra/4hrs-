@@ -16,6 +16,7 @@ const nav: Array<{ label: string; href: string; permission?: AdminPermission }> 
   { label: "Returns", href: "/admin/returns", permission: "return.read" },
   { label: "Cases", href: "/admin/cases", permission: "case.read" },
   { label: "Administration", href: "/admin/users", permission: "admin.users.read" },
+  { label: "Analytics", href: "/admin/analytics", permission: "analytics.read" },
   { label: "Audit log", href: "/admin/audit", permission: "admin.audit.read" },
 ];
 
