@@ -1,6 +1,10 @@
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { db } from "@/lib/db/client";
 export type ReturnsClient=PrismaClient|Prisma.TransactionClient;
+export type ReturnsOrder = Prisma.OrderGetPayload<{include:{items:true,payment:true,fulfillment:{include:{shipments:true}},shipments:true,cancellationRequests:true,returnRequests:{include:{items:true,shipment:true,inspection:true,resolution:true}}}}>;
+export type ReturnRecord = Prisma.ReturnRequestGetPayload<{include:{items:{include:{orderItem:true}},order:true,shipment:true,inspection:true,resolution:true}}>;
+export type CancellationRecord = Prisma.CancellationRequestGetPayload<{include:{order:true}}>;
+
 export function createReturnsRepository(client:ReturnsClient=db){
   return {
     getOrder(id:string,customerId:string){return client.order.findFirst({where:{id,customerId},include:{items:true,payment:true,fulfillment:{include:{shipments:true}},shipments:true,cancellationRequests:true,returnRequests:{include:{items:true,shipment:true,inspection:true,resolution:true}}}});},
