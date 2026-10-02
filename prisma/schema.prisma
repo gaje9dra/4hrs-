@@ -668,6 +668,7 @@ model Shipment {
 
   @@index([fulfillmentId, createdAt])
   @@index([orderId, createdAt])
+  @@unique([providerId, providerReference])
   @@index([providerId, providerReference])
   @@index([trackingNumber])
   @@index([status, updatedAt])
