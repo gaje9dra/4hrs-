@@ -96,6 +96,9 @@ export interface ShippingRepository {
   getShipmentByTrackingNumber(trackingNumber: string): Promise<ShipmentWithEvents | null>;
   transitionStatus(input: { id: string; expectedStatus: PrismaShipmentStatus; nextStatus: PrismaShipmentStatus; shippedAt?: Date | null; deliveredAt?: Date | null }): Promise<ShipmentWithEvents | null>;
   transitionFromTrackingEvent(input: { id: string; expectedStatus: PrismaShipmentStatus; nextStatus: PrismaShipmentStatus; eventTimestamp: Date }): Promise<ShipmentWithEvents | null>;
+  markReconciliationRequired(input: { id: string; reason: string; requestedAt?: Date }): Promise<ShipmentWithEvents | null>;
+  getRecoveryActionByIdempotencyKey(key: string): Promise<Prisma.ShipmentRecoveryActionGetPayload<Record<string, never>> | null>;
+  createRecoveryAction(input: { shipmentId: string; operatorId: string; reason: string; idempotencyKey: string }): Promise<Prisma.ShipmentRecoveryActionGetPayload<Record<string, never>>>;
   createTrackingEventIfNew(input: CreateTrackingEventInput): Promise<{ event: TrackingEventRecord; created: boolean }>;
   findTrackingEventByInput(input: CreateTrackingEventInput): Promise<TrackingEventRecord | null>;
   createTrackingEvent(input: CreateTrackingEventInput): Promise<TrackingEventRecord | null>;
@@ -266,6 +269,52 @@ export function createShippingRepository(client?: ShippingRepositoryClient): Shi
       });
       if (result.count !== 1) return null;
       return database.shipment.findUnique({ where: { id: input.id }, include: shipmentInclude() });
+    },
+
+    async markReconciliationRequired(input: { id: string; reason: string; requestedAt?: Date }) {
+      const reason = input.reason.trim();
+      nonEmpty(reason, "reconciliation reason");
+      if (reason.length > 500) throw new Error("reconciliation reason exceeds 500 characters.");
+      const result = await database.shipment.updateMany({
+        where: { id: input.id },
+        data: {
+          reconciliationRequired: true,
+          reconciliationReason: reason,
+          reconciliationRequestedAt: input.requestedAt ?? new Date(),
+        },
+      });
+      if (result.count !== 1) return null;
+      return database.shipment.findUnique({ where: { id: input.id }, include: shipmentInclude() });
+    },
+
+    getRecoveryActionByIdempotencyKey(key: string) {
+      return database.shipmentRecoveryAction.findUnique({ where: { idempotencyKey: key } });
+    },
+
+    async createRecoveryAction(input: { shipmentId: string; operatorId: string; reason: string; idempotencyKey: string }) {
+      nonEmpty(input.shipmentId, "shipmentId");
+      nonEmpty(input.operatorId, "operatorId");
+      nonEmpty(input.reason, "reason");
+      nonEmpty(input.idempotencyKey, "idempotencyKey");
+      if (input.operatorId.length > 128) throw new Error("operatorId exceeds 128 characters.");
+      if (input.reason.length > 500) throw new Error("reason exceeds 500 characters.");
+      if (input.idempotencyKey.length > 128) throw new Error("idempotencyKey exceeds 128 characters.");
+      try {
+        return await database.shipmentRecoveryAction.create({
+          data: {
+            shipmentId: input.shipmentId,
+            operatorId: input.operatorId,
+            reason: input.reason,
+            idempotencyKey: input.idempotencyKey,
+          },
+        });
+      } catch (error) {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+          const existing = await database.shipmentRecoveryAction.findUnique({ where: { idempotencyKey: input.idempotencyKey } });
+          if (existing) return existing;
+        }
+        throw error;
+      }
     },
 
     async transitionFromTrackingEvent(input: {
