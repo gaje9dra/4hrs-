@@ -193,7 +193,7 @@ test("Shipment lifecycle uses controlled transitions", async () => {
       expectedStatus: "IN_TRANSIT",
       nextStatus: "CREATED",
     }),
-    /Invalid Shipment transition/,
+    /transition .* is not allowed/,
   );
 
   assert.equal(
