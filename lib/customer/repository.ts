@@ -13,7 +13,9 @@ export type CustomerRepository = {
   findCustomerByNormalizedEmail(email: string): Promise<CustomerRecord | null>;
   createCustomer(input: { email: string; status?: "ACTIVE" | "DISABLED" | "SUSPENDED" | "PENDING_VERIFICATION"; emailVerifiedAt?: Date | null }): Promise<CustomerRecord>;
   updateCustomerStatus(customerId: string, status: "ACTIVE" | "DISABLED" | "SUSPENDED" | "PENDING_VERIFICATION"): Promise<CustomerRecord>;
+  updateCustomerStatusIfUnchanged(customerId: string, status: "ACTIVE" | "DISABLED" | "SUSPENDED" | "PENDING_VERIFICATION", expectedUpdatedAt: Date): Promise<{ count: number }>;
   updateCustomerProfile(customerId: string, input: { displayName: string | null }): Promise<CustomerRecord>;
+  updateCustomerProfileIfUnchanged(customerId: string, displayName: string | null, expectedUpdatedAt: Date): Promise<{ count: number }>;
   createCredential(input: { customerId: string; passwordHash: string }): Promise<CredentialRecord>;
   findCredentialByCustomerId(customerId: string): Promise<CredentialRecord | null>;
   updateCredentialHash(customerId: string, passwordHash: string): Promise<CredentialRecord>;
@@ -62,12 +64,20 @@ export function createCustomerRepository(client?: CustomerRepositoryClient): Cus
     updateCustomerStatus(customerId: string, status: "ACTIVE" | "DISABLED" | "SUSPENDED" | "PENDING_VERIFICATION") {
       return database.customer.update({ where: { id: customerId }, data: { status } });
     },
+
+    updateCustomerStatusIfUnchanged(customerId: string, status: "ACTIVE" | "DISABLED" | "SUSPENDED" | "PENDING_VERIFICATION", expectedUpdatedAt: Date) {
+      return database.customer.updateMany({ where: { id: customerId, updatedAt: expectedUpdatedAt }, data: { status } });
+    },
     
     updateCustomerProfile(customerId: string, input: { displayName: string | null }) {
       return database.customer.update({
         where: { id: customerId },
         data: { displayName: input.displayName },
       });
+    },
+
+    updateCustomerProfileIfUnchanged(customerId: string, displayName: string | null, expectedUpdatedAt: Date) {
+      return database.customer.updateMany({ where: { id: customerId, updatedAt: expectedUpdatedAt }, data: { displayName } });
     },
 
     createCredential(input: { customerId: string; passwordHash: string }) {
