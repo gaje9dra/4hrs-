@@ -14,6 +14,8 @@ import type {
   NormalizedTrackingEvent,
   ShippingProviderResolver,
 } from "@/lib/shipping/contracts";
+import { createShippingProviderResolver } from "@/lib/shipping/resolver";
+import { logShippingObservation } from "@/lib/shipping/observability";
 
 export type ShippingApplicationDependencies = Readonly<{
   database?: PrismaClient;
@@ -77,7 +79,7 @@ export function createShippingApplication(
 ): ShippingApplicationService {
   const database = dependencies.database ?? db;
   const repository = dependencies.repository ?? createShippingRepository();
-  const providerResolver = dependencies.providerResolver;
+  const providerResolver = dependencies.providerResolver ?? createShippingProviderResolver();
 
   async function createShipmentFromFulfillment(input: {
     fulfillmentId: string;
@@ -163,7 +165,7 @@ export function createShippingApplication(
           throw new ShippingDomainError("SHIPMENT_ALREADY_EXISTS", "A Shipment already exists for this Fulfillment.");
         }
 
-        return txRepository.createShipment({
+        const created = await txRepository.createShipment({
           orderId: current.orderId,
           fulfillmentId: current.id,
           providerId: current.provider,
@@ -171,6 +173,15 @@ export function createShippingApplication(
           providerReference: current.providerFulfillmentReference,
           status: "CREATED",
         });
+        logShippingObservation({
+          operation: "handoff",
+          shipmentId: created.id,
+          fulfillmentId: current.id,
+          orderId: current.orderId,
+          providerId: current.provider,
+          result: "success",
+        });
+        return created;
       }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
     } catch (error) {
       if (error instanceof ShippingDomainError) throw error;
@@ -238,7 +249,17 @@ export function createShippingApplication(
           latestEvent?.eventTimestamp ?? null,
         );
 
-        if (decision !== "APPLY") return refreshed;
+        if (decision !== "APPLY") {
+          logShippingObservation({
+            operation: "tracking-event",
+            shipmentId: shipment.id,
+            providerId: input.event.providerId,
+            result: "history-only",
+            from: shipment.status,
+            to: input.event.normalizedStatus,
+          });
+          return refreshed;
+        }
 
         assertTrackingEventTransition(shipment.status, input.event.normalizedStatus);
         const updated = await txRepository.transitionFromTrackingEvent({
