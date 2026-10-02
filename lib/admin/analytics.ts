@@ -159,7 +159,7 @@ function bucketSql(query: AnalyticsQuery) {
 }
 
 function bucketLabelSql(query: AnalyticsQuery) {
-  const format = query.grouping === "day" ? "YYYY-MM-DD" : query.grouping === "week" ? "IYYY-\\"W\\"IW" : "YYYY-MM";
+  const format = query.grouping === "day" ? "YYYY-MM-DD" : query.grouping === "week" ? 'IYYY-"W"IW' : "YYYY-MM";
   return Prisma.sql`to_char(${bucketSql(query)}, ${format})`;
 }
 
