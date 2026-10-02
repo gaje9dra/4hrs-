@@ -1,6 +1,5 @@
 import { requireAdmin } from "@/lib/admin/authorization";
 import { auditAdminAction } from "@/lib/admin/audit";
-import { AdminError } from "@/lib/admin/errors";
 import { DEFAULT_ANALYTICS_TIMEZONE, getAdminAnalytics, parseAnalyticsQuery } from "@/lib/admin/analytics";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -27,7 +26,6 @@ export default async function AnalyticsPage({searchParams}:{searchParams:SearchP
     if (value) queryString.set(key, value);
   }
 
-  try {
     const query = parseAnalyticsQuery(new URL("https://admin.local/admin/analytics?" + queryString.toString()));
     const financial = context.permissions.has("analytics.financial.read");
     const operations = context.permissions.has("analytics.operations.read");
@@ -106,8 +104,5 @@ export default async function AnalyticsPage({searchParams}:{searchParams:SearchP
 
       <footer className="border-2 border-black bg-white p-4 text-sm"><strong>Reporting contract:</strong> {query.timezone}; {query.from} through {query.to}; data generated {new Date(analytics.freshness.generatedAt).toLocaleString("en-IN",{timeZone:query.timezone})}. No analytics cache is used, so financial reports are live canonical aggregations.</footer>
     </section>;
-  } catch (error) {
-    const message = error instanceof AdminError ? error.message : "Analytics could not be loaded.";
-    return <section className="space-y-6"><header className="border-4 border-black bg-white p-6"><h2 className="text-3xl font-black uppercase">Analytics unavailable</h2><p className="mt-3 font-semibold">{message}</p></header><a href="/admin/analytics" className="inline-block border-2 border-black bg-black px-5 py-2 font-black uppercase text-white">Reset report</a></section>;
-  }
+
 }
