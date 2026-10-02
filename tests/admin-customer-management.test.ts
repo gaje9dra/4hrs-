@@ -31,6 +31,13 @@ test("display names are bounded and normalized",()=>{
  assert.throws(()=>normalizeCustomerDisplayName("x".repeat(121)),/too long/);
 });
 
+test("customer detail gates financial records behind financial permission",()=>{
+ const source=fs.readFileSync("lib/admin/customer-detail.ts","utf8");
+ assert.match(source,/canFinancial\?db\.payment\.findMany/);
+ assert.match(source,/total:canFinancial\?o\.total\.toFixed/);
+ assert.match(source,/payments:canFinancial\?payments\.map/);
+});
+
 test("customer admin response code does not select credentials or sessions",()=>{
 
  const source=fs.readFileSync("lib/admin/customer-detail.ts","utf8");
