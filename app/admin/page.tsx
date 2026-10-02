@@ -7,7 +7,7 @@ const modules: Array<{name:string;description:string;href:string;permission?:Adm
   {name:"Fulfillment",description:"Fulfillment administration is reserved for a later module phase.",href:"/admin/fulfillment",permission:"fulfillment.read"},
   {name:"Shipping",description:"Shipping administration is reserved for a later module phase.",href:"/admin/shipping",permission:"shipping.read"},
   {name:"Returns",description:"Returns administration is reserved for a later module phase.",href:"/admin/returns",permission:"returns.read"},
-  {name:"Customers",description:"Customer administration is reserved for a later module phase.",href:"/admin/customers",permission:"customers.read"},
+  {name:"Customers",description:"Secure customer search, operational context, privacy-gated insights and canonical profile/status management.",href:"/admin/customers",permission:"customers.read"},
   {name:"Cases",description:"Case administration from Phase 13.9 uses the centralized admin authorization boundary.",href:"/admin/cases",permission:"cases.read"},
   {name:"Analytics",description:"Read-only KPI reporting over canonical commerce domains with permission-gated financial and customer views.",href:"/admin/analytics",permission:"analytics.read"},
   {name:"Administration",description:"Manage administrative identities, roles and security audit records.",href:"/admin/users",permission:"admin.users.read"},
