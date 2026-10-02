@@ -470,6 +470,23 @@ enum PaymentEventProcessingStatus {
   FAILED
 }
 
+enum PaymentRefundStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  AMBIGUOUS
+}
+
+enum PaymentRefundReason {
+  CUSTOMER_REQUEST
+  ORDER_CANCELLED
+  RETURN_APPROVED
+  DUPLICATE_PAYMENT
+  PAYMENT_ERROR
+  OPERATIONAL_CORRECTION
+  OTHER
+}
+
 
 enum OrderStatus {
   PENDING
@@ -651,6 +668,7 @@ model Payment {
   attempts           PaymentAttempt[]
   events             PaymentEvent[]
   idempotencyRecords PaymentIdempotency[]
+  refunds          PaymentRefund[]
   order            Order?
   cases            Case[]
 
@@ -729,6 +747,28 @@ model TrackingEvent {
   @@index([shipmentId, eventTimestamp])
   @@index([providerId, providerEventId])
   @@index([normalizedStatus, eventTimestamp])
+}
+
+model PaymentRefund {
+  id                    String             @id @default(uuid()) @db.Uuid
+  paymentId             String             @db.Uuid
+  idempotencyKey        String             @unique @db.VarChar(128)
+  amount                Decimal            @db.Decimal(12, 2)
+  currency              String             @db.VarChar(3)
+  status                PaymentRefundStatus @default(PENDING)
+  reason                PaymentRefundReason
+  note                  String?            @db.VarChar(1000)
+  providerId            String?            @db.VarChar(64)
+  providerReference     String?            @db.VarChar(255)
+  failureCode           String?            @db.VarChar(100)
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+  completedAt           DateTime?
+  payment               Payment            @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+
+  @@index([paymentId, createdAt])
+  @@index([paymentId, status, createdAt])
+  @@index([providerId, providerReference])
 }
 
 model PaymentAttempt {

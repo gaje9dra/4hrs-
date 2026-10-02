@@ -1,11 +1,12 @@
 import { randomUUID } from "node:crypto";
-import { Prisma, type PaymentStatus as PrismaPaymentStatus } from "@prisma/client";
+import { Prisma, type PaymentStatus as PrismaPaymentStatus, type PaymentRefundReason, PaymentRefundStatus } from "@prisma/client";
 import {
   assertPaymentTransition,
   canRetryPayment,
   isTerminalPaymentStatus,
   validatePaymentAmount,
   type PaymentDto,
+  type PaymentAmount,
   type PaymentStatus,
 } from "@/lib/payments/domain";
 import { PaymentError } from "@/lib/payments/errors";
@@ -42,11 +43,17 @@ export type PaymentApplicationDependencies = {
   providerResolver?: PaymentProviderResolver;
 };
 
+export type AdminRefundReason = "CUSTOMER_REQUEST" | "ORDER_CANCELLED" | "RETURN_APPROVED" | "DUPLICATE_PAYMENT" | "PAYMENT_ERROR" | "OPERATIONAL_CORRECTION" | "OTHER";
+export type AdminRefundInput = { paymentId: string; amount: string; currency: string; reason: AdminRefundReason; note?: string | null; idempotencyKey: string };
+export type AdminRefundResult = { refundId: string; status: "PENDING" | "SUCCEEDED" | "FAILED" | "AMBIGUOUS"; payment: PaymentDto; amount: PaymentAmount; currency: string; providerReference: string | null; failureCode: string | null };
+
 export type PaymentApplicationService = {
   createPaymentFromCheckout(input: CreatePaymentFromCheckoutInput): Promise<PaymentDto>;
   getPayment(paymentId: string, customerId: string): Promise<PaymentDto>;
   transitionPaymentState(input: TransitionPaymentInput): Promise<PaymentDto>;
-  retryPayment(paymentId: string, customerId: string): Promise<PaymentDto>;
+  retryPayment(paymentId: string, customerId: string, idempotencyKey?: string): Promise<PaymentDto>;
+  refundPayment(input: AdminRefundInput): Promise<AdminRefundResult>;
+  reconcilePayment(paymentId: string, customerId: string): Promise<PaymentDto>;
   processNormalizedPaymentEvent(event: NormalizedPaymentEvent): Promise<{
     duplicate: boolean;
     processed: boolean;
@@ -221,33 +228,161 @@ export function createPaymentApplication(
     }
   }
 
-  async function retryPayment(paymentId: string, customerId: string): Promise<PaymentDto> {
+  async function retryPayment(paymentId: string, customerId: string, idempotencyKey?: string): Promise<PaymentDto> {
     const payment = await repository.getPaymentById(paymentId, customerId);
     if (!payment) throw new PaymentError("PAYMENT_NOT_FOUND", "Payment could not be found.");
-    if (!canRetryPayment(payment.status)) {
-      if (payment.status === "SUCCEEDED") throw new PaymentError("PAYMENT_ALREADY_COMPLETED", "Payment has already completed.");
-      if (isTerminalPaymentStatus(payment.status)) throw new PaymentError("PAYMENT_ALREADY_TERMINAL", "Payment can no longer be retried.");
-      return toPaymentDto(payment);
+    if (!idempotencyKey) {
+      if (!canRetryPayment(payment.status)) {
+        if (payment.status === "SUCCEEDED") throw new PaymentError("PAYMENT_ALREADY_COMPLETED", "Payment has already completed.");
+        if (isTerminalPaymentStatus(payment.status)) throw new PaymentError("PAYMENT_ALREADY_TERMINAL", "Payment can no longer be retried.");
+        return toPaymentDto(payment);
+      }
+    } else {
+      assertValidIdempotencyKey(idempotencyKey);
+      const existing = await repository.lookupByIdempotencyKey(customerId, "admin-retry", idempotencyKey);
+      if (existing) {
+        if (existing.requestFingerprint !== paymentId) throw new PaymentError("IDEMPOTENCY_CONFLICT", "The idempotency key was already used for a different payment request.");
+        const replay = await repository.getPaymentById(paymentId, customerId);
+        if (!replay) throw new PaymentError("PAYMENT_NOT_FOUND", "Payment could not be found.");
+        return toPaymentDto(replay);
+      }
     }
-
-    const attempts = await repository.getPaymentAttempts(payment.id);
-    const nextAttemptNumber = attempts.reduce((max, attempt) => Math.max(max, attempt.attemptNumber), 0) + 1;
     try {
-      const result = await repository.withTransaction(async (tx) => {
-        const updated = await tx.updatePaymentStatus(payment.id, asPrismaStatus("FAILED"), asPrismaStatus("PROCESSING"));
-        await tx.createPaymentAttempt({
-          paymentId: payment.id,
-          attemptNumber: nextAttemptNumber,
-          amount: payment.amount,
-          currency: payment.currency,
-          status: asPrismaStatus("PROCESSING"),
-        });
-        return updated;
+      return await repository.withTransaction(async (tx) => {
+        const current = await tx.getPaymentById(paymentId, customerId);
+        if (!current) throw new PaymentError("PAYMENT_NOT_FOUND", "Payment could not be found.");
+        if (!canRetryPayment(current.status)) {
+          if (current.status === "SUCCEEDED") throw new PaymentError("PAYMENT_ALREADY_COMPLETED", "Payment has already completed.");
+          if (isTerminalPaymentStatus(current.status)) throw new PaymentError("PAYMENT_ALREADY_TERMINAL", "Payment can no longer be retried.");
+          return toPaymentDto(current);
+        }
+        const attempts = await tx.getPaymentAttempts(paymentId);
+        const nextAttemptNumber = attempts.reduce((max, attempt) => Math.max(max, attempt.attemptNumber), 0) + 1;
+        const updated = await tx.updatePaymentStatus(paymentId, asPrismaStatus("FAILED"), asPrismaStatus("PROCESSING"));
+        await tx.createPaymentAttempt({ paymentId, attemptNumber: nextAttemptNumber, amount: current.amount, currency: current.currency, status: asPrismaStatus("PROCESSING") });
+        if (idempotencyKey) {
+          await tx.createPaymentIdempotency({ customerId, checkoutReference: current.checkoutReference, operation: "admin-retry", key: idempotencyKey, requestFingerprint: paymentId, paymentId: current.id, response: { paymentId: current.id } });
+        }
+        return toPaymentDto(updated);
       });
-      return toPaymentDto(result);
     } catch (error) {
+      if (error instanceof PaymentError) throw error;
+      if (isPrismaUniqueConflict(error) && idempotencyKey) {
+        const raced = await repository.lookupByIdempotencyKey(customerId, "admin-retry", idempotencyKey);
+        if (raced && raced.requestFingerprint === paymentId) {
+          const replay = await repository.getPaymentById(paymentId, customerId);
+          if (replay) return toPaymentDto(replay);
+        }
+      }
       throw new PaymentError("INVALID_STATE_TRANSITION", "Payment retry could not be applied safely.", { cause: error });
     }
+  }
+
+  function validateRefundReason(reason: string): AdminRefundReason {
+    const allowed: readonly AdminRefundReason[] = ["CUSTOMER_REQUEST","ORDER_CANCELLED","RETURN_APPROVED","DUPLICATE_PAYMENT","PAYMENT_ERROR","OPERATIONAL_CORRECTION","OTHER"];
+    if (!allowed.includes(reason as AdminRefundReason)) throw new PaymentError("INVALID_PAYMENT_REQUEST", "Refund reason is invalid.");
+    return reason as AdminRefundReason;
+  }
+
+  async function refundPayment(input: AdminRefundInput): Promise<AdminRefundResult> {
+    assertValidIdempotencyKey(input.idempotencyKey);
+    const payment = await repository.getPaymentForAdmin(input.paymentId);
+    if (!payment) throw new PaymentError("PAYMENT_NOT_FOUND", "Payment could not be found.");
+    if (input.currency !== payment.currency) throw new PaymentError("INVALID_CURRENCY", "Refund currency does not match the payment currency.");
+    if (!/^\d+(?:\.\d{1,2})?$/.test(input.amount)) throw new PaymentError("INVALID_AMOUNT", "Refund amount is invalid.");
+    const amount = new Prisma.Decimal(input.amount);
+    if (!amount.isFinite() || amount.lte(0)) throw new PaymentError("INVALID_AMOUNT", "Refund amount is invalid.");
+    const reason = validateRefundReason(input.reason);
+    if (input.note && input.note.length > 1000) throw new PaymentError("INVALID_PAYMENT_REQUEST", "Refund note is invalid.");
+
+    const existingKey = await repository.lookupByIdempotencyKey(payment.customerId, "admin-refund", input.idempotencyKey);
+    if (existingKey) {
+      if (existingKey.requestFingerprint !== [input.paymentId,input.amount,input.currency,input.reason].join("|")) throw new PaymentError("IDEMPOTENCY_CONFLICT", "The idempotency key was already used for a different refund request.");
+      const refund = await repository.getRefundByIdempotencyKey(input.idempotencyKey);
+      if (!refund) throw new PaymentError("PAYMENT_INTERNAL_ERROR", "Refund idempotency record could not be resolved.");
+      return { refundId: refund.id, status: refund.status, payment: toPaymentDto(payment), amount: { value: refund.amount.toFixed(2), currency: refund.currency }, currency: refund.currency, providerReference: refund.providerReference, failureCode: refund.failureCode };
+    }
+
+    if (payment.status !== "SUCCEEDED" && payment.status !== "PARTIALLY_REFUNDED") throw new PaymentError("INVALID_STATE_TRANSITION", "Payment is not eligible for refund.");
+    const reserved = payment.refunds.reduce((sum, refund) => refund.status === "SUCCEEDED" || refund.status === "PENDING" || refund.status === "AMBIGUOUS" ? sum.plus(refund.amount) : sum, new Prisma.Decimal(0));
+    const refundable = payment.amount.minus(reserved);
+    if (amount.gt(refundable)) throw new PaymentError("INVALID_AMOUNT", "Refund amount exceeds the remaining refundable balance.");
+    const fingerprintValue = [input.paymentId,input.amount,input.currency,input.reason].join("|");
+
+    let refund = await repository.withTransaction(async (tx) => {
+      const current = await tx.getPaymentForAdmin(input.paymentId);
+      if (!current) throw new PaymentError("PAYMENT_NOT_FOUND", "Payment could not be found.");
+      if (current.status !== "SUCCEEDED" && current.status !== "PARTIALLY_REFUNDED") throw new PaymentError("INVALID_STATE_TRANSITION", "Payment is not eligible for refund.");
+      const reservedNow = current.refunds.reduce((sum, item) => item.status === "SUCCEEDED" || item.status === "PENDING" || item.status === "AMBIGUOUS" ? sum.plus(item.amount) : sum, new Prisma.Decimal(0));
+      if (amount.gt(current.amount.minus(reservedNow))) throw new PaymentError("INVALID_AMOUNT", "Refund amount exceeds the remaining refundable balance.");
+      const created = await tx.createPaymentRefund({ paymentId: current.id, idempotencyKey: input.idempotencyKey, amount, currency: current.currency, reason: reason as PaymentRefundReason, note: input.note ?? null });
+      await tx.createPaymentIdempotency({ customerId: current.customerId, checkoutReference: current.checkoutReference, operation: "admin-refund", key: input.idempotencyKey, requestFingerprint: fingerprintValue, paymentId: current.id, response: { refundId: created.id } });
+      return created;
+    });
+
+    if (!payment.providerId || !payment.providerReference) {
+      refund = await repository.updatePaymentRefund({ id: refund.id, status: PaymentRefundStatus.FAILED, failureCode: "PROVIDER_REFERENCE_MISSING" });
+      throw new PaymentError("PROVIDER_UNAVAILABLE", "Payment provider reference is unavailable; no refund was executed.");
+    }
+    const adapter = providerResolver.resolve({ customerId: payment.customerId, checkoutReference: payment.checkoutReference, currency: payment.currency, providerId: payment.providerId });
+    if (!adapter || !adapter.capabilities.refunds || !adapter.refundPayment) {
+      refund = await repository.updatePaymentRefund({ id: refund.id, status: "FAILED", failureCode: "REFUND_UNSUPPORTED" });
+      throw new PaymentError("PROVIDER_UNAVAILABLE", "The configured payment provider does not support refunds.");
+    }
+    let providerConfirmed = false;
+    try {
+      const result = await adapter.refundPayment({ providerPaymentReference: payment.providerReference, paymentReference: payment.internalReference, amount: { value: amount.toFixed(2), currency: payment.currency } });
+      if (result.providerId !== adapter.id) throw new PaymentError("PROVIDER_CONFIGURATION_ERROR", "Provider response identity is invalid.");
+      if (result.status !== "REFUNDED" && result.status !== "PARTIALLY_REFUNDED") throw new PaymentError("INVALID_STATE_TRANSITION", "Provider did not confirm a valid refund state.");
+      providerConfirmed = true;
+      refund = await repository.withTransaction(async (tx) => {
+        const updatedRefund = await tx.updatePaymentRefund({ id: refund.id, status: PaymentRefundStatus.SUCCEEDED, providerId: result.providerId, providerReference: result.providerPaymentReference, completedAt: new Date() });
+        if (result.status !== payment.status) await tx.updatePaymentStatus(payment.id, asPrismaStatus(payment.status), asPrismaStatus(result.status));
+        return updatedRefund;
+      });
+    } catch (error) {
+      if (providerConfirmed) {
+        refund = await repository.updatePaymentRefund({ id: refund.id, status: PaymentRefundStatus.AMBIGUOUS, failureCode: "LOCAL_FINALIZATION_FAILED" });
+        throw new PaymentError("PAYMENT_INTERNAL_ERROR", "The provider accepted the refund but local state could not be finalized; reconcile the payment before retrying.", { cause: error });
+      }
+      if (error instanceof PaymentError) {
+        refund = await repository.updatePaymentRefund({ id: refund.id, status: "FAILED", failureCode: error.code });
+        throw error;
+      }
+      const category = adapter.normalizeError(error);
+      if (category === "PROVIDER_TIMEOUT" || category === "PROVIDER_NETWORK_ERROR") {
+        refund = await repository.updatePaymentRefund({ id: refund.id, status: "AMBIGUOUS", failureCode: category });
+        throw new PaymentError("PROVIDER_TIMEOUT", "Refund outcome is ambiguous; reconcile the payment before retrying.", { cause: error });
+      }
+      refund = await repository.updatePaymentRefund({ id: refund.id, status: "FAILED", failureCode: category });
+      throw new PaymentError("PROVIDER_REJECTED", "The payment provider rejected the refund.", { cause: error });
+    }
+    const refreshed = await repository.getPaymentForAdmin(payment.id);
+    if (!refreshed) throw new PaymentError("PAYMENT_INTERNAL_ERROR", "Payment could not be reloaded after refund.");
+    return { refundId: refund.id, status: refund.status, payment: toPaymentDto(refreshed), amount: { value: refund.amount.toFixed(2), currency: refund.currency }, currency: refund.currency, providerReference: refund.providerReference, failureCode: refund.failureCode };
+  }
+
+  async function reconcilePayment(paymentId: string, customerId: string): Promise<PaymentDto> {
+    const payment = await repository.getPaymentById(paymentId, customerId);
+    if (!payment) throw new PaymentError("PAYMENT_NOT_FOUND", "Payment could not be found.");
+    if (!payment.providerId || !payment.providerReference) throw new PaymentError("PROVIDER_UNAVAILABLE", "Payment provider reference is unavailable.");
+    const adapter = providerResolver.resolve({ customerId, checkoutReference: payment.checkoutReference, currency: payment.currency, providerId: payment.providerId });
+    if (!adapter || !adapter.capabilities.statusLookup) throw new PaymentError("PROVIDER_UNAVAILABLE", "The configured payment provider does not support reconciliation.");
+    const result = await adapter.retrievePayment({ providerPaymentReference: payment.providerReference, paymentReference: payment.internalReference });
+    if (result.providerId !== adapter.id) throw new PaymentError("PROVIDER_CONFIGURATION_ERROR", "Provider response identity is invalid.");
+    if (result.status === payment.status) return toPaymentDto(payment);
+    if (result.status === "PARTIALLY_REFUNDED" || result.status === "REFUNDED") {
+      const refunds = await repository.getPaymentRefunds(payment.id);
+      const succeededRefunded = refunds.reduce((sum, refund) => refund.status === PaymentRefundStatus.SUCCEEDED ? sum.plus(refund.amount) : sum, new Prisma.Decimal(0));
+      const provesState = result.status === "REFUNDED"
+        ? succeededRefunded.eq(payment.amount)
+        : succeededRefunded.gt(0) && succeededRefunded.lt(payment.amount);
+      if (!provesState) {
+        throw new PaymentError("INVALID_STATE_TRANSITION", "Provider refund state cannot be applied because local refund history cannot substantiate the refunded balance.");
+      }
+    }
+    assertPaymentTransition(payment.status, result.status);
+    return toPaymentDto(await repository.updatePaymentStatus(payment.id, asPrismaStatus(payment.status), asPrismaStatus(result.status), result.status === "SUCCEEDED" ? new Date() : undefined));
   }
 
   async function processNormalizedPaymentEvent(event: NormalizedPaymentEvent) {
@@ -381,6 +516,8 @@ export function createPaymentApplication(
     getPayment,
     transitionPaymentState,
     retryPayment,
+    refundPayment,
+    reconcilePayment,
     processNormalizedPaymentEvent,
     startProviderPayment,
   };
