@@ -1,6 +1,9 @@
 import { CatalogServiceError } from "@/lib/catalog/errors";
 import { NextResponse } from "next/server";
 import { AdminError } from "@/lib/admin/errors";
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+export function isValidAdminId(value: unknown): value is string { return typeof value === "string" && UUID_PATTERN.test(value.trim()); }
 export function adminJson<T>(data: T, init: ResponseInit = {}) {
   return NextResponse.json(data, { ...init, headers: {
     "cache-control": "private, no-store, max-age=0",
