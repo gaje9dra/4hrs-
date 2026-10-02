@@ -604,6 +604,19 @@ model FulfillmentProviderMapping {
   @@index([variantId, active])
 }
 
+enum FulfillmentOperationType {
+  SUBMIT
+  RETRY
+  RECONCILE
+}
+
+enum FulfillmentOperationStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  AMBIGUOUS
+}
+
 model Fulfillment {
   id                    String             @id @default(uuid()) @db.Uuid
   orderId               String             @unique @db.Uuid
@@ -625,11 +638,25 @@ model Fulfillment {
   items                 FulfillmentItem[]
   shipments             Shipment[]
   cases                 Case[]
+  operationIdempotency  FulfillmentOperationIdempotency[]
 
   @@index([provider, createdAt])
   @@index([provider, providerFulfillmentReference])
   @@index([status, createdAt])
   @@index([orderId, status])
+}
+
+model FulfillmentOperationIdempotency {
+  id             String                      @id @default(uuid()) @db.Uuid
+  fulfillmentId  String                      @db.Uuid
+  operation      FulfillmentOperationType
+  idempotencyKey String                      @unique @db.VarChar(128)
+  status         FulfillmentOperationStatus  @default(PENDING)
+  createdAt      DateTime                    @default(now())
+  updatedAt      DateTime                    @updatedAt
+  fulfillment    Fulfillment                 @relation(fields: [fulfillmentId], references: [id], onDelete: Restrict)
+  @@index([fulfillmentId, operation, createdAt])
+  @@index([fulfillmentId, status, updatedAt])
 }
 
 model FulfillmentItem {
