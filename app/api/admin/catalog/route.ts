@@ -21,7 +21,7 @@ function errorResponse(error: unknown) {
 
 export async function GET(request: Request) {
   try {
-    await requireAdmin(request);
+    await requireAdmin(request,"catalog.read");
     const url = new URL(request.url);
     const rawStatus = url.searchParams.get("status");
     const status = rawStatus === "DRAFT" || rawStatus === "ACTIVE" || rawStatus === "ARCHIVED" ? rawStatus : undefined;
@@ -35,7 +35,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    await requireAdmin(request);
+    await requireAdmin(request,"catalog.read");
     assertSameOrigin(request);
     const input = await request.json();
     if (!input || typeof input !== "object" || Array.isArray(input)) return json({ error: "Invalid catalog request." }, 400);
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    await requireAdmin(request);
+    await requireAdmin(request,"catalog.read");
     assertSameOrigin(request);
     const input = await request.json();
     if (!input || typeof input !== "object" || Array.isArray(input) || typeof input.id !== "string") {
