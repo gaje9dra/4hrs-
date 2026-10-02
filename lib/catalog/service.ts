@@ -8,6 +8,7 @@ import {
   type CatalogErrorCode,
 } from "@/lib/catalog/errors";
 import * as repository from "@/lib/catalog/repository";
+import { createFulfillmentProviderMappingRepository } from "@/lib/fulfillment/mapping";
 import {
   CatalogValidationError,
   validateCategory,
@@ -590,6 +591,20 @@ export function createCatalogService(
     },
 
     async publishProduct(id: string) {
+      if (Object.keys(customRepository).length === 0) {
+        const variants = await repo.getVariantsByProduct(id);
+        const activeVariants = variants.filter((variant) => variant.status === "ACTIVE");
+        const mappings = createFulfillmentProviderMappingRepository();
+        for (const variant of activeVariants) {
+          const mapping = await mappings.getByVariantAndProvider(variant.id, "qikink");
+          if (!mapping?.active || !mapping.providerSku.trim()) {
+            throw new CatalogServiceError(
+              "NOT_PUBLICATION_READY",
+              "Every active ProductVariant requires an active Qikink provider mapping before publication.",
+            );
+          }
+        }
+      }
       return lifecycle.publishProduct(id);
     },
 
@@ -1462,7 +1477,18 @@ export function createCatalogService(
     },
 
     async isPublishable(id: string) {
-      return lifecycle.validatePublicationReadiness(id);
+      const readiness = await lifecycle.validatePublicationReadiness(id);
+      if (readiness.length || Object.keys(customRepository).length > 0) return readiness;
+      const variants = await repo.getVariantsByProduct(id);
+      const mappings = createFulfillmentProviderMappingRepository();
+      const missing = [];
+      for (const variant of variants.filter((item) => item.status === "ACTIVE")) {
+        const mapping = await mappings.getByVariantAndProvider(variant.id, "qikink");
+        if (!mapping?.active || !mapping.providerSku.trim()) {
+          missing.push({ field: "variants", code: "QIKINK_MAPPING_REQUIRED", message: "Every active ProductVariant requires an active Qikink provider mapping before publication." });
+        }
+      }
+      return missing;
     },
   };
 
