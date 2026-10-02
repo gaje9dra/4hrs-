@@ -897,6 +897,7 @@ const publicProductDetailSelect = {
     orderBy: [{ createdAt: "asc" as const }, { id: "asc" as const }],
     select: {
       id: true,
+      sku: true,
       displayName: true,
       size: true,
       color: true,

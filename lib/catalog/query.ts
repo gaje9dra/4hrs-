@@ -108,6 +108,7 @@ export type CatalogProductOption = {
 
 export type CatalogProductVariant = {
   id: string;
+  sku: string;
   displayName: string | null;
   size: string | null;
   color: string | null;
@@ -529,6 +530,7 @@ export function createCatalogQueryService(customRepository: Partial<QueryReposit
         const effectivePrice = variant.price ?? product.price;
         return {
           id: variant.id,
+          sku: variant.sku,
           displayName: variant.displayName,
           size: variant.size,
           color: variant.color,
