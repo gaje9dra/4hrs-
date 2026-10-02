@@ -148,6 +148,8 @@ test("TrackingEvent persistence is historical and deduplicated", async () => {
     source: "PROVIDER",
   });
 
+  assert.ok(first);
+  assert.ok(duplicate);
   assert.equal(duplicate.id, first.id);
   const events = await repository.listTrackingEvents(shipment.id);
   assert.equal(events.length, 1);
@@ -162,6 +164,7 @@ test("TrackingEvent persistence is historical and deduplicated", async () => {
     eventTimestamp: new Date("2026-10-02T09:00:00.000Z"),
     source: "PROVIDER",
   });
+  assert.ok(older);
   assert.notEqual(older.id, first.id);
   assert.equal((await repository.listTrackingEvents(shipment.id)).length, 2);
 });
