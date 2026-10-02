@@ -141,7 +141,7 @@ export async function getAdminShipment(id:string,context:AdminAuthorizationConte
   trackingEvents:row.trackingEvents.map(e=>({id:e.id,providerId:e.providerId,providerEventId:sensitive?e.providerEventId:null,providerStatus:e.providerStatus,normalizedStatus:e.normalizedStatus,eventTimestamp:e.eventTimestamp.toISOString(),receivedAt:e.receivedAt.toISOString(),location:e.location,description:e.description,source:e.source})),
   returnShipments:row.returnShipments.map(r=>({reference:r.reference,status:r.status,carrier:r.carrier,trackingNumber:sensitive?r.trackingNumber:null,trackingUrl:sensitive?r.trackingUrl:null,createdAt:r.createdAt.toISOString(),updatedAt:r.updatedAt.toISOString()})),
   cases:row.cases.map(c=>({id:c.id,reference:c.caseReference,status:c.status,category:c.category,priority:c.priority,createdAt:c.createdAt.toISOString(),updatedAt:c.updatedAt.toISOString()})),
-  audit,
+  audit:audit.map(entry=>({...entry,createdAt:entry.createdAt.toISOString()})),
  };
 }
 
@@ -170,8 +170,9 @@ export async function executeAdminShippingAction(context:AdminAuthorizationConte
    if(!UUID.test(input.fulfillmentId)||!UUID.test(input.orderId))throw new AdminError("INVALID_REQUEST","Order and Fulfillment identifiers are invalid.");
    const app=createShippingApplication();
    const result=await app.createShipmentFromFulfillment({fulfillmentId:input.fulfillmentId,orderId:input.orderId,idempotencyKey:input.idempotencyKey});
-   await auditAdminAction(context,{action:"SHIPPING_SHIPMENT_CREATE",resourceType:"Shipment",resourceId:result?.id,success:true,reason,correlationId,metadata:{fulfillmentId:input.fulfillmentId,orderId:input.orderId,idempotencyKey:input.idempotencyKey}});
-   return result?getAdminShipment(result.id,context):null;
+   if(!result) throw new AdminError("CONFLICT","The canonical Shipping service did not return the created Shipment.");
+   await auditAdminAction(context,{action:"SHIPPING_SHIPMENT_CREATE",resourceType:"Shipment",resourceId:result.id,success:true,reason,correlationId,metadata:{fulfillmentId:input.fulfillmentId,orderId:input.orderId,idempotencyKey:input.idempotencyKey}});
+   return getAdminShipment(result.id,context);
   }
   if(input.action==="reconcile"){
    requirePermission(context,"shipping.reconcile");const reason=requireHighRiskReason(input.reason);const shipmentId=requireShipmentId(input.shipmentId);
