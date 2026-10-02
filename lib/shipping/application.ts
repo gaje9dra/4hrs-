@@ -131,18 +131,6 @@ export function createShippingApplication(
       );
     }
 
-    const trackingInput = {
-      shipmentId: input.shipmentId,
-      providerId: input.event.providerId,
-      providerEventId: input.event.providerEventId,
-      providerStatus: input.event.providerStatus,
-      normalizedStatus: input.event.normalizedStatus,
-      eventTimestamp: input.event.eventTimestamp,
-      location: input.event.location,
-      description: input.event.description,
-      source: "PROVIDER" as const,
-    };
-
     try {
       return await database.$transaction(async (tx) => {
         const txRepository = createShippingRepository(tx);
@@ -221,6 +209,18 @@ export function createShippingApplication(
     if (Number.isNaN(input.event.eventTimestamp.getTime())) {
       throw new ShippingDomainError("INVALID_TRACKING_EVENT", "Tracking event timestamp is invalid.");
     }
+
+    const trackingInput = {
+      shipmentId: input.shipmentId,
+      providerId: input.event.providerId,
+      providerEventId: input.event.providerEventId,
+      providerStatus: input.event.providerStatus,
+      normalizedStatus: input.event.normalizedStatus,
+      eventTimestamp: input.event.eventTimestamp,
+      location: input.event.location,
+      description: input.event.description,
+      source: "PROVIDER" as const,
+    };
 
     try {
       return await database.$transaction(async (tx) => {
