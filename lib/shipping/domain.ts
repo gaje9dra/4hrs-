@@ -3,11 +3,11 @@ import { SHIPPING_STATUSES } from "@/lib/shipping/contracts";
 import { ShippingDomainError } from "@/lib/shipping/errors";
 
 const TRANSITIONS: Readonly<Record<ShipmentStatus, readonly ShipmentStatus[]>> = {
-  CREATED: ["IN_TRANSIT", "OUT_FOR_DELIVERY", "DELIVERY_FAILED", "RETURNED"],
+  CREATED: ["IN_TRANSIT", "OUT_FOR_DELIVERY"],
   IN_TRANSIT: ["OUT_FOR_DELIVERY", "DELIVERED", "DELIVERY_FAILED", "RETURNED"],
   OUT_FOR_DELIVERY: ["DELIVERED", "DELIVERY_FAILED", "RETURNED"],
   DELIVERED: [],
-  DELIVERY_FAILED: ["OUT_FOR_DELIVERY", "DELIVERED", "RETURNED"],
+  DELIVERY_FAILED: ["OUT_FOR_DELIVERY", "RETURNED"],
   RETURNED: [],
 };
 
