@@ -44,9 +44,6 @@ function dayDistance(from: string, to: string): number {
 
 function validateTimezone(value: string): string {
   try {
-    if (typeof Intl.supportedValuesOf === "function" && !Intl.supportedValuesOf("timeZone").includes(value) && value !== "UTC") {
-      throw new Error("unsupported");
-    }
     new Intl.DateTimeFormat("en-US", { timeZone: value }).format();
     return value;
   } catch {
