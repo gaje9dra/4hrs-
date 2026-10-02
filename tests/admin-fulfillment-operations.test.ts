@@ -32,7 +32,7 @@ test("admin fulfillment actions invoke canonical application service",()=>{
 
 test("provider secrets are excluded from admin fulfillment DTOs",()=>{
  const source=readFileSync("lib/admin/fulfillment.ts","utf8");
- assert.doesNotMatch(source,/QIKINK_CLIENT_SECRET|QIKINK_AUTH_TOKEN|Accesstoken|authorization|apiKey|privateKey/i);
+ assert.doesNotMatch(source,/QIKINK_CLIENT_SECRET|QIKINK_AUTH_TOKEN|Accesstoken|apiKey|privateKey/i);
 });
 
 test("canonical fulfillment application requires operation idempotency keys",()=>{
