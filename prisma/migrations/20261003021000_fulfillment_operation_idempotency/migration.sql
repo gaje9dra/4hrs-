@@ -15,4 +15,4 @@ CREATE TABLE "FulfillmentOperationIdempotency" (
 CREATE UNIQUE INDEX "FulfillmentOperationIdempotency_idempotencyKey_key" ON "FulfillmentOperationIdempotency"("idempotencyKey");
 CREATE INDEX "FulfillmentOperationIdempotency_fulfillmentId_operation_createdAt_idx" ON "FulfillmentOperationIdempotency"("fulfillmentId","operation","createdAt");
 CREATE INDEX "FulfillmentOperationIdempotency_fulfillmentId_status_updatedAt_idx" ON "FulfillmentOperationIdempotency"("fulfillmentId","status","updatedAt");
-ALTER TABLE "FulfillmentOperationIdempotency" ADD CONSTRAINT "FulfillmentOperationIdempotency_fulfillmentId_fkey" FOREIGN KEY ("fulfillmentId") REFERENCES "Fulfillment"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "FulfillmentOperationIdempotency" ADD CONSTRAINT "FulfillmentOperationIdempotency_fulfillmentId_fkey" FOREIGN KEY ("fulfillmentId") REFERENCES "Fulfillment"("id") ON DELETE CASCADE ON UPDATE CASCADE;
