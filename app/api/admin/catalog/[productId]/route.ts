@@ -1,5 +1,5 @@
 import { requireAdmin } from "@/lib/auth/admin";
-import { createCatalogService } from "@/lib/catalog/service";
+import { adminErrorResponse } from "@/lib/admin/http";import { AdminError } from "@/lib/admin/errors";import { createCatalogService } from "@/lib/catalog/service";
 import { CatalogServiceError } from "@/lib/catalog/errors";
 import { authErrorResponse } from "@/lib/auth/http";
 
