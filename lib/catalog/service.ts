@@ -8,7 +8,7 @@ import {
   type CatalogErrorCode,
 } from "@/lib/catalog/errors";
 import * as repository from "@/lib/catalog/repository";
-import { createFulfillmentProviderMappingRepository } from "@/lib/fulfillment/mapping";
+import { createFulfillmentProviderMappingRepository, mapProviderMappingDatabaseError } from "@/lib/fulfillment/mapping";
 import {
   CatalogValidationError,
   validateCategory,
@@ -1480,6 +1480,72 @@ export function createCatalogService(
     async listPublishedProducts(options: Omit<repository.CatalogListOptions, "filters"> = {}) {
       validateListOptions(options);
       return repo.listPublishedProducts(options);
+    },
+
+    async listProviderMappings(variantId: string) {
+      requireId(variantId, "VARIANT_NOT_FOUND", "Variant ID");
+      const variant = await repo.getVariantById(variantId);
+      if (!variant) throw new CatalogServiceError("VARIANT_NOT_FOUND", "Variant was not found.");
+      return createFulfillmentProviderMappingRepository().getByVariant(variantId);
+    },
+
+    async upsertProviderMapping(input: {
+      variantId: string;
+      providerId: string;
+      providerSku: string;
+      providerVariantReference?: string | null;
+      active?: boolean;
+    }) {
+      requireId(input.variantId, "VARIANT_NOT_FOUND", "Variant ID");
+      const variant = await repo.getVariantById(input.variantId);
+      if (!variant) throw new CatalogServiceError("VARIANT_NOT_FOUND", "Variant was not found.");
+      if (!input.providerId?.trim() || !input.providerSku?.trim()) {
+        throw new CatalogServiceError("INVALID_VARIANT", "Provider and provider SKU are required.");
+      }
+      try {
+        return await repo.withTransaction(async (tx) => {
+          const mappingRepository = createFulfillmentProviderMappingRepository(tx);
+          const before = await mappingRepository.getByVariantAndProvider(input.variantId, input.providerId);
+          const result = await mappingRepository.upsert(input);
+          await audit({
+            entityType: "VARIANT",
+            entityId: input.variantId,
+            operation: "UPDATE",
+            changedFields: ["providerMapping"],
+            beforeState: before,
+            afterState: result,
+            metadata: { providerId: input.providerId.trim().toLowerCase() },
+          }, tx);
+          return result;
+        });
+      } catch (error) {
+        mapProviderMappingDatabaseError(error);
+      }
+    },
+
+    async removeProviderMapping(variantId: string, providerId: string) {
+      requireId(variantId, "VARIANT_NOT_FOUND", "Variant ID");
+      const variant = await repo.getVariantById(variantId);
+      if (!variant) throw new CatalogServiceError("VARIANT_NOT_FOUND", "Variant was not found.");
+      try {
+        return await repo.withTransaction(async (tx) => {
+          const mappingRepository = createFulfillmentProviderMappingRepository(tx);
+          const before = await mappingRepository.getByVariantAndProvider(variantId, providerId);
+          if (!before) throw new CatalogServiceError("INVALID_VARIANT", "Provider mapping was not found.");
+          const result = await mappingRepository.deleteByVariantAndProvider(variantId, providerId);
+          await audit({
+            entityType: "VARIANT",
+            entityId: variantId,
+            operation: "UPDATE",
+            changedFields: ["providerMapping"],
+            beforeState: before,
+            metadata: { providerId: providerId.trim().toLowerCase(), removed: true },
+          }, tx);
+          return result;
+        });
+      } catch (error) {
+        mapProviderMappingDatabaseError(error);
+      }
     },
 
     async isPublishable(id: string) {
