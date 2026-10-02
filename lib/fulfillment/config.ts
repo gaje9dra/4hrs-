@@ -31,7 +31,7 @@ export function loadFulfillmentProviderConfiguration(
     providerId: process.env.FULFILLMENT_PROVIDER_ID ?? "qikink",
     enabled: process.env.FULFILLMENT_PROVIDER_ENABLED,
     mode: process.env.FULFILLMENT_PROVIDER_MODE,
-    secretReference: process.env.FULFILLMENT_PROVIDER_SECRET_REFERENCE ?? "QIKINK_AUTH_TOKEN",
+    secretReference: process.env.FULFILLMENT_PROVIDER_SECRET_REFERENCE ?? "QIKINK_CLIENT_SECRET",
     timeoutMs: process.env.FULFILLMENT_PROVIDER_TIMEOUT_MS,
   },
 ): FulfillmentProviderConfiguration | null {
