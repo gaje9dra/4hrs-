@@ -52,7 +52,7 @@ The persisted lifecycle remains:
 
 DELIVERED and RETURNED are terminal.
 
-Tracking events may be stored as historical evidence, but canonical state changes must use the explicit transition table. Tracking events can no longer bypass that table through a numeric status-order fallback.
+Tracking events may be stored as historical evidence. Direct Shipment transitions remain governed by the explicit transition table, while normalized tracking evidence may advance canonical state when the event is newer and represents a forward lifecycle state. Terminal states still cannot regress.
 
 Duplicate events remain idempotent. Older events remain history-only and cannot regress a newer canonical state.
 
