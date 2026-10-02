@@ -1,4 +1,5 @@
 import { requireAdmin } from "@/lib/admin/authorization";
+import { AdminError } from "@/lib/admin/errors";
 import { adminErrorResponse, adminJson, assertAdminSameOrigin, readAdminJson } from "@/lib/admin/http";
 import { executeAdminOrderAction, type AdminOrderAction } from "@/lib/admin/orders";
 
@@ -37,7 +38,7 @@ export async function POST(request:Request,{params}:{params:Promise<{orderId:str
     const context=await requireAdmin(request);
     const body=await readAdminJson(request);
     let input:AdminOrderAction;
-    try{input=actionBody(body);}catch{throw new (await import("@/lib/admin/errors")).AdminError("INVALID_REQUEST","Order action request is invalid.");}
+    try{input=actionBody(body);}catch{throw new AdminError("INVALID_REQUEST","Order action request is invalid.");}
     return adminJson(await executeAdminOrderAction(context,(await params).orderId,input,request));
   }catch(error){return adminErrorResponse(error);}
 }
