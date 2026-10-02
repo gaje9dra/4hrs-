@@ -59,14 +59,12 @@ export async function POST(request: Request) {
     const providerConfiguration = loadFulfillmentProviderConfiguration();
     let fulfillment: { id: string; status: string } | null = null;
     if (providerConfiguration?.enabled) {
-      try {
+      if (result.status === "PENDING") {
         await application.transitionOrderLifecycle({
           orderId: result.id,
           expectedStatus: "PENDING",
           nextStatus: "CONFIRMED",
         });
-      } catch (error) {
-        if (!(error instanceof Error) || !/current state|terminal|concurrently/i.test(error.message)) throw error;
       }
 
       try {
@@ -76,24 +74,16 @@ export async function POST(request: Request) {
         });
         const submitted = await fulfillmentApplication.submitFulfillment({ fulfillmentId: created.id });
         fulfillment = { id: submitted.id, status: submitted.status };
-      } catch (error) {
+      } catch {
         // The Order remains authoritative. The fulfillment service persists
         // retryable/ambiguous provider failures independently of payment/order state.
-        console.error("Order fulfillment submission failed.", {
-          orderId: result.id,
-          error: error instanceof Error ? error.message : "unknown_error",
-        });
       }
     } else if (result.status === "PENDING") {
-      try {
-        await application.transitionOrderLifecycle({
-          orderId: result.id,
-          expectedStatus: "PENDING",
-          nextStatus: "CONFIRMED",
-        });
-      } catch (error) {
-        if (!(error instanceof Error) || !/current state|terminal|concurrently/i.test(error.message)) throw error;
-      }
+      await application.transitionOrderLifecycle({
+        orderId: result.id,
+        expectedStatus: "PENDING",
+        nextStatus: "CONFIRMED",
+      });
     }
 
     return orderJson({
