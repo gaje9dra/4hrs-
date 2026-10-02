@@ -87,12 +87,6 @@ test("administrative identifier validation rejects malformed IDs before database
 test("admin authorization context carries a bounded correlation ID", async () => {
   const f = await fixture("VIEWER");
   try {
-    const request = new Request("https://4hrs.test/admin", {
-      headers: {
-        cookie: `customer_session=${(await db.customerSession.findUnique({ where: { id: f.session.id } })) ? "test-token-placeholder" : "test-token-placeholder"}`,
-        "x-request-id": "phase14-correlation-test",
-      },
-    });
     const context = await requireAdmin(new Request("https://4hrs.test/admin", {
       headers: {
         cookie: f.request().headers.get("cookie")!,
