@@ -1478,7 +1478,7 @@ export function createCatalogService(
 
     async isPublishable(id: string) {
       const readiness = await lifecycle.validatePublicationReadiness(id);
-      if (readiness.length || Object.keys(customRepository).length > 0) return readiness;
+      if (readiness.issues.length || Object.keys(customRepository).length > 0) return readiness;
       const variants = await repo.getVariantsByProduct(id);
       const mappings = createFulfillmentProviderMappingRepository();
       const missing = [];
@@ -1488,7 +1488,7 @@ export function createCatalogService(
           missing.push({ field: "variants", code: "QIKINK_MAPPING_REQUIRED", message: "Every active ProductVariant requires an active Qikink provider mapping before publication." });
         }
       }
-      return missing;
+      return { publishable: missing.length === 0, issues: missing };
     },
   };
 
