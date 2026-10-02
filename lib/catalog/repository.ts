@@ -15,6 +15,7 @@ export type CatalogSortField = keyof typeof CATALOG_SORT_FIELDS | "merchandising
 export type SortDirection = "asc" | "desc";
 
 export type CatalogListFilters = {
+  search?: string;
   status?: "DRAFT" | "ACTIVE" | "ARCHIVED";
   categoryId?: string;
   collectionId?: string;
@@ -104,6 +105,11 @@ function normalizeOffset(offset?: number): number {
 
 function buildListWhere(filters: CatalogListFilters = {}): Prisma.ProductWhereInput {
   const where: Prisma.ProductWhereInput = {};
+  if (filters.search) where.OR = [
+    { title: { contains: filters.search, mode: "insensitive" } },
+    { slug: { contains: filters.search, mode: "insensitive" } },
+    { description: { contains: filters.search, mode: "insensitive" } },
+  ];
   if (filters.status) where.status = filters.status;
   if (filters.categoryId) where.categories = { some: { categoryId: filters.categoryId } };
   if (filters.collectionId) where.collections = { some: { collectionId: filters.collectionId } };
