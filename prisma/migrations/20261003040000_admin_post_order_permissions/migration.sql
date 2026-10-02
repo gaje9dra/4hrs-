@@ -4,6 +4,7 @@ SELECT gen_random_uuid(), v.key, v.description
 FROM (VALUES
 ('cancellation.read','Read cancellation requests and history'),('cancellation.approve','Approve or reject cancellation requests'),('cancellation.execute','Execute a supported cancellation through the canonical domain'),('cancellation.audit.read','Read cancellation administrative audit history'),
 ('return.read','Read return requests and eligibility'),('return.review','Review return requests'),('return.approve','Approve return requests'),('return.reject','Reject return requests'),('return.inspect','Inspect received returns'),('return.resolve','Resolve returns through the canonical Return domain'),('return.shipment.manage','Manage supported Return Shipment operations'),('return.refund','Invoke Payment refunds as part of a supported return resolution'),('return.audit.read','Read return administrative audit history'),
+('case.read','Read operational customer cases'),
 ('case.create','Create operational customer cases'),('case.update','Update operational case state and priority'),('case.assign','Assign operational cases'),('case.respond','Send authorized customer-visible case communication'),('case.resolve','Resolve or close operational cases'),('case.reopen','Reopen operational cases where supported'),('case.audit.read','Read case audit history')
 ) AS v(key,description) WHERE NOT EXISTS (SELECT 1 FROM "AdminPermission" p WHERE p.key=v.key);
 
