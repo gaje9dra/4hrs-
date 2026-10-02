@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { Prisma, type PrismaClient } from "@prisma/client";
 import { db } from "@/lib/db/client";
 import {
   assertFulfillmentEligibleForShipment,
@@ -8,7 +8,7 @@ import {
   isShipmentStatus,
 } from "@/lib/shipping/domain";
 import { ShippingDomainError } from "@/lib/shipping/errors";
-import { createShippingRepository, type ShippingRepositoryClient, type ShippingRepository } from "@/lib/shipping/repository";
+import { createShippingRepository, type ShippingRepository } from "@/lib/shipping/repository";
 import type {
   CustomerShipmentDto,
   NormalizedTrackingEvent,
@@ -21,7 +21,6 @@ export type ShippingApplicationDependencies = Readonly<{
   providerResolver?: ShippingProviderResolver;
 }>;
 
-type PrismaClient = import("@prisma/client").PrismaClient;
 
 export type ShippingApplicationService = Readonly<{
   createShipmentFromFulfillment(input: {
@@ -223,7 +222,8 @@ export function createShippingApplication(
         });
 
         if (!persisted.created) {
-          throw new ShippingDomainError("TRACKING_EVENT_DUPLICATE", "Tracking event has already been processed.");
+          logShippingObservation({ operation: "tracking-event", shipmentId: shipment.id, providerId: input.event.providerId, result: "duplicate" });
+          return shipment;
         }
 
         const refreshed = await txRepository.getShipmentById(shipment.id);
