@@ -196,6 +196,7 @@ export function createCatalogLifecycleService(
         latest.status,
         target,
         tx,
+        expectedUpdatedAt,
       );
       if (!updated) {
         throw new CatalogServiceError(
