@@ -27,5 +27,5 @@ FROM "AdminRole" r
 JOIN "AdminPermission" p ON p.key = 'catalog.read'
 WHERE r.name IN ('OPERATIONS','VIEWER')
   AND NOT EXISTS (
-    SELECT 1 FROM "AdminRolePermission" rp WHERE rp.roleId = r.id AND rp.permissionId = p.id
+    SELECT 1 FROM "AdminRolePermission" rp WHERE rp."roleId" = r.id AND rp."permissionId" = p.id
   );
