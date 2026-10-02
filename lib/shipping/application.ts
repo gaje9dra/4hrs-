@@ -131,6 +131,18 @@ export function createShippingApplication(
       );
     }
 
+    const trackingInput = {
+      shipmentId: input.shipmentId,
+      providerId: input.event.providerId,
+      providerEventId: input.event.providerEventId,
+      providerStatus: input.event.providerStatus,
+      normalizedStatus: input.event.normalizedStatus,
+      eventTimestamp: input.event.eventTimestamp,
+      location: input.event.location,
+      description: input.event.description,
+      source: "PROVIDER" as const,
+    };
+
     try {
       return await database.$transaction(async (tx) => {
         const txRepository = createShippingRepository(tx);
@@ -219,17 +231,7 @@ export function createShippingApplication(
           throw new ShippingDomainError("INVALID_TRACKING_EVENT", "Tracking event provider does not match the Shipment provider.");
         }
 
-        const persisted = await txRepository.createTrackingEventIfNew({
-          shipmentId: shipment.id,
-          providerId: input.event.providerId,
-          providerEventId: input.event.providerEventId,
-          providerStatus: input.event.providerStatus,
-          normalizedStatus: input.event.normalizedStatus,
-          eventTimestamp: input.event.eventTimestamp,
-          location: input.event.location,
-          description: input.event.description,
-          source: "PROVIDER",
-        });
+        const persisted = await txRepository.createTrackingEventIfNew(trackingInput);
 
         if (!persisted.created) {
           logShippingObservation({ operation: "tracking-event", shipmentId: shipment.id, providerId: input.event.providerId, result: "duplicate" });
@@ -277,6 +279,21 @@ export function createShippingApplication(
       }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
     } catch (error) {
       if (error instanceof ShippingDomainError) throw error;
+      if (isUniqueConflict(error)) {
+        const existingEvent = await repository.findTrackingEventByInput(trackingInput);
+        if (existingEvent) {
+          const current = await repository.getShipmentById(input.shipmentId);
+          if (current) {
+            logShippingObservation({
+              operation: "tracking-event",
+              shipmentId: current.id,
+              providerId: input.event.providerId,
+              result: "duplicate",
+            });
+            return current;
+          }
+        }
+      }
       throw new ShippingDomainError(
         "SHIPMENT_CONCURRENCY_CONFLICT",
         "Tracking event processing conflicted with another operation.",
