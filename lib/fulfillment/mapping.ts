@@ -48,6 +48,12 @@ export function createFulfillmentProviderMappingRepository(client?: ProviderMapp
         where: { providerId_providerSku: { providerId: normalize(providerId, "providerId"), providerSku: normalizeSku(providerSku) } },
       });
     },
+    getVariantPublicationState(variantId: string) {
+      return database.productVariant.findUnique({
+        where: { id: variantId },
+        select: { id: true, product: { select: { status: true } } },
+      });
+    },
     async upsert(input: {
       variantId: string;
       providerId: string;
