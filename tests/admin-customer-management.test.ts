@@ -31,7 +31,7 @@ test("display names are bounded and normalized",()=>{
 });
 
 test("customer admin response code does not select credentials or sessions",()=>{
- const fs=require("node:fs");
+ const fs=await import("node:fs");
  const source=fs.readFileSync("lib/admin/customer-detail.ts","utf8");
  assert.doesNotMatch(source,/passwordHash|sessionTokenHash|resetToken|oauth/i);
 });
