@@ -1,5 +1,5 @@
 import { requireAdmin } from "@/lib/admin/authorization";
-import { adminErrorResponse, adminJson, assertAdminSameOrigin, readAdminJson } from "@/lib/admin/http";
+import { adminCatalogErrorResponse, adminErrorResponse, adminJson, assertAdminSameOrigin, readAdminJson } from "@/lib/admin/http";
 import { isValidAdminId } from "@/lib/admin/http";
 import { createCatalogProduct, createCatalogCategory, createCatalogCollection, listCatalogProducts, listCatalogCategories, listCatalogCollections } from "@/lib/admin/catalog";
 import type { CatalogSortField, SortDirection } from "@/lib/catalog/repository";
@@ -61,7 +61,7 @@ export async function GET(request: Request) {
     return badRequest("Unsupported catalog resource.");
   } catch (error) {
     if (error instanceof Error && ["INVALID_PAGINATION","INVALID_SORT","INVALID_FILTER"].includes(error.message)) return badRequest("Catalog query parameters are invalid.");
-    return adminErrorResponse(error);
+    return adminCatalogErrorResponse(error);
   }
 }
 
