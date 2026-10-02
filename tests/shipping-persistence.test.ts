@@ -107,8 +107,7 @@ test("Shipment persistence enforces Fulfillment and Order consistency", async ()
     () => repository.createShipment({
       orderId: randomUUID(),
       fulfillmentId: fulfillment.id,
-      shipmentReference: `SHP-${randomUUID()}`,
-      providerId: "qikink",
+        providerId: "qikink",
     }),
     /Shipment Order does not match the Fulfillment Order/,
   );
