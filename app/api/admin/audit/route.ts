@@ -7,7 +7,7 @@ export const revalidate = 0;
 
 export async function GET(request: Request) {
   try {
-    const context = await requireAdmin(request, "admin.audit.read");
+    await requireAdmin(request, "admin.audit.read");
     const q = new URL(request.url).searchParams;
     const raw = Number(q.get("limit") ?? "50");
     if (!Number.isInteger(raw) || raw < 1 || raw > 100) {
@@ -17,7 +17,6 @@ export async function GET(request: Request) {
     if (cursor && !isValidAdminId(cursor)) {
       return adminJson({ error: { code: "INVALID_REQUEST", message: "Cursor is invalid." } }, { status: 400 });
     }
-    void context;
     return adminJson(await listAdminAudit(raw, cursor));
   } catch (error) { return adminErrorResponse(error); }
 }
