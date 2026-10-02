@@ -9,7 +9,7 @@ export const ADMIN_PERMISSIONS = [
   "cases.read","case.read","case.create","case.update","case.assign","case.respond","case.resolve","case.reopen","case.audit.read","cases.manage",
   "analytics.read","analytics.financial.read","analytics.operations.read","analytics.customer.read",
   "admin.users.read","admin.users.manage","admin.audit.read",
-  "analytics.financial.read","analytics.customer.read","system.settings.read","system.settings.manage",
+  "system.settings.read","system.settings.manage",
 ] as const;
 export type AdminPermission = typeof ADMIN_PERMISSIONS[number];
 export const ADMIN_ROLES = ["SUPER_ADMIN","ADMIN","OPERATIONS","VIEWER"] as const;
