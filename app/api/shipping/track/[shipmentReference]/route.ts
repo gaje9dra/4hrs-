@@ -1,4 +1,5 @@
 import { requireCurrentCustomer } from "@/lib/auth/context";
+import { isAuthenticationError } from "@/lib/auth/errors";
 import { createInMemoryAuthenticationRateLimiter } from "@/lib/auth/rate-limit";
 import { createShippingApplication } from "@/lib/shipping/application";
 import { trackingErrorResponse, trackingJson, trackingMethodNotAllowed } from "@/lib/shipping/tracking-http";
@@ -45,7 +46,7 @@ export async function GET(
     return trackingJson({ shipment: data });
   } catch (error) {
     logCustomerTrackingRequest({
-      result: error instanceof Error && "code" in error ? "unauthorized" : "failure",
+      result: isAuthenticationError(error) ? "unauthorized" : "failure",
       durationMs: Date.now() - startedAt,
     });
     return trackingErrorResponse(error);
