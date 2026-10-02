@@ -5,7 +5,7 @@ export const ADMIN_PERMISSIONS = [
   "fulfillment.read","fulfillment.view_sensitive","fulfillment.create","fulfillment.submit","fulfillment.retry","fulfillment.reconcile","fulfillment.cancel","fulfillment.provider.manage","fulfillment.audit.read","fulfillment.manage",
   "shipping.read","shipping.view_sensitive","shipping.create","shipping.reconcile","shipping.recovery","shipping.tracking.read","shipping.audit.read","shipping.manage",
   "returns.read","returns.manage","cancellation.read","cancellation.approve","cancellation.execute","cancellation.audit.read","return.read","return.review","return.approve","return.reject","return.inspect","return.resolve","return.shipment.manage","return.refund","return.audit.read",
-  "customers.read","customers.manage",
+  "customers.read","customers.search","customers.update","customers.status.manage","customers.address.read","customers.financial.read","customers.case.read","customers.case.create","customers.audit.read","customers.manage",
   "cases.read","case.read","case.create","case.update","case.assign","case.respond","case.resolve","case.reopen","case.audit.read","cases.manage",
   "analytics.read","analytics.financial.read","analytics.operations.read","analytics.customer.read",
   "admin.users.read","admin.users.manage","admin.audit.read",
@@ -17,7 +17,7 @@ export type AdminRoleName = typeof ADMIN_ROLES[number];
 export const HIGH_RISK_ADMIN_PERMISSIONS = new Set<AdminPermission>([
   "payments.refund","payments.refund_partial","payments.verify","payments.capture","payments.reconcile","payments.retry",
   "fulfillment.submit","fulfillment.retry","fulfillment.reconcile","fulfillment.cancel","fulfillment.provider.manage",
-  "customers.manage","shipping.create","cancellation.execute","return.resolve","return.shipment.manage","return.refund","case.resolve","case.assign","shipping.reconcile","shipping.recovery","shipping.manage","admin.users.manage","system.settings.manage",
+  "customers.manage","customers.status.manage","customers.update","shipping.create","cancellation.execute","return.resolve","return.shipment.manage","return.refund","case.resolve","case.assign","shipping.reconcile","shipping.recovery","shipping.manage","admin.users.manage","system.settings.manage",
 ]);
 export function isAdminPermission(value: unknown): value is AdminPermission {
   return typeof value === "string" && (ADMIN_PERMISSIONS as readonly string[]).includes(value);
