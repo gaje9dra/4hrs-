@@ -72,9 +72,9 @@ export async function POST(request: Request) {
     const context = await requireAdmin(request, resource === "categories" ? "catalog.category.manage" : resource === "collections" ? "catalog.collection.manage" : "catalog.create");
     assertAdminSameOrigin(request);
     const body = await readAdminJson(request);
-    if (resource === "categories") return adminJson({ category: await createCatalogCategory(context, body as never) }, { status: 201 });
-    if (resource === "collections") return adminJson({ collection: await createCatalogCollection(context, body as never) }, { status: 201 });
-    return adminJson({ product: await createCatalogProduct(context, body as never) }, { status: 201 });
+    if (resource === "categories") return adminJson({ category: await createCatalogCategory(context, body as unknown as Parameters<typeof createCatalogCategory>[1]) }, { status: 201 });
+    if (resource === "collections") return adminJson({ collection: await createCatalogCollection(context, body as unknown as Parameters<typeof createCatalogCollection>[1]) }, { status: 201 });
+    return adminJson({ product: await createCatalogProduct(context, body as unknown as Parameters<typeof createCatalogProduct>[1]) }, { status: 201 });
   } catch (error) { return adminErrorResponse(error); }
 }
 
@@ -85,6 +85,6 @@ export async function PATCH(request: Request) {
     const body = await readAdminJson(request);
     if (typeof body.id !== "string" || !isValidAdminId(body.id)) return badRequest("Product ID is invalid.");
     const { id, ...patch } = body;
-    return adminJson({ product: await import("@/lib/admin/catalog").then((m) => m.updateCatalogProduct(context, { id, ...(patch as never) })) });
+    return adminJson({ product: await import("@/lib/admin/catalog").then((m) => m.updateCatalogProduct(context, { id, ...(patch as Record<string, unknown>) } as Parameters<typeof updateCatalogProduct>[1])) });
   } catch (error) { return adminErrorResponse(error); }
 }
