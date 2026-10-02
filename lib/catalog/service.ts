@@ -152,6 +152,7 @@ export type CreateProductInput = ProductInput & {
 
 export type UpdateProductInput = Partial<Omit<ProductInput, "id">> & {
   id: string;
+  expectedUpdatedAt?: string;
   categoryIds?: string[];
   collectionIds?: string[];
   tagIds?: string[];
