@@ -654,7 +654,7 @@ model FulfillmentOperationIdempotency {
   status         FulfillmentOperationStatus  @default(PENDING)
   createdAt      DateTime                    @default(now())
   updatedAt      DateTime                    @updatedAt
-  fulfillment    Fulfillment                 @relation(fields: [fulfillmentId], references: [id], onDelete: Restrict)
+  fulfillment    Fulfillment                 @relation(fields: [fulfillmentId], references: [id], onDelete: Cascade)
   @@index([fulfillmentId, operation, createdAt])
   @@index([fulfillmentId, status, updatedAt])
 }
