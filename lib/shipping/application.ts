@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { db } from "@/lib/db/client";
 import {
@@ -93,6 +94,7 @@ export function createShippingApplication(
     orderId: string;
     idempotencyKey?: string;
   }) {
+    const correlationId = randomUUID();
     const idempotencyKey = input.idempotencyKey?.trim() || `fulfillment-${input.fulfillmentId}-shipment`;
     validateIdempotencyKey(idempotencyKey);
 
@@ -189,6 +191,7 @@ export function createShippingApplication(
           orderId: current.orderId,
           providerId: current.provider,
           result: "success",
+          correlationId,
         });
         return created;
           }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
@@ -205,6 +208,22 @@ export function createShippingApplication(
       }
       throw new Error("Shipment transaction retry limit reached.");
     } catch (error) {
+      logShippingObservation({
+        operation: "shipment-create",
+        fulfillmentId: input.fulfillmentId,
+        orderId: input.orderId,
+        result: "failure",
+        errorCode: error instanceof ShippingDomainError ? error.code : "SHIPMENT_CONCURRENCY_CONFLICT",
+        correlationId,
+      });
+      logShippingObservation({
+        operation: "tracking-event",
+        shipmentId: input.shipmentId,
+        providerId: input.event.providerId,
+        result: "failure",
+        errorCode: error instanceof ShippingDomainError ? error.code : "SHIPMENT_CONCURRENCY_CONFLICT",
+        correlationId,
+      });
       if (error instanceof ShippingDomainError) throw error;
       if (isUniqueConflict(error)) {
         const raced = await repository.getShipmentByCreationIdempotencyKey(idempotencyKey);
@@ -222,6 +241,7 @@ export function createShippingApplication(
     shipmentId: string;
     event: NormalizedTrackingEvent;
   }) {
+    const correlationId = randomUUID();
     if (!isShipmentStatus(input.event.normalizedStatus)) {
       throw new ShippingDomainError("UNSUPPORTED_PROVIDER_STATUS", "Provider event normalized to an unsupported Shipment status.");
     }
@@ -289,6 +309,7 @@ export function createShippingApplication(
             result: "history-only",
             from: shipment.status,
             to: input.event.normalizedStatus,
+            correlationId,
           });
           return refreshed;
         }
@@ -320,6 +341,7 @@ export function createShippingApplication(
               shipmentId: current.id,
               providerId: input.event.providerId,
               result: "duplicate",
+              correlationId,
             });
             return current;
           }
@@ -383,6 +405,7 @@ export function createShippingApplication(
       throw new ShippingDomainError("SHIPMENT_IDEMPOTENCY_CONFLICT", "Recovery idempotency key is invalid.");
     }
 
+    const correlationId = randomUUID();
     const authorized = await authorizeOperationalRecovery({ shipmentId: input.shipmentId, operatorId });
     if (!authorized) {
       throw new ShippingDomainError("UNAUTHORIZED_SHIPMENT_ACCESS", "Operational shipment recovery is not authorized.");
@@ -424,6 +447,7 @@ export function createShippingApplication(
         fulfillmentId: updated.fulfillmentId,
         providerId: updated.providerId,
         result: "reconciliation-required",
+        correlationId,
       });
       return updated;
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
