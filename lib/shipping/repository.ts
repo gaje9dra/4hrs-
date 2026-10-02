@@ -97,6 +97,7 @@ export interface ShippingRepository {
   transitionStatus(input: { id: string; expectedStatus: PrismaShipmentStatus; nextStatus: PrismaShipmentStatus; shippedAt?: Date | null; deliveredAt?: Date | null }): Promise<ShipmentWithEvents | null>;
   transitionFromTrackingEvent(input: { id: string; expectedStatus: PrismaShipmentStatus; nextStatus: PrismaShipmentStatus; eventTimestamp: Date }): Promise<ShipmentWithEvents | null>;
   createTrackingEventIfNew(input: CreateTrackingEventInput): Promise<{ event: TrackingEventRecord; created: boolean }>;
+  findTrackingEventByInput(input: CreateTrackingEventInput): Promise<TrackingEventRecord | null>;
   createTrackingEvent(input: CreateTrackingEventInput): Promise<TrackingEventRecord | null>;
   listTrackingEvents(shipmentId: string, options?: { limit?: number; cursor?: string }): Promise<TrackingEventRecord[]>;
   findTrackingEventByProviderEventId(shipmentId: string, providerId: string, providerEventId: string): Promise<TrackingEventRecord | null>;
@@ -285,7 +286,7 @@ export function createShippingRepository(client?: ShippingRepositoryClient): Shi
       return database.shipment.findUnique({ where: { id: input.id }, include: shipmentInclude() });
     },
 
-    async createTrackingEventIfNew(input: CreateTrackingEventInput): Promise<{ event: Awaited<ReturnType<typeof database.trackingEvent.create>>; created: boolean }> {
+    async createTrackingEventIfNew(input: CreateTrackingEventInput): Promise<{ event: TrackingEventRecord; created: boolean }> {
       nonEmpty(input.shipmentId, "shipmentId");
       nonEmpty(input.providerId, "providerId");
       const shipment = await database.shipment.findUnique({
@@ -294,38 +295,33 @@ export function createShippingRepository(client?: ShippingRepositoryClient): Shi
       });
       if (!shipment) throw new Error("Shipment not found.");
 
-      const key = deduplicationKey(input);
-      try {
-        const event = await database.trackingEvent.create({
-          data: {
+      const event = await database.trackingEvent.create({
+        data: {
+          shipmentId: input.shipmentId,
+          providerId: input.providerId,
+          providerEventId: input.providerEventId?.trim() || null,
+          deduplicationKey: deduplicationKey(input),
+          providerStatus: input.providerStatus?.trim() || null,
+          normalizedStatus: input.normalizedStatus,
+          eventTimestamp: input.eventTimestamp,
+          location: input.location?.trim() || null,
+          description: input.description?.trim() || null,
+          source: input.source,
+        },
+      });
+      return { event, created: true };
+    },
+
+    findTrackingEventByInput(input: CreateTrackingEventInput): Promise<TrackingEventRecord | null> {
+      return database.trackingEvent.findUnique({
+        where: {
+          shipmentId_providerId_deduplicationKey: {
             shipmentId: input.shipmentId,
             providerId: input.providerId,
-            providerEventId: input.providerEventId?.trim() || null,
-            deduplicationKey: key,
-            providerStatus: input.providerStatus?.trim() || null,
-            normalizedStatus: input.normalizedStatus,
-            eventTimestamp: input.eventTimestamp,
-            location: input.location?.trim() || null,
-            description: input.description?.trim() || null,
-            source: input.source,
+            deduplicationKey: deduplicationKey(input),
           },
-        });
-        return { event, created: true };
-      } catch (error) {
-        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-          const event = await database.trackingEvent.findUnique({
-            where: {
-              shipmentId_providerId_deduplicationKey: {
-                shipmentId: input.shipmentId,
-                providerId: input.providerId,
-                deduplicationKey: key,
-              },
-            },
-          });
-          if (event) return { event, created: false };
-        }
-        throw error;
-      }
+        },
+      });
     },
 
     async createTrackingEvent(input: CreateTrackingEventInput) {
