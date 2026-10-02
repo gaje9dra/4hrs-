@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { AuthenticationError, isAuthenticationError } from "@/lib/auth/errors";
+import { isAuthenticationError } from "@/lib/auth/errors";
 import { ShippingDomainError } from "@/lib/shipping/errors";
 
 export function trackingJson<T>(data: T, init: ResponseInit = {}) {
