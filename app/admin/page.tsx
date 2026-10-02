@@ -35,7 +35,7 @@ export default function AdminCatalogPage() {
     event.preventDefault();
     setMessage("");
     try {
-      await api("/api/admin/catalog", {
+      const created = await api("/api/admin/catalog", {
         method: "POST",
         body: JSON.stringify({
           title,
@@ -47,21 +47,24 @@ export default function AdminCatalogPage() {
           compareAtPrice: null,
           currency: "INR",
           seoTitle: title,
-          seoDescription: "",
-          variants: [{
-            productId: "00000000-0000-0000-0000-000000000000",
-            sku,
-            displayName: sku,
-            size: null,
-            color: null,
-            status: "ACTIVE",
-            price: null,
-            compareAtPrice: null
-          }]
+          seoDescription: ""
+        })
+      });
+      await api("/api/admin/catalog/variants", {
+        method: "POST",
+        body: JSON.stringify({
+          productId: created.product.id,
+          sku,
+          displayName: sku,
+          size: null,
+          color: null,
+          status: "ACTIVE",
+          price: null,
+          compareAtPrice: null
         })
       });
       setTitle(""); setSlug(""); setPrice(""); setSku("");
-      setMessage("Product created. Add the Qikink mapping below before publishing.");
+      setMessage("Product and variant created. Add the Qikink mapping before publishing.");
       await load();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Unable to create product.");
