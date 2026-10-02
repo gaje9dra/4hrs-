@@ -26,7 +26,7 @@ export async function GET(request: Request) {
     const rawStatus = url.searchParams.get("status");
     const status = rawStatus === "DRAFT" || rawStatus === "ACTIVE" || rawStatus === "ARCHIVED" ? rawStatus : undefined;
     const result = await catalog.listProducts({ filters: { status }, limit: 100, offset: 0 });
-    const items = await Promise.all(result.items.map((item) => catalog.getProductWithVariants(item.id)));
+    const items = (await Promise.all(result.items.map((item) => item ? catalog.getProductWithVariants(item.id) : null))).filter((item): item is NonNullable<typeof item> => item !== null);
     return json({ ...result, items });
   } catch (error) {
     return errorResponse(error);
