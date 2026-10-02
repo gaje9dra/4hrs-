@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import * as fs from "node:fs";
 import { parseAdminCustomerQuery } from "@/lib/admin/customer-query";
 import { assertCustomerStatusTransition, normalizeCustomerDisplayName } from "@/lib/customer/domain";
 
@@ -31,7 +32,7 @@ test("display names are bounded and normalized",()=>{
 });
 
 test("customer admin response code does not select credentials or sessions",()=>{
- const fs=await import("node:fs");
+
  const source=fs.readFileSync("lib/admin/customer-detail.ts","utf8");
  assert.doesNotMatch(source,/passwordHash|sessionTokenHash|resetToken|oauth/i);
 });
