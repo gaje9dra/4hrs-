@@ -14,6 +14,7 @@ export async function GET(request: Request, context: { params: Promise<{ product
     const { productId } = await context.params;
     return Response.json({ product: await catalog.getProductDetails(productId) }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
+    if (error instanceof AdminError) return adminErrorResponse(error);
     if (error instanceof CatalogServiceError) return Response.json({ error: error.message }, { status: 400 });
     return authErrorResponse(error);
   }
