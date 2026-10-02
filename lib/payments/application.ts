@@ -327,16 +327,22 @@ export function createPaymentApplication(
       refund = await repository.updatePaymentRefund({ id: refund.id, status: "FAILED", failureCode: "REFUND_UNSUPPORTED" });
       throw new PaymentError("PROVIDER_UNAVAILABLE", "The configured payment provider does not support refunds.");
     }
+    let providerConfirmed = false;
     try {
       const result = await adapter.refundPayment({ providerPaymentReference: payment.providerReference, paymentReference: payment.internalReference, amount: { value: amount.toFixed(2), currency: payment.currency } });
       if (result.providerId !== adapter.id) throw new PaymentError("PROVIDER_CONFIGURATION_ERROR", "Provider response identity is invalid.");
       if (result.status !== "REFUNDED" && result.status !== "PARTIALLY_REFUNDED") throw new PaymentError("INVALID_STATE_TRANSITION", "Provider did not confirm a valid refund state.");
+      providerConfirmed = true;
       refund = await repository.withTransaction(async (tx) => {
         const updatedRefund = await tx.updatePaymentRefund({ id: refund.id, status: "SUCCEEDED", providerId: result.providerId, providerReference: result.providerPaymentReference, completedAt: new Date() });
-        await tx.updatePaymentStatus(payment.id, asPrismaStatus(payment.status), asPrismaStatus(result.status));
+        if (result.status !== payment.status) await tx.updatePaymentStatus(payment.id, asPrismaStatus(payment.status), asPrismaStatus(result.status));
         return updatedRefund;
       });
     } catch (error) {
+      if (providerConfirmed) {
+        refund = await repository.updatePaymentRefund({ id: refund.id, status: "AMBIGUOUS", failureCode: "LOCAL_FINALIZATION_FAILED" });
+        throw new PaymentError("PAYMENT_INTERNAL_ERROR", "The provider accepted the refund but local state could not be finalized; reconcile the payment before retrying.", { cause: error });
+      }
       if (error instanceof PaymentError) {
         refund = await repository.updatePaymentRefund({ id: refund.id, status: "FAILED", failureCode: error.code });
         throw error;
