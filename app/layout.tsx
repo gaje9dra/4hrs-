@@ -11,7 +11,7 @@ import { organizationJsonLd, websiteJsonLd, serializeJsonLd } from '@/lib/seo/st
 const outfit = Outfit({ subsets: ['latin'], weight: '400', variable: '--font-outfit', display: 'swap' })
 
 export const metadata: Metadata = {
-  metadataBase: getSiteOrigin(),
+  metadataBase: process.env.NEXT_PUBLIC_SITE_URL ? getSiteOrigin() : undefined,
   title: { default: '4HRS — Modern Fashion, Geometric by Design', template: '%s | 4HRS' },
   description: siteConfig.description,
   alternates: { canonical: '/' },
