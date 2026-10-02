@@ -48,7 +48,7 @@ export type CatalogLifecycleRepository = {
   getProductById: (id: string, client?: CatalogRepositoryClient) => Promise<{
     id: string;
     status: ProductStatus;
-    updatedAt: Date;
+    updatedAt?: Date;
   } | null>;
   getProductDetails: (id: string, client?: CatalogRepositoryClient) => Promise<CatalogLifecycleProductDetails | null>;
   transitionProductStatus: (id: string, from: ProductStatus, to: ProductStatus, client?: CatalogRepositoryClient, expectedUpdatedAt?: Date) => Promise<{
@@ -171,7 +171,7 @@ export function createCatalogLifecycleService(
 
     return repository.withTransaction(async (tx) => {
       const latest = await repository.getProductById(productId, tx);
-      if (expectedUpdatedAt && (!latest || latest.updatedAt.getTime() !== expectedUpdatedAt.getTime())) {
+      if (expectedUpdatedAt && (!latest || !latest.updatedAt || latest.updatedAt.getTime() !== expectedUpdatedAt.getTime())) {
         throw new CatalogServiceError("CATALOG_CONFLICT", "Product changed concurrently. Refresh before changing lifecycle state.");
       }
       if (!latest) throw new CatalogServiceError("PRODUCT_NOT_FOUND", "Product was not found.");
