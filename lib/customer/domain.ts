@@ -35,12 +35,12 @@ export function parseCustomerStatus(value: unknown): CustomerStatus | undefined 
   return value as CustomerStatus;
 }
 export function parseCustomerSort(value: unknown): CustomerSort {
-  if (value === undefined || value === "") return "createdAt";
+  if (value === undefined || value === null || value === "") return "createdAt";
   if (typeof value !== "string" || !(CUSTOMER_SORT_VALUES as readonly string[]).includes(value)) throw new Error("Customer sort is invalid.");
   return value as CustomerSort;
 }
 export function parseSortDirection(value: unknown): "asc" | "desc" {
-  if (value === undefined || value === "") return "desc";
+  if (value === undefined || value === null || value === "") return "desc";
   if (value !== "asc" && value !== "desc") throw new Error("Customer sort direction is invalid.");
   return value;
 }
