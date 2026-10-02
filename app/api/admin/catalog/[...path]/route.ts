@@ -1,5 +1,5 @@
 import { requireAdmin } from "@/lib/admin/authorization";
-import { adminErrorResponse, adminJson, assertAdminSameOrigin, isValidAdminId, readAdminJson } from "@/lib/admin/http";
+import { adminCatalogErrorResponse, adminErrorResponse, adminJson, assertAdminSameOrigin, isValidAdminId, readAdminJson } from "@/lib/admin/http";
 import {
   getCatalogProduct, updateCatalogProduct,
   publishCatalogProduct, unpublishCatalogProduct, archiveCatalogProduct, restoreCatalogProduct,
@@ -29,7 +29,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ path
       return adminJson({ items: await listVariantProviderMappings(context, p[1]) });
     }
     return bad("Catalog resource is not supported.");
-  } catch (error) { return adminErrorResponse(error); }
+  } catch (error) { return adminCatalogErrorResponse(error); }
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ path: string[] }> }) {
