@@ -1,4 +1,4 @@
-import { Prisma, type PrismaClient, type PaymentStatus, type PaymentEventProcessingStatus } from "@prisma/client";
+import { Prisma, type PrismaClient, type PaymentStatus, type PaymentEventProcessingStatus, type PaymentRefundReason, type PaymentRefundStatus } from "@prisma/client";
 import { db } from "@/lib/db/client";
 
 export type PaymentRepositoryClient = PrismaClient | Prisma.TransactionClient;
@@ -75,8 +75,8 @@ export type PaymentRepository = {
   getPaymentForAdmin(paymentId: string): Promise<PaymentAdminRecord | null>;
   listPaymentsForAdmin(input: { skip: number; take: number; where: Prisma.PaymentWhereInput; orderBy: Prisma.PaymentOrderByWithRelationInput[] }): Promise<{ rows: PaymentAdminRecord[]; total: number }>;
   getRefundByIdempotencyKey(idempotencyKey: string): Promise<PaymentRefundRecord | null>;
-  createPaymentRefund(input: { paymentId: string; idempotencyKey: string; amount: Prisma.Decimal | string; currency: string; reason: Prisma.PaymentRefundReason; note?: string | null }): Promise<PaymentRefundRecord>;
-  updatePaymentRefund(input: { id: string; status: Prisma.PaymentRefundStatus; providerId?: string | null; providerReference?: string | null; failureCode?: string | null; completedAt?: Date | null }): Promise<PaymentRefundRecord>;
+  createPaymentRefund(input: { paymentId: string; idempotencyKey: string; amount: Prisma.Decimal | string; currency: string; reason: PaymentRefundReason; note?: string | null }): Promise<PaymentRefundRecord>;
+  updatePaymentRefund(input: { id: string; status: PaymentRefundStatus; providerId?: string | null; providerReference?: string | null; failureCode?: string | null; completedAt?: Date | null }): Promise<PaymentRefundRecord>;
   getPaymentRefunds(paymentId: string): Promise<PaymentRefundRecord[]>;
   getPaymentsByCustomer(customerId: string): Promise<PaymentRecord[]>;
   getPaymentByCheckout(customerId: string, checkoutReference: string): Promise<PaymentRecord | null>;
