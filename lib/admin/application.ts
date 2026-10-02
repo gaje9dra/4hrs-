@@ -11,10 +11,11 @@ function parseRoles(value: unknown): AdminRoleName[] {
   if (!Array.isArray(value) || value.length > 4 || value.some((role) => !isAdminRoleName(role))) throw new AdminError("INVALID_REQUEST", "Roles are invalid.");
   return [...new Set(value as AdminRoleName[])];
 }
-function dto(row: any): AdminUserDto {
+type AdminUserWithRelations = Prisma.AdminUserGetPayload<{ include: typeof include }>;
+function dto(row: AdminUserWithRelations): AdminUserDto {
   return {
     id: row.id, customerId: row.customerId, email: row.customer.email, displayName: row.customer.displayName,
-    status: row.status, roles: row.roles.map((x: any) => x.role.name as AdminRoleName), version: row.version,
+    status: row.status, roles: row.roles.map((x) => x.role.name as AdminRoleName), version: row.version,
     lastLoginAt: row.lastLoginAt?.toISOString() ?? null, createdAt: row.createdAt.toISOString(), updatedAt: row.updatedAt.toISOString(),
   };
 }
