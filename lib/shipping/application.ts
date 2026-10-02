@@ -41,6 +41,7 @@ export type ShippingApplicationService = Readonly<{
     payload: unknown;
   }): Promise<Awaited<ReturnType<ShippingRepository["getShipmentById"]>>>;
   getCustomerShipment(input: { shipmentId: string; customerId: string }): Promise<CustomerShipmentDto | null>;
+  getCustomerShipmentByReference(input: { shipmentReference: string; customerId: string }): Promise<CustomerShipmentDto | null>;
   reconcileShipment(input: { shipmentId: string }): Promise<{
     status: "MATCHED" | "RECONCILIATION_REQUIRED" | "PROVIDER_UNSUPPORTED";
     reason?: string;
@@ -59,20 +60,50 @@ function validateIdempotencyKey(key: string): void {
   }
 }
 
-function safeCustomerDto(shipment: NonNullable<Awaited<ReturnType<ShippingRepository["getShipmentById"]>>>): CustomerShipmentDto {
+const CUSTOMER_STATUS_LABELS: Record<import("@/lib/shipping/contracts").ShipmentStatus, string> = {
+  CREATED: "Shipment created",
+  IN_TRANSIT: "In transit",
+  OUT_FOR_DELIVERY: "Out for delivery",
+  DELIVERED: "Delivered",
+  DELIVERY_FAILED: "Delivery issue",
+  RETURNED: "Returned",
+};
+
+function customerStatusLabel(status: import("@/lib/shipping/contracts").ShipmentStatus): string {
+  return CUSTOMER_STATUS_LABELS[status];
+}
+
+function customerEventDescription(status: import("@/lib/shipping/contracts").ShipmentStatus, description: string | null): string {
+  const value = description?.trim();
+  if (value) return value;
+  return customerStatusLabel(status);
+}
+
+function safeCustomerDto(
+  shipment: NonNullable<Awaited<ReturnType<ShippingRepository["getShipmentById"]>>>,
+): CustomerShipmentDto {
+  const events = shipment.trackingEvents.map((event) => ({
+    status: event.normalizedStatus,
+    statusLabel: customerStatusLabel(event.normalizedStatus),
+    occurredAt: event.eventTimestamp.toISOString(),
+    location: event.location,
+    description: customerEventDescription(event.normalizedStatus, event.description),
+  }));
+  const latestEvent = events.length > 0 ? events[events.length - 1] : null;
+
   return {
+    shipmentReference: shipment.shipmentReference,
+    orderReference: shipment.order.orderNumber,
     status: shipment.status,
+    statusLabel: customerStatusLabel(shipment.status),
     carrier: shipment.carrier,
     trackingNumber: shipment.trackingNumber,
     trackingUrl: shipment.trackingUrl,
-    events: shipment.trackingEvents.map((event) => ({
-      status: event.normalizedStatus,
-      occurredAt: event.eventTimestamp.toISOString(),
-      location: event.location,
-      description: event.description,
-    })),
+    events,
+    latestEvent,
     createdAt: shipment.createdAt.toISOString(),
     updatedAt: shipment.updatedAt.toISOString(),
+    shippedAt: shipment.shippedAt?.toISOString() ?? null,
     deliveredAt: shipment.deliveredAt?.toISOString() ?? null,
   };
 }
@@ -388,6 +419,15 @@ export function createShippingApplication(
     return shipment ? safeCustomerDto(shipment) : null;
   }
 
+  async function getCustomerShipmentByReference(input: { shipmentReference: string; customerId: string }): Promise<CustomerShipmentDto | null> {
+    const reference = input.shipmentReference.trim();
+    if (!/^SHP-[A-F0-9]{32}$/i.test(reference)) {
+      throw new ShippingDomainError("SHIPMENT_NOT_FOUND", "Shipment could not be found.");
+    }
+    const shipment = await repository.getShipmentByReference(reference, input.customerId);
+    return shipment ? safeCustomerDto(shipment) : null;
+  }
+
   async function requestShipmentReconciliation(input: {
     shipmentId: string;
     operatorId: string;
@@ -503,6 +543,7 @@ export function createShippingApplication(
     processNormalizedTrackingEvent,
     processProviderTrackingEvent,
     getCustomerShipment,
+    getCustomerShipmentByReference,
     reconcileShipment,
     requestShipmentReconciliation,
   };
