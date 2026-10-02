@@ -7,6 +7,8 @@ export type PaymentRecord = Prisma.PaymentGetPayload<Record<string, never>>;
 export type PaymentAttemptRecord = Prisma.PaymentAttemptGetPayload<Record<string, never>>;
 export type PaymentEventRecord = Prisma.PaymentEventGetPayload<Record<string, never>>;
 export type PaymentIdempotencyRecord = Prisma.PaymentIdempotencyGetPayload<Record<string, never>>;
+export type PaymentRefundRecord = Prisma.PaymentRefundGetPayload<Record<string, never>>;
+export type PaymentAdminRecord = Prisma.PaymentGetPayload<{ include: { customer: true; order: true; attempts: true; events: true; refunds: true } }>;
 
 export type CreatePaymentInput = {
   customerId: string;
@@ -70,6 +72,12 @@ export type PaymentRepository = {
     attempt: CreatePaymentAttemptInput,
   ): Promise<{ payment: PaymentRecord; attempt: PaymentAttemptRecord }>;
   getPaymentById(paymentId: string, customerId: string): Promise<PaymentRecord | null>;
+  getPaymentForAdmin(paymentId: string): Promise<PaymentAdminRecord | null>;
+  listPaymentsForAdmin(input: { skip: number; take: number; where: Prisma.PaymentWhereInput; orderBy: Prisma.PaymentOrderByWithRelationInput[] }): Promise<{ rows: PaymentAdminRecord[]; total: number }>;
+  getRefundByIdempotencyKey(idempotencyKey: string): Promise<PaymentRefundRecord | null>;
+  createPaymentRefund(input: { paymentId: string; idempotencyKey: string; amount: Prisma.Decimal | string; currency: string; reason: Prisma.PaymentRefundReason; note?: string | null }): Promise<PaymentRefundRecord>;
+  updatePaymentRefund(input: { id: string; status: Prisma.PaymentRefundStatus; providerId?: string | null; providerReference?: string | null; failureCode?: string | null; completedAt?: Date | null }): Promise<PaymentRefundRecord>;
+  getPaymentRefunds(paymentId: string): Promise<PaymentRefundRecord[]>;
   getPaymentsByCustomer(customerId: string): Promise<PaymentRecord[]>;
   getPaymentByCheckout(customerId: string, checkoutReference: string): Promise<PaymentRecord | null>;
   getPaymentByInternalReference(internalReference: string): Promise<PaymentRecord | null>;
@@ -205,9 +213,35 @@ export function createPaymentRepository(client?: PaymentRepositoryClient): Payme
     },
 
     getPaymentById(paymentId, customerId) {
-      return database.payment.findFirst({
-        where: { id: paymentId, customerId },
-      });
+      return database.payment.findFirst({ where: { id: paymentId, customerId } });
+    },
+
+    getPaymentForAdmin(paymentId) {
+      return database.payment.findUnique({ where: { id: paymentId }, include: { customer: true, order: true, attempts: true, events: true, refunds: true } });
+    },
+
+    async listPaymentsForAdmin(input) {
+      const [rows,total] = await database.$transaction([
+        database.payment.findMany({ skip: input.skip, take: input.take, where: input.where, orderBy: input.orderBy, include: { customer: true, order: true, attempts: true, events: true, refunds: true } }),
+        database.payment.count({ where: input.where }),
+      ]);
+      return { rows, total };
+    },
+
+    getRefundByIdempotencyKey(idempotencyKey) {
+      return database.paymentRefund.findUnique({ where: { idempotencyKey } });
+    },
+
+    createPaymentRefund(input) {
+      return database.paymentRefund.create({ data: { paymentId: input.paymentId, idempotencyKey: input.idempotencyKey, amount: input.amount, currency: input.currency, reason: input.reason, note: input.note ?? null } });
+    },
+
+    updatePaymentRefund(input) {
+      return database.paymentRefund.update({ where: { id: input.id }, data: { status: input.status, ...(input.providerId !== undefined ? { providerId: input.providerId } : {}), ...(input.providerReference !== undefined ? { providerReference: input.providerReference } : {}), ...(input.failureCode !== undefined ? { failureCode: input.failureCode } : {}), ...(input.completedAt !== undefined ? { completedAt: input.completedAt } : {}) } });
+    },
+
+    getPaymentRefunds(paymentId) {
+      return database.paymentRefund.findMany({ where: { paymentId }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] });
     },
 
     getPaymentsByCustomer(customerId) {
