@@ -4,6 +4,7 @@ import { db } from "@/lib/db/client";
 import type { AdminAuthorizationContext } from "@/lib/admin/authorization";
 
 const MAX_METADATA_BYTES = 16384;
+
 function sanitize(value: unknown, depth = 0): Prisma.JsonValue | undefined {
   if (value === undefined) return undefined;
   if (value === null || typeof value === "string" || typeof value === "boolean") return value;
@@ -22,12 +23,14 @@ function sanitize(value: unknown, depth = 0): Prisma.JsonValue | undefined {
   }
   return String(value);
 }
+
 function safeMetadata(value: unknown): Prisma.InputJsonValue | undefined {
   const safe = sanitize(value);
   if (safe === undefined) return undefined;
   const raw = JSON.stringify(safe);
   return raw.length <= MAX_METADATA_BYTES ? safe as Prisma.InputJsonValue : { truncated: true };
 }
+
 export async function recordAdminAudit(input: {
   actorAdminId?: string | null;
   action: string;
@@ -42,16 +45,21 @@ export async function recordAdminAudit(input: {
     data: {
       id: randomUUID(),
       actorAdminId: input.actorAdminId ?? null,
-      action: input.action.slice(0,120),
-      resourceType: input.resourceType?.slice(0,120),
-      resourceId: input.resourceId?.slice(0,255),
+      action: input.action.slice(0, 120),
+      resourceType: input.resourceType?.slice(0, 120),
+      resourceId: input.resourceId?.slice(0, 255),
       success: input.success,
-      reason: input.reason?.slice(0,1000),
-      correlationId: input.correlationId?.slice(0,128),
+      reason: input.reason?.slice(0, 1000),
+      correlationId: input.correlationId?.slice(0, 128),
       metadata: safeMetadata(input.metadata),
     },
   });
 }
-export async function auditAdminAction(context: AdminAuthorizationContext, input: Omit<Parameters<typeof recordAdminAudit>[0],"actorAdminId">, client: Prisma.TransactionClient | typeof db = db) {
-  return recordAdminAudit({ ...input, actorAdminId: context.adminUser.id }, client);
+
+export async function auditAdminAction(
+  context: AdminAuthorizationContext,
+  input: Omit<Parameters<typeof recordAdminAudit>[0], "actorAdminId" | "correlationId"> & { correlationId?: string | null },
+  client: Prisma.TransactionClient | typeof db = db,
+) {
+  return recordAdminAudit({ ...input, actorAdminId: context.adminUser.id, correlationId: input.correlationId ?? context.correlationId }, client);
 }
