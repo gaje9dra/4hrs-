@@ -6,7 +6,6 @@ import { requireHighRiskReason, requirePermission, type AdminAuthorizationContex
 import { createReturnsApplication } from "@/lib/returns/application";
 import { cancellationEligibility, returnEligibility } from "@/lib/returns/domain";
 
-const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const MAX_PAGE_SIZE=50;
 const SORTS=["createdAt_desc","createdAt_asc","updatedAt_desc","updatedAt_asc"] as const;
 type Sort=typeof SORTS[number];
@@ -24,7 +23,7 @@ function iso(d:Date|null|undefined){return d?.toISOString()??null;}
 function eligibilityForOrder(row:{status:Prisma.OrderGetPayload<{select:{status:true}}>["status"];fulfillment:{status:string}|null;shipments:Array<{status:string;deliveredAt:Date|null;updatedAt:Date}>;payment:{status:string;completedAt:Date|null}}){
  const shipment=row.shipments.slice().sort((a,b)=>b.updatedAt.getTime()-a.updatedAt.getTime())[0]??null;
  const state={orderStatus:row.status,fulfillmentStatus:row.fulfillment?.status??null,hasShipment:row.shipments.length>0,shipmentStatus:shipment?.status??null,deliveredAt:shipment?.deliveredAt??null,paymentSucceeded:row.payment.status==="SUCCEEDED"&&!!row.payment.completedAt};
- return {cancellation:cancellationEligibility(state),return:returnEligibility({...state,now:new Date(),returnWindowDays:Number(process.env.RETURN_WINDOW_DAYS??"7"))};
+ const configured=Number(process.env.RETURN_WINDOW_DAYS??"7");const returnWindowDays=Number.isInteger(configured)&&configured>=0&&configured<=365?configured:7;return {cancellation:cancellationEligibility(state),return:returnEligibility({...state,now:new Date(),returnWindowDays})};
 }
 export type PostOrderQuery={page:number;pageSize:number;search?:string;status?:string;reason?:string;from?:Date;to?:Date;sort:Sort};
 export function parsePostOrderQuery(url:URL):PostOrderQuery{return {page:page(url.searchParams.get("page")),pageSize:pageSize(url.searchParams.get("pageSize")),search:clean(url.searchParams.get("search")),status:clean(url.searchParams.get("status")),reason:clean(url.searchParams.get("reason")), ...range(url),sort:sort(url)};}
