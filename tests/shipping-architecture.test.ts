@@ -11,6 +11,7 @@ import {
 test("Shipment lifecycle allows forward transitions", () => {
   assert.equal(canTransitionShipmentStatus("CREATED", "IN_TRANSIT"), true);
   assert.equal(canTransitionShipmentStatus("CREATED", "DELIVERED"), false);
+  assert.throws(() => assertShipmentTransition("CREATED", "DELIVERED"), /transition .* is not allowed/);
   assert.equal(canTransitionShipmentStatus("IN_TRANSIT", "OUT_FOR_DELIVERY"), true);
   assert.equal(canTransitionShipmentStatus("OUT_FOR_DELIVERY", "DELIVERED"), true);
 });
