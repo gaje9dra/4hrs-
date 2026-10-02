@@ -1,4 +1,3 @@
-import type { Prisma } from "@prisma/client";
 import type { ReturnDto,CancellationDto } from "@/lib/returns/contracts";
 import type { ReturnRecord, CancellationRecord } from "@/lib/returns/repository";
 export function toCancellationDto(x:CancellationRecord):CancellationDto{return {cancellationReference:x.cancellationReference,orderReference:x.order.orderNumber,status:x.status,reason:x.reason,customerDescription:x.customerDescription,requestedAt:x.requestedAt.toISOString(),reviewedAt:x.reviewedAt?.toISOString()??null,completedAt:x.completedAt?.toISOString()??null};}
