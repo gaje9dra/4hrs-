@@ -20,6 +20,7 @@ CREATE TABLE "Shipment" (
   "fulfillmentId" UUID NOT NULL,
   "orderId" UUID NOT NULL,
   "shipmentReference" VARCHAR(120) NOT NULL,
+  "creationIdempotencyKey" VARCHAR(128) NOT NULL,
   "providerId" VARCHAR(64) NOT NULL,
   "providerReference" VARCHAR(255),
   "carrier" VARCHAR(120),
@@ -35,6 +36,7 @@ CREATE TABLE "Shipment" (
 );
 
 CREATE UNIQUE INDEX "Shipment_shipmentReference_key" ON "Shipment"("shipmentReference");
+CREATE UNIQUE INDEX "Shipment_creationIdempotencyKey_key" ON "Shipment"("creationIdempotencyKey");
 CREATE INDEX "Shipment_fulfillmentId_createdAt_idx" ON "Shipment"("fulfillmentId", "createdAt");
 CREATE INDEX "Shipment_orderId_createdAt_idx" ON "Shipment"("orderId", "createdAt");
 CREATE UNIQUE INDEX "Shipment_providerId_providerReference_key" ON "Shipment"("providerId", "providerReference");
