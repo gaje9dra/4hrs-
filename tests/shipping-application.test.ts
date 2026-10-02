@@ -111,6 +111,48 @@ test("Fulfillment -> Shipment handoff requires submitted fulfillment and trusted
   assert.equal(repeated?.id, shipment?.id);
 });
 
+test("Customer tracking uses a safe shipment reference and enforces order ownership", async () => {
+  const { customer, order, fulfillment } = await fixture("SUBMITTED");
+  const other = await db.customer.create({
+    data: { email: `${randomUUID()}@shipping-domain.invalid`, displayName: "Other Customer" },
+  });
+  customerIds.push(other.id);
+
+  const app = createShippingApplication();
+  const shipment = await app.createShipmentFromFulfillment({
+    orderId: order.id,
+    fulfillmentId: fulfillment.id,
+  });
+  assert.ok(shipment);
+  if (!shipment) return;
+  shipmentIds.push(shipment.id);
+
+  const own = await app.getCustomerShipmentByReference({
+    shipmentReference: shipment.shipmentReference,
+    customerId: customer.id,
+  });
+  assert.ok(own);
+  assert.equal(own?.shipmentReference, shipment.shipmentReference);
+  assert.equal(own?.orderReference, order.orderNumber);
+  assert.equal(own && "id" in own, false);
+  assert.equal(own && "providerReference" in own, false);
+  assert.equal(own && "reconciliationRequired" in own, false);
+
+  const otherCustomer = await app.getCustomerShipmentByReference({
+    shipmentReference: shipment.shipmentReference,
+    customerId: other.id,
+  });
+  assert.equal(otherCustomer, null);
+
+  await assert.rejects(
+    () => app.getCustomerShipmentByReference({
+      shipmentReference: "SHP-not-enumerable",
+      customerId: customer.id,
+    }),
+    (error: unknown) => error instanceof ShippingDomainError && error.code === "SHIPMENT_NOT_FOUND",
+  );
+});
+
 test("Shipment handoff rejects non-eligible Fulfillment", async () => {
   const { order, fulfillment } = await fixture("PENDING");
   const app = createShippingApplication();
