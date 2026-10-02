@@ -50,7 +50,7 @@ export type CatalogLifecycleRepository = {
     status: ProductStatus;
   } | null>;
   getProductDetails: (id: string, client?: CatalogRepositoryClient) => Promise<CatalogLifecycleProductDetails | null>;
-  transitionProductStatus: (id: string, from: ProductStatus, to: ProductStatus, client?: CatalogRepositoryClient) => Promise<{
+  transitionProductStatus: (id: string, from: ProductStatus, to: ProductStatus, client?: CatalogRepositoryClient, expectedUpdatedAt?: Date) => Promise<{
     id: string;
     status: ProductStatus;
   } | null>;
@@ -161,7 +161,7 @@ export function createCatalogLifecycleService(
   context: CatalogAuditContext = {},
 ) {
   void context;
-  async function transitionProduct(productId: string, target: ProductStatus) {
+  async function transitionProduct(productId: string, target: ProductStatus, expectedUpdatedAt?: Date) {
     const initial = await repository.getProductById(productId);
     if (!initial) throw new CatalogServiceError("PRODUCT_NOT_FOUND", "Product was not found.");
 
@@ -170,6 +170,9 @@ export function createCatalogLifecycleService(
 
     return repository.withTransaction(async (tx) => {
       const latest = await repository.getProductById(productId, tx);
+      if (expectedUpdatedAt && (!latest || latest.updatedAt.getTime() !== expectedUpdatedAt.getTime())) {
+        throw new CatalogServiceError("CATALOG_CONFLICT", "Product changed concurrently. Refresh before changing lifecycle state.");
+      }
       if (!latest) throw new CatalogServiceError("PRODUCT_NOT_FOUND", "Product was not found.");
 
       const latestTransition = assertProductLifecycleTransition(latest.status, target);
@@ -221,9 +224,9 @@ export function createCatalogLifecycleService(
       const issues = validateProductPublicationReadiness(product);
       return { publishable: issues.length === 0, issues };
     },
-    publishProduct: (productId: string) => transitionProduct(productId, "ACTIVE"),
-    unpublishProduct: (productId: string) => transitionProduct(productId, "DRAFT"),
-    archiveProduct: (productId: string) => transitionProduct(productId, "ARCHIVED"),
-    restoreProduct: (productId: string) => transitionProduct(productId, "DRAFT"),
+    publishProduct: (productId: string, expectedUpdatedAt?: Date) => transitionProduct(productId, "ACTIVE", expectedUpdatedAt),
+    unpublishProduct: (productId: string, expectedUpdatedAt?: Date) => transitionProduct(productId, "DRAFT", expectedUpdatedAt),
+    archiveProduct: (productId: string, expectedUpdatedAt?: Date) => transitionProduct(productId, "ARCHIVED", expectedUpdatedAt),
+    restoreProduct: (productId: string, expectedUpdatedAt?: Date) => transitionProduct(productId, "DRAFT", expectedUpdatedAt),
   };
 }
