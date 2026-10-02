@@ -63,17 +63,27 @@ export function createReturnsApplication(dependencies:ReturnsApplicationDependen
     return toCancellationDto(result, input.orderNumber);
    }catch(e){return mapError(e);}
  }
- async function reviewCancellation(input:{reference:string;decision:"APPROVE"|"REJECT";reason?:string;request?:Request}){
-  try{const admin=await requireAdmin(input.request,"cancellation.approve");const reason=requestText(input.reason,500);
-   const result=await database.$transaction(async tx=>{const row=await tx.cancellationRequest.findFirst({where:{cancellationReference:input.reference},include:{order:true}});if(!row)throw new ReturnDomainError("ORDER_NOT_FOUND","Cancellation could not be found.");
-    if(input.idempotencyKey){const prior=await tx.commerceExceptionAuditEvent.findFirst({where:{cancellationRequestId:row.id,correlationId:input.idempotencyKey,action:{in:["CANCELLATION_APPROVED","CANCELLATION_REJECTED"]}}});if(prior)return tx.cancellationRequest.findUnique({where:{id:row.id},include:{order:true}});}
-    const next=input.decision==="APPROVE"?"APPROVED":"REJECTED";if(row.status===next)return row;assertCancellationTransition(row.status as CancellationLifecycle,next);
-    await tx.cancellationRequest.update({where:{id:row.id},data:{status:next,reviewedAt:new Date(),operationalReason:reason}});
-    await tx.commerceExceptionAuditEvent.create({data:{actorType:"ADMIN",actorId:admin.customer.id,action:input.decision==="APPROVE"?"CANCELLATION_APPROVED":"CANCELLATION_REJECTED",previousState:row.status,newState:next,reason,orderId:row.orderId,cancellationRequestId:row.id,correlationId:input.idempotencyKey}});
-    await tx.notificationEvent.create({data:{customerId:row.customerId,orderId:row.orderId,type:input.decision==="APPROVE"?"CANCELLATION_APPROVED":"CANCELLATION_REJECTED"}});
-    return tx.cancellationRequest.findUnique({where:{id:row.id},include:{order:true}});
-   }); return toCancellationDto(result);
-  }catch(e){return mapError(e);}
+ async function reviewCancellation(input:{reference:string;decision:"APPROVE"|"REJECT";reason?:string;idempotencyKey?:string;request?:Request}){
+  try {
+    const admin=await requireAdmin(input.request,"cancellation.approve");
+    const reason=requestText(input.reason,500);
+    const result=await database.$transaction(async tx=>{
+      const row=await tx.cancellationRequest.findFirst({where:{cancellationReference:input.reference},include:{order:true}});
+      if(!row) throw new ReturnDomainError("ORDER_NOT_FOUND","Cancellation could not be found.");
+      if(input.idempotencyKey){
+        const prior=await tx.commerceExceptionAuditEvent.findFirst({where:{cancellationRequestId:row.id,correlationId:input.idempotencyKey,action:{in:["CANCELLATION_APPROVED","CANCELLATION_REJECTED"]}}});
+        if(prior) return tx.cancellationRequest.findUnique({where:{id:row.id},include:{order:true}});
+      }
+      const next=input.decision==="APPROVE"?"APPROVED":"REJECTED";
+      if(row.status===next) return row;
+      assertCancellationTransition(row.status as CancellationLifecycle,next);
+      await tx.cancellationRequest.update({where:{id:row.id},data:{status:next,reviewedAt:new Date(),operationalReason:reason}});
+      await tx.commerceExceptionAuditEvent.create({data:{actorType:"ADMIN",actorId:admin.customer.id,action:input.decision==="APPROVE"?"CANCELLATION_APPROVED":"CANCELLATION_REJECTED",previousState:row.status,newState:next,reason,orderId:row.orderId,cancellationRequestId:row.id,correlationId:input.idempotencyKey}});
+      await tx.notificationEvent.create({data:{customerId:row.customerId,orderId:row.orderId,type:input.decision==="APPROVE"?"CANCELLATION_APPROVED":"CANCELLATION_REJECTED"}});
+      return tx.cancellationRequest.findUnique({where:{id:row.id},include:{order:true}});
+    },{isolationLevel:Prisma.TransactionIsolationLevel.Serializable});
+    return toCancellationDto(result);
+  } catch(e) { return mapError(e); }
  }
  async function requestReturn(input:{orderNumber:string;items:{orderItemReference:string;quantity:number}[];reasonCode:ReturnReason;description?:string;request?:Request}){
   try{
@@ -98,10 +108,104 @@ export function createReturnsApplication(dependencies:ReturnsApplicationDependen
  }
  async function getCustomerReturn(input:{reference:string;request?:Request}){try{const c=await customer(input.request);const row=await createReturnsRepository().getReturn(input.reference,c.id);if(!row)throw new ReturnDomainError("RETURN_NOT_FOUND","Return could not be found.");return toReturnDto(row);}catch(e){return mapError(e);}}
  async function getCustomerCancellation(input:{reference:string;request?:Request}){try{const c=await customer(input.request);const row=await createReturnsRepository().getCancellation(input.reference,c.id);if(!row)throw new ReturnDomainError("ORDER_NOT_FOUND","Cancellation could not be found.");return toCancellationDto(row);}catch(e){return mapError(e);}}
- async function reviewReturn(input:{reference:string;decision:"APPROVE"|"REJECT";reason?:string;request?:Request}){try{const admin=await requireAdmin(input.request,input.decision==="APPROVE"?"return.approve":"return.reject");const reason=requestText(input.reason,500);return toReturnDto(await database.$transaction(async tx=>{const row=await tx.returnRequest.findUnique({where:{returnReference:input.reference},include:{items:{include:{orderItem:true}},order:true,shipment:true,inspection:true,resolution:true}});if(!row)throw new ReturnDomainError("RETURN_NOT_FOUND","Return could not be found.");if(input.idempotencyKey){const prior=await tx.commerceExceptionAuditEvent.findFirst({where:{returnRequestId:row.id,correlationId:input.idempotencyKey,action:{in:["RETURN_APPROVED","RETURN_REJECTED"]}}});if(prior)return tx.returnRequest.findUnique({where:{id:row.id},include:{items:{include:{orderItem:true}},order:true,shipment:true,inspection:true,resolution:true}});}const next=input.decision==="APPROVE"?"APPROVED":"REJECTED";if(row.status!==next)assertReturnTransition(row.status as ReturnLifecycle,next);await tx.returnRequest.update({where:{id:row.id},data:{status:next,reviewedAt:new Date(),operationalReason:reason}});await tx.commerceExceptionAuditEvent.create({data:{actorType:"ADMIN",actorId:admin.customer.id,action:input.decision==="APPROVE"?"RETURN_APPROVED":"RETURN_REJECTED",previousState:row.status,newState:next,reason,orderId:row.orderId,returnRequestId:row.id,correlationId:input.idempotencyKey}});await tx.notificationEvent.create({data:{customerId:row.customerId,orderId:row.orderId,returnRequestId:row.id,type:input.decision==="APPROVE"?"RETURN_APPROVED":"RETURN_REJECTED"}});return tx.returnRequest.findUnique({where:{id:row.id},include:{items:{include:{orderItem:true}},order:true,shipment:true,inspection:true,resolution:true}});}),{isolationLevel:Prisma.TransactionIsolationLevel.Serializable});}catch(e){return mapError(e);}}
- async function authorizeReturnShipment(input:{reference:string;carrier?:string;trackingNumber?:string;trackingUrl?:string;request?:Request}){try{const admin=await requireAdmin(input.request,"return.shipment.manage");const carrier=requestText(input.carrier,120);const trackingNumber=requestText(input.trackingNumber,160);const trackingUrl=requestText(input.trackingUrl,1000);if(trackingUrl){const url=new URL(trackingUrl);if(url.protocol!=="http:"&&url.protocol!=="https:")throw new ReturnDomainError("INVALID_REQUEST","Tracking URL must use HTTP(S).");}return toReturnDto(await database.$transaction(async tx=>{const row=await tx.returnRequest.findUnique({where:{returnReference:input.reference},include:{items:{include:{orderItem:true}},order:true,shipment:true,inspection:true,resolution:true}});if(!row)throw new ReturnDomainError("RETURN_NOT_FOUND","Return could not be found.");if(row.status!=="APPROVED")throw new ReturnDomainError("RETURN_INVALID_TRANSITION","Return must be approved before shipment authorization.");if(row.shipment)return tx.returnRequest.findUnique({where:{id:row.id},include:{items:{include:{orderItem:true}},order:true,shipment:true,inspection:true,resolution:true}});await tx.returnShipment.create({data:{returnRequestId:row.id,sourceShipmentId:null,reference:ref("RSH-"),status:"RETURN_AUTHORIZED",carrier,trackingNumber,trackingUrl,externallySupplied:true}});assertReturnTransition(row.status as ReturnLifecycle,"RETURN_IN_TRANSIT");await tx.returnRequest.update({where:{id:row.id},data:{status:"RETURN_IN_TRANSIT"}});await tx.commerceExceptionAuditEvent.create({data:{actorType:"ADMIN",actorId:admin.customer.id,action:"RETURN_APPROVED",previousState:"APPROVED",newState:"RETURN_IN_TRANSIT",reason:"return_shipment_authorized",orderId:row.orderId,returnRequestId:row.id,correlationId:input.idempotencyKey}});return tx.returnRequest.findUnique({where:{id:row.id},include:{items:{include:{orderItem:true}},order:true,shipment:true,inspection:true,resolution:true}});}),{isolationLevel:Prisma.TransactionIsolationLevel.Serializable});}catch(e){return mapError(e);}}
- async function markReturnReceived(input:{reference:string;request?:Request}){try{const admin=await requireAdmin(input.request,"return.inspect");return toReturnDto(await database.$transaction(async tx=>{const row=await tx.returnRequest.findUnique({where:{returnReference:input.reference},include:{items:{include:{orderItem:true}},order:true,shipment:true,inspection:true,resolution:true}});if(!row)throw new ReturnDomainError("RETURN_NOT_FOUND","Return could not be found.");if(input.idempotencyKey){const prior=await tx.commerceExceptionAuditEvent.findFirst({where:{returnRequestId:row.id,correlationId:input.idempotencyKey,action:"RETURN_RECEIVED"}});if(prior)return row;}if(row.status==="RETURN_RECEIVED")return row;if(row.status!=="RETURN_IN_TRANSIT")throw new ReturnDomainError("RETURN_INVALID_TRANSITION","Return must be in transit before receipt.");assertReturnTransition(row.status as ReturnLifecycle,"RETURN_RECEIVED");await tx.returnShipment.update({where:{returnRequestId:row.id},data:{status:"RETURN_RECEIVED"}});await tx.returnRequest.update({where:{id:row.id},data:{status:"RETURN_RECEIVED"}});await tx.commerceExceptionAuditEvent.create({data:{actorType:"ADMIN",actorId:admin.customer.id,action:"RETURN_RECEIVED",previousState:row.status,newState:"RETURN_RECEIVED",orderId:row.orderId,returnRequestId:row.id,correlationId:input.idempotencyKey}});await tx.notificationEvent.create({data:{customerId:row.customerId,orderId:row.orderId,returnRequestId:row.id,type:"RETURN_RECEIVED"}});return tx.returnRequest.findUnique({where:{id:row.id},include:{items:{include:{orderItem:true}},order:true,shipment:true,inspection:true,resolution:true}});}),{isolationLevel:Prisma.TransactionIsolationLevel.Serializable});}catch(e){return mapError(e);}}
- async function inspectReturn(input:{reference:string;receivedQuantity:number;acceptedQuantity:number;rejectedQuantity:number;outcome:"ACCEPTED"|"PARTIALLY_ACCEPTED"|"REJECTED";reason?:string;request?:Request}){try{const admin=await requireAdmin(input.request,"return.inspect");return toReturnDto(await database.$transaction(async tx=>{const row=await tx.returnRequest.findUnique({where:{returnReference:input.reference},include:{items:true,order:true,shipment:true,inspection:true,resolution:true}});if(!row)throw new ReturnDomainError("RETURN_NOT_FOUND","Return could not be found.");if(input.idempotencyKey){const prior=await tx.commerceExceptionAuditEvent.findFirst({where:{returnRequestId:row.id,correlationId:input.idempotencyKey,action:"RETURN_INSPECTED"}});if(prior)return tx.returnRequest.findUnique({where:{id:row.id},include:{items:{include:{orderItem:true}},order:true,shipment:true,inspection:true,resolution:true}});}if(row.status!=="RETURN_RECEIVED")throw new ReturnDomainError("RETURN_INSPECTION_INVALID","Return must be received before inspection.");const returned=row.items.reduce((sum,i)=>sum+i.quantity,0);validateInspection(input.receivedQuantity,input.acceptedQuantity,input.rejectedQuantity,returned);if(row.inspection)return tx.returnRequest.findUnique({where:{id:row.id},include:{items:{include:{orderItem:true}},order:true,shipment:true,inspection:true,resolution:true}});await tx.returnInspection.create({data:{returnRequestId:row.id,receivedQuantity:input.receivedQuantity,acceptedQuantity:input.acceptedQuantity,rejectedQuantity:input.rejectedQuantity,outcome:input.outcome,internalReason:requestText(input.reason,500),operatorId:admin.customer.id}});assertReturnTransition(row.status as ReturnLifecycle,"INSPECTION_PENDING");await tx.returnRequest.update({where:{id:row.id},data:{status:"INSPECTION_PENDING"}});assertReturnTransition("INSPECTION_PENDING","INSPECTED");await tx.returnRequest.update({where:{id:row.id},data:{status:"INSPECTED"}});return tx.returnRequest.findUnique({where:{id:row.id},include:{items:{include:{orderItem:true}},order:true,shipment:true,inspection:true,resolution:true}});})),{isolationLevel:Prisma.TransactionIsolationLevel.Serializable});}catch(e){return mapError(e);}}
- async function resolveReturn(input:{reference:string;type:"REFUND"|"REPLACEMENT"|"STORE_CREDIT"|"REJECTED"|"PARTIAL_REFUND";refundAmount?:string;note?:string;request?:Request}){try{const admin=await requireAdmin(input.request,"return.resolve");if(input.type!=="REJECTED")throw new ReturnDomainError("REFUND_UNAVAILABLE","Payment/refund, replacement, and store-credit execution are not implemented in the existing architecture; resolution is stopped at the explicit integration boundary.");return toReturnDto(await database.$transaction(async tx=>{const row=await tx.returnRequest.findUnique({where:{returnReference:input.reference},include:{items:{include:{orderItem:true}},order:true,shipment:true,inspection:true,resolution:true}});if(!row)throw new ReturnDomainError("RETURN_NOT_FOUND","Return could not be found.");if(input.idempotencyKey){const prior=await tx.commerceExceptionAuditEvent.findFirst({where:{returnRequestId:row.id,correlationId:input.idempotencyKey,action:"RETURN_RESOLVED"}});if(prior)return tx.returnRequest.findUnique({where:{id:row.id},include:{items:{include:{orderItem:true}},order:true,shipment:true,inspection:true,resolution:true}});}if(row.status==="RESOLVED")return row;if(row.status!=="INSPECTED"&&row.status!=="RESOLUTION_PENDING")throw new ReturnDomainError("RETURN_RESOLUTION_INVALID","Return is not ready for resolution.");if(!row.inspection)throw new ReturnDomainError("RETURN_RESOLUTION_INVALID","Return inspection is required.");if(!row.resolution)await tx.returnResolution.create({data:{returnRequestId:row.id,type:"REJECTED",note:requestText(input.note,500),resolvedBy:admin.customer.id}});assertReturnTransition(row.status as ReturnLifecycle,"RESOLUTION_PENDING");await tx.returnRequest.update({where:{id:row.id},data:{status:"RESOLUTION_PENDING"}});assertReturnTransition("RESOLUTION_PENDING","RESOLVED");await tx.returnRequest.update({where:{id:row.id},data:{status:"RESOLVED",resolvedAt:new Date()}});await tx.commerceExceptionAuditEvent.create({data:{actorType:"ADMIN",actorId:admin.customer.id,action:"RETURN_RESOLVED",previousState:row.status,newState:"RESOLVED",reason:input.note??"rejected_resolution",orderId:row.orderId,returnRequestId:row.id}});await tx.notificationEvent.create({data:{customerId:row.customerId,orderId:row.orderId,returnRequestId:row.id,type:"RETURN_RESOLUTION_COMPLETED"}});return tx.returnRequest.findUnique({where:{id:row.id},include:{items:{include:{orderItem:true}},order:true,shipment:true,inspection:true,resolution:true}});}),{isolationLevel:Prisma.TransactionIsolationLevel.Serializable});}catch(e){return mapError(e);}}
+ async function reviewReturn(input:{reference:string;decision:"APPROVE"|"REJECT";reason?:string;idempotencyKey?:string;request?:Request}){
+  try{
+    const admin=await requireAdmin(input.request,input.decision==="APPROVE"?"return.approve":"return.reject");
+    const reason=requestText(input.reason,500);
+    const result=await database.$transaction(async tx=>{
+      const row=await tx.returnRequest.findUnique({where:{returnReference:input.reference},include:{items:{include:{orderItem:true}},order:true,shipment:true,inspection:true,resolution:true}});
+      if(!row) throw new ReturnDomainError("RETURN_NOT_FOUND","Return could not be found.");
+      if(input.idempotencyKey){
+        const prior=await tx.commerceExceptionAuditEvent.findFirst({where:{returnRequestId:row.id,correlationId:input.idempotencyKey,action:{in:["RETURN_APPROVED","RETURN_REJECTED"]}}});
+        if(prior) return tx.returnRequest.findUnique({where:{id:row.id},include:{items:{include:{orderItem:true}},order:true,shipment:true,inspection:true,resolution:true}});
+      }
+      const next=input.decision==="APPROVE"?"APPROVED":"REJECTED";
+      if(row.status!==next) assertReturnTransition(row.status as ReturnLifecycle,next);
+      await tx.returnRequest.update({where:{id:row.id},data:{status:next,reviewedAt:new Date(),operationalReason:reason}});
+      await tx.commerceExceptionAuditEvent.create({data:{actorType:"ADMIN",actorId:admin.customer.id,action:input.decision==="APPROVE"?"RETURN_APPROVED":"RETURN_REJECTED",previousState:row.status,newState:next,reason,orderId:row.orderId,returnRequestId:row.id,correlationId:input.idempotencyKey}});
+      await tx.notificationEvent.create({data:{customerId:row.customerId,orderId:row.orderId,returnRequestId:row.id,type:input.decision==="APPROVE"?"RETURN_APPROVED":"RETURN_REJECTED"}});
+      return tx.returnRequest.findUnique({where:{id:row.id},include:{items:{include:{orderItem:true}},order:true,shipment:true,inspection:true,resolution:true}});
+    },{isolationLevel:Prisma.TransactionIsolationLevel.Serializable});
+    return toReturnDto(result);
+  }catch(e){return mapError(e);}
+ }
+ async function authorizeReturnShipment(input:{reference:string;carrier?:string;trackingNumber?:string;trackingUrl?:string;idempotencyKey?:string;request?:Request}){
+  try{
+    const admin=await requireAdmin(input.request,"return.shipment.manage");
+    const carrier=requestText(input.carrier,120);const trackingNumber=requestText(input.trackingNumber,160);const trackingUrl=requestText(input.trackingUrl,1000);
+    if(trackingUrl){const url=new URL(trackingUrl);if(url.protocol!=="http:"&&url.protocol!=="https:")throw new ReturnDomainError("INVALID_REQUEST","Tracking URL must use HTTP(S).");}
+    const result=await database.$transaction(async tx=>{
+      const row=await tx.returnRequest.findUnique({where:{returnReference:input.reference},include:{items:{include:{orderItem:true}},order:true,shipment:true,inspection:true,resolution:true}});
+      if(!row)throw new ReturnDomainError("RETURN_NOT_FOUND","Return could not be found.");
+      if(row.status!=="APPROVED")throw new ReturnDomainError("RETURN_INVALID_TRANSITION","Return must be approved before shipment authorization.");
+      if(row.shipment)return row;
+      await tx.returnShipment.create({data:{returnRequestId:row.id,sourceShipmentId:null,reference:ref("RSH-"),status:"RETURN_AUTHORIZED",carrier,trackingNumber,trackingUrl,externallySupplied:true}});
+      assertReturnTransition(row.status as ReturnLifecycle,"RETURN_IN_TRANSIT");
+      await tx.returnRequest.update({where:{id:row.id},data:{status:"RETURN_IN_TRANSIT"}});
+      await tx.commerceExceptionAuditEvent.create({data:{actorType:"ADMIN",actorId:admin.customer.id,action:"RETURN_APPROVED",previousState:"APPROVED",newState:"RETURN_IN_TRANSIT",reason:"return_shipment_authorized",orderId:row.orderId,returnRequestId:row.id,correlationId:input.idempotencyKey}});
+      return tx.returnRequest.findUnique({where:{id:row.id},include:{items:{include:{orderItem:true}},order:true,shipment:true,inspection:true,resolution:true}});
+    },{isolationLevel:Prisma.TransactionIsolationLevel.Serializable});
+    return toReturnDto(result);
+  }catch(e){return mapError(e);}
+ }
+ async function markReturnReceived(input:{reference:string;idempotencyKey?:string;request?:Request}){
+  try{
+    const admin=await requireAdmin(input.request,"return.inspect");
+    const result=await database.$transaction(async tx=>{
+      const row=await tx.returnRequest.findUnique({where:{returnReference:input.reference},include:{items:{include:{orderItem:true}},order:true,shipment:true,inspection:true,resolution:true}});
+      if(!row)throw new ReturnDomainError("RETURN_NOT_FOUND","Return could not be found.");
+      if(input.idempotencyKey){const prior=await tx.commerceExceptionAuditEvent.findFirst({where:{returnRequestId:row.id,correlationId:input.idempotencyKey,action:"RETURN_RECEIVED"}});if(prior)return row;}
+      if(row.status==="RETURN_RECEIVED")return row;
+      if(row.status!=="RETURN_IN_TRANSIT")throw new ReturnDomainError("RETURN_INVALID_TRANSITION","Return must be in transit before receipt.");
+      assertReturnTransition(row.status as ReturnLifecycle,"RETURN_RECEIVED");
+      await tx.returnShipment.update({where:{returnRequestId:row.id},data:{status:"RETURN_RECEIVED"}});
+      await tx.returnRequest.update({where:{id:row.id},data:{status:"RETURN_RECEIVED"}});
+      await tx.commerceExceptionAuditEvent.create({data:{actorType:"ADMIN",actorId:admin.customer.id,action:"RETURN_RECEIVED",previousState:row.status,newState:"RETURN_RECEIVED",orderId:row.orderId,returnRequestId:row.id,correlationId:input.idempotencyKey}});
+      await tx.notificationEvent.create({data:{customerId:row.customerId,orderId:row.orderId,returnRequestId:row.id,type:"RETURN_RECEIVED"}});
+      return tx.returnRequest.findUnique({where:{id:row.id},include:{items:{include:{orderItem:true}},order:true,shipment:true,inspection:true,resolution:true}});
+    },{isolationLevel:Prisma.TransactionIsolationLevel.Serializable});
+    return toReturnDto(result);
+  }catch(e){return mapError(e);}
+ }
+ async function inspectReturn(input:{reference:string;receivedQuantity:number;acceptedQuantity:number;rejectedQuantity:number;outcome:"ACCEPTED"|"PARTIALLY_ACCEPTED"|"REJECTED";reason?:string;idempotencyKey?:string;request?:Request}){
+  try{
+    const admin=await requireAdmin(input.request,"return.inspect");
+    const result=await database.$transaction(async tx=>{
+      const row=await tx.returnRequest.findUnique({where:{returnReference:input.reference},include:{items:true,order:true,shipment:true,inspection:true,resolution:true}});
+      if(!row)throw new ReturnDomainError("RETURN_NOT_FOUND","Return could not be found.");
+      if(input.idempotencyKey){const prior=await tx.commerceExceptionAuditEvent.findFirst({where:{returnRequestId:row.id,correlationId:input.idempotencyKey,action:"RETURN_INSPECTED"}});if(prior)return tx.returnRequest.findUnique({where:{id:row.id},include:{items:{include:{orderItem:true}},order:true,shipment:true,inspection:true,resolution:true}});}
+      if(row.status!=="RETURN_RECEIVED")throw new ReturnDomainError("RETURN_INSPECTION_INVALID","Return must be received before inspection.");
+      const returned=row.items.reduce((sum,i)=>sum+i.quantity,0);validateInspection(input.receivedQuantity,input.acceptedQuantity,input.rejectedQuantity,returned);
+      if(row.inspection)return tx.returnRequest.findUnique({where:{id:row.id},include:{items:{include:{orderItem:true}},order:true,shipment:true,inspection:true,resolution:true}});
+      await tx.returnInspection.create({data:{returnRequestId:row.id,receivedQuantity:input.receivedQuantity,acceptedQuantity:input.acceptedQuantity,rejectedQuantity:input.rejectedQuantity,outcome:input.outcome,internalReason:requestText(input.reason,500),operatorId:admin.customer.id}});
+      assertReturnTransition(row.status as ReturnLifecycle,"INSPECTION_PENDING");await tx.returnRequest.update({where:{id:row.id},data:{status:"INSPECTION_PENDING"}});
+      assertReturnTransition("INSPECTION_PENDING","INSPECTED");await tx.returnRequest.update({where:{id:row.id},data:{status:"INSPECTED"}});
+      await tx.commerceExceptionAuditEvent.create({data:{actorType:"ADMIN",actorId:admin.customer.id,action:"RETURN_INSPECTED",previousState:row.status,newState:"INSPECTED",orderId:row.orderId,returnRequestId:row.id,reason:input.reason??"inspection",correlationId:input.idempotencyKey}});
+      return tx.returnRequest.findUnique({where:{id:row.id},include:{items:{include:{orderItem:true}},order:true,shipment:true,inspection:true,resolution:true}});
+    },{isolationLevel:Prisma.TransactionIsolationLevel.Serializable});
+    return toReturnDto(result);
+  }catch(e){return mapError(e);}
+ }
+ async function resolveReturn(input:{reference:string;type:"REFUND"|"REPLACEMENT"|"STORE_CREDIT"|"REJECTED"|"PARTIAL_REFUND";refundAmount?:string;note?:string;idempotencyKey?:string;request?:Request}){
+  try{
+    const admin=await requireAdmin(input.request,"return.resolve");
+    if(input.type!=="REJECTED")throw new ReturnDomainError("REFUND_UNAVAILABLE","Payment/refund, replacement, and store-credit execution are not implemented in the existing architecture; resolution is stopped at the explicit integration boundary.");
+    const result=await database.$transaction(async tx=>{
+      const row=await tx.returnRequest.findUnique({where:{returnReference:input.reference},include:{items:{include:{orderItem:true}},order:true,shipment:true,inspection:true,resolution:true}});
+      if(!row)throw new ReturnDomainError("RETURN_NOT_FOUND","Return could not be found.");
+      if(input.idempotencyKey){const prior=await tx.commerceExceptionAuditEvent.findFirst({where:{returnRequestId:row.id,correlationId:input.idempotencyKey,action:"RETURN_RESOLVED"}});if(prior)return tx.returnRequest.findUnique({where:{id:row.id},include:{items:{include:{orderItem:true}},order:true,shipment:true,inspection:true,resolution:true}});}
+      if(row.status==="RESOLVED")return row;
+      if(row.status!=="INSPECTED"&&row.status!=="RESOLUTION_PENDING")throw new ReturnDomainError("RETURN_RESOLUTION_INVALID","Return is not ready for resolution.");
+      if(!row.inspection)throw new ReturnDomainError("RETURN_RESOLUTION_INVALID","Return inspection is required.");
+      if(!row.resolution)await tx.returnResolution.create({data:{returnRequestId:row.id,type:"REJECTED",note:requestText(input.note,500),resolvedBy:admin.customer.id}});
+      assertReturnTransition(row.status as ReturnLifecycle,"RESOLUTION_PENDING");await tx.returnRequest.update({where:{id:row.id},data:{status:"RESOLUTION_PENDING"}});
+      assertReturnTransition("RESOLUTION_PENDING","RESOLVED");await tx.returnRequest.update({where:{id:row.id},data:{status:"RESOLVED",resolvedAt:new Date()}});
+      await tx.commerceExceptionAuditEvent.create({data:{actorType:"ADMIN",actorId:admin.customer.id,action:"RETURN_RESOLVED",previousState:row.status,newState:"RESOLVED",reason:input.note??"rejected_resolution",orderId:row.orderId,returnRequestId:row.id,correlationId:input.idempotencyKey}});
+      await tx.notificationEvent.create({data:{customerId:row.customerId,orderId:row.orderId,returnRequestId:row.id,type:"RETURN_RESOLUTION_COMPLETED"}});
+      return tx.returnRequest.findUnique({where:{id:row.id},include:{items:{include:{orderItem:true}},order:true,shipment:true,inspection:true,resolution:true}});
+    },{isolationLevel:Prisma.TransactionIsolationLevel.Serializable});
+    return toReturnDto(result);
+  }catch(e){return mapError(e);}
+ }
  return {getCustomerExceptionSummary,requestCancellation,reviewCancellation,requestReturn,reviewReturn,authorizeReturnShipment,markReturnReceived,inspectReturn,resolveReturn,getCustomerReturn,getCustomerCancellation};
 }
