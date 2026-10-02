@@ -4,6 +4,16 @@ import { Container } from "@/components/layout/container";
 import { requireCurrentCustomer } from "@/lib/auth/context";
 import { createShippingApplication } from "@/lib/shipping/application";
 
+function safeTrackingUrl(value: string | null): string | null {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || url.protocol === "http:" ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
