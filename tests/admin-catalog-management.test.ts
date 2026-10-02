@@ -6,6 +6,7 @@ import { hashPassword } from "@/lib/auth/password";
 import { createSessionToken, hashSessionToken, CUSTOMER_SESSION_TTL_SECONDS } from "@/lib/auth/session";
 import { requireAdmin } from "@/lib/admin/authorization";
 import { AdminError } from "@/lib/admin/errors";
+import { CatalogServiceError } from "@/lib/catalog/errors";
 
 async function fixture(role: "ADMIN"|"VIEWER") {
   const email = `phase14-2-${role.toLowerCase()}-${crypto.randomUUID()}@example.test`;
@@ -34,14 +35,14 @@ test("admin catalog uses the canonical service and rejects stale product edits",
   const f=await fixture("ADMIN"); let productId:string|undefined;
   try {
     const context=await requireAdmin(f.request(),"catalog.create");
-    const catalog=createCatalogService({}, { source:"MANUAL", actorType:"USER", actorId:context.adminUser.id, correlationId:context.correlationId });
+    const catalog=createCatalogService({}, { source:"MANUAL", actorType:"USER", actorId:context.adminUser.id, correlationId:undefined });
     const product=await catalog.createProduct({title:"Phase 14.2 Test Product",slug:`phase-14-2-${crypto.randomUUID()}`,description:"Production catalog test",shortDescription:"Test",status:"DRAFT",price:"999.00",currency:"INR"});
     productId=product.id;
     const stale=await catalog.getProductById(product.id);
     await catalog.updateProduct({id:product.id,title:"Fresh update",expectedUpdatedAt:stale.updatedAt.toISOString()});
     await assert.rejects(
       () => catalog.updateProduct({id:product.id,title:"Stale update",expectedUpdatedAt:stale.updatedAt.toISOString()}),
-      (error) => error?.code === "CATALOG_CONFLICT",
+      (error) => error instanceof CatalogServiceError && error.code === "CATALOG_CONFLICT",
     );
   } finally { await cleanup(f,productId); }
 });
@@ -59,7 +60,7 @@ test("catalog search is bounded and deterministic", async () => {
   const f=await fixture("ADMIN"); let productId:string|undefined;
   try {
     const context=await requireAdmin(f.request(),"catalog.create");
-    const catalog=createCatalogService({}, { source:"MANUAL", actorType:"USER", actorId:context.adminUser.id, correlationId:context.correlationId });
+    const catalog=createCatalogService({}, { source:"MANUAL", actorType:"USER", actorId:context.adminUser.id, correlationId:undefined });
     const product=await catalog.createProduct({title:"Unique Phase 14.2 Search",slug:`phase-14-2-search-${crypto.randomUUID()}`,description:"Searchable catalog fixture",status:"DRAFT",price:"10.00",currency:"INR"});
     productId=product.id;
     const result=await catalog.listProducts({filters:{search:"unique phase 14.2"},limit:10,offset:0,sortBy:"updatedAt",sortDirection:"desc"});
