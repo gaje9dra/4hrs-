@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { db } from "@/lib/db/client";
 import { requireCurrentCustomer } from "@/lib/auth/context";
 import { AuthenticationError } from "@/lib/auth/errors";
@@ -14,6 +15,7 @@ export type AdminAuthorizationContext = {
   };
   permissions: Set<AdminPermission>;
   roles: Set<string>;
+  correlationId: string;
 };
 
 function denied(message = "Administrator access is required."): never {
@@ -27,29 +29,45 @@ export async function requireAdmin(request?: Request, permission?: AdminPermissi
     if (error instanceof AuthenticationError && (error.code === "SESSION_INVALID" || error.code === "SESSION_EXPIRED")) denied();
     throw error;
   }
+
+  const correlationId = request?.headers.get("x-request-id")?.trim().slice(0, 128) || randomUUID();
+
   if (request && request.method !== "GET" && request.method !== "HEAD" && request.method !== "OPTIONS") {
     const origin = request.headers.get("origin");
     if (origin && origin !== new URL(request.url).origin) throw new AdminError("FORBIDDEN", "The request origin is not allowed.");
   }
+
   const admin = await db.adminUser.findUnique({
     where: { customerId: current.customer.id },
     include: { roles: { include: { role: { include: { permissions: { include: { permission: true } } } } } } },
   });
   if (!admin || admin.status !== "ACTIVE" || current.customer.status !== "ACTIVE") denied();
+
   const roles = new Set(admin.roles.map((entry) => entry.role.name));
   const permissions = new Set(admin.roles.flatMap((entry) => entry.role.permissions.map((rp) => rp.permission.key))) as Set<AdminPermission>;
+
   if (request) consumeAdminRateLimit(admin.id + ":" + (request.headers.get("x-forwarded-for") ?? "unknown"), 120, 60_000);
+
   if (permission && !permissions.has(permission)) {
-    await recordAdminAudit({ actorAdminId: admin.id, action: "AUTHORIZATION_DENIED", success: false, reason: `Missing permission: ${permission}`, metadata: { permission } });
+    await recordAdminAudit({
+      actorAdminId: admin.id,
+      action: "AUTHORIZATION_DENIED",
+      success: false,
+      reason: "Missing required permission.",
+      correlationId,
+      metadata: { permission },
+    });
     throw new AdminError("FORBIDDEN", "You are not authorized to perform this administrative action.");
   }
+
   if (!admin.lastLoginAt || Date.now() - admin.lastLoginAt.getTime() > 5 * 60 * 1000) {
     await db.adminUser.updateMany({ where: { id: admin.id, version: admin.version }, data: { lastLoginAt: new Date() } });
   }
+
   return {
     customer: { id: current.customer.id, email: current.customer.email, status: current.customer.status },
     adminUser: { id: admin.id, customerId: admin.customerId, status: admin.status, version: admin.version, roles: [...roles] },
-    permissions, roles,
+    permissions, roles, correlationId,
   };
 }
 
