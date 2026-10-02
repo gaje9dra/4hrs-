@@ -54,6 +54,11 @@ export function createProviderMappingService() {
     },
     async removeVariantMapping(variantId: string, providerId: string) {
       const normalizedProvider = normalizeProviderId(providerId);
+      const variant = await repository.getVariantPublicationState(variantId);
+      if (!variant) throw new Error("ProductVariant was not found.");
+      if (variant.product.status === "ACTIVE") {
+        throw new Error("Cannot remove a fulfillment mapping from a published ProductVariant.");
+      }
       return repository.deleteByVariantAndProvider(variantId, normalizedProvider);
     },
   };
