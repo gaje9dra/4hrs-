@@ -8,7 +8,7 @@ import { getStorefrontNavigation, storefrontNavigationToFooterGroups } from '@/l
 
 const outfit = Outfit({
   subsets: ['latin'],
-  weight: ['400', '500', '700', '900'],
+  weight: '400',
   variable: '--font-outfit',
   display: 'swap',
 })
