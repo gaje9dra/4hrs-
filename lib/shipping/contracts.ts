@@ -42,18 +42,30 @@ export type TrackingEvent = Readonly<{
 }>;
 
 export type CustomerShipmentDto = Readonly<{
+  shipmentReference: string;
+  orderReference: string;
   status: ShipmentStatus;
+  statusLabel: string;
   carrier: string | null;
   trackingNumber: string | null;
   trackingUrl: string | null;
   events: readonly Readonly<{
     status: ShipmentStatus;
+    statusLabel: string;
     occurredAt: string;
     location: string | null;
-    description: string | null;
+    description: string;
   }>[];
+  latestEvent: Readonly<{
+    status: ShipmentStatus;
+    statusLabel: string;
+    occurredAt: string;
+    location: string | null;
+    description: string;
+  }> | null;
   createdAt: string;
   updatedAt: string;
+  shippedAt: string | null;
   deliveredAt: string | null;
 }>;
 

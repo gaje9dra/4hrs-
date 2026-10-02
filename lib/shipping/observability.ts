@@ -6,12 +6,15 @@ export type ShippingObservation = Readonly<{
     | "shipment-create"
     | "state-transition"
     | "tracking-event"
-    | "reconciliation";
+    | "reconciliation"
+    | "customer-tracking-request"
+    | "customer-tracking-unauthorized"
+    | "customer-tracking-not-found";
   shipmentId?: string;
   fulfillmentId?: string;
   orderId?: string;
   providerId?: string;
-  result: "success" | "duplicate" | "history-only" | "failure" | "reconciliation-required";
+  result: "success" | "duplicate" | "history-only" | "failure" | "reconciliation-required" | "not-found" | "unauthorized";
   from?: string;
   to?: string;
   errorCode?: ShippingErrorCode;

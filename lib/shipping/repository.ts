@@ -9,7 +9,7 @@ import { db } from "@/lib/db/client";
 import { assertShipmentTransition } from "@/lib/shipping/domain";
 
 export type ShippingRepositoryClient = PrismaClient | Prisma.TransactionClient;
-export type ShipmentWithEvents = Prisma.ShipmentGetPayload<{ include: { trackingEvents: true } }>;
+export type ShipmentWithEvents = Prisma.ShipmentGetPayload<{ include: { trackingEvents: true; order: { select: { orderNumber: true; customerId: true } } } }>;
 export type FulfillmentShipmentSource = {
   id: string;
   orderId: string;
@@ -78,7 +78,10 @@ function deduplicationKey(input: CreateTrackingEventInput): string {
 }
 
 function shipmentInclude() {
-  return { trackingEvents: { orderBy: { eventTimestamp: "asc" as const } } };
+  return {
+    trackingEvents: { orderBy: { eventTimestamp: "asc" as const } },
+    order: { select: { orderNumber: true, customerId: true } },
+  };
 }
 
 export type TrackingEventRecord = Prisma.TrackingEventGetPayload<Record<string, never>>;
@@ -93,6 +96,7 @@ export interface ShippingRepository {
   listShipmentsByOrder(orderId: string): Promise<ShipmentWithEvents[]>;
   getShipmentByProviderReference(providerId: string, providerReference: string): Promise<ShipmentWithEvents | null>;
   getShipmentByCustomer(id: string, customerId: string): Promise<ShipmentWithEvents | null>;
+  getShipmentByReference(reference: string, customerId: string): Promise<ShipmentWithEvents | null>;
   getShipmentByTrackingNumber(trackingNumber: string): Promise<ShipmentWithEvents | null>;
   transitionStatus(input: { id: string; expectedStatus: PrismaShipmentStatus; nextStatus: PrismaShipmentStatus; shippedAt?: Date | null; deliveredAt?: Date | null }): Promise<ShipmentWithEvents | null>;
   transitionFromTrackingEvent(input: { id: string; expectedStatus: PrismaShipmentStatus; nextStatus: PrismaShipmentStatus; eventTimestamp: Date }): Promise<ShipmentWithEvents | null>;
@@ -240,6 +244,13 @@ export function createShippingRepository(client?: ShippingRepositoryClient): Shi
     getShipmentByCustomer(id: string, customerId: string): Promise<ShipmentWithEvents | null> {
       return database.shipment.findFirst({
         where: { id, order: { customerId } },
+        include: shipmentInclude(),
+      });
+    },
+
+    getShipmentByReference(reference: string, customerId: string): Promise<ShipmentWithEvents | null> {
+      return database.shipment.findFirst({
+        where: { shipmentReference: reference, order: { customerId } },
         include: shipmentInclude(),
       });
     },
