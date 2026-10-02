@@ -1,0 +1,2 @@
+import { requireAdmin } from "@/lib/admin/authorization";
+export default async function NewAdminUserPage() { await requireAdmin(undefined,"admin.users.manage"); return <section><h2 className="text-4xl font-black uppercase">Create administrator</h2><p className="mt-3 max-w-xl">Administrator creation is exposed through the protected API so validation, role assignment, privileged reasons and auditing remain server-side.</p></section>; }
