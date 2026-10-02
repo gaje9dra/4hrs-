@@ -293,7 +293,7 @@ export function createPaymentApplication(
     const amount = new Prisma.Decimal(input.amount);
     if (!amount.isFinite() || amount.lte(0)) throw new PaymentError("INVALID_AMOUNT", "Refund amount is invalid.");
     const reason = validateRefundReason(input.reason);
-    if (!input.note || input.note.length > 1000) throw new PaymentError("INVALID_PAYMENT_REQUEST", "Refund note is invalid.");
+    if (input.note && input.note.length > 1000) throw new PaymentError("INVALID_PAYMENT_REQUEST", "Refund note is invalid.");
 
     const existingKey = await repository.lookupByIdempotencyKey(payment.customerId, "admin-refund", input.idempotencyKey);
     if (existingKey) {
