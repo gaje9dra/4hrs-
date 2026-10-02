@@ -11,7 +11,6 @@ function parseRoles(value: unknown): AdminRoleName[] {
   if (!Array.isArray(value) || value.length > 4 || value.some((role) => !isAdminRoleName(role))) throw new AdminError("INVALID_REQUEST", "Roles are invalid.");
   return [...new Set(value as AdminRoleName[])];
 }
-type AdminUserWithRelations = Prisma.AdminUserGetPayload<{ include: typeof include }>;
 function dto(row: AdminUserWithRelations): AdminUserDto {
   return {
     id: row.id, customerId: row.customerId, email: row.customer.email, displayName: row.customer.displayName,
@@ -20,6 +19,7 @@ function dto(row: AdminUserWithRelations): AdminUserDto {
   };
 }
 const include = { customer: { select: { id: true, email: true, displayName: true } }, roles: { include: { role: true } } } as const;
+type AdminUserWithRelations = Prisma.AdminUserGetPayload<{ include: typeof include }>;
 
 function isSuper(context: AdminAuthorizationContext) { return context.roles.has("SUPER_ADMIN"); }
 
