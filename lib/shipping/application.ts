@@ -1,4 +1,5 @@
 import { Prisma, type PrismaClient } from "@prisma/client";
+import { Prisma, type PrismaClient } from "@prisma/client";
 import { db } from "@/lib/db/client";
 import {
   assertFulfillmentEligibleForShipment,
@@ -14,7 +15,6 @@ import type {
   NormalizedTrackingEvent,
   ShippingProviderResolver,
 } from "@/lib/shipping/contracts";
-import { createShippingProviderResolver } from "@/lib/shipping/resolver";
 import { logShippingObservation } from "@/lib/shipping/observability";
 
 export type ShippingApplicationDependencies = Readonly<{
@@ -22,7 +22,6 @@ export type ShippingApplicationDependencies = Readonly<{
   repository?: ShippingRepository;
   providerResolver?: ShippingProviderResolver;
 }>;
-
 
 export type ShippingApplicationService = Readonly<{
   createShipmentFromFulfillment(input: {
