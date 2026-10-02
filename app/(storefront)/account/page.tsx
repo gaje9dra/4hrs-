@@ -60,7 +60,7 @@ export default async function AccountPage() {
           <CardContent className="grid gap-3">
             <Link href="/account" aria-current="page" className="border-2 border-border bg-white px-4 py-3 font-900 uppercase no-underline">Account</Link>
             <Link href="/account/profile" className="border-2 border-border bg-white px-4 py-3 font-900 uppercase no-underline hover:bg-primary-yellow">Profile</Link>
-            <Link href="/account/orders" className="border-2 border-border bg-white px-4 py-3 font-900 uppercase no-underline hover:bg-primary-yellow">Orders</Link>
+            <Link href="/account/orders" className="border-2 border-border bg-white px-4 py-3 font-900 uppercase no-underline hover:bg-primary-yellow">Orders</Link><Link href="/account/cases" className="border-2 border-border bg-white px-4 py-3 font-900 uppercase no-underline hover:bg-primary-yellow">Support cases</Link>
             <Button href="/cart" variant="outline">Cart</Button>
           </CardContent>
         </Card>
