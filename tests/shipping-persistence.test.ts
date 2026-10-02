@@ -95,7 +95,6 @@ test("Shipment persistence enforces Fulfillment and Order consistency", async ()
   const shipment = await repository.createShipment({
     orderId: order.id,
     fulfillmentId: fulfillment.id,
-    shipmentReference: `SHP-${randomUUID()}`,
     providerId: "qikink",
   });
   shipmentIds.push(shipment.id);
@@ -120,7 +119,6 @@ test("TrackingEvent persistence is historical and deduplicated", async () => {
   const shipment = await repository.createShipment({
     orderId: order.id,
     fulfillmentId: fulfillment.id,
-    shipmentReference: `SHP-${randomUUID()}`,
     providerId: "qikink",
     trackingNumber: "AWB-TEST-1",
     carrier: "Test Carrier",
@@ -170,7 +168,6 @@ test("Shipment lifecycle uses controlled transitions", async () => {
   const shipment = await repository.createShipment({
     orderId: order.id,
     fulfillmentId: fulfillment.id,
-    shipmentReference: `SHP-${randomUUID()}`,
     providerId: "qikink",
   });
   shipmentIds.push(shipment.id);
