@@ -20,6 +20,8 @@ function errorResponse(error: unknown) {
     const status =
       error.code === "CUSTOMER_NOT_FOUND" ? 404 :
       error.code === "EXPORT_TOO_LARGE" ? 413 :
+      error.code === "CONFIRMATION_REQUIRED" ? 400 :
+      error.code === "ADMIN_ACCOUNT_PROTECTED" ? 403 :
       503;
     return authJson({ error: { code: error.code, message: error.message } }, { status });
   }
