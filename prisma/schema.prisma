@@ -2101,3 +2101,135 @@ model ReliabilityIncidentEvent {
   @@index([incidentId, occurredAt])
   @@index([type, occurredAt])
 }
+
+enum CostResourceCategory {
+  INFRASTRUCTURE
+  DATABASE
+  COMPUTE
+  STORAGE
+  BANDWIDTH
+  CDN
+  SEARCH
+  OBSERVABILITY
+  EMAIL
+  SMS
+  ANALYTICS
+  PAYMENT_PROCESSING
+  FULFILLMENT
+  SHIPPING
+  BUILD_AND_DEPLOYMENT
+  THIRD_PARTY_API
+  SUPPORT_OPERATIONS
+}
+
+enum CostMeasurementStatus {
+  ACTUAL
+  ESTIMATED
+  ALLOCATED
+  PROJECTED
+  UNKNOWN
+}
+
+enum CostEnvironment {
+  DEVELOPMENT
+  TEST
+  PREVIEW
+  STAGING
+  PRODUCTION
+}
+
+enum CapacityLimitKind {
+  HARD
+  SOFT
+}
+
+enum CostAnomalyStatus {
+  OPEN
+  ACKNOWLEDGED
+  RESOLVED
+  DISMISSED
+}
+
+model CostResource {
+  id                 String                 @id @default(uuid()) @db.Uuid
+  key                String                 @unique @db.VarChar(120)
+  name               String                 @db.VarChar(160)
+  category           CostResourceCategory
+  purpose             String                 @db.VarChar(500)
+  owner              String                 @db.VarChar(120)
+  environment        CostEnvironment
+  criticality        String                 @db.VarChar(32)
+  provider            String?                @db.VarChar(120)
+  measurementStatus  CostMeasurementStatus  @default(UNKNOWN)
+  billingAvailable   Boolean                @default(false)
+  rateLimitKnown     Boolean                @default(false)
+  capacityLimitKnown Boolean                @default(false)
+  failureBehavior    String?                @db.VarChar(1000)
+  fallbackBehavior   String?                @db.VarChar(1000)
+  monitoring         String?                @db.VarChar(500)
+  alerting           String?                @db.VarChar(500)
+  documentation      String?                @db.VarChar(1000)
+  active             Boolean                @default(true)
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+  metrics            CostResourceMetric[]
+  limits             CapacityLimit[]
+
+  @@index([category, environment, active])
+  @@index([measurementStatus, environment])
+}
+
+model CostResourceMetric {
+  id            String                @id @default(uuid()) @db.Uuid
+  resourceId    String                @db.Uuid
+  metricKey     String                @db.VarChar(120)
+  value         Decimal               @db.Decimal(20, 6)
+  unit          String                @db.VarChar(32)
+  status        CostMeasurementStatus
+  measuredAt    DateTime              @default(now())
+  service       String?               @db.VarChar(120)
+  correlationId String?               @db.VarChar(128)
+  metadata      Json?
+  resource      CostResource           @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  @@index([resourceId, metricKey, measuredAt])
+  @@index([metricKey, measuredAt])
+  @@index([status, measuredAt])
+}
+
+model CapacityLimit {
+  id             String             @id @default(uuid()) @db.Uuid
+  resourceId     String             @db.Uuid
+  metricKey      String             @db.VarChar(120)
+  kind           CapacityLimitKind
+  threshold      Decimal            @db.Decimal(20, 6)
+  unit           String             @db.VarChar(32)
+  severity       String             @db.VarChar(32)
+  owner          String             @db.VarChar(120)
+  runbook        String             @db.VarChar(1000)
+  action         String             @db.VarChar(1000)
+  escalationPath String             @db.VarChar(500)
+  enabled        Boolean            @default(true)
+  resource       CostResource       @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  @@unique([resourceId, metricKey, kind])
+  @@index([metricKey, enabled])
+}
+
+model CostAnomaly {
+  id            String             @id @default(uuid()) @db.Uuid
+  resourceId    String             @db.Uuid
+  metricKey     String             @db.VarChar(120)
+  status        CostAnomalyStatus  @default(OPEN)
+  severity      String             @db.VarChar(32)
+  observedValue Decimal            @db.Decimal(20, 6)
+  baselineValue Decimal            @db.Decimal(20, 6)
+  deviation     Decimal            @db.Decimal(20, 6)
+  detectedAt    DateTime           @default(now())
+  resolvedAt    DateTime?
+  evidence      Json?
+  resource      CostResource       @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  @@index([resourceId, metricKey, detectedAt])
+  @@index([status, severity, detectedAt])
+}
