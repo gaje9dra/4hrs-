@@ -28,16 +28,7 @@ function safeMetadata(value: unknown): Prisma.InputJsonValue | undefined {
   const raw = JSON.stringify(safe);
   return raw.length <= MAX_METADATA_BYTES ? safe as Prisma.InputJsonValue : { truncated: true };
 }
-export async function recordAdminAudit(input: {
-  actorAdminId?: string | null;
-  action: string;
-  resourceType?: string;
-  resourceId?: string;
-  success: boolean;
-  reason?: string | null;
-  correlationId?: string | null;
-  metadata?: unknown;
-}, client: Prisma.TransactionClient | typeof db = db): Promise<void> {
+export async function recordAdminAudit(input: { actorAdminId?: string | null; action: string; resourceType?: string; resourceId?: string; success: boolean; reason?: string | null; correlationId?: string | null; requestId?: string | null; metadata?: unknown }, client: Prisma.TransactionClient | typeof db = db): Promise<void> {
   await client.adminAuditLog.create({
     data: {
       id: randomUUID(),
@@ -48,7 +39,7 @@ export async function recordAdminAudit(input: {
       success: input.success,
       reason: input.reason?.slice(0,1000),
       correlationId: input.correlationId?.slice(0,128),
-      metadata: safeMetadata(input.metadata),
+      metadata: safeMetadata({ requestId: input.requestId, ...(input.metadata as Record<string, unknown> | undefined) }),
     },
   });
 }

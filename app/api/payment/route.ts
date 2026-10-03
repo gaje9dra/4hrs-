@@ -7,6 +7,8 @@ import { createCheckoutPaymentReference } from "@/lib/payments/checkout";
 import { createPaymentApplication } from "@/lib/payments/application";
 import { PaymentError } from "@/lib/payments/errors";
 import { paymentErrorResponse, paymentJson, paymentMethodNotAllowed } from "@/lib/payments/http";
+import { logger, createOperationId } from "@/lib/observability/logger";
+import { incrementMetric } from "@/lib/observability/metrics";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -62,6 +64,7 @@ export async function POST(request: Request) {
     const expectedReference = createCheckoutPaymentReference(customerContext.customer.id, checkout);
     if (expectedReference !== input.checkoutReference) throw new PaymentError("STALE_CHECKOUT", "Checkout changed; refresh Checkout before continuing.");
     if (!checkout.payment.ready || checkout.payment.checkoutReference !== input.checkoutReference) throw new PaymentError("CHECKOUT_NOT_PAYABLE", "Checkout is not ready for payment.");
+    incrementMetric("payment_operations_total", { operation: "create", metric: "started" });
     const payment = await paymentApplication.createPaymentFromCheckout({ checkout: { customerId: customerContext.customer.id, checkoutReference: input.checkoutReference, amount: { value: checkout.totals.total, currency: checkout.totals.currency ?? "" } }, idempotencyKey: input.idempotencyKey });
     return paymentJson({ payment });
   } catch (error) { return paymentErrorResponse(error); }

@@ -5,11 +5,13 @@ import './globals.css'
 import { Header } from '@/components/layout/header'
 import { SkipLink } from '@/components/layout/skip-link'
 import { Footer } from '@/components/layout/footer'
+import { WebVitalsTelemetry } from '@/components/observability/web-vitals'
+import { ClientErrorTelemetry } from '@/components/observability/client-errors'
 import { getStorefrontNavigation, storefrontNavigationToFooterGroups } from '@/lib/storefront/navigation'
 import { getSiteOrigin, siteConfig } from '@/config/site'
 import { organizationJsonLd, websiteJsonLd, serializeJsonLd } from '@/lib/seo/structured-data'
 
-const outfit = Outfit({ subsets: ['latin'], weight: '400', variable: '--font-outfit', display: 'swap' })
+const outfit = Outfit({ subsets: ['latin'], weight: ['400'], variable: '--font-outfit', display: 'swap' })
 
 export const metadata: Metadata = {
   metadataBase: process.env.NEXT_PUBLIC_SITE_URL ? getSiteOrigin() : undefined,
@@ -30,6 +32,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   return (
     <html lang="en"><body className={`${outfit.variable} antialiased`}>
       <SkipLink /><Header items={navigation} /><main id="main-content" tabIndex={-1}>{children}</main><Footer navigationGroups={footerGroups} />
+      <WebVitalsTelemetry /><ClientErrorTelemetry />
       {identityJsonLd.map((value) => <script key={value['@type'] as string} nonce={nonce ?? undefined} type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(value) }} />)}
     </body></html>
   )

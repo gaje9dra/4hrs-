@@ -1,15 +1,9 @@
 import type { ShippingErrorCode } from "@/lib/shipping/errors";
+import { incrementMetric } from "@/lib/observability/metrics";
+import { logger } from "@/lib/observability/logger";
 
 export type ShippingObservation = Readonly<{
-  operation:
-    | "handoff"
-    | "shipment-create"
-    | "state-transition"
-    | "tracking-event"
-    | "reconciliation"
-    | "customer-tracking-request"
-    | "customer-tracking-unauthorized"
-    | "customer-tracking-not-found";
+  operation: "handoff" | "shipment-create" | "state-transition" | "tracking-event" | "reconciliation" | "customer-tracking-request" | "customer-tracking-unauthorized" | "customer-tracking-not-found";
   shipmentId?: string;
   fulfillmentId?: string;
   orderId?: string;
@@ -24,25 +18,25 @@ export type ShippingObservation = Readonly<{
 }>;
 
 export function logShippingObservation(observation: ShippingObservation): void {
-  if (process.env.NODE_ENV === "test") return;
-  const payload = {
-    scope: "shipping",
+  incrementMetric("shipping_operations_total", {
     operation: observation.operation,
-    shipmentId: observation.shipmentId,
+    provider: observation.providerId ?? "none",
+    metric: observation.result,
+  });
+  logger[["success", "duplicate", "history-only"].includes(observation.result) ? "info" : "warn"]("shipping.operation", {
+    resourceType: "shipment",
+    resourceId: observation.shipmentId,
+    correlationId: observation.correlationId,
+    provider: observation.providerId,
+    durationMs: observation.durationMs,
+    outcome: observation.result === "success" ? "success" : observation.result === "failure" ? "failure" : "rejected",
+    errorCode: observation.errorCode,
+  }, {
+    operation: observation.operation,
     fulfillmentId: observation.fulfillmentId,
     orderId: observation.orderId,
-    providerId: observation.providerId,
-    result: observation.result,
     from: observation.from,
     to: observation.to,
-    errorCode: observation.errorCode,
-    durationMs: observation.durationMs === undefined ? undefined : Math.round(observation.durationMs),
-    correlationId: observation.correlationId,
     retryClassification: observation.retryClassification,
-  };
-  if (observation.result === "success" || observation.result === "duplicate" || observation.result === "history-only") {
-    console.info("[shipping]", payload);
-  } else {
-    console.warn("[shipping]", payload);
-  }
+  });
 }

@@ -1,5 +1,7 @@
 import { AuthenticationError } from "@/lib/auth/errors";
 import { PaymentError, type PaymentErrorCode } from "@/lib/payments/errors";
+import { incrementMetric } from "@/lib/observability/metrics";
+import { reportError } from "@/lib/observability/errors";
 
 const STATUS: Record<PaymentErrorCode | "SESSION_INVALID", number> = {
   UNAUTHENTICATED: 401,
@@ -34,6 +36,7 @@ const STATUS: Record<PaymentErrorCode | "SESSION_INVALID", number> = {
 };
 
 export function paymentJson<T>(data: T, status = 200): Response {
+  incrementMetric("payment_operations_total", { operation: "http", status_class: `${Math.floor(status / 100)}xx` });
   return Response.json(data, {
     status,
     headers: {
@@ -45,6 +48,8 @@ export function paymentJson<T>(data: T, status = 200): Response {
 }
 
 export function paymentErrorResponse(error: unknown): Response {
+  incrementMetric("payment_operations_total", { operation: "error", error_class: error instanceof PaymentError ? error.code : error instanceof AuthenticationError ? "authentication" : "unexpected" });
+  reportError(error, { outcome: "failure", resourceType: "payment" });
   const code = error instanceof AuthenticationError
     ? "SESSION_INVALID"
     : error instanceof PaymentError

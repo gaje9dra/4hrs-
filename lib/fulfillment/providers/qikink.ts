@@ -5,6 +5,8 @@ import type {
   FulfillmentProviderResponse,
 } from "@/lib/fulfillment/provider";
 import { getQikinkAccessToken, getQikinkApiCredentials } from "@/lib/fulfillment/providers/qikink-auth";
+import { logger } from "@/lib/observability/logger";
+import { incrementMetric } from "@/lib/observability/metrics";
 
 const QIKINK_ID = "qikink";
 const QIKINK_LEGACY_CREATE_ORDER_URL = "https://qikink.com/erp2/index.php/api/createOrder";
@@ -208,6 +210,7 @@ export function createQikinkFulfillmentProvider(options: {
     },
 
     async createFulfillment(request) {
+      const startedAt = performance.now();
       this.validateConfiguration();
       assertValidRequest(request);
 
@@ -267,14 +270,31 @@ export function createQikinkFulfillmentProvider(options: {
           throw new QikinkProviderError("PROVIDER_INVALID_RESPONSE", "Qikink accepted the request without returning an order reference.");
         }
 
+        logger.info("provider.request.succeeded", {
+          provider: QIKINK_ID,
+          resourceType: "fulfillment",
+          resourceId: request.fulfillmentId,
+          durationMs: Math.round(performance.now() - startedAt),
+          outcome: "success",
+        }, { operation: "createFulfillment" });
+        incrementMetric("provider_requests_total", { provider: QIKINK_ID, operation: "createFulfillment" });
         return {
           providerId: QIKINK_ID,
           providerFulfillmentReference: providerReference,
           status: "SUBMITTED",
         } satisfies FulfillmentProviderResponse;
       } catch (error) {
+        const code = error instanceof QikinkProviderError ? error.category : classifyError(error);
+        logger.warn("provider.request.failed", {
+          provider: QIKINK_ID,
+          resourceType: "fulfillment",
+          resourceId: request.fulfillmentId,
+          durationMs: Math.round(performance.now() - startedAt),
+          outcome: code === "PROVIDER_TIMEOUT" ? "timeout" : "failure",
+          errorCode: code,
+        }, { operation: "createFulfillment" });
+        incrementMetric("provider_failures_total", { provider: QIKINK_ID, operation: "createFulfillment", error_class: code });
         if (error instanceof QikinkProviderError) throw error;
-        const code = classifyError(error);
         throw new QikinkProviderError(
           code,
           code === "PROVIDER_TIMEOUT"

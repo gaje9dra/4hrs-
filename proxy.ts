@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { resolveRequestId, REQUEST_ID_HEADER } from "@/lib/observability/request";
 
 function contentSecurityPolicy(nonce: string): string {
   const directives = [
@@ -26,25 +27,18 @@ function contentSecurityPolicy(nonce: string): string {
 export function proxy(request: NextRequest) {
   const nonce = Buffer.from(randomUUID()).toString("base64");
   const csp = contentSecurityPolicy(nonce);
+  const requestId = resolveRequestId(request.headers.get(REQUEST_ID_HEADER));
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-nonce", nonce);
+  requestHeaders.set(REQUEST_ID_HEADER, requestId);
   requestHeaders.set("Content-Security-Policy", csp);
 
-  const response = NextResponse.next({
-    request: { headers: requestHeaders },
-  });
+  const response = NextResponse.next({ request: { headers: requestHeaders } });
   response.headers.set("Content-Security-Policy", csp);
+  response.headers.set(REQUEST_ID_HEADER, requestId);
   return response;
 }
 
 export const config = {
-  matcher: [
-    {
-      source: "/((?!api|_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml).*)",
-      missing: [
-        { type: "header", key: "next-router-prefetch" },
-        { type: "header", key: "purpose", value: "prefetch" },
-      ],
-    },
-  ],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml).*)"],
 };
