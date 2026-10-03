@@ -434,6 +434,83 @@ export async function rollbackContent(context: AdminAuthorizationContext, id: st
   return result.version;
 }
 
+export async function listPublishedContentByType(type: ContentType, locale: SupportedLocale) {
+  const items = await db.contentItem.findMany({
+    where: { type, locale, publishedAt: { not: null }, publishedVersion: { not: null } },
+    orderBy: [{ position: "asc" }, { updatedAt: "desc" }, { id: "asc" }],
+  });
+  const now = new Date();
+  const results: Array<{ item: typeof items[number]; snapshot: ContentSnapshot; version: number }> = [];
+  for (const item of items) {
+    if (item.publishedVersion === null) continue;
+    const revision = await db.contentRevision.findUnique({
+      where: { contentId_version: { contentId: item.id, version: item.publishedVersion } },
+    });
+    if (!revision) continue;
+    const snapshot = validateContentInput(revision.snapshot as ContentInput);
+    const start = snapshot.publicationStartAt ? new Date(snapshot.publicationStartAt) : null;
+    const end = snapshot.publicationEndAt ? new Date(snapshot.publicationEndAt) : null;
+    if ((start && start > now) || (end && end <= now)) continue;
+    results.push({ item, snapshot, version: revision.version });
+  }
+  return results;
+}
+
+export async function listPublishedEditorialForReference(
+  type: ContentType,
+  referenceType: ContentReferenceType,
+  referenceId: string,
+  locale: SupportedLocale,
+) {
+  const results = await listPublishedContentByType(type, locale);
+  return results.filter((result) =>
+    result.snapshot.linkedReferences.some((reference) => reference.type === referenceType && reference.id === referenceId),
+  );
+}
+
+export async function resolvePublishedContentPresentation(
+  results: Array<{ item: { id: string }; snapshot: ContentSnapshot; version: number }>,
+) {
+  const mediaIds = new Set<string>();
+  const productIds = new Set<string>();
+  const categoryIds = new Set<string>();
+  const collectionIds = new Set<string>();
+
+  for (const result of results) {
+    for (const mediaId of result.snapshot.mediaReferences) mediaIds.add(mediaId);
+    for (const block of result.snapshot.body) {
+      if (block.type === "image") mediaIds.add(block.mediaId);
+      if (block.type === "product") productIds.add(block.productId);
+      if (block.type === "category") categoryIds.add(block.categoryId);
+      if (block.type === "collection") collectionIds.add(block.collectionId);
+    }
+  }
+
+  const [media, products, categories, collections] = await Promise.all([
+    mediaIds.size ? db.productImage.findMany({ where: { id: { in: [...mediaIds] } }, select: { id: true, url: true, altText: true } }) : [],
+    productIds.size ? db.product.findMany({ where: { id: { in: [...productIds] }, status: "ACTIVE" }, select: { id: true, slug: true } }) : [],
+    categoryIds.size ? db.category.findMany({ where: { id: { in: [...categoryIds] }, status: "ACTIVE" }, select: { id: true, slug: true } }) : [],
+    collectionIds.size ? db.collection.findMany({ where: { id: { in: [...collectionIds] }, status: "ACTIVE" }, select: { id: true, slug: true } }) : [],
+  ]);
+
+  const mediaMap = new Map(media.map((item) => [item.id, { url: item.url, altText: item.altText }]));
+  const linkMap = new Map<string, string>();
+  products.forEach((item) => linkMap.set(item.id, "/product/" + encodeURIComponent(item.slug)));
+  categories.forEach((item) => linkMap.set(item.id, "/category/" + encodeURIComponent(item.slug)));
+  collections.forEach((item) => linkMap.set(item.id, "/collection/" + encodeURIComponent(item.slug)));
+
+  return results.map((result) => ({
+    ...result,
+    media: Object.fromEntries(result.snapshot.mediaReferences.map((id) => [id, mediaMap.get(id)]).filter((entry): entry is [string, { url: string; altText: string | null }] => Boolean(entry[1]))),
+    links: Object.fromEntries(
+      result.snapshot.body
+        .flatMap((block) => block.type === "product" ? [block.productId] : block.type === "category" ? [block.categoryId] : block.type === "collection" ? [block.collectionId] : [])
+        .map((id) => [id, linkMap.get(id)])
+        .filter((entry): entry is [string, string] => Boolean(entry[1])),
+    ),
+  }));
+}
+
 export async function getPublishedContent(type: ContentType, slug: string, locale: SupportedLocale) {
   const item = await db.contentItem.findFirst({ where: { type, slug, locale, publishedAt: { not: null }, publishedVersion: { not: null } }, orderBy: { publishedAt: "desc" } });
   if (!item || item.publishedVersion === null) return null;
