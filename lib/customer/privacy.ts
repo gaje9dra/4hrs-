@@ -279,21 +279,13 @@ async function buildExport(customerId: string, tx: Prisma.TransactionClient): Pr
     tx.notificationEvent.findMany({
       where: { customerId },
       orderBy: [{ createdAt: "asc" }, { id: "asc" }],
-      select: {
-        type: true,
-        createdAt: true,
-      },
+      select: { type: true, createdAt: true },
     }),
     tx.customerCommunicationPreference.findMany({
       where: { customerId },
       orderBy: [{ category: "asc" }, { channel: "asc" }],
       select: { category: true, channel: true, state: true, source: true, version: true, createdAt: true, updatedAt: true },
-    })    tx.customerCommunicationPreference.findMany({
-      where: { customerId },
-      orderBy: [{ category: "asc" }, { channel: "asc" }],
-      select: { category: true, channel: true, state: true, source: true, version: true, createdAt: true, updatedAt: true },
     }),
-,
   ]);
 
   return {
