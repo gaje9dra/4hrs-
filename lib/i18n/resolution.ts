@@ -3,6 +3,12 @@ import { DEFAULT_LOCALE, normalizeLocale, type SupportedLocale } from "./registr
 
 export const LOCALE_COOKIE = "4hrs_locale";
 
+export function localeFromPathname(pathname: string): SupportedLocale | null {
+  const segment = pathname.split("/").filter(Boolean)[0];
+  if (segment === "en-IN" || segment === "en-US") return segment;
+  return null;
+}
+
 function parseAcceptLanguage(value: string | null): SupportedLocale | null {
   if (!value) return null;
   const candidates = value
