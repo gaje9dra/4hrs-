@@ -14,7 +14,9 @@
     "postinstall": "prisma generate",
     "admin:provision": "tsx scripts/provision-admin.ts",
     "recovery:validate": "tsx scripts/recovery-validate.ts",
-    "recovery:drill": "tsx scripts/recovery-drill.ts"
+    "recovery:drill": "tsx scripts/recovery-drill.ts",
+    "release:validate": "tsx scripts/validate-environment.ts",
+    "release:check": "npm run lint && npm run typecheck && npm test && npm run build"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.1.14",
@@ -38,5 +40,10 @@
   },
   "overrides": {
     "deepmerge-ts": "^8.0.2"
-  }
+  },
+  "engines": {
+    "node": ">=24.21.0 <25",
+    "npm": ">=11.6.0 <12"
+  },
+  "packageManager": "npm@11.6.0"
 }
