@@ -7,9 +7,10 @@ const root = process.cwd();
 const read = (file: string) => fs.readFileSync(path.join(root, file), "utf8");
 
 test("Phase 15.3 patches the Next.js security release in the locked release line", () => {
-  const pkg = JSON.parse(read("package.json")) as { dependencies: Record<string, string>; devDependencies: Record<string, string> };
+  const pkg = JSON.parse(read("package.json")) as { dependencies: Record<string, string>; devDependencies: Record<string, string>; overrides: Record<string, string> };
   assert.equal(pkg.dependencies.next, "16.3.8");
   assert.equal(pkg.devDependencies["eslint-config-next"], "16.3.8");
+  assert.equal(pkg.overrides["deepmerge-ts"], "^8.0.2");
 });
 
 test("Security headers use a strict nonce CSP without unsafe-inline or unsafe-eval", () => {
