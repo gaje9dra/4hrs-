@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { Prisma, type CostMeasurementStatus } from "@prisma/client";
+import { type CostMeasurementStatus } from "@prisma/client";
 import { db } from "@/lib/db/client";
 import { auditAdminAction } from "@/lib/admin/audit";
 import type { AdminAuthorizationContext } from "@/lib/admin/authorization";
