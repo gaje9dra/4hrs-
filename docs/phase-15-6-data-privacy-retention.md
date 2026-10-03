@@ -226,7 +226,7 @@ Tests and development scripts use synthetic data. Phase 15.6 introduces no produ
 | Telemetry | Observability | Redacted/bounded | Operations | Requires business/legal confirmation |
 | Privacy exports | Immediate response | Not persisted | Customer | No server-side export-file retention |
 | Media | Catalog/media storage | Not changed by customer deletion | Catalog/Operations | Requires business/legal confirmation |
-| Backups | Phase 15.5 backup system | Primary deletion does not erase backups immediately | Operations | Requires business/legal confirmation |
+| Notification delivery recipient | NotificationDelivery | Email recipient snapshot is scrubbed on customer deletion; delivery metadata remains operational | Notifications | Requires business/legal confirmation |\n| Backups | Phase 15.5 backup system | Primary deletion does not erase backups immediately | Operations | Requires business/legal confirmation |
 
 ## 24. Automated retention
 
