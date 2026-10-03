@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { requireAdmin, requireHighRiskReason } from "@/lib/admin/authorization";
 import { adminErrorResponse, adminJson, assertAdminSameOrigin, readAdminJson } from "@/lib/admin/http";
 import { auditAdminAction } from "@/lib/admin/audit";
-import { createFeatureFlag, listFeatureFlags, normalizeEnvironment } from "@/lib/feature-flags/service";
+import { createFeatureFlag, listFeatureFlags  } from "@/lib/feature-flags/service";
 import type { FeatureFlagEnvironment } from "@prisma/client";
+const ENVIRONMENTS = new Set<FeatureFlagEnvironment>(["DEVELOPMENT","TEST","STAGING","PRODUCTION"]);
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -13,7 +14,8 @@ export async function GET(request: Request) {
     const context = await requireAdmin(request, "feature_flags.read");
     const url = new URL(request.url);
     const rawEnvironment = url.searchParams.get("environment");
-    const environment = rawEnvironment ? normalizeEnvironment(rawEnvironment) : undefined;
+    const environment = rawEnvironment ? rawEnvironment as FeatureFlagEnvironment : undefined;
+    if (environment && !ENVIRONMENTS.has(environment)) return adminJson({ error: { code: "INVALID_REQUEST", message: "Feature flag environment is invalid." } }, { status: 400 });
     return adminJson({ featureFlags: await listFeatureFlags(environment as FeatureFlagEnvironment | undefined) });
   } catch (error) {
     return adminErrorResponse(error);
