@@ -1814,3 +1814,79 @@ model ContentRevision {
   @@unique([contentId, version])
   @@index([contentId, createdAt])
 }
+
+
+enum ReliabilityIncidentSeverity {
+  CRITICAL
+  MAJOR
+  OPERATIONAL
+  LOCALIZED
+  INFO
+}
+
+enum ReliabilityIncidentStatus {
+  OPEN
+  ACKNOWLEDGED
+  RESOLVED
+}
+
+enum ReliabilityIncidentCategory {
+  AVAILABILITY
+  FINANCIAL
+  DATA_PRIVACY
+  PROVIDER
+  OPERATIONS
+  SECURITY
+  PERFORMANCE
+  DEPENDENCY
+  DATA_INTEGRITY
+}
+
+enum ReliabilityIncidentEventType {
+  DETECTED
+  UPDATED
+  ACKNOWLEDGED
+  RESOLVED
+  MITIGATION
+}
+
+model ReliabilityIncident {
+  id              String                         @id @default(uuid()) @db.Uuid
+  fingerprint     String                         @unique @db.VarChar(64)
+  severity        ReliabilityIncidentSeverity
+  category        ReliabilityIncidentCategory
+  capability      String                         @db.VarChar(64)
+  title           String                         @db.VarChar(200)
+  summary         String                         @db.VarChar(2000)
+  dependency      String?                        @db.VarChar(64)
+  status          ReliabilityIncidentStatus      @default(OPEN)
+  firstSeenAt     DateTime                       @default(now())
+  lastSeenAt      DateTime                       @default(now())
+  lastAlertedAt   DateTime?
+  resolvedAt      DateTime?
+  occurrenceCount Int                            @default(1)
+  correlationId   String?                        @db.VarChar(128)
+  deploymentId    String?                        @db.VarChar(128)
+  metadata        Json?
+  createdAt       DateTime                       @default(now())
+  updatedAt       DateTime                       @updatedAt
+  events          ReliabilityIncidentEvent[]
+
+  @@index([status, severity, lastSeenAt])
+  @@index([capability, lastSeenAt])
+}
+
+model ReliabilityIncidentEvent {
+  id            String                        @id @default(uuid()) @db.Uuid
+  incidentId    String                        @db.Uuid
+  type          ReliabilityIncidentEventType
+  actorAdminId  String?                       @db.VarChar(64)
+  reason        String?                       @db.VarChar(1000)
+  correlationId String?                       @db.VarChar(128)
+  metadata      Json?
+  occurredAt    DateTime                      @default(now())
+  incident      ReliabilityIncident           @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+
+  @@index([incidentId, occurredAt])
+  @@index([type, occurredAt])
+}
