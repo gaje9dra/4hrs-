@@ -17,7 +17,8 @@
     "recovery:drill": "tsx scripts/recovery-drill.ts",
     "release:validate": "tsx scripts/validate-environment.ts",
     "release:check": "npm run lint && npm run typecheck && npm test && npm run build",
-    "release:verify": "tsx scripts/release-verify.ts"
+    "release:verify": "tsx scripts/release-verify.ts",
+    "db:audit-migrations": "tsx scripts/audit-migrations.ts"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.1.14",
