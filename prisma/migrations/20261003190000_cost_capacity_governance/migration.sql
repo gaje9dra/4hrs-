@@ -86,3 +86,10 @@ CREATE TABLE "CostAnomaly" (
 );
 CREATE INDEX "CostAnomaly_resourceId_metricKey_detectedAt_idx" ON "CostAnomaly"("resourceId","metricKey","detectedAt");
 CREATE INDEX "CostAnomaly_status_severity_detectedAt_idx" ON "CostAnomaly"("status","severity","detectedAt");
+
+INSERT INTO "GovernanceControl" ("id","key","domain","title","description","criticality","ownerRole","status","applicability","verificationMethod","version")
+VALUES
+(gen_random_uuid(),'COST-001','OBSERVABILITY','Operational cost telemetry is governed','Resource telemetry is structured, bounded, privacy-safe and separated from customer financial truth.','HIGH','platform','IMPLEMENTED','REQUIRED','Review resource metric classification, sanitization and audit boundaries.',1),
+(gen_random_uuid(),'COST-002','THIRD_PARTY_INTEGRATIONS','Provider cost limits are evidence-backed','Provider pricing, quotas and hard limits are never represented as facts without authoritative evidence.','HIGH','operations','IMPLEMENTED','REQUIRED','Verify unknown provider limits remain UNKNOWN until externally evidenced.',1),
+(gen_random_uuid(),'COST-003','DATA_LIFECYCLE','Cost telemetry follows retention controls','Operational resource telemetry remains subject to existing privacy and data-lifecycle governance.','MEDIUM','platform','IMPLEMENTED','REQUIRED','Verify retention policy integration and bounded telemetry storage.',1)
+ON CONFLICT ("key") DO NOTHING;
