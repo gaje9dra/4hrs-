@@ -5,6 +5,7 @@ import { CustomerProfileForm } from "@/components/storefront/customer-profile-fo
 import { CustomerPrivacyControls } from "@/components/storefront/customer-privacy-controls";
 import { CustomerCommunicationPreferences } from "@/components/storefront/customer-communication-preferences";
 import { requireCurrentCustomer } from "@/lib/auth/context";
+import { getCustomerCommunicationPreferences } from "@/lib/communications/preferences";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -22,6 +23,9 @@ export default async function AccountProfilePage() {
   } catch {
     redirect("/login?next=%2Faccount%2Fprofile");
   }
+  const communicationPreferences = await getCustomerCommunicationPreferences(current.customer.id);
+  const marketingEmailPreference = communicationPreferences.find((item) => item.category === "MARKETING_PROMOTIONAL" && item.channel === "EMAIL");
+  if (!marketingEmailPreference) throw new Error("Communication preference configuration is unavailable.");
 
   return (
     <Container width="narrow" className="py-10 sm:py-14 lg:py-20">
@@ -31,7 +35,7 @@ export default async function AccountProfilePage() {
         <p className="mt-4 text-base leading-7">Update the editable profile information on your customer account.</p>
       </header>
       <CustomerProfileForm initialCustomer={current.customer} />
-      <CustomerCommunicationPreferences />
+      <CustomerCommunicationPreferences initialPreference={{ category: "MARKETING_PROMOTIONAL", channel: "EMAIL", state: marketingEmailPreference.state, version: marketingEmailPreference.version }} />
       <CustomerPrivacyControls />
     </Container>
   );
