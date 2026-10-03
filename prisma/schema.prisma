@@ -1791,6 +1791,7 @@ model ContentItem {
 
   @@unique([type, locale, slug])
   @@index([status, locale, type])
+  @@index([type, locale, status, position])
   @@index([publicationStartAt, publicationEndAt])
   @@index([sourceContentId, translationStatus])
   @@index([updatedAt])
