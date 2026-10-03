@@ -29,7 +29,17 @@ export async function POST(request: Request) {
     const body = await readAdminJson(request);
     const reason = typeof body.reason === "string" ? body.reason : null;
     if (body.environment === "PRODUCTION" && body.status === "ACTIVE") requireHighRiskReason(reason);
-    const experiment = await createExperiment(body);
+    const experiment = await createExperiment({
+      key: body.key,
+      name: body.name,
+      description: body.description,
+      environment: body.environment,
+      status: body.status,
+      startAt: body.startAt,
+      endAt: body.endAt,
+      primaryMetricEvent: body.primaryMetricEvent,
+      variants: body.variants,
+    });
     await auditAdminAction(context, {
       action: "EXPERIMENT_CREATED",
       resourceType: "Experiment",
