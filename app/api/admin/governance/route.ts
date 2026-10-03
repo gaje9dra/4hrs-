@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin/authorization";
 import { AdminError } from "@/lib/admin/errors";
+import { auditAdminAction } from "@/lib/admin/audit";
 import { createGovernanceEvidence, createGovernanceException, exportGovernancePackage, governanceSummary, listGovernanceControls, transitionGovernanceException, verifyGovernanceControl } from "@/lib/governance/service";
 
 export const dynamic = "force-dynamic";
@@ -18,6 +19,7 @@ export async function GET(request: Request) {
     if (url.searchParams.get("export") === "1") {
       await requireAdmin(request, "governance.export");
       const payload = await exportGovernancePackage();
+      await auditAdminAction(context, { action: "GOVERNANCE_EXPORT", resourceType: "GovernanceAuditPackage", success: true, reason: "Governance audit package exported", requestId: request.headers.get("x-request-id"), metadata: { controlCount: payload.controls.length, evidenceCount: payload.evidence.length, verificationCount: payload.verifications.length } });
       const body = JSON.stringify(payload);
       return new NextResponse(body, { status: 200, headers: { "content-type": "application/json", "content-disposition": "attachment; filename=4hrs-governance-audit-package.json", "cache-control": "no-store" } });
     }
