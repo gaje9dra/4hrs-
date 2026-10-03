@@ -7,22 +7,24 @@ import type { CustomerRepository } from "../lib/customer/repository.ts";
 
 function fakeRepository(): CustomerRepository {
   const now = () => new Date("2026-10-03T10:00:00.000Z");
-  const customer = { id: "customer-1", email: "customer@example.com", displayName: null, status: "ACTIVE" as const, locale: "en-IN", timezone: "Asia/Kolkata", emailVerifiedAt: null, anonymizedAt: null, createdAt: now(), updatedAt: now() };
-  const credential = { id: "credential-1", customerId: customer.id, passwordHash: "", createdAt: now(), updatedAt: now() };
+  type FakeCustomer = { id: string; email: string; displayName: string | null; status: "ACTIVE" | "DISABLED" | "SUSPENDED" | "PENDING_VERIFICATION"; locale: string; timezone: string; emailVerifiedAt: Date | null; anonymizedAt: Date | null; createdAt: Date; updatedAt: Date };
+  type FakeCredential = { id: string; customerId: string; passwordHash: string; createdAt: Date; updatedAt: Date };
+  let customer: FakeCustomer | null = null;
+  let credential: FakeCredential | null = null;
   const sessions = new Map<string, { id: string; customerId: string; sessionTokenHash: string; createdAt: Date; expiresAt: Date; revokedAt: Date | null; lastUsedAt: Date | null }>();
   let sequence = 0;
   const repo: CustomerRepository = {
     async withTransaction<T>(work: (repository: CustomerRepository) => Promise<T>): Promise<T> { return work(repo); },
-    async findCustomerById(id) { return id === customer.id ? customer : null; },
-    async findCustomerByNormalizedEmail(email) { return email === customer.email ? customer : null; },
-    async createCustomer() { return customer; },
-    async updateCustomerStatus() { return customer; },
+    async findCustomerById(id) { return customer?.id === id ? customer : null; },
+    async findCustomerByNormalizedEmail(email) { return customer?.email === email ? customer : null; },
+    async createCustomer(input) { customer = { id: "customer-1", email: input.email, displayName: null, status: input.status ?? "ACTIVE", locale: "en-IN", timezone: "Asia/Kolkata", emailVerifiedAt: input.emailVerifiedAt ?? null, anonymizedAt: null, createdAt: now(), updatedAt: now() }; return customer; },
+    async updateCustomerStatus(_id, status) { if (!customer) throw new Error("not found"); customer.status = status; return customer; },
     async updateCustomerStatusIfUnchanged() { return { count: 1 }; },
-    async updateCustomerProfile() { return customer; },
+    async updateCustomerProfile() { if (!customer) throw new Error("not found"); return customer; },
     async updateCustomerProfileIfUnchanged() { return { count: 1 }; },
-    async createCredential(input) { Object.assign(credential, input); return credential; },
-    async findCredentialByCustomerId(id) { return id === customer.id ? credential : null; },
-    async updateCredentialHash(_id, passwordHash) { credential.passwordHash = passwordHash; return credential; },
+    async createCredential(input) { credential = { id: "credential-1", ...input, createdAt: now(), updatedAt: now() }; return credential; },
+    async findCredentialByCustomerId(id) { return customer?.id === id ? credential : null; },
+    async updateCredentialHash(_id, passwordHash) { if (!credential) throw new Error("credential not found"); credential.passwordHash = passwordHash; return credential; },
     async createSession(input) {
       const session = { id: `session-${++sequence}`, ...input, createdAt: now(), revokedAt: null, lastUsedAt: null };
       sessions.set(session.id, session);
@@ -30,7 +32,7 @@ function fakeRepository(): CustomerRepository {
     },
     async findSessionByTokenHash(hash) {
       const session = [...sessions.values()].find((item) => item.sessionTokenHash === hash);
-      return session ? { ...session, customer } : null;
+      return session && customer ? { ...session, customer } : null;
     },
     async revokeSession(id, revokedAt = now()) {
       const session = sessions.get(id);
