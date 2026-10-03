@@ -297,7 +297,7 @@ Webhook processing must preserve event IDs, signatures, versions, processing sta
 
 Historical events are not blindly replayed. Where replay is required, it must be controlled and idempotent.
 
-## 22. Background-job recovery
+## 22. Background job recovery
 
 Jobs are classified as pending, running, completed, failed, dead-lettered or unknown.
 
