@@ -19,7 +19,8 @@
     "release:check": "npm run lint && npm run typecheck && npm test && npm run build",
     "release:verify": "tsx scripts/release-verify.ts",
     "db:audit-migrations": "tsx scripts/audit-migrations.ts",
-    "reliability:validate": "tsx -e \"import { SLO_CANDIDATES, DEPENDENCY_POLICIES } from './lib/reliability/model.ts'; if (!SLO_CANDIDATES.every((x) => x.provisional)) process.exit(1); console.log(JSON.stringify({sloCandidates:SLO_CANDIDATES.length, dependencies:Object.keys(DEPENDENCY_POLICIES).length}));\""
+    "reliability:validate": "tsx -e \"import { SLO_CANDIDATES, DEPENDENCY_POLICIES } from './lib/reliability/model.ts'; if (!SLO_CANDIDATES.every((x) => x.provisional)) process.exit(1); console.log(JSON.stringify({sloCandidates:SLO_CANDIDATES.length, dependencies:Object.keys(DEPENDENCY_POLICIES).length}));\"",
+    "architecture:audit": "tsx scripts/platform-maturity-audit.ts"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.1.14",
