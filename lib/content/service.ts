@@ -3,7 +3,8 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db/client";
 import { normalizeLocale, isSupportedLocale, type SupportedLocale } from "@/lib/i18n/registry";
-import { auditAdminAction, type AdminAuthorizationContext } from "@/lib/admin/audit";
+import { auditAdminAction } from "@/lib/admin/audit";
+import type { AdminAuthorizationContext } from "@/lib/admin/authorization";
 import { incrementMetric } from "@/lib/observability/metrics";
 
 export type ContentReferenceType = "PRODUCT" | "CATEGORY" | "COLLECTION";
@@ -358,7 +359,7 @@ async function transition(context: AdminAuthorizationContext, id: string, target
       if (new Date(snapshot.publicationStartAt) <= new Date()) throw new ContentError("INVALID_TRANSITION", "Scheduled publication must be in the future.");
       await validateExternalReferences(snapshot);
     }
-    const data: Prisma.ContentItemUpdateInput = { status: target, updatedByAdmin: { connect: { id: context.adminUser.id } } };
+    const data: Prisma.ContentItemUpdateInput = { status: target, updatedBy: { connect: { id: context.adminUser.id } } };
     if (target === "PUBLISHED") {
       data.publishedAt = new Date();
       data.publishedVersion = current.version;
