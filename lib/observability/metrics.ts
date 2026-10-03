@@ -11,7 +11,8 @@ export type MetricName =
   | "payment_operations_total"
   | "fulfillment_operations_total"
   | "shipping_operations_total"
-  | "security_events_total";
+  | "security_events_total"
+  | "notification_operations_total";
 
 export type MetricLabels = Readonly<Record<string, string>>;
 
