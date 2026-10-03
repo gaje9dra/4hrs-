@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 type Preference = { category: "MARKETING_PROMOTIONAL"; channel: "EMAIL"; state: "OPTED_IN" | "OPTED_OUT"; version: number };
-type AuditItem = { category: string; channel: string; previousState: string | null; newState: string; source: string; actorType: string; reason: string | null; createdAt: string };
+type AuditItem = { category: string; channel: string; previousState: string | null; newState: string; source: string; actorType: string | null; reason: string | null; createdAt: string };
 
 export default function CustomerCommunicationPreferencesAdmin({ customerId, canManage, canAudit, initialPreference, initialAudit }: { customerId: string; canManage: boolean; canAudit: boolean; initialPreference: Preference; initialAudit: AuditItem[] | null }) {
   const [preference, setPreference] = useState<Preference>(initialPreference);
