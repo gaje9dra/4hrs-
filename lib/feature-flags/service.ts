@@ -1,7 +1,7 @@
 import { Prisma, type FeatureFlagEnvironment, type FeatureFlagLifecycle, type FeatureFlagType, type ExperimentStatus, type ExperimentSubjectType } from "@prisma/client";
 import { createHash } from "node:crypto";
 import { db } from "@/lib/db/client";
-import { recordAnalyticsEvent } from "@/lib/analytics/events";
+import { ANALYTICS_EVENT_CATALOG, recordAnalyticsEvent } from "@/lib/analytics/events";
 import { incrementMetric, observeMetric } from "@/lib/observability/metrics";
 
 export const ROLLOUT_BASIS_POINTS = 10_000;
@@ -307,7 +307,11 @@ export function validateExperimentInput(input: {
   if (typeof input.name !== "string" || input.name.trim().length < 2 || input.name.trim().length > 160) throw new FeatureFlagError("INVALID_CONFIGURATION", "Experiment name is invalid.");
   if (!["DEVELOPMENT","TEST","STAGING","PRODUCTION"].includes(String(input.environment))) throw new FeatureFlagError("INVALID_CONFIGURATION", "Experiment environment is invalid.");
   if (input.status !== undefined && !["DRAFT","ACTIVE","PAUSED","COMPLETED","RETIRED"].includes(String(input.status))) throw new FeatureFlagError("INVALID_CONFIGURATION", "Experiment status is invalid.");
-  if (input.primaryMetricEvent !== undefined && input.primaryMetricEvent !== null && !validKey(input.primaryMetricEvent, FLAG_KEY_PATTERN, 64)) throw new FeatureFlagError("INVALID_CONFIGURATION", "Primary metric event reference is invalid.");
+  if (input.primaryMetricEvent !== undefined && input.primaryMetricEvent !== null) {
+    if (typeof input.primaryMetricEvent !== "string" || !(input.primaryMetricEvent in ANALYTICS_EVENT_CATALOG)) {
+      throw new FeatureFlagError("INVALID_CONFIGURATION", "Primary metric event reference is not a supported analytics event.");
+    }
+  }
   const parseDate = (value: unknown) => {
     if (value === undefined || value === null) return null;
     if (typeof value !== "string") throw new FeatureFlagError("INVALID_CONFIGURATION", "Experiment dates must be ISO timestamps.");
