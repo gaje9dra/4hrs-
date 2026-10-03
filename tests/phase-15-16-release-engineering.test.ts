@@ -2,7 +2,11 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { publicReleaseIdentity, readServerEnvironment, validateServerEnvironment } from "@/lib/config/env";
 
-const original = { ...process.env };\n\nfunction setNodeEnv(value: string) {\n  Object.defineProperty(process.env, "NODE_ENV", { value, writable: true, configurable: true, enumerable: true });\n}
+const original = { ...process.env };
+
+function setNodeEnv(value: string) {
+  Object.defineProperty(process.env, "NODE_ENV", { value, writable: true, configurable: true, enumerable: true });
+}
 
 function restoreEnvironment() {
   for (const key of Object.keys(process.env)) {
