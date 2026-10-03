@@ -22,7 +22,7 @@ export type MetricName =
 
 export type MetricLabels = Readonly<Record<string, string>>;
 
-const ALLOWED_LABELS = new Set(["route", "method", "status_class", "error_class", "provider", "operation", "environment", "metric", "category", "channel", "reason", "category"]);
+const ALLOWED_LABELS = new Set(["route", "method", "status_class", "error_class", "provider", "operation", "environment", "metric", "category", "channel", "reason"]);
 
 export function boundedMetricLabels(labels: MetricLabels): MetricLabels {
   const result: Record<string, string> = {};
