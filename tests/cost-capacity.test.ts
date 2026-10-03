@@ -10,8 +10,8 @@ test("cost status semantics never upgrades unknown billing data to actual",()=>{
 });
 
 test("capacity evaluation triggers only at or above configured threshold",()=>{
-  assert.equal(evaluateCapacity(9,10,"SOFT","HIGH","scale","operations").triggered,false);
-  assert.equal(evaluateCapacity(10,10,"HARD","CRITICAL","protect","on-call").triggered,true);
+  assert.equal(evaluateCapacity(9,10,"HIGH","scale","operations").triggered,false);
+  assert.equal(evaluateCapacity(10,10,"CRITICAL","protect","on-call").triggered,true);
 });
 
 test("anomaly detection is deterministic and does not require monetary assumptions",()=>{
