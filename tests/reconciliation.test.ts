@@ -2,8 +2,28 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { AUTHORITATIVE_DOMAINS, canAutoRepair, isHighRisk, sanitizeReconciliationEvidence } from "@/lib/reconciliation/model";
 
- it("defines authority for supported domains",()=>{ expect(AUTHORITATIVE_DOMAINS.PAYMENT).toBe("PAYMENT"); expect(AUTHORITATIVE_DOMAINS.SEARCH).toBe("SEARCH_PROJECTION"); expect(AUTHORITATIVE_DOMAINS.PROVIDERS).toBe("PROVIDER_ADAPTER"); });
- it("only permits projection-safe automatic repair",()=>{ expect(canAutoRepair("STALE_PROJECTION","SEARCH")).toBe(true); expect(canAutoRepair("MISSING_EVENT","NOTIFICATIONS")).toBe(true); expect(canAutoRepair("FINANCIAL_MISMATCH","PAYMENT")).toBe(false); expect(canAutoRepair("OWNERSHIP_MISMATCH","CUSTOMER")).toBe(false); expect(canAutoRepair("PROVIDER_MISMATCH","FULFILLMENT")).toBe(false); });
- it("marks high-risk discrepancies",()=>{ expect(isHighRisk("FINANCIAL_MISMATCH","PAYMENT")).toBe(true); expect(isHighRisk("OWNERSHIP_MISMATCH","CUSTOMER")).toBe(true); expect(isHighRisk("PROVIDER_MISMATCH","FULFILLMENT")).toBe(true); expect(isHighRisk("STALE_PROJECTION","SEARCH")).toBe(false); });
- it("redacts sensitive evidence",()=>{ const safe=sanitizeReconciliationEvidence({token:"secret",customerEmail:"x@example.com",phone:"123",rule:"R",nested:{address:"hidden",count:2}}); expect(safe).toEqual({rule:"R",nested:{count:2}}); });
+test("defines authority for supported domains",()=>{
+ assert.equal(AUTHORITATIVE_DOMAINS.PAYMENT,"PAYMENT");
+ assert.equal(AUTHORITATIVE_DOMAINS.SEARCH,"SEARCH_PROJECTION");
+ assert.equal(AUTHORITATIVE_DOMAINS.PROVIDERS,"PROVIDER_ADAPTER");
+});
+
+test("only permits projection-safe automatic repair",()=>{
+ assert.equal(canAutoRepair("STALE_PROJECTION","SEARCH"),true);
+ assert.equal(canAutoRepair("MISSING_EVENT","NOTIFICATIONS"),true);
+ assert.equal(canAutoRepair("FINANCIAL_MISMATCH","PAYMENT"),false);
+ assert.equal(canAutoRepair("OWNERSHIP_MISMATCH","CUSTOMER"),false);
+ assert.equal(canAutoRepair("PROVIDER_MISMATCH","FULFILLMENT"),false);
+});
+
+test("marks high-risk discrepancies",()=>{
+ assert.equal(isHighRisk("FINANCIAL_MISMATCH","PAYMENT"),true);
+ assert.equal(isHighRisk("OWNERSHIP_MISMATCH","CUSTOMER"),true);
+ assert.equal(isHighRisk("PROVIDER_MISMATCH","FULFILLMENT"),true);
+ assert.equal(isHighRisk("STALE_PROJECTION","SEARCH"),false);
+});
+
+test("redacts sensitive evidence",()=>{
+ const safe=sanitizeReconciliationEvidence({token:"secret",customerEmail:"x@example.com",phone:"123",rule:"R",nested:{address:"hidden",count:2}});
+ assert.deepEqual(safe,{rule:"R",nested:{count:2}});
 });
