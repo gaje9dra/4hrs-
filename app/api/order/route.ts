@@ -6,7 +6,7 @@ import { OrderDomainError } from "@/lib/orders/errors";
 import { orderErrorResponse, orderJson, orderMethodNotAllowed } from "@/lib/orders/http";
 import { createShippingApplication } from "@/lib/shipping/application";
 import { logShippingObservation } from "@/lib/shipping/observability";
-import { parsePositivePagination } from "@/lib/api/governance";
+import { ApiContractError, parsePositivePagination } from "@/lib/api/governance";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -67,7 +67,7 @@ export async function POST(request: Request) {
 
 export async function GET(request: Request) {
   try {
-    const { page, pageSize } = parsePositivePagination(request);
+    let page: number | undefined;\n    let pageSize: number | undefined;\n    try { ({ page, pageSize } = parsePositivePagination(request)); } catch (error) {\n      if (error instanceof ApiContractError) throw new OrderDomainError("ORDER_INVALID_REQUEST", error.message);\n      throw error;\n    }
     return orderJson(await application.listCustomerOrders({ request, page, pageSize }));
   } catch (error) {
     return orderErrorResponse(error, "list");
