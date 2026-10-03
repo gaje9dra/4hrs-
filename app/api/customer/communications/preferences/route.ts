@@ -17,6 +17,7 @@ function errorResponse(error: unknown) {
 export async function GET(request: Request) {
   try {
     const current = await requireCurrentCustomer(request);
+    consumeCommunicationRateLimit(current.customer.id, request, 60, 60 * 60 * 1000);
     const preferences = await getCustomerCommunicationPreferences(current.customer.id);
     return authJson({ preferences });
   } catch (error) { return errorResponse(error); }
