@@ -22,6 +22,7 @@ export type CustomerPrivacyExport = {
   cancellations: Array<Record<string, unknown>>;
   cases: Array<Record<string, unknown>>;
   notifications: Array<Record<string, unknown>>;
+  communicationPreferences: Array<Record<string, unknown>>;
 };
 
 export class CustomerPrivacyError extends Error {
@@ -53,7 +54,7 @@ export function buildAnonymizedCustomerEmail(customerId: string): string {
 }
 
 async function assertExportWithinBound(customerId: string, tx: Prisma.TransactionClient) {
-  const [addresses, orders, payments, returns, cancellations, cases, notifications] = await Promise.all([
+  const [addresses, orders, payments, returns, cancellations, cases, notifications, communicationPreferences] = await Promise.all([
     tx.customerAddress.count({ where: { customerId } }),
     tx.order.count({ where: { customerId } }),
     tx.payment.count({ where: { customerId } }),
@@ -283,6 +284,11 @@ async function buildExport(customerId: string, tx: Prisma.TransactionClient): Pr
         createdAt: true,
       },
     }),
+    tx.customerCommunicationPreference.findMany({
+      where: { customerId },
+      orderBy: [{ category: "asc" }, { channel: "asc" }],
+      select: { category: true, channel: true, state: true, source: true, version: true, createdAt: true, updatedAt: true },
+    }),
   ]);
 
   return {
@@ -422,6 +428,15 @@ async function buildExport(customerId: string, tx: Prisma.TransactionClient): Pr
       type: event.type,
       createdAt: event.createdAt.toISOString(),
     })),
+    communicationPreferences: communicationPreferences.map((preference) => ({
+      category: preference.category,
+      channel: preference.channel,
+      state: preference.state,
+      source: preference.source,
+      version: preference.version,
+      createdAt: preference.createdAt.toISOString(),
+      updatedAt: preference.updatedAt.toISOString(),
+    })),
   };
 }
 
@@ -520,8 +535,11 @@ export async function deleteCustomerData(
       });
       await tx.notificationDelivery.updateMany({
         where: { customerId },
-        data: { recipientAddress: null },
+        data: { recipientAddress: null, suppressionReason: "CUSTOMER_DELETED" },
       });
+      await tx.communicationUnsubscribeToken.deleteMany({ where: { customerId } });
+      await tx.customerCommunicationPreferenceAudit.deleteMany({ where: { customerId } });
+      await tx.customerCommunicationPreference.deleteMany({ where: { customerId } });
       await tx.paymentIdempotency.updateMany({
         where: { customerId },
         data: { response: Prisma.DbNull },
