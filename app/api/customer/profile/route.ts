@@ -10,27 +10,21 @@ export const revalidate = 0;
 
 const customer = createCustomerProfileService();
 
-function errorResponse(error: unknown) {
-  if (isAuthenticationError(error)) {
-    return authJson({ error: { code: error.code, message: error.publicMessage } }, { status: 401 });
-  }
+function errorResponse(error: unknown, request: Request) {
+  if (isAuthenticationError(error)) return authJson({ error: { code: error.code, message: error.publicMessage } }, { status: 401, headers: { "x-request-id": request.headers.get("x-request-id") ?? undefined } });
   if (error instanceof CustomerIdentityError) {
-    const status =
-      error.code === "CUSTOMER_DATABASE_ERROR" ? 503 :
-      error.code === "CUSTOMER_NOT_FOUND" ? 404 : 400;
-    return authJson({ error: { code: error.code, message: error.message } }, { status });
+    const status = error.code === "CUSTOMER_DATABASE_ERROR" ? 503 : error.code === "CUSTOMER_NOT_FOUND" ? 404 : 400;
+    return authJson({ error: { code: error.code, message: error.message } }, { status, headers: { "x-request-id": request.headers.get("x-request-id") ?? undefined } });
   }
-  return authJson({
-    error: { code: "CUSTOMER_DATABASE_ERROR", message: "Customer information is temporarily unavailable." },
-  }, { status: 503 });
+  return authJson({ error: { code: "CUSTOMER_DATABASE_ERROR", message: "Customer information is temporarily unavailable." } }, { status: 503, headers: { "x-request-id": request.headers.get("x-request-id") ?? undefined } });
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const current = await requireCurrentCustomer();
-    return authJson({ customer: await customer.getProfile(current.customer.id) });
+    const current = await requireCurrentCustomer(request);
+    return authJson({ customer: await customer.getProfile(current.customer.id) }, { headers: { "x-request-id": request.headers.get("x-request-id") ?? undefined } });
   } catch (error) {
-    return errorResponse(error);
+    return errorResponse(error, request);
   }
 }
 
@@ -39,13 +33,10 @@ export async function PATCH(request: Request) {
     assertSameOrigin(request);
     const current = await requireCurrentCustomer(request);
     const body = await readAuthJson(request);
-    const keys = Object.keys(body);
-    if (keys.some((key) => key !== "displayName")) {
-      throw new CustomerIdentityError("CUSTOMER_INVALID_EMAIL", "Profile update contains an unsupported field.");
-    }
+    if (Object.keys(body).some((key) => key !== "displayName")) throw new CustomerIdentityError("CUSTOMER_INVALID_EMAIL", "Profile update contains an unsupported field.");
     const displayName = validateDisplayName(body.displayName);
-    return authJson({ customer: await customer.updateProfile(current.customer.id, { displayName }) });
+    return authJson({ customer: await customer.updateProfile(current.customer.id, { displayName }) }, { headers: { "x-request-id": request.headers.get("x-request-id") ?? undefined } });
   } catch (error) {
-    return errorResponse(error);
+    return errorResponse(error, request);
   }
 }
