@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db/client";
 import { normalizeLocale, isSupportedLocale, type SupportedLocale } from "@/lib/i18n/registry";
-import { auditAdminAction } from "@/lib/admin/audit";
+import { auditAdminAction, recordAdminAudit } from "@/lib/admin/audit";
 import type { AdminAuthorizationContext } from "@/lib/admin/authorization";
 import { incrementMetric } from "@/lib/observability/metrics";
 
@@ -273,10 +273,15 @@ function publicPath(snapshot: ContentSnapshot): string | null {
 }
 
 async function invalidateContentCaches(snapshot: ContentSnapshot) {
-  const path = publicPath(snapshot);
-  if (path) revalidatePath(path);
-  if (snapshot.type === "HOMEPAGE_SECTION") revalidatePath("/");
-  revalidatePath("/sitemap.xml");
+  try {
+    const path = publicPath(snapshot);
+    if (path) revalidatePath(path);
+    if (snapshot.type === "HOMEPAGE_SECTION" || snapshot.type === "PROMOTIONAL_BANNER") revalidatePath("/");
+    revalidatePath("/sitemap.xml");
+  } catch (error) {
+    incrementMetric("content_operations_total" as never, { operation: "cache_invalidation_failure" });
+    void error;
+  }
 }
 
 async function recordLifecycleAudit(context: AdminAuthorizationContext | null, action: string, contentId: string, success: boolean, metadata?: unknown, client: Prisma.TransactionClient | typeof db = db) {
@@ -561,6 +566,14 @@ export async function processScheduledContent(limit = 50) {
           : { status: "UNPUBLISHED", publishedAt: null },
       });
       if (updated.count === 1) {
+        await recordAdminAudit({
+          actorAdminId: null,
+          action: action === "PUBLISHED" ? "CONTENT_SCHEDULED_PUBLISH" : "CONTENT_SCHEDULED_UNPUBLISH",
+          resourceType: "ContentItem",
+          resourceId: item.id,
+          success: true,
+          metadata: { version: item.version, source: "SCHEDULED_WORKER" },
+        });
         await invalidateContentCaches(snapshot);
         results.push({ id: item.id, action });
       } else results.push({ id: item.id, action: "SKIPPED" });
