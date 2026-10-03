@@ -50,6 +50,14 @@ export function getNotificationTemplate(type: NotificationEventType, locale: Sup
     const subject = translate(normalizedLocale, "notifications", "paymentFailed", { orderNumber: "{{orderNumber}}" });
     return { ...template, subject, text: "Your payment for order {{orderNumber}} was not completed.", html: "<p>Your payment for order <strong>{{orderNumber}}</strong> was not completed.</p>" };
   }
+  if (type === "SECURITY_PASSWORD_CHANGED") {
+    const subject = translate(normalizedLocale, "notifications", "securityPasswordChanged");
+    return { ...template, subject, text: subject + ". If you did not make this change, secure your account immediately.", html: "<p>" + subject + ".</p><p>If you did not make this change, secure your account immediately.</p>" };
+  }
+  if (type === "SECURITY_SESSIONS_REVOKED") {
+    const subject = translate(normalizedLocale, "notifications", "securitySessionsRevoked");
+    return { ...template, subject, text: "All active sessions for your 4HRS+ account were signed out.", html: "<p>All active sessions for your 4HRS+ account were signed out.</p>" };
+  }
   return template;
 }
 
