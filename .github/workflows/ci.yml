@@ -62,6 +62,8 @@ jobs:
 
       - name: Validate runtime configuration
         run: npm run release:validate
+      - name: Run platform maturity audit
+        run: npm run architecture:audit
 
       - name: Audit migration safety
         run: npm run db:audit-migrations
