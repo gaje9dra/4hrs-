@@ -115,3 +115,6 @@ The Phase 15.7 production notification provider remains fail-closed and must be 
 
 ## 23. Explicitly unsupported functionality
 This phase does not implement marketing automation, campaign management, newsletters, SMS/WhatsApp/push delivery, CRM functionality, customer segmentation, behavioral advertising, cookie/tracking consent, third-party provider onboarding, or legal compliance certification.
+
+## CI validation note
+The phase readiness gate is based on the repository CI-equivalent validation suite, not compilation alone.
