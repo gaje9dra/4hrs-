@@ -29,6 +29,8 @@ const messages = {
       orderConfirmed: "Your 4HRS+ order is confirmed",
       paymentReceived: "Payment received for order {{orderNumber}}",
       paymentFailed: "Payment update for order {{orderNumber}}",
+      securityPasswordChanged: "Your 4HRS+ password was changed",
+      securitySessionsRevoked: "Your 4HRS+ sessions were signed out",
     },
   },
   "en-US": {
@@ -40,6 +42,8 @@ const messages = {
       orderConfirmed: "Your 4HRS+ order is confirmed",
       paymentReceived: "Payment received for order {{orderNumber}}",
       paymentFailed: "Payment update for order {{orderNumber}}",
+      securityPasswordChanged: "Your 4HRS+ password was changed",
+      securitySessionsRevoked: "Your 4HRS+ sessions were signed out",
     },
   },
 } as const;
