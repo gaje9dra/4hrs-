@@ -460,6 +460,15 @@ export async function processScheduledContent(limit = 50) {
   return results;
 }
 
+export async function resolvePublishedMedia(snapshot: ContentSnapshot) {
+  if (!snapshot.mediaReferences.length) return new Map<string, { url: string; altText: string | null }>();
+  const media = await db.productImage.findMany({
+    where: { id: { in: snapshot.mediaReferences } },
+    select: { id: true, url: true, altText: true },
+  });
+  return new Map(media.map((item) => [item.id, { url: item.url, altText: item.altText }]));
+}
+
 export function publicContentSnapshot(snapshot: ContentSnapshot) {
   return {
     type: snapshot.type, slug: snapshot.slug, locale: snapshot.locale, title: snapshot.title, summary: snapshot.summary,
