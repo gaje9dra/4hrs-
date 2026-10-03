@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 type Preference = {
   category: "MARKETING_PROMOTIONAL";
@@ -9,28 +9,13 @@ type Preference = {
   version: number;
 };
 
-export function CustomerCommunicationPreferences() {
+export function CustomerCommunicationPreferences({ initialPreference }: { initialPreference: Preference }) {
   const [preference, setPreference] = useState<Preference | null>(null);
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
 
-  async function load() {
-    setLoading(true);
-    try {
-      const response = await fetch("/api/customer/communications/preferences", { credentials: "same-origin", cache: "no-store" });
-      const body = (await response.json().catch(() => null)) as { preferences?: Preference[]; error?: { message?: string } } | null;
-      if (!response.ok || !body?.preferences) throw new Error(body?.error?.message ?? "Communication preferences could not be loaded.");
-      setPreference(body.preferences.find((item) => item.category === "MARKETING_PROMOTIONAL" && item.channel === "EMAIL") ?? null);
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Communication preferences could not be loaded.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => { void load(); }, []);
-
+  const [preference, setPreference] = useState<Preference>(initialPreference);
   async function setMarketingOptIn(enabled: boolean) {
     if (!preference) return;
     setBusy(true);
@@ -50,7 +35,10 @@ export function CustomerCommunicationPreferences() {
       });
       const body = (await response.json().catch(() => null)) as { preference?: Preference; error?: { message?: string } } | null;
       if (response.status === 409) {
-        await load();
+        const latestResponse = await fetch("/api/customer/communications/preferences", { credentials: "same-origin", cache: "no-store" });
+        const latestBody = (await latestResponse.json().catch(() => null)) as { preferences?: Preference[] } | null;
+        const latest = latestBody?.preferences?.find((item) => item.category === "MARKETING_PROMOTIONAL" && item.channel === "EMAIL");
+        if (latest) setPreference(latest);
         throw new Error(body?.error?.message ?? "Your preference changed in another session. The current value has been loaded.");
       }
       if (!response.ok || !body?.preference) throw new Error(body?.error?.message ?? "Communication preference could not be saved.");
@@ -84,12 +72,12 @@ export function CustomerCommunicationPreferences() {
             <label className="inline-flex min-h-12 items-center gap-3 border-2 border-black px-4 py-3 font-black uppercase focus-within:ring-2 focus-within:ring-primary-blue">
               <input
                 type="checkbox"
-                checked={preference?.state === "OPTED_IN"}
-                disabled={loading || busy || !preference}
+                checked={preference.state === "OPTED_IN"}
+                disabled={busy}
                 onChange={(event) => void setMarketingOptIn(event.target.checked)}
                 className="h-5 w-5"
               />
-              <span>{loading ? "Loading…" : preference?.state === "OPTED_IN" ? "Opted in" : "Opted out"}</span>
+              <span>{preference.state === "OPTED_IN" ? "Opted in" : "Opted out"}</span>
             </label>
           </div>
         </div>
