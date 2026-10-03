@@ -47,7 +47,7 @@ test("Phase 15.13 rejects oversized or malformed block payloads", () => {
     body: Array.from({ length: 101 }, () => ({ type: "paragraph", text: "x" })),
   })));
   assert.throws(() => validateContentInput(base({
-    body: [{ type: "unknown", value: "unsafe" }],
+    body: [{ type: "unknown", value: "unsafe" } as unknown as ContentInput["body"][number]],
   })));
 });
 
