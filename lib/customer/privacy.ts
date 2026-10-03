@@ -98,7 +98,7 @@ async function buildExport(customerId: string, tx: Prisma.TransactionClient): Pr
 
   await assertExportWithinBound(customerId, tx);
 
-  const [addresses, orders, payments, returns, cancellations, cases, notifications, communicationPreferences, analyticsEvents] = await Promise.all([
+  const [addresses, orders, payments, returns, cancellations, cases, notifications, communicationPreferences, analyticsEvents, experimentAssignments] = await Promise.all([
     tx.customerAddress.findMany({
       where: { customerId },
       orderBy: [{ createdAt: "asc" }, { id: "asc" }],
