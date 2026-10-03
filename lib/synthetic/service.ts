@@ -13,7 +13,7 @@ function safeMeta(value: unknown): Prisma.InputJsonValue {
   if(!value||typeof value!=="object"||Array.isArray(value)) return {};
   const input=value as Record<string,unknown>; const out:Record<string,unknown>={};
   const sensitive=/(token|secret|password|authorization|cookie|api.?key|email|phone|address|payment|credential)/i;
-  for(const [k,v] of Object.entries(input)){ if(sensitive.test(k)) continue; out[k]=typeof v==="string"?v.slice(0,300):v; }
+  return JSON.parse(JSON.stringify(out)) as Prisma.InputJsonValue;
   return out;
 }
 function combineStatus(statuses:SyntheticStatus[]):SyntheticStatus{
@@ -56,7 +56,7 @@ export async function executeSyntheticWorkflow(workflowId:string, mode:Synthetic
     const ended=new Date();
     const row=await db.syntheticExecution.update({where:{id:execution.id},data:{status,failureCode,endedAt:ended,durationMs:ended.getTime()-started.getTime(),cleanupStatus:"SUCCEEDED",evidence:{stepCount:stepResults.length,mode}}});
     if(status==="FAILING"||status==="DEGRADED"){
-      await recordReliabilityFindings([{fingerprint:incidentFingerprint("synthetic",workflowId,workflowId),severity:workflow.failureSeverity==="P0"?"CRITICAL":workflow.failureSeverity==="P1"?"MAJOR":"OPERATIONAL",category:"AVAILABILITY" as const,capability:"synthetic-monitoring",title:`Synthetic workflow ${workflowId} failed`,summary:`Synthetic execution ${row.id} reported ${status}.`,metadata:{workflowId,executionId:row.id,correlationId,failureCode}}]);
+      await recordReliabilityFindings([{fingerprint:incidentFingerprint("synthetic","AVAILABILITY",workflowId),severity:workflow.failureSeverity==="P0"?"CRITICAL":workflow.failureSeverity==="P1"?"MAJOR":"OPERATIONAL",category:"AVAILABILITY" as const,capability:"synthetic-monitoring",title:`Synthetic workflow ${workflowId} failed`,summary:`Synthetic execution ${row.id} reported ${status}.`,metadata:{workflowId,executionId:row.id,correlationId,failureCode}}]);
     }
     return row;
   } catch(error){
