@@ -70,8 +70,10 @@ export async function PUT(request: Request) {
   try {
     assertSameOrigin(request);
     const current = await currentCustomer(request);
-    if (!current) return NextResponse.json({ error: { code: "UNAUTHORIZED", message: "Authentication is required for authenticated analytics events." } }, { status: 401 });
-    const consent = await getAnalyticsConsent(current.customer.id);
+    const cookieState = (await cookies()).get(ANALYTICS_CONSENT_COOKIE)?.value;
+    const consent = current
+      ? await getAnalyticsConsent(current.customer.id)
+      : cookieState === "OPTED_IN" ? "OPTED_IN" : "OPTED_OUT";
     if (consent !== "OPTED_IN") throw new AnalyticsError("CONSENT_REQUIRED", "Analytics consent is not enabled.");
 
     const body = await readAuthJson(request);
@@ -88,8 +90,8 @@ export async function PUT(request: Request) {
       source: "CLIENT",
       anonymousId: body.anonymousId,
       sessionId: body.sessionId,
-      customerId: current.customer.id,
-      locale: current.customer.locale,
+      customerId: current?.customer.id ?? null,
+      locale: current?.customer.locale ?? (typeof body.locale === "string" ? body.locale : null),
       consent: true,
     });
     return NextResponse.json(result, { status: result.created ? 201 : 200 });
