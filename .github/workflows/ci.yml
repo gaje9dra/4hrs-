@@ -63,6 +63,9 @@ jobs:
       - name: Validate runtime configuration
         run: npm run release:validate
 
+      - name: Audit migration safety
+        run: npm run db:audit-migrations
+
       - name: Audit production dependencies
         run: npm audit --omit=dev --audit-level=high
 
