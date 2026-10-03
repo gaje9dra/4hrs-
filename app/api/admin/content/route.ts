@@ -20,9 +20,13 @@ export async function GET(request: Request) {
   try {
     const context = await requireAdmin(request, "content.read");
     const url = new URL(request.url);
+    const statusParam = url.searchParams.get("status");
+    const typeParam = url.searchParams.get("type");
+    const status = isStatus(statusParam) ? statusParam : undefined;
+    const type = isType(typeParam) ? typeParam : undefined;
     const result = await listContent({
-      status: isStatus(url.searchParams.get("status")) ? url.searchParams.get("status")! : undefined,
-      type: isType(url.searchParams.get("type")) ? url.searchParams.get("type")! : undefined,
+      status,
+      type,
       locale: url.searchParams.get("locale") ?? undefined,
       slug: url.searchParams.get("slug") ?? undefined,
       search: url.searchParams.get("search") ?? undefined,
