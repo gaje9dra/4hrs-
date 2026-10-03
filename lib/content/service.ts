@@ -543,10 +543,12 @@ export async function processScheduledContent(limit = 50) {
   const bounded = Math.min(100, Math.max(1, Math.trunc(limit)));
   const now = new Date();
   const due = await db.contentItem.findMany({
-    where: { OR: [
-      { status: "SCHEDULED", publicationStartAt: { lte: now } },
-      { status: "PUBLISHED", publicationEndAt: { lte: now } },
-    ]},
+    where: {
+      OR: [
+        { status: "SCHEDULED", publicationStartAt: { lte: now } },
+        { status: "PUBLISHED", publicationEndAt: { lte: now } },
+      ],
+    },
     orderBy: [{ publicationStartAt: "asc" }, { id: "asc" }],
     take: bounded,
   });
@@ -559,13 +561,14 @@ export async function processScheduledContent(limit = 50) {
         await validateExternalReferences(snapshot);
         assertPublishWindow(snapshot, now);
       }
-      const updated = await db.contentItem.updateMany({
-        where: { id: item.id, version: item.version, status: item.status },
-        data: action === "PUBLISHED"
-          ? { status: "PUBLISHED", publishedAt: now, publishedVersion: item.version, updatedByAdminId: item.updatedByAdminId }
-          : { status: "UNPUBLISHED", publishedAt: null },
-      });
-      if (updated.count === 1) {
+      const updated = await db.$transaction(async (tx) => {
+        const changed = await tx.contentItem.updateMany({
+          where: { id: item.id, version: item.version, status: item.status },
+          data: action === "PUBLISHED"
+            ? { status: "PUBLISHED", publishedAt: now, publishedVersion: item.version, updatedByAdminId: item.updatedByAdminId }
+            : { status: "UNPUBLISHED", publishedAt: null },
+        });
+        if (changed.count !== 1) return false;
         await recordAdminAudit({
           actorAdminId: null,
           action: action === "PUBLISHED" ? "CONTENT_SCHEDULED_PUBLISH" : "CONTENT_SCHEDULED_UNPUBLISH",
@@ -573,10 +576,15 @@ export async function processScheduledContent(limit = 50) {
           resourceId: item.id,
           success: true,
           metadata: { version: item.version, source: "SCHEDULED_WORKER" },
-        });
+        }, tx);
+        return true;
+      });
+      if (updated) {
         await invalidateContentCaches(snapshot);
         results.push({ id: item.id, action });
-      } else results.push({ id: item.id, action: "SKIPPED" });
+      } else {
+        results.push({ id: item.id, action: "SKIPPED" });
+      }
     } catch {
       incrementMetric("content_operations_total" as never, { operation: action === "PUBLISHED" ? "scheduled_publish_failure" : "scheduled_unpublish_failure" });
       results.push({ id: item.id, action: "SKIPPED" });
