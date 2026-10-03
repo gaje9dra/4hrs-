@@ -1,5 +1,7 @@
 import type { NotificationEventType } from "@prisma/client";
 import type { NotificationTemplate } from "./types";
+import { normalizeLocale, type SupportedLocale } from "@/lib/i18n/registry";
+import { translate } from "@/lib/i18n/messages";
 
 const templates: Record<NotificationEventType, NotificationTemplate> = {
   ORDER_CONFIRMED: { key: "order-confirmed", version: 1, channel: "EMAIL", subject: "Your 4HRS+ order is confirmed", text: "Your order {{orderNumber}} is confirmed.", html: "<p>Your order <strong>{{orderNumber}}</strong> is confirmed.</p>", requiredVariables: ["orderNumber"] },
@@ -31,8 +33,22 @@ function escapeHtml(value: string): string {
   return value.replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#39;");
 }
 
-export function getNotificationTemplate(type: NotificationEventType): NotificationTemplate {
-  return templates[type];
+export function getNotificationTemplate(type: NotificationEventType, locale: SupportedLocale = "en-IN"): NotificationTemplate {
+  const template = templates[type];
+  const normalizedLocale = normalizeLocale(locale);
+  if (type === "ORDER_CONFIRMED") {
+    const subject = translate(normalizedLocale, "notifications", "orderConfirmed");
+    return { ...template, subject, text: subject + ".", html: "<p>" + subject + ".</p>" };
+  }
+  if (type === "PAYMENT_SUCCEEDED") {
+    const subject = translate(normalizedLocale, "notifications", "paymentReceived", { orderNumber: "{{orderNumber}}" });
+    return { ...template, subject, text: subject + ".", html: "<p>" + subject + ".</p>" };
+  }
+  if (type === "PAYMENT_FAILED") {
+    const subject = translate(normalizedLocale, "notifications", "paymentFailed", { orderNumber: "{{orderNumber}}" });
+    return { ...template, subject, text: "Your payment for order {{orderNumber}} was not completed.", html: "<p>Your payment for order <strong>{{orderNumber}}</strong> was not completed.</p>" };
+  }
+  return template;
 }
 
 export function renderNotificationTemplate(template: NotificationTemplate, payload: Record<string, unknown> | null | undefined) {

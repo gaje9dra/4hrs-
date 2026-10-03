@@ -361,6 +361,8 @@ model Customer {
   id              String               @id @default(uuid()) @db.Uuid
   email           String               @unique @db.VarChar(320)
   displayName     String?              @db.VarChar(120)
+  locale          String               @default("en-IN") @db.VarChar(16)
+  timezone        String               @default("Asia/Kolkata") @db.VarChar(64)
   status          CustomerAccountStatus @default(ACTIVE)
   emailVerifiedAt DateTime?
   anonymizedAt DateTime?
