@@ -80,7 +80,7 @@ const BLOCKED = [
 ];
 
 export const BLOCKED_WORKFLOW_DEFINITIONS: WorkflowDefinition[] = BLOCKED.map(([id,domain,blockedReason])=>({
-  id, name:id.replaceAll("_"," "), domains:[domain], entryPoint:"existing application contract", prerequisites:[], expectedOutcome:"Capability is validated safely or explicitly blocked.", criticalInvariants:["No unsafe mutation"], dependencies:[domain], syntheticEligible:true, productionSafe:false, failureSeverity:id.includes("PAYMENT")||id.includes("ORDER")||id.includes("FULFILLMENT")?"P0":"P1", timeoutMs:5000, retryPolicy:"NONE", owner:domain.toLowerCase(), escalationTarget:"reliability", blockedReason, steps:[{key:"safety-gate",name:"Evaluate safety gate",productionSafe:false,execute:async()=>blocked("UNSUPPORTED_SYNTHETIC_CAPABILITY",{reason:blockedReason})}],
+  id, name:id.replaceAll("_"," "), domains:[domain], entryPoint:"existing application contract", prerequisites:[], expectedOutcome:"Capability is validated safely or explicitly blocked.", criticalInvariants:["No unsafe mutation"], dependencies:[domain], syntheticEligible:true, productionSafe:false, failureSeverity:(id.includes("PAYMENT")||id.includes("ORDER")||id.includes("FULFILLMENT")?"P0":"P1") as "P0"|"P1", timeoutMs:5000, retryPolicy:"NONE", owner:domain.toLowerCase(), escalationTarget:"reliability", blockedReason, steps:[{key:"safety-gate",name:"Evaluate safety gate",productionSafe:false,execute:async()=>blocked("UNSUPPORTED_SYNTHETIC_CAPABILITY",{reason:blockedReason})}],
 }));
 
 export const WORKFLOW_REGISTRY = [...WORKFLOWS,...BLOCKED_WORKFLOW_DEFINITIONS];
