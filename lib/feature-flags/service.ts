@@ -130,7 +130,7 @@ function safeFlagFallback(flag: { defaultEnabled: boolean; defaultVariantKey: st
   return {
     key: "",
     type: flag?.type ?? "BOOLEAN",
-    enabled: flag?.defaultEnabled ?? false,
+    enabled: flag?.type === "MULTIVARIANT" ? Boolean(flag.defaultVariantKey) : (flag?.defaultEnabled ?? false),
     variantKey: flag?.defaultVariantKey ?? null,
     flagVersion: flag?.version ?? null,
     source: flag ? "DEFAULT" : "ERROR",
@@ -188,6 +188,7 @@ export function validateFeatureFlagInput(input: {
   rolloutPercentage?: unknown;
   expiresAt?: unknown;
   variants?: unknown;
+  description?: unknown;
 }) {
   if (!validKey(input.key, FLAG_KEY_PATTERN, 100)) throw new FeatureFlagError("INVALID_KEY", "Feature flag key is invalid.");
   if (typeof input.name !== "string" || input.name.trim().length < 2 || input.name.trim().length > 160) throw new FeatureFlagError("INVALID_CONFIGURATION", "Feature flag name is invalid.");
@@ -265,7 +266,8 @@ export async function updateFeatureFlag(id: string, expectedVersion: number, inp
       const current = await tx.featureFlag.findUnique({ where: { id }, include: { variants: true } });
       if (!current) throw new FeatureFlagError("NOT_FOUND", "Feature flag was not found.");
       if (current.version !== expectedVersion) throw new FeatureFlagError("CONFLICT", "Feature flag changed since it was read.");
-      await tx.featureFlag.updateMany({ where: { id, version: expectedVersion }, data: { key: value.key, name: value.name, description: value.description, type: value.type, lifecycle: value.lifecycle, environment: value.environment, defaultEnabled: value.defaultEnabled, defaultVariantKey: value.defaultVariantKey, rolloutPercentage: value.rolloutPercentage, expiresAt: value.expiresAt, version: { increment: 1 } } });
+      const updated = await tx.featureFlag.updateMany({ where: { id, version: expectedVersion }, data: { key: value.key, name: value.name, description: value.description, type: value.type, lifecycle: value.lifecycle, environment: value.environment, defaultEnabled: value.defaultEnabled, defaultVariantKey: value.defaultVariantKey, rolloutPercentage: value.rolloutPercentage, expiresAt: value.expiresAt, version: { increment: 1 } } });
+      if (updated.count !== 1) throw new FeatureFlagError("CONFLICT", "Feature flag changed since it was read.");
       await tx.featureFlagVariant.deleteMany({ where: { flagId: id } });
       if (value.variants.length) await tx.featureFlagVariant.createMany({ data: value.variants.map((variant) => ({ ...variant, flagId: id })) });
       return tx.featureFlag.findUniqueOrThrow({ where: { id }, include: { variants: true } });
@@ -351,7 +353,8 @@ export async function updateExperiment(id: string, expectedVersion: number, inpu
       const current = await tx.experiment.findUnique({ where: { id }, include: { variants: true } });
       if (!current) throw new FeatureFlagError("NOT_FOUND", "Experiment was not found.");
       if (current.version !== expectedVersion) throw new FeatureFlagError("CONFLICT", "Experiment changed since it was read.");
-      await tx.experiment.updateMany({ where: { id, version: expectedVersion }, data: { key: value.key, name: value.name, description: value.description, environment: value.environment, status: value.status, startAt: value.startAt, endAt: value.endAt, primaryMetricEvent: value.primaryMetricEvent, version: { increment: 1 } } });
+      const updated = await tx.experiment.updateMany({ where: { id, version: expectedVersion }, data: { key: value.key, name: value.name, description: value.description, environment: value.environment, status: value.status, startAt: value.startAt, endAt: value.endAt, primaryMetricEvent: value.primaryMetricEvent, version: { increment: 1 } } });
+      if (updated.count !== 1) throw new FeatureFlagError("CONFLICT", "Experiment changed since it was read.");
       await tx.experimentVariant.deleteMany({ where: { experimentId: id } });
       await tx.experimentVariant.createMany({ data: value.variants.map((variant) => ({ ...variant, experimentId: id })) });
       return tx.experiment.findUniqueOrThrow({ where: { id }, include: { variants: true } });
