@@ -58,7 +58,7 @@ export async function collectPlatformCertification(options:{persist?:boolean;eva
   };
   const record={certificationId,releaseVersion:pkg.version??"unknown",commitSha:options.commitSha??process.env.COMMIT_REF??null,deploymentId:options.deploymentId??process.env.NETLIFY_DEPLOY_ID??null,environment:options.environment??(process.env.NODE_ENV==="production"?"PRODUCTION":"CI"),timestamp:new Date().toISOString(),evaluator:options.evaluator??"platform-certification-engine",testMatrix,findings,readiness};
   if(options.persist){
-    await db.platformCertification.create({data:{certificationId,releaseVersion:record.releaseVersion,commitSha:record.commitSha,deploymentId:record.deploymentId,environment:record.environment,evaluator:record.evaluator,readiness,testMatrix,results:{findings},blockers:findings.filter(f=>f.level==="BLOCKER"),limitations:findings.filter(f=>f.level!=="BLOCKER"),evidence:{source:"platform-certification-engine",phase:"15.24"}}});
+    await db.platformCertification.create({data:{certificationId,releaseVersion:record.releaseVersion,commitSha:record.commitSha,deploymentId:record.deploymentId,environment:record.environment,evaluator:record.evaluator,readiness:readiness as never,testMatrix,results:{findings},blockers:findings.filter(f=>f.level==="BLOCKER"),limitations:findings.filter(f=>f.level!=="BLOCKER"),evidence:{source:"platform-certification-engine",phase:"15.24"}}});
   }
   return record;
 }
