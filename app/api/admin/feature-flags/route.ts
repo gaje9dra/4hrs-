@@ -29,7 +29,19 @@ export async function POST(request: Request) {
     const body = await readAdminJson(request);
     const reason = typeof body.reason === "string" ? body.reason : null;
     if (body.environment === "PRODUCTION" && body.lifecycle === "ACTIVE") requireHighRiskReason(reason);
-    const featureFlag = await createFeatureFlag(body);
+    const featureFlag = await createFeatureFlag({
+      key: body.key,
+      name: body.name,
+      description: body.description,
+      type: body.type,
+      lifecycle: body.lifecycle,
+      environment: body.environment,
+      defaultEnabled: body.defaultEnabled,
+      defaultVariantKey: body.defaultVariantKey,
+      rolloutPercentage: body.rolloutPercentage,
+      expiresAt: body.expiresAt,
+      variants: body.variants,
+    });
     await auditAdminAction(context, {
       action: "FEATURE_FLAG_CREATED",
       resourceType: "FeatureFlag",
