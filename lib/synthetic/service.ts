@@ -48,7 +48,7 @@ export async function executeSyntheticWorkflow(workflowId:string, mode:Synthetic
       try{ result=await step.execute({mode,environment:safety.environment,correlationId,traceId:correlationId,baseUrl,timeoutMs:workflow.timeoutMs}); }
       catch(error){ result={status:"FAILING" as const,failureCode:"CONFIGURATION_FAILURE" as const,diagnostic:{error:error instanceof Error?error.message:"unknown"}}; }
       stepResults.push(result.status); if(result.failureCode) failureCode=result.failureCode;
-      await db.syntheticStepExecution.create({data:{executionId:execution.id,stepKey:step.key,stepOrder:i+1,status:result.status,startedAt:ss,endedAt:new Date(),durationMs:Math.round(performance.now()-ss.getTime()),failureCode:result.failureCode,diagnostic:safeMeta(result.diagnostic),dependency:step.dependency??null}});
+      await db.syntheticStepExecution.create({data:{executionId:execution.id,stepKey:step.key,stepOrder:i+1,status:result.status,startedAt:ss,endedAt:new Date(),durationMs:new Date().getTime()-ss.getTime(),failureCode:result.failureCode,diagnostic:safeMeta(result.diagnostic),dependency:step.dependency??null}});
       if(result.status==="FAILING") break;
     }
     const status=combineStatus(stepResults);
