@@ -1777,6 +1777,7 @@ model ContentItem {
   translationStatus    ContentTranslationStatus @default(ORIGINAL)
   sourceContentId      String?                  @db.Uuid
   sourceVersion        Int?
+  position             Int                      @default(0)
   createdByAdminId     String                   @db.Uuid
   updatedByAdminId     String                   @db.Uuid
   publishedByAdminId   String?                  @db.Uuid
