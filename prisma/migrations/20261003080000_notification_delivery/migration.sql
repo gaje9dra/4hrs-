@@ -60,7 +60,7 @@ CREATE INDEX "NotificationDelivery_correlationId_createdAt_idx" ON "Notification
 
 ALTER TABLE "NotificationDelivery"
   ADD CONSTRAINT "NotificationDelivery_notificationEventId_fkey"
-  FOREIGN KEY ("notificationEventId") REFERENCES "NotificationEvent"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+  FOREIGN KEY ("notificationEventId") REFERENCES "NotificationEvent"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 ALTER TABLE "NotificationDelivery"
   ADD CONSTRAINT "NotificationDelivery_customerId_fkey"
