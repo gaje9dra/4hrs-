@@ -160,7 +160,7 @@ test("customer and admin APIs enforce ownership, same-origin, explicit permissio
 
 test("communication UI does not pre-check optional marketing communication and separates required messaging", () => {
   const source = fs.readFileSync("components/storefront/customer-communication-preferences.tsx", "utf8");
-  assert.match(source, /checked=\{preference\?\.state === "OPTED_IN"\}/);
+  assert.match(source, /checked=\{preference\.state === "OPTED_IN"\}/);
   assert.match(source, /Transactional communication/);
   assert.match(source, /Optional promotional/);
 });
