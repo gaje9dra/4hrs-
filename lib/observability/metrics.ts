@@ -14,11 +14,15 @@ export type MetricName =
   | "security_events_total"
   | "notification_operations_total"
   | "communication_preference_operations_total"
-  | "analytics_events_total";
+  | "analytics_events_total"
+  | "feature_flag_evaluations_total"
+  | "feature_flag_evaluation_latency_ms"
+  | "experiment_assignments_total"
+  | "experiment_exposures_total";
 
 export type MetricLabels = Readonly<Record<string, string>>;
 
-const ALLOWED_LABELS = new Set(["route", "method", "status_class", "error_class", "provider", "operation", "environment", "metric", "category", "channel", "reason"]);
+const ALLOWED_LABELS = new Set(["route", "method", "status_class", "error_class", "provider", "operation", "environment", "metric", "category", "channel", "reason", "category"]);
 
 export function boundedMetricLabels(labels: MetricLabels): MetricLabels {
   const result: Record<string, string> = {};
