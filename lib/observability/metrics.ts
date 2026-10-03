@@ -14,7 +14,11 @@ export type MetricName =
   | "security_events_total"
   | "notification_operations_total"
   | "communication_preference_operations_total"
-  | "analytics_events_total";
+  | "analytics_events_total"
+  | "feature_flag_evaluations_total"
+  | "feature_flag_evaluation_latency_ms"
+  | "experiment_assignments_total"
+  | "experiment_exposures_total";
 
 export type MetricLabels = Readonly<Record<string, string>>;
 

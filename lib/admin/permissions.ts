@@ -8,7 +8,7 @@ export const ADMIN_PERMISSIONS = [
   "customers.read","customers.search","customers.update","customers.status.manage","customers.address.read","customers.financial.read","customers.case.read","customers.case.create","customers.audit.read","customers.manage",
   "cases.read","case.read","case.create","case.update","case.assign","case.respond","case.resolve","case.reopen","case.audit.read","cases.manage",
   "analytics.read","analytics.financial.read","analytics.operations.read","analytics.customer.read","notifications.read","notifications.manage","communication.preference.read","communication.preference.manage","communication.preference.audit.read",
-  "admin.users.read","admin.users.manage","admin.audit.read",
+  "admin.users.read","admin.users.manage","admin.audit.read","feature_flags.read","feature_flags.manage","experiments.read","experiments.manage",
   "system.settings.read","system.settings.manage",
 ] as const;
 export type AdminPermission = typeof ADMIN_PERMISSIONS[number];

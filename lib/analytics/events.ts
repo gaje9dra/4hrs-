@@ -29,6 +29,7 @@ export const ANALYTICS_EVENT_CATALOG = {
   CHECKOUT_STEP_VIEWED: { version: 1, properties: ["step"] },
   ACCOUNT_CREATED: { version: 1, properties: [] },
   ACCOUNT_LOGIN: { version: 1, properties: [] },
+  EXPERIMENT_EXPOSURE: { version: 1, properties: ["experimentKey", "experimentVersion", "variantKey", "subjectType"] },
 } as const;
 
 export type AnalyticsEventName = keyof typeof ANALYTICS_EVENT_CATALOG;

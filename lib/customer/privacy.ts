@@ -24,6 +24,7 @@ export type CustomerPrivacyExport = {
   notifications: Array<Record<string, unknown>>;
   communicationPreferences: Array<Record<string, unknown>>;
   analyticsEvents: Array<Record<string, unknown>>;
+  experimentAssignments: Array<Record<string, unknown>>;
 };
 
 export class CustomerPrivacyError extends Error {
@@ -55,7 +56,7 @@ export function buildAnonymizedCustomerEmail(customerId: string): string {
 }
 
 async function assertExportWithinBound(customerId: string, tx: Prisma.TransactionClient) {
-  const [addresses, orders, payments, returns, cancellations, cases, notifications, analyticsEvents] = await Promise.all([
+  const [addresses, orders, payments, returns, cancellations, cases, notifications, analyticsEvents, experimentAssignments] = await Promise.all([
     tx.customerAddress.count({ where: { customerId } }),
     tx.order.count({ where: { customerId } }),
     tx.payment.count({ where: { customerId } }),
@@ -64,9 +65,10 @@ async function assertExportWithinBound(customerId: string, tx: Prisma.Transactio
     tx.case.count({ where: { customerId } }),
     tx.notificationEvent.count({ where: { customerId } }),
     tx.analyticsEvent.count({ where: { customerId } }),
+    tx.experimentAssignment.count({ where: { customerId } }),
   ]);
 
-  const counts = { addresses, orders, payments, returns, cancellations, cases, notifications, analyticsEvents };
+  const counts = { addresses, orders, payments, returns, cancellations, cases, notifications, analyticsEvents, experimentAssignments };
   if (Object.values(counts).some((count) => count > MAX_PRIVACY_EXPORT_RECORDS)) {
     throw new CustomerPrivacyError(
       "EXPORT_TOO_LARGE",
@@ -96,7 +98,7 @@ async function buildExport(customerId: string, tx: Prisma.TransactionClient): Pr
 
   await assertExportWithinBound(customerId, tx);
 
-  const [addresses, orders, payments, returns, cancellations, cases, notifications, communicationPreferences, analyticsEvents] = await Promise.all([
+  const [addresses, orders, payments, returns, cancellations, cases, notifications, communicationPreferences, analyticsEvents, experimentAssignments] = await Promise.all([
     tx.customerAddress.findMany({
       where: { customerId },
       orderBy: [{ createdAt: "asc" }, { id: "asc" }],
@@ -294,6 +296,12 @@ async function buildExport(customerId: string, tx: Prisma.TransactionClient): Pr
       take: 5000,
       select: { eventId: true, eventName: true, eventVersion: true, occurredAt: true, receivedAt: true, locale: true, properties: true, source: true },
     }),
+    tx.experimentAssignment.findMany({
+      where: { customerId },
+      orderBy: [{ assignedAt: "asc" }, { id: "asc" }],
+      take: 5000,
+      select: { variantKey: true, experimentVersion: true, subjectType: true, assignedAt: true, expiresAt: true, experiment: { select: { key: true } } },
+    }),
   ]);
 
   return {
@@ -442,6 +450,14 @@ async function buildExport(customerId: string, tx: Prisma.TransactionClient): Pr
       createdAt: preference.createdAt.toISOString(),
       updatedAt: preference.updatedAt.toISOString(),
     })),
+    experimentAssignments: experimentAssignments.map((assignment) => ({
+      experimentKey: assignment.experiment.key,
+      variantKey: assignment.variantKey,
+      experimentVersion: assignment.experimentVersion,
+      subjectType: assignment.subjectType,
+      assignedAt: assignment.assignedAt.toISOString(),
+      expiresAt: iso(assignment.expiresAt),
+    })),
     analyticsEvents: analyticsEvents.map((event) => ({
       eventId: event.eventId,
       eventName: event.eventName,
@@ -560,6 +576,7 @@ export async function deleteCustomerData(
       await tx.customerCommunicationPreferenceAudit.deleteMany({ where: { customerId } });
       await tx.customerCommunicationPreference.deleteMany({ where: { customerId } });
       await tx.analyticsEvent.deleteMany({ where: { customerId } });
+      await tx.experimentAssignment.deleteMany({ where: { customerId } });
       await tx.customerAnalyticsConsent.deleteMany({ where: { customerId } });
       await tx.paymentIdempotency.updateMany({
         where: { customerId },
