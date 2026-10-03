@@ -1,8 +1,8 @@
-import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db/client";
 import { requireAdmin } from "@/lib/admin/authorization";
 import { adminErrorResponse, adminJson, assertAdminSameOrigin, readAdminJson, isValidAdminId } from "@/lib/admin/http";
-import { auditAdminAction, requireHighRiskReason } from "@/lib/admin/audit";
+import { auditAdminAction } from "@/lib/admin/audit";
+import { requireHighRiskReason } from "@/lib/admin/authorization";
 import { resendNotificationDelivery } from "@/lib/notifications/service";
 
 export const dynamic = "force-dynamic";
