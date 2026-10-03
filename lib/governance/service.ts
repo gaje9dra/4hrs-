@@ -43,7 +43,7 @@ export function verificationToStatus(result: GovernanceVerification["result"]): 
   return "UNKNOWN";
 }
 async function tableExists(table: string): Promise<boolean> {
-  const rows = await db.$queryRaw<Array<{ table_name: string }>>(Prisma.sql\`SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name=\${table} LIMIT 1\`);
+  const rows = await db.$queryRaw<Array<{ table_name: string }>>(Prisma.sql`SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name=\${table} LIMIT 1`);
   return rows.length === 1;
 }
 async function hasValidEvidence(controlId: string, evidenceType: GovernanceEvidenceType): Promise<boolean> {
@@ -89,7 +89,7 @@ export async function verifyGovernanceControl(controlKey: string, actorAdminId?:
         verification = process.env.CI === "true" ? { result:"PASS", method:"CI execution context", source:"GitHub Actions", details:{ ci:true } } : { result:"UNKNOWN", method:"CI evidence reference required", source:"repository CI", details:{ reason:"Runtime cannot independently assert historical CI results." } };
         break;
       case "REL-MIG-001": {
-        const rows = await db.$queryRaw<Array<{ migration_name:string; finished_at:Date|null; rolled_back_at:Date|null }>>(Prisma.sql\`SELECT migration_name, finished_at, rolled_back_at FROM "_prisma_migrations" ORDER BY started_at DESC LIMIT 100\`);
+        const rows = await db.$queryRaw<Array<{ migration_name:string; finished_at:Date|null; rolled_back_at:Date|null }>>(Prisma.sql`SELECT migration_name, finished_at, rolled_back_at FROM "_prisma_migrations" ORDER BY started_at DESC LIMIT 100`);
         const failed = rows.filter((row) => !row.finished_at || row.rolled_back_at !== null);
         verification = rows.length > 0 && failed.length === 0 ? { result:"PASS", method:"Prisma migration history validation", source:"_prisma_migrations", details:{ checked:rows.length } } : { result:"FAIL", method:"Prisma migration history validation", source:"_prisma_migrations", details:{ checked:rows.length, failed:failed.length } };
         break;
