@@ -1,12 +1,12 @@
-import type { Decimal } from "@prisma/client/runtime/library";
+import type { Prisma } from "@prisma/client";
 import { getLocaleDefinition, normalizeLocale, assertSupportedCurrency, type SupportedCurrency, type SupportedLocale } from "./registry";
 
-type DecimalLike = Decimal | string | number;
+type DecimalLike = Prisma.Decimal | string | number;
 
 function numericDisplayValue(value: DecimalLike): number {
-  if (typeof value === "number") return value;
-  if (typeof value === "string") return Number(value);
-  return value.toNumber();
+  const numeric = typeof value === "number" ? value : Number(value.toString());
+  if (!Number.isFinite(numeric)) throw new Error("INVALID_MONEY_VALUE");
+  return numeric;
 }
 
 export function formatNumber(value: number, locale: SupportedLocale, options?: Intl.NumberFormatOptions): string {
