@@ -28,7 +28,7 @@ export async function enqueueNotificationEvent(client: DbClient, input: Notifica
   const customer = await client.customer.findUnique({ where: { id: input.customerId }, select: { email: true, status: true, anonymizedAt: true, locale: true } });
   if (!customer || customer.anonymizedAt || customer.status !== "ACTIVE") return { eventId: event.id, deliveryId: null, created: true };
 
-  const template = getNotificationTemplate(input.type, "en-IN");
+  const template = getNotificationTemplate(input.type, normalizeLocale(customer.locale));
   const eligibility = await evaluateNotificationEligibility({ customerId: input.customerId, category: input.communicationCategory ?? "REQUIRED_TRANSACTIONAL", channel: template.channel, client });
   const delivery = await client.notificationDelivery.create({
     data: {
