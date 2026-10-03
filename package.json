@@ -24,7 +24,8 @@
     "reconciliation:audit": "tsx scripts/reconciliation-audit.ts",
     "synthetic:validate": "tsx scripts/synthetic-audit.ts",
     "synthetic:ci": "tsx scripts/synthetic-ci.ts",
-    "synthetic:monitor": "tsx scripts/synthetic-monitor.ts"
+    "synthetic:monitor": "tsx scripts/synthetic-monitor.ts",
+    "platform:certify": "tsx scripts/platform-certification.ts"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.1.14",

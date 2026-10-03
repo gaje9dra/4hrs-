@@ -2513,3 +2513,32 @@ model SyntheticCertification {
   @@index([readiness, evaluatedAt])
   @@index([releaseId, deploymentId])
 }
+
+enum PlatformCertificationReadiness {
+  READY_FOR_PRODUCTION
+  READY_WITH_DOCUMENTED_LIMITATIONS
+  NOT_READY
+  BLOCKED
+}
+
+model PlatformCertification {
+  id               String                           @id @default(uuid()) @db.Uuid
+  certificationId  String                           @unique
+  releaseVersion   String?
+  commitSha        String?
+  deploymentId     String?
+  environment      String
+  timestamp        DateTime                         @default(now())
+  evaluator        String
+  readiness        PlatformCertificationReadiness
+  testMatrix       Json
+  results          Json
+  blockers         Json
+  limitations      Json
+  evidence         Json
+  createdAt        DateTime                         @default(now())
+
+  @@index([environment, timestamp])
+  @@index([readiness, timestamp])
+  @@index([commitSha])
+}

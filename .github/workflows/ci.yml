@@ -70,6 +70,8 @@ jobs:
         run: npm run synthetic:validate
       - name: Run synthetic CI safety validation
         run: npm run synthetic:ci
+      - name: Run final platform certification audit
+        run: npm run platform:certify
 
       - name: Audit migration safety
         run: npm run db:audit-migrations
