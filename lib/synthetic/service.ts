@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db/client";
 import { recordReliabilityFindings } from "@/lib/reliability/service";
 import { incidentFingerprint } from "@/lib/reliability/incidents";
@@ -8,7 +9,7 @@ import type { SyntheticFailureCode, SyntheticMode, SyntheticStatus } from "./mod
 
 function envName(){return process.env.NODE_ENV==="production"?"PRODUCTION":(process.env.NODE_ENV??"development").toUpperCase();}
 function releaseId(){return process.env.APP_VERSION??process.env.COMMIT_REF??null;}
-function safeMeta(value: unknown): Record<string,unknown> {
+function safeMeta(value: unknown): Prisma.InputJsonValue {
   if(!value||typeof value!=="object"||Array.isArray(value)) return {};
   const input=value as Record<string,unknown>; const out:Record<string,unknown>={};
   const sensitive=/(token|secret|password|authorization|cookie|api.?key|email|phone|address|payment|credential)/i;
@@ -55,7 +56,7 @@ export async function executeSyntheticWorkflow(workflowId:string, mode:Synthetic
     const ended=new Date();
     const row=await db.syntheticExecution.update({where:{id:execution.id},data:{status,failureCode,endedAt:ended,durationMs:ended.getTime()-started.getTime(),cleanupStatus:"SUCCEEDED",evidence:{stepCount:stepResults.length,mode}}});
     if(status==="FAILING"||status==="DEGRADED"){
-      await recordReliabilityFindings([{fingerprint:incidentFingerprint("synthetic",workflowId,workflowId),severity:workflow.failureSeverity==="P0"?"CRITICAL":workflow.failureSeverity==="P1"?"MAJOR":"OPERATIONAL",category:"AVAILABILITY",capability:"synthetic-monitoring",title:`Synthetic workflow ${workflowId} failed`,summary:`Synthetic execution ${row.id} reported ${status}.`,metadata:{workflowId,executionId:row.id,correlationId,failureCode}}]);
+      await recordReliabilityFindings([{fingerprint:incidentFingerprint("synthetic",workflowId,workflowId),severity:workflow.failureSeverity==="P0"?"CRITICAL":workflow.failureSeverity==="P1"?"MAJOR":"OPERATIONAL",category:"AVAILABILITY" as const,capability:"synthetic-monitoring",title:`Synthetic workflow ${workflowId} failed`,summary:`Synthetic execution ${row.id} reported ${status}.`,metadata:{workflowId,executionId:row.id,correlationId,failureCode}}]);
     }
     return row;
   } catch(error){
@@ -75,7 +76,7 @@ export async function syntheticSummary(){
   return {total,healthy,failing,blocked,latest};
 }
 export async function listSyntheticExecutions(options:{workflowId?:string;status?:SyntheticStatus;environment?:string;limit?:number}={}){
-  return db.syntheticExecution.findMany({where:{...(options.workflowId?{workflowId}:{}),...(options.status?{status:options.status}:{}),...(options.environment?{environment:options.environment}:{})},orderBy:{startedAt:"desc"},take:Math.min(Math.max(options.limit??100,1),200),include:{steps:{orderBy:{stepOrder:"asc"}}}});
+  return db.syntheticExecution.findMany({where:{...(options.workflowId?{workflowId:options.workflowId}:{}),...(options.status?{status:options.status}:{}),...(options.environment?{environment:options.environment}:{})},orderBy:{startedAt:"desc"},take:Math.min(Math.max(options.limit??100,1),200),include:{steps:{orderBy:{stepOrder:"asc"}}}});
 }
 export async function evaluateReadiness(environment=envName()){
   const latest=await db.syntheticExecution.findMany({where:{environment},orderBy:{startedAt:"desc"},take:200});
