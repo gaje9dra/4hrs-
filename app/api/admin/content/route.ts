@@ -11,12 +11,10 @@ export const revalidate = 0;
 function json(data: unknown, status = 200) {
   return Response.json(data, { status, headers: { "Cache-Control": "no-store" } });
 }
-function isType(value: string | null): value is ContentType {
-  return value !== null && ["HOMEPAGE_SECTION","LANDING_PAGE","COLLECTION_PAGE","CATEGORY_EDITORIAL","PRODUCT_EDITORIAL","PROMOTIONAL_BANNER","CONTENT_BLOCK"].includes(value);
-}
-function isStatus(value: string | null): value is ContentStatus {
-  return value !== null && ["DRAFT","IN_REVIEW","APPROVED","SCHEDULED","PUBLISHED","UNPUBLISHED","ARCHIVED"].includes(value);
-}
+const CONTENT_TYPES: readonly ContentType[] = ["HOMEPAGE_SECTION","LANDING_PAGE","COLLECTION_PAGE","CATEGORY_EDITORIAL","PRODUCT_EDITORIAL","PROMOTIONAL_BANNER","CONTENT_BLOCK"];
+const CONTENT_STATUSES: readonly ContentStatus[] = ["DRAFT","IN_REVIEW","APPROVED","SCHEDULED","PUBLISHED","UNPUBLISHED","ARCHIVED"];
+function isType(value: string | null): value is ContentType { return value !== null && CONTENT_TYPES.includes(value as ContentType); }
+function isStatus(value: string | null): value is ContentStatus { return value !== null && CONTENT_STATUSES.includes(value as ContentStatus); }
 
 export async function GET(request: Request) {
   try {
