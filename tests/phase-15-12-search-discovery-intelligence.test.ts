@@ -33,7 +33,7 @@ test("Phase 15.12 validates scope requirements", () => {
     environment: "PRODUCTION",
     action: "BOOST",
     scope: "QUERY",
-    scopeValue: "T-shirts",
+    scopeValue: "T-shirts?",
   }));
 });
 
