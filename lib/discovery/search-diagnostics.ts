@@ -4,7 +4,7 @@ import { incrementMetric } from "@/lib/observability/metrics";
 export async function getSearchDiagnostics(sinceHours = 24) {
   const hours = Math.max(1, Math.min(168, Math.trunc(sinceHours)));
   const since = new Date(Date.now() - hours * 60 * 60 * 1000);
-  const rows = await db.$queryRaw<Array<{ total: bigint; zero: bigint }>>\`
+  const rows = await db.$queryRaw<Array<{ total: bigint; zero: bigint }>>`
     SELECT
       COUNT(*)::bigint AS total,
       COUNT(*) FILTER (
@@ -13,7 +13,7 @@ export async function getSearchDiagnostics(sinceHours = 24) {
     FROM "AnalyticsEvent"
     WHERE "eventName" = 'SEARCH_PERFORMED'
       AND "occurredAt" >= ${since}
-  \`;
+  `;
   const total = Number(rows[0]?.total ?? 0);
   const zero = Number(rows[0]?.zero ?? 0);
   incrementMetric("search_quality_observations_total", { operation: "diagnostics" });
