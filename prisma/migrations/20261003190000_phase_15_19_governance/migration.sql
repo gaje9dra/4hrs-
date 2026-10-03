@@ -197,4 +197,4 @@ INSERT INTO "GovernanceControl" ("id","key","domain","title","description","crit
 SELECT gen_random_uuid(), key, domain, title, description, criticality, ownerRole, verificationMethod, evidenceRequirements
 FROM "_governance_seed" s
 WHERE NOT EXISTS (SELECT 1 FROM "GovernanceControl" c WHERE c.key=s.key);
-DROP TABLE "_governance_seed";
+-- Temporary seed table is session-scoped and is dropped automatically at migration end.
