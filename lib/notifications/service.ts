@@ -28,6 +28,7 @@ export async function enqueueNotificationEvent(client: DbClient, input: Notifica
   if (!customer || customer.anonymizedAt || customer.status !== "ACTIVE") return { eventId: event.id, deliveryId: null, created: true };
 
   const template = getNotificationTemplate(input.type);
+  const eligibility = await evaluateNotificationEligibility({ customerId: input.customerId, category: input.communicationCategory ?? "REQUIRED_TRANSACTIONAL", channel: template.channel, client });
   const delivery = await client.notificationDelivery.create({
     data: {
       notificationEventId: event.id,
@@ -37,13 +38,14 @@ export async function enqueueNotificationEvent(client: DbClient, input: Notifica
       templateVersion: template.version,
       locale: "en-IN",
       recipientAddress: customer.email,
-      status: "PENDING",
+      status: eligibility.eligible ? "PENDING" : "SUPPRESSED",
+      suppressionReason: eligibility.eligible ? null : (eligibility.reason === "CUSTOMER_DELETED" ? "CUSTOMER_DELETED" : eligibility.reason === "CUSTOMER_OPTED_OUT" ? "CUSTOMER_OPTED_OUT" : eligibility.reason === "CONSENT_NOT_PRESENT" ? "CONSENT_NOT_PRESENT" : "CHANNEL_UNAVAILABLE"),
       maxAttempts: NOTIFICATION_MAX_ATTEMPTS,
       correlationId: input.correlationId?.slice(0,128) ?? null,
       idempotencyKey: deliveryIdempotencyKey(input, template.key),
     },
   });
-  incrementMetric("notification_operations_total" as never, { operation: "enqueue" });
+  incrementMetric("notification_operations_total" as never, { operation: eligibility.eligible ? "enqueue" : "suppressed", reason: eligibility.eligible ? "eligible" : eligibility.reason });
   return { eventId: event.id, deliveryId: delivery.id, created: true };
 }
 
@@ -61,7 +63,16 @@ async function claimDelivery() {
 }
 
 async function processOne(delivery: NonNullable<Awaited<ReturnType<typeof claimDelivery>>>): Promise<NotificationDeliverySummary> {
-  const eligibility = await evaluateNotificationEligibility({ customerId: delivery.customerId, category: delivery.notificationEvent.communicationCategory, channel: delivery.channel });
+  let eligibility;
+  try {
+    eligibility = await evaluateNotificationEligibility({ customerId: delivery.customerId, category: delivery.notificationEvent.communicationCategory, channel: delivery.channel });
+  } catch (error) {
+    const failureCode = "NOTIFICATION_PREFERENCE_EVALUATION_FAILED";
+    const terminal = delivery.attempts >= delivery.maxAttempts;
+    await db.notificationDelivery.update({ where: { id: delivery.id }, data: { status: terminal ? "FAILED" : "RETRY_SCHEDULED", failureCategory: "CONNECTION", failureCode, nextAttemptAt: terminal ? null : new Date(Date.now() + retryDelaySeconds(delivery.attempts) * 1000) } });
+    logger.error("notification.preference_evaluation_failed", { operationId: delivery.id, correlationId: delivery.correlationId, resourceType: "NotificationDelivery", resourceId: delivery.id, outcome: "failure", errorCode: error instanceof Error ? error.name : failureCode });
+    return { id: delivery.id, status: terminal ? "FAILED" : "RETRY_SCHEDULED", attempts: delivery.attempts };
+  }
   if (!eligibility.eligible) {
     const suppressionReason = eligibility.reason === "CUSTOMER_DELETED" ? "CUSTOMER_DELETED" : eligibility.reason === "CUSTOMER_OPTED_OUT" ? "CUSTOMER_OPTED_OUT" : eligibility.reason === "CONSENT_NOT_PRESENT" ? "CONSENT_NOT_PRESENT" : "CHANNEL_UNAVAILABLE";
     await db.notificationDelivery.update({ where: { id: delivery.id }, data: { status: "SUPPRESSED", suppressionReason, nextAttemptAt: null, failureCategory: null, failureCode: null } });
