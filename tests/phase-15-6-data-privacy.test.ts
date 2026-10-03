@@ -41,8 +41,8 @@ test("privacy deletion scrubs mutable customer content but preserves auditabilit
   assert.match(source, /title: "Customer support request"/);
   assert.match(source, /payload: Prisma\.DbNull/);
   assert.match(source, /response: Prisma\.DbNull/);
-  assert.match(source, /CUSTOMER_PRIVACY_DELETE/);
-  assert.match(source, /CUSTOMER_PRIVACY_EXPORT/);
+  assert.match(source, /CUSTOMER_PRIVACY_\$\{input\.operation\}/);
+  assert.match(source, /operation: "EXPORT" \| "DELETE"/);
 });
 
 test("privacy endpoints use Phase 15.3 same-origin protection and rate limiting", () => {
