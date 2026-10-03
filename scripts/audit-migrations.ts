@@ -20,11 +20,13 @@ async function main() {
 
   const timestamps = new Set<string>();
   const invalidNames: string[] = [];
+  const duplicateTimestamps: string[] = [];
   const risky: Array<{ migration: string; lines: string[] }> = [];
 
   for (const name of entries) {
     const match = name.match(migrationNamePattern);
-    if (!match || timestamps.has(match[1])) invalidNames.push(name);
+    if (!match) invalidNames.push(name);
+    else if (timestamps.has(match[1])) duplicateTimestamps.push(name);
     else timestamps.add(match[1]);
 
     const sqlPath = join(root, name, "migration.sql");
@@ -42,6 +44,7 @@ async function main() {
     migrations: entries.length,
     first: entries[0] ?? null,
     latest: entries.at(-1) ?? null,
+    duplicateTimestampMigrations: duplicateTimestamps,
     destructiveOperations: risky,
   }, null, 2));
 
