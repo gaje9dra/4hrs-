@@ -1,27 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 type Preference = { category: "MARKETING_PROMOTIONAL"; channel: "EMAIL"; state: "OPTED_IN" | "OPTED_OUT"; version: number };
 type AuditItem = { category: string; channel: string; previousState: string | null; newState: string; source: string; actorType: string; reason: string | null; createdAt: string };
 
-export default function CustomerCommunicationPreferencesAdmin({ customerId, canManage, canAudit }: { customerId: string; canManage: boolean; canAudit: boolean }) {
-  const [preference, setPreference] = useState<Preference | null>(null);
-  const [audit, setAudit] = useState<AuditItem[] | null>(null);
+export default function CustomerCommunicationPreferencesAdmin({ customerId, canManage, canAudit, initialPreference, initialAudit }: { customerId: string; canManage: boolean; canAudit: boolean; initialPreference: Preference; initialAudit: AuditItem[] | null }) {
+  const [preference, setPreference] = useState<Preference>(initialPreference);
+  const [audit, setAudit] = useState<AuditItem[] | null>(initialAudit);
   const [reason, setReason] = useState("");
   const [basis, setBasis] = useState("CUSTOMER_REQUEST");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
-
-  async function load() {
-    const response = await fetch(`/api/admin/customers/${customerId}/communication-preferences`, { cache: "no-store" });
-    const body = await response.json();
-    if (!response.ok) throw new Error(body.error?.message ?? "Communication preferences could not be loaded.");
-    setPreference(body.preferences?.[0] ?? null);
-    setAudit(body.audit ?? null);
-  }
-  useEffect(() => { void load().catch((error) => setMessage(error instanceof Error ? error.message : "Communication preferences could not be loaded.")); }, [customerId]);
-
   async function save(state: "OPTED_IN" | "OPTED_OUT") {
     if (!preference) return;
     if (reason.trim().length < 3) { setMessage("A reason is required."); return; }
@@ -34,7 +24,7 @@ export default function CustomerCommunicationPreferencesAdmin({ customerId, canM
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error?.message ?? "Preference change failed.");
-      setReason(""); setMessage("Saved."); await load();
+      setReason(""); setMessage("Saved.");
     } catch (error) { setMessage(error instanceof Error ? error.message : "Preference change failed."); }
     finally { setBusy(false); }
   }
