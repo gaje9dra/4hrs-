@@ -37,9 +37,10 @@ test("Phase 15.13 rejects unsafe rich-content URLs", () => {
 test("Phase 15.13 requires publication slugs and typed catalog references", () => {
   assert.throws(() => validateContentInput(base({ slug: null })));
   assert.throws(() => validateContentInput(base({ type: "PRODUCT_EDITORIAL", slug: null })));
-  assert.throws(() => validateContentInput(base({
+  const snapshot = validateContentInput(base({
     type: "PRODUCT_EDITORIAL", linkedReferences: [{ type: "PRODUCT", id: "product-1" }],
-  })));
+  }));
+  assert.equal(snapshot.linkedReferences[0]?.type, "PRODUCT");
 });
 
 test("Phase 15.13 rejects oversized or malformed block payloads", () => {
