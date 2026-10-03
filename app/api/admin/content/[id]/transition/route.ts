@@ -26,7 +26,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const permission = permissions[action];
     if (!permission) return json({ error: { code: "INVALID_REQUEST", message: "Unsupported content transition." } }, 400);
     const context = await requireAdmin(request, permission);
-    const expectedVersion = typeof expectedVersion === "number" && Number.isInteger(expectedVersion) ? expectedVersion : null;
+    const expectedVersion = typeof body.expectedVersion === "number" && Number.isInteger(body.expectedVersion) ? body.expectedVersion : null;
     if (expectedVersion === null) return json({ error: { code: "INVALID_REQUEST", message: "expectedVersion is required." } }, 400);
     const id = (await params).id;
     const reason = ["publish","unpublish","schedule","rollback","archive"].includes(action) ? requireHighRiskReason(body.reason) : (typeof body.reason === "string" ? body.reason : null);
