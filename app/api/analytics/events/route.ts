@@ -91,7 +91,7 @@ export async function PUT(request: Request) {
       anonymousId: body.anonymousId,
       sessionId: body.sessionId,
       customerId: current?.customer.id ?? null,
-      locale: current?.customer.locale ?? (typeof body.locale === "string" ? body.locale : null),
+      locale: current ? (await getCustomerRegionalPreferences(current.customer.id)).locale : (typeof body.locale === "string" ? body.locale : null),
       consent: true,
     });
     return NextResponse.json(result, { status: result.created ? 201 : 200 });
