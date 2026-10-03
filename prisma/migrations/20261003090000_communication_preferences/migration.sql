@@ -37,6 +37,7 @@ CREATE TABLE "CustomerCommunicationPreferenceAudit" (
   "source" "CommunicationPreferenceSource" NOT NULL,
   "actorType" "CommunicationPreferenceActorType" NOT NULL,
   "correlationId" VARCHAR(128),
+  "idempotencyKey" VARCHAR(255),
   "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT "CustomerCommunicationPreferenceAudit_pkey" PRIMARY KEY ("id")
 );
@@ -59,6 +60,8 @@ CREATE INDEX "CustomerCommunicationPreference_customerId_updatedAt_idx"
   ON "CustomerCommunicationPreference" ("customerId","updatedAt");
 CREATE INDEX "CustomerCommunicationPreference_category_channel_state_idx"
   ON "CustomerCommunicationPreference" ("category","channel","state");
+
+CREATE UNIQUE INDEX "CustomerCommunicationPreferenceAudit_idempotencyKey_key" ON "CustomerCommunicationPreferenceAudit" ("idempotencyKey");
 
 CREATE INDEX "CustomerCommunicationPreferenceAudit_customerId_createdAt_idx"
   ON "CustomerCommunicationPreferenceAudit" ("customerId","createdAt");
