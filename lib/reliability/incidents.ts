@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { Prisma } from "@prisma/client";
 import { sanitizeTelemetryValue } from "@/lib/observability/redaction";
 
 export type ReliabilitySeverity = "CRITICAL" | "MAJOR" | "OPERATIONAL" | "LOCALIZED" | "INFO";
@@ -47,7 +48,7 @@ export function shouldEmitAlert(now: Date, lastAlertedAt: Date | null, cooldownM
   return !lastAlertedAt || now.getTime() - lastAlertedAt.getTime() >= cooldownMs;
 }
 
-export function sanitizeIncidentMetadata(metadata: unknown): Record<string, unknown> {
+export function sanitizeIncidentMetadata(metadata: unknown): Prisma.InputJsonValue {
   const value = sanitizeTelemetryValue(metadata);
-  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Prisma.InputJsonValue : {};
 }
