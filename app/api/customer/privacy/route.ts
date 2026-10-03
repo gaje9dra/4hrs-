@@ -1,8 +1,10 @@
+import { cookies } from "next/headers";
 import { requireCurrentCustomer } from "@/lib/auth/context";
 import { isAuthenticationError } from "@/lib/auth/errors";
 import { assertSameOrigin, authJson, readAuthJson } from "@/lib/auth/http";
-import { CustomerPrivacyError, exportCustomerData } from "@/lib/customer/privacy";
+import { CustomerPrivacyError, deleteCustomerData, exportCustomerData } from "@/lib/customer/privacy";
 import { consumeCustomerPrivacyRateLimit } from "@/lib/customer/privacy-rate-limit";
+import { CUSTOMER_SESSION_COOKIE } from "@/lib/auth/session";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -56,11 +58,13 @@ export async function POST(request: Request) {
     if (Object.keys(body).some((key) => key !== "confirmation")) {
       throw new CustomerPrivacyError("CONFIRMATION_REQUIRED", "Explicit account deletion confirmation is required.");
     }
-    const result = await (await import("@/lib/customer/privacy")).deleteCustomerData(
+    const result = await deleteCustomerData(
       current.customer.id,
       body.confirmation,
       request.headers.get("x-request-id"),
     );
+    const cookieStore = await cookies();
+    cookieStore.set(CUSTOMER_SESSION_COOKIE, "", { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: 0 });
     return authJson({ deletion: { status: "completed", anonymizedAt: result.anonymizedAt } });
   } catch (error) {
     return errorResponse(error);
