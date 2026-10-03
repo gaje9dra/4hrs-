@@ -26,20 +26,22 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const permission = permissions[action];
     if (!permission) return json({ error: { code: "INVALID_REQUEST", message: "Unsupported content transition." } }, 400);
     const context = await requireAdmin(request, permission);
-    if (!Number.isInteger(body.expectedVersion)) return json({ error: { code: "INVALID_REQUEST", message: "expectedVersion is required." } }, 400);
+    const expectedVersion = typeof expectedVersion === "number" && Number.isInteger(expectedVersion) ? expectedVersion : null;
+    if (expectedVersion === null) return json({ error: { code: "INVALID_REQUEST", message: "expectedVersion is required." } }, 400);
     const id = (await params).id;
     const reason = ["publish","unpublish","schedule","rollback","archive"].includes(action) ? requireHighRiskReason(body.reason) : (typeof body.reason === "string" ? body.reason : null);
     let content;
-    if (action === "submit_review") content = await submitContentForReview(context, id, body.expectedVersion, reason);
-    else if (action === "approve") content = await approveContent(context, id, body.expectedVersion, reason);
-    else if (action === "reject") content = await rejectContent(context, id, body.expectedVersion, reason);
-    else if (action === "publish") content = await publishContent(context, id, body.expectedVersion, reason);
-    else if (action === "unpublish") content = await unpublishContent(context, id, body.expectedVersion, reason);
-    else if (action === "schedule") content = await scheduleContent(context, id, body.expectedVersion, reason);
-    else if (action === "archive") content = await archiveContent(context, id, body.expectedVersion, reason);
+    if (action === "submit_review") content = await submitContentForReview(context, id, expectedVersion, reason);
+    else if (action === "approve") content = await approveContent(context, id, expectedVersion, reason);
+    else if (action === "reject") content = await rejectContent(context, id, expectedVersion, reason);
+    else if (action === "publish") content = await publishContent(context, id, expectedVersion, reason);
+    else if (action === "unpublish") content = await unpublishContent(context, id, expectedVersion, reason);
+    else if (action === "schedule") content = await scheduleContent(context, id, expectedVersion, reason);
+    else if (action === "archive") content = await archiveContent(context, id, expectedVersion, reason);
     else {
-      if (!Number.isInteger(body.targetRevisionVersion)) return json({ error: { code: "INVALID_REQUEST", message: "targetRevisionVersion is required for rollback." } }, 400);
-      content = await rollbackContent(context, id, body.expectedVersion, body.targetRevisionVersion, reason);
+      const targetRevisionVersion = typeof body.targetRevisionVersion === "number" && Number.isInteger(body.targetRevisionVersion) ? body.targetRevisionVersion : null;
+      if (targetRevisionVersion === null) return json({ error: { code: "INVALID_REQUEST", message: "targetRevisionVersion is required for rollback." } }, 400);
+      content = await rollbackContent(context, id, expectedVersion, targetRevisionVersion, reason);
     }
     return json({ content });
   } catch (error) {
