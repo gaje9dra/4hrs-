@@ -18,7 +18,7 @@ function expectedRuntimeFindings(pkg:ReturnType<typeof packageJson>):Certificati
     ["typescript",dep(pkg,"typescript"),LOCKED_STACK.typescript,"Locked TypeScript version drift."],
     ["eslint",dep(pkg,"eslint"),LOCKED_STACK.eslint,"Locked ESLint version drift."],
     ["tailwindcss",dep(pkg,"tailwindcss"),LOCKED_STACK.tailwind,"Locked Tailwind CSS version drift."],
-    ["prisma",dep(pkg,"prisma")??dep(pkg,"@prisma/client"),LOCKED_STACK.prisma,"Locked Prisma version drift."],
+    ["prisma",dep(pkg,"prisma"),LOCKED_STACK.prisma,"Locked Prisma version drift."],["@prisma/client",dep(pkg,"@prisma/client"),LOCKED_STACK.prisma,"Locked Prisma Client version drift."],
   ];
   for(const [name,actual,wanted,title] of expected){
     const normalized=actual?.replace(/^\^|^~/,"");
@@ -35,7 +35,7 @@ export async function collectPlatformCertification(options:{persist?:boolean;eva
   if(!qikink.capabilities.statusLookup){
     findings.push({id:"QIKINK_SHIPPING_STATUS_CONTRACT",level:"BLOCKER",title:"Provider shipping/tracking status contract is unavailable.",impact:"Shipment/tracking readiness cannot be certified end-to-end without a verified status lookup contract.",evidence:"Qikink adapter declares statusLookup=false; no verified provider-neutral shipment-status contract is available.",owner:"fulfillment/shipping"});
   }
-  for(const path of ["docs/phase-15-18-business-continuity-operational-resilience.md","docs/phase-15-19-production-governance-compliance-evidence-audit-readiness.md","docs/phase-15-23-production-end-to-end-workflow-validation-synthetic-monitoring.md"]){
+  for(const path of ["docs/phase-15-18-business-continuity-disaster-recovery-validation.md","docs/phase-15-19-production-governance-compliance-evidence-audit-readiness.md","docs/phase-15-23-production-end-to-end-workflow-validation-synthetic-monitoring.md"]){
     if(!existsSync(join(process.cwd(),path))) findings.push({id:"MISSING_CERTIFICATION_DOCUMENT_"+path.replaceAll("/","_").replaceAll(".","_"),level:"HIGH",title:"Required certification evidence document is missing.",impact:"The corresponding control cannot be traced to repository evidence.",evidence:path,owner:"platform-governance"});
   }
   findings.push(
