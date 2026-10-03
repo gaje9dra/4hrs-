@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import test from "node:test";
+import fs from "node:fs";
 import { db } from "@/lib/db/client";
 import { getNotificationTemplate, renderNotificationTemplate } from "@/lib/notifications/templates";
 import { resolveNotificationProvider } from "@/lib/notifications/provider";
@@ -102,7 +103,7 @@ test("notification event creation is idempotent and creates a durable delivery",
 });
 
 test("notification admin resend is permission-gated and notification routes do not accept browser provider calls", () => {
-  const source = require("node:fs").readFileSync("app/api/admin/notifications/route.ts", "utf8");
+  const source = fs.readFileSync("app/api/admin/notifications/route.ts", "utf8");
   assert.match(source, /requireAdmin\(request, "notifications\.manage"\)/);
   assert.match(source, /requireHighRiskReason/);
   assert.match(source, /assertAdminSameOrigin/);
