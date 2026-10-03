@@ -27,12 +27,25 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     const { id } = await params;
     if (!isValidAdminId(id)) return adminJson({ error: { code: "INVALID_REQUEST", message: "Feature flag identifier is invalid." } }, { status: 400 });
     const body = await readAdminJson(request);
-    if (!Number.isInteger(body.expectedVersion) || body.expectedVersion < 1) {
+    const expectedVersion = body.expectedVersion;
+    if (typeof expectedVersion !== "number" || !Number.isInteger(expectedVersion) || expectedVersion < 1) {
       return adminJson({ error: { code: "INVALID_REQUEST", message: "A valid expectedVersion is required." } }, { status: 400 });
     }
     const reason = typeof body.reason === "string" ? body.reason : null;
     if (body.environment === "PRODUCTION" && (body.lifecycle === "ACTIVE" || body.rolloutPercentage !== undefined)) requireHighRiskReason(reason);
-    const featureFlag = await updateFeatureFlag(id, body.expectedVersion, body);
+    const featureFlag = await updateFeatureFlag(id, expectedVersion, {
+      key: body.key,
+      name: body.name,
+      description: body.description,
+      type: body.type,
+      lifecycle: body.lifecycle,
+      environment: body.environment,
+      defaultEnabled: body.defaultEnabled,
+      defaultVariantKey: body.defaultVariantKey,
+      rolloutPercentage: body.rolloutPercentage,
+      expiresAt: body.expiresAt,
+      variants: body.variants,
+    });
     await auditAdminAction(context, {
       action: "FEATURE_FLAG_UPDATED",
       resourceType: "FeatureFlag",
