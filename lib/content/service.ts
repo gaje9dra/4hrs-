@@ -221,6 +221,21 @@ function snapshotFromRecord(record: {
   };
 }
 
+async function validateTranslationState(snapshot: ContentSnapshot) {
+  if (snapshot.translationStatus === "ORIGINAL") {
+    if (snapshot.sourceContentId || snapshot.sourceVersion !== null) throw new ContentError("INVALID_CONTENT", "Original content cannot reference a source translation.");
+    return;
+  }
+  if (!snapshot.sourceContentId || snapshot.sourceVersion === null || !Number.isInteger(snapshot.sourceVersion) || snapshot.sourceVersion < 1) {
+    throw new ContentError("INVALID_CONTENT", "Translated content requires a source content and source version.");
+  }
+  const source = await db.contentItem.findUnique({ where: { id: snapshot.sourceContentId }, select: { id: true, type: true, version: true, locale: true } });
+  if (!source) throw new ContentError("INVALID_CONTENT", "The translation source content does not exist.");
+  if (source.type !== snapshot.type) throw new ContentError("INVALID_CONTENT", "Translation source content type must match.");
+  if (source.locale === snapshot.locale) throw new ContentError("INVALID_CONTENT", "Translation locale must differ from the source locale.");
+  if (snapshot.sourceVersion > source.version) throw new ContentError("INVALID_CONTENT", "Translation source version cannot be newer than the source content.");
+}
+
 async function validateExternalReferences(snapshot: ContentSnapshot) {
   const ids = new Set(snapshot.mediaReferences);
   if (ids.size) {
@@ -272,6 +287,7 @@ async function recordLifecycleAudit(context: AdminAuthorizationContext | null, a
 export async function createContent(context: AdminAuthorizationContext, input: ContentInput) {
   const snapshot = validateContentInput(input);
   try {
+    await validateTranslationState(snapshot);
     const result = await db.$transaction(async (tx) => {
       const content = await tx.contentItem.create({
         data: {
@@ -331,7 +347,14 @@ export async function updateContent(context: AdminAuthorizationContext, id: stri
         },
       });
       if (content.count !== 1) throw new ContentError("CONFLICT", "Content changed concurrently. Refresh before saving.");
+      await validateTranslationState(snapshot);
+      if (current.publishedAt && (current.slug !== snapshot.slug || current.type !== snapshot.type || current.locale !== snapshot.locale)) {
+        throw new ContentError("INVALID_CONTENT", "Slug, content type, and locale cannot change while a published revision is live. Unpublish before changing the public identity.");
+      }
       await tx.contentRevision.create({ data: { id: randomUUID(), contentId: id, version: nextVersion, snapshot, changeSummary: changeSummary?.trim().slice(0,1000) || null, createdByAdminId: context.adminUser.id } });
+      if (current.sourceContentId === null) {
+        await tx.contentItem.updateMany({ where: { sourceContentId: id, translationStatus: { in: ["CURRENT", "IN_PROGRESS"] } }, data: { translationStatus: "STALE", sourceVersion: nextVersion } });
+      }
       await recordLifecycleAudit(context, "CONTENT_UPDATED", id, true, { fromVersion: expectedVersion, toVersion: nextVersion, changeSummary }, tx);
       return tx.contentItem.findUniqueOrThrow({ where: { id } });
     });
@@ -351,10 +374,12 @@ async function transition(context: AdminAuthorizationContext, id: string, target
     if (!transitionAllowed(current.status, target)) throw new ContentError("INVALID_TRANSITION", "Content cannot transition from " + current.status + " to " + target + ".");
     const snapshot = snapshotFromRecord(current);
     if (target === "PUBLISHED") {
+      await validateTranslationState(snapshot);
       await validateExternalReferences(snapshot);
       assertPublishWindow(snapshot);
     }
     if (target === "SCHEDULED") {
+      await validateTranslationState(snapshot);
       if (!snapshot.publicationStartAt) throw new ContentError("INVALID_TRANSITION", "Scheduled content requires a publicationStartAt.");
       if (new Date(snapshot.publicationStartAt) <= new Date()) throw new ContentError("INVALID_TRANSITION", "Scheduled publication must be in the future.");
       await validateExternalReferences(snapshot);
@@ -365,7 +390,7 @@ async function transition(context: AdminAuthorizationContext, id: string, target
       data.publishedVersion = current.version;
       data.publishedBy = { connect: { id: context.adminUser.id } };
     }
-    if (target === "UNPUBLISHED") data.publishedAt = null;
+    if (target === "UNPUBLISHED" || target === "ARCHIVED") data.publishedAt = null;
     if (target === "SCHEDULED") data.publishedAt = null;
     if (target === "DRAFT" && current.status === "PUBLISHED") data.publishedAt = null;
     const updated = await tx.contentItem.update({ where: { id }, data });
@@ -395,7 +420,11 @@ export async function rollbackContent(context: AdminAuthorizationContext, id: st
     if (!revision) throw new ContentError("NOT_FOUND", "Target revision was not found.");
     const snapshot = validateContentInput(revision.snapshot as ContentInput);
     const nextVersion = current.version + 1;
+    await validateTranslationState(snapshot);
     await validateExternalReferences(snapshot);
+    if (current.publishedAt && (current.slug !== snapshot.slug || current.type !== snapshot.type || current.locale !== snapshot.locale)) {
+      throw new ContentError("INVALID_CONTENT", "Rollback cannot change the public identity of a live revision. Unpublish before rolling back across slug, type, or locale.");
+    }
     await tx.contentItem.update({ where: { id }, data: { ...snapshot, body: snapshot.body, linkedReferences: snapshot.linkedReferences, version: nextVersion, status: "DRAFT", updatedByAdminId: context.adminUser.id } });
     await tx.contentRevision.create({ data: { id: randomUUID(), contentId: id, version: nextVersion, snapshot, changeSummary: "Rollback to revision " + targetRevisionVersion, createdByAdminId: context.adminUser.id } });
     await recordLifecycleAudit(context, "CONTENT_ROLLBACK", id, true, { fromVersion: expectedVersion, targetRevisionVersion, createdVersion: nextVersion, reason }, tx);
@@ -406,11 +435,16 @@ export async function rollbackContent(context: AdminAuthorizationContext, id: st
 }
 
 export async function getPublishedContent(type: ContentType, slug: string, locale: SupportedLocale) {
-  const item = await db.contentItem.findFirst({ where: { type, slug, locale, status: "PUBLISHED", OR: [{ publicationStartAt: null }, { publicationStartAt: { lte: new Date() } }], AND: [{ OR: [{ publicationEndAt: null }, { publicationEndAt: { gt: new Date() } }] }] }, orderBy: { version: "desc" } });
+  const item = await db.contentItem.findFirst({ where: { type, slug, locale, publishedAt: { not: null }, publishedVersion: { not: null } }, orderBy: { publishedAt: "desc" } });
   if (!item || item.publishedVersion === null) return null;
   const revision = await db.contentRevision.findUnique({ where: { contentId_version: { contentId: item.id, version: item.publishedVersion } } });
   if (!revision) return null;
-  return { item, snapshot: validateContentInput(revision.snapshot as ContentInput), version: revision.version };
+  const snapshot = validateContentInput(revision.snapshot as ContentInput);
+  const now = new Date();
+  const start = snapshot.publicationStartAt ? new Date(snapshot.publicationStartAt) : null;
+  const end = snapshot.publicationEndAt ? new Date(snapshot.publicationEndAt) : null;
+  if ((start && start > now) || (end && end <= now)) return null;
+  return { item, snapshot, version: revision.version };
 }
 
 export async function getPublicLandingPage(slug: string, locale: SupportedLocale) {
