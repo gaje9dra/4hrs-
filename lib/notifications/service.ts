@@ -87,6 +87,13 @@ async function processOne(delivery: NonNullable<Awaited<ReturnType<typeof claimD
   try {
     const template = getNotificationTemplate(delivery.notificationEvent.type);
     const rendered = renderNotificationTemplate(template, (delivery.notificationEvent.payload ?? null) as Record<string, unknown> | null);
+    const finalEligibility = await evaluateNotificationEligibility({ customerId: delivery.customerId, category: delivery.notificationEvent.communicationCategory, channel: delivery.channel });
+    if (!finalEligibility.eligible) {
+      const suppressionReason = finalEligibility.reason === "CUSTOMER_DELETED" ? "CUSTOMER_DELETED" : finalEligibility.reason === "CUSTOMER_OPTED_OUT" ? "CUSTOMER_OPTED_OUT" : finalEligibility.reason === "CONSENT_NOT_PRESENT" ? "CONSENT_NOT_PRESENT" : "CHANNEL_UNAVAILABLE";
+      await db.notificationDelivery.update({ where: { id: delivery.id }, data: { status: "SUPPRESSED", suppressionReason, nextAttemptAt: null, failureCategory: null, failureCode: null } });
+      incrementMetric("notification_operations_total" as never, { operation: "suppressed", reason: suppressionReason });
+      return { id: delivery.id, status: "SUPPRESSED", attempts: delivery.attempts };
+    }
     const provider = resolveNotificationProvider();
     const result = await sendWithTimeout(provider, { channel: "EMAIL", recipientAddress: delivery.recipientAddress, subject: rendered.subject, text: rendered.text, html: rendered.html, idempotencyKey: delivery.idempotencyKey });
 
