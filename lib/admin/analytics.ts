@@ -277,6 +277,17 @@ export async function getAdminAnalytics(query: AnalyticsQuery, options: {
       (SELECT COUNT(DISTINCT o."customerId") FROM "Order" o JOIN "Payment" p ON p.id = o."paymentId" WHERE p.status IN ('SUCCEEDED','REFUNDED','PARTIALLY_REFUNDED') AND o."createdAt" >= (${query.from}::date::timestamp AT TIME ZONE ${query.timezone}) AND o."createdAt" < (${addDays(query.to, 1)}::date::timestamp AT TIME ZONE ${query.timezone}))::bigint AS "customersWithPaidOrders"
   `) : Promise.resolve([{newCustomers: 0, customersWithPaidOrders: 0}]);
 
+  const engagementPromise = db.$queryRaw<Array<{ pageViews: bigint; productViews: bigint; searches: bigint; addToCart: bigint; checkoutStarts: bigint }>>(Prisma.sql`
+    SELECT
+      COUNT(*) FILTER (WHERE "eventName" = 'PAGE_VIEW')::bigint AS "pageViews",
+      COUNT(*) FILTER (WHERE "eventName" = 'PRODUCT_VIEWED')::bigint AS "productViews",
+      COUNT(*) FILTER (WHERE "eventName" = 'SEARCH_PERFORMED')::bigint AS "searches",
+      COUNT(*) FILTER (WHERE "eventName" = 'ADD_TO_CART')::bigint AS "addToCart",
+      COUNT(*) FILTER (WHERE "eventName" = 'CHECKOUT_STARTED')::bigint AS "checkoutStarts"
+    FROM "AnalyticsEvent"
+    WHERE ${range}
+  `);
+
   const trendsPromise = db.$queryRaw<TrendRow[]>(Prisma.sql`
     SELECT
       ${bucketLabel} AS bucket,
@@ -299,8 +310,8 @@ export async function getAdminAnalytics(query: AnalyticsQuery, options: {
     LIMIT ${MAX_TREND_BUCKETS}
   `);
 
-  const [[summary], [payment], [fulfillment], [shipping], [returns], [cases], [customer], trends] = await Promise.all([
-    summaryPromise, paymentPromise, fulfillmentPromise, shippingPromise, returnsPromise, casesPromise, customerPromise, trendsPromise,
+  const [[summary], [payment], [fulfillment], [shipping], [returns], [cases], [customer], [engagement], trends] = await Promise.all([
+    summaryPromise, paymentPromise, fulfillmentPromise, shippingPromise, returnsPromise, casesPromise, customerPromise, engagementPromise, trendsPromise,
   ]);
 
   const paidOrders = int(summary?.paidOrderCount ?? 0);
@@ -357,6 +368,15 @@ export async function getAdminAnalytics(query: AnalyticsQuery, options: {
       newCustomers: int(customer?.newCustomers ?? 0),
       customersWithPaidOrders: int(customer?.customersWithPaidOrders ?? 0),
     } : null,
+    engagement: {
+      sourceOfTruth: "AnalyticsEvent",
+      supportingSignalOnly: true,
+      pageViews: int(engagement?.pageViews ?? 0),
+      productViews: int(engagement?.productViews ?? 0),
+      searches: int(engagement?.searches ?? 0),
+      addToCart: int(engagement?.addToCart ?? 0),
+      checkoutStarts: int(engagement?.checkoutStarts ?? 0),
+    },
     trends: trends.map((row) => ({
       bucket: row.bucket,
       orderCount: int(row.orderCount),

@@ -363,6 +363,8 @@ model Customer {
   displayName     String?              @db.VarChar(120)
   locale          String               @default("en-IN") @db.VarChar(16)
   timezone        String               @default("Asia/Kolkata") @db.VarChar(64)
+  analyticsConsent CustomerAnalyticsConsent?
+  analyticsEvents  AnalyticsEvent[]
   status          CustomerAccountStatus @default(ACTIVE)
   emailVerifiedAt DateTime?
   anonymizedAt DateTime?
@@ -1271,6 +1273,55 @@ model NotificationDelivery {
   @@index([correlationId, createdAt])
 }
 
+
+enum AnalyticsConsentState {
+  OPTED_OUT
+  OPTED_IN
+}
+
+enum AnalyticsConsentSource {
+  CUSTOMER_SETTINGS
+  SYSTEM
+}
+
+enum AnalyticsEventSource {
+  CLIENT
+  SERVER
+}
+
+model CustomerAnalyticsConsent {
+  id         String                @id @default(uuid()) @db.Uuid
+  customerId String                @unique @db.Uuid
+  state      AnalyticsConsentState @default(OPTED_OUT)
+  source     AnalyticsConsentSource @default(SYSTEM)
+  version    Int                   @default(1)
+  createdAt  DateTime              @default(now())
+  updatedAt  DateTime              @updatedAt
+  customer   Customer              @relation(fields: [customerId], references: [id], onDelete: Cascade)
+}
+
+model AnalyticsEvent {
+  id            String              @id @default(uuid()) @db.Uuid
+  eventId       String              @unique @db.VarChar(64)
+  eventName     String              @db.VarChar(64)
+  eventVersion  Int
+  occurredAt    DateTime
+  receivedAt    DateTime            @default(now())
+  anonymousId   String?             @db.VarChar(64)
+  sessionId     String?             @db.VarChar(64)
+  customerId    String?             @db.Uuid
+  locale        String?             @db.VarChar(16)
+  context       Json?
+  properties    Json
+  source        AnalyticsEventSource
+  expiresAt     DateTime
+  customer      Customer?           @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  @@index([occurredAt])
+  @@index([expiresAt])
+  @@index([customerId, occurredAt])
+  @@index([eventName, occurredAt])
+}
 
 enum CaseStatus {
   OPEN
