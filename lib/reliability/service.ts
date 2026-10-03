@@ -68,7 +68,7 @@ export async function recordReliabilityFindings(findings: readonly ReliabilityFi
         summary: finding.summary,
         occurrenceCount: incident.occurrenceCount,
       });
-      incrementMetric("reliability_alerts_total" as never, { operation: "emitted", category: finding.category, reason: finding.severity });
+      incrementMetric("reliability_alerts_total", { operation: "emitted", category: finding.category, reason: finding.severity });
     } else {
       incrementMetric("reliability_alerts_total" as never, { operation: "deduplicated", category: finding.category, reason: finding.severity });
     }
