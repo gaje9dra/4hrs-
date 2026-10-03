@@ -5,6 +5,8 @@ import type {
   FulfillmentProviderResponse,
 } from "@/lib/fulfillment/provider";
 import { getQikinkAccessToken, getQikinkApiCredentials } from "@/lib/fulfillment/providers/qikink-auth";
+import { logger } from "@/lib/observability/logger";
+import { incrementMetric } from "@/lib/observability/metrics";
 
 const QIKINK_ID = "qikink";
 const QIKINK_LEGACY_CREATE_ORDER_URL = "https://qikink.com/erp2/index.php/api/createOrder";
