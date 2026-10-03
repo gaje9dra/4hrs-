@@ -1,7 +1,7 @@
 import { requireCurrentCustomer } from "@/lib/auth/context";
 import { isAuthenticationError } from "@/lib/auth/errors";
 import { assertSameOrigin, authJson, readAuthJson } from "@/lib/auth/http";
-import { CustomerIdentityError } from "@/lib/customer/errors";
+import { createCustomerError, isCustomerError } from "@/lib/customer/errors";
 import { createCustomerProfileService } from "@/lib/customer/service";
 import { validateDisplayName } from "@/lib/customer/validation";
 
@@ -14,7 +14,7 @@ function errorResponse(error: unknown) {
   if (isAuthenticationError(error)) {
     return authJson({ error: { code: error.code, message: error.publicMessage } }, { status: 401 });
   }
-  if (error instanceof CustomerIdentityError) {
+  if (isCustomerError(error)) {
     const status =
       error.code === "CUSTOMER_DATABASE_ERROR" ? 503 :
       error.code === "CUSTOMER_NOT_FOUND" ? 404 : 400;
@@ -41,7 +41,7 @@ export async function PATCH(request: Request) {
     const body = await readAuthJson(request);
     const keys = Object.keys(body);
     if (keys.some((key) => key !== "displayName")) {
-      throw new CustomerIdentityError("CUSTOMER_INVALID_EMAIL", "Profile update contains an unsupported field.");
+      throw createCustomerError("CUSTOMER_INVALID_EMAIL", "Profile update contains an unsupported field.");
     }
     const displayName = validateDisplayName(body.displayName);
     return authJson({ customer: await customer.updateProfile(current.customer.id, { displayName }) });

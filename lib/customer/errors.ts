@@ -17,6 +17,14 @@ export class CustomerIdentityError extends Error {
   }
 }
 
+export function isCustomerError(error: unknown): error is CustomerIdentityError {
+  return error instanceof CustomerIdentityError;
+}
+
+export function createCustomerError(code: CustomerIdentityErrorCode, message: string): CustomerIdentityError {
+  return new CustomerIdentityError(code, message);
+}
+
 export type CustomerAddressErrorCode =
   | "CUSTOMER_ADDRESS_NOT_FOUND"
   | "CUSTOMER_ADDRESS_INVALID"

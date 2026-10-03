@@ -6,6 +6,7 @@ import { OrderDomainError } from "@/lib/orders/errors";
 import { orderErrorResponse, orderJson, orderMethodNotAllowed } from "@/lib/orders/http";
 import { createShippingApplication } from "@/lib/shipping/application";
 import { logShippingObservation } from "@/lib/shipping/observability";
+import { ApiContractError, parsePositivePagination } from "@/lib/api/governance";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -23,30 +24,15 @@ async function readCreateRequest(request: Request): Promise<{ paymentId: string 
       throw new OrderDomainError("ORDER_INVALID_REQUEST", "Order request is invalid.");
     }
   }
-
   const body = await request.text();
-  if (new TextEncoder().encode(body).byteLength > MAX_BODY_BYTES) {
-    throw new OrderDomainError("ORDER_INVALID_REQUEST", "Order request is too large.");
-  }
-
+  if (new TextEncoder().encode(body).byteLength > MAX_BODY_BYTES) throw new OrderDomainError("ORDER_INVALID_REQUEST", "Order request is too large.");
   let parsed: unknown;
-  try {
-    parsed = body.trim() ? JSON.parse(body) : null;
-  } catch {
-    throw new OrderDomainError("ORDER_INVALID_REQUEST", "Order request must contain valid JSON.");
-  }
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-    throw new OrderDomainError("ORDER_INVALID_REQUEST", "Order request must be a JSON object.");
-  }
-
+  try { parsed = body.trim() ? JSON.parse(body) : null; } catch { throw new OrderDomainError("ORDER_INVALID_REQUEST", "Order request must contain valid JSON."); }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new OrderDomainError("ORDER_INVALID_REQUEST", "Order request must be a JSON object.");
   const value = parsed as Record<string, unknown>;
-  if (Object.keys(value).some((key) => key !== "paymentId")) {
-    throw new OrderDomainError("ORDER_INVALID_REQUEST", "Order request contains unsupported fields.");
-  }
+  if (Object.keys(value).some((key) => key !== "paymentId")) throw new OrderDomainError("ORDER_INVALID_REQUEST", "Order request contains unsupported fields.");
   const paymentId = typeof value.paymentId === "string" ? value.paymentId.trim() : "";
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(paymentId)) {
-    throw new OrderDomainError("ORDER_INVALID_REQUEST", "Payment identifier is invalid.");
-  }
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(paymentId)) throw new OrderDomainError("ORDER_INVALID_REQUEST", "Payment identifier is invalid.");
   return { paymentId };
 }
 
@@ -55,76 +41,25 @@ export async function POST(request: Request) {
     assertSameOrigin(request);
     const input = await readCreateRequest(request);
     const result = await application.createOrderFromVerifiedPayment({ paymentId: input.paymentId, request });
-
-    // Payment success creates the Order first. Once the Order is confirmed,
-    // fulfillment is a separate provider-neutral step. It is deliberately
-    // best-effort here: a provider failure must not roll back a paid Order.
     const providerConfiguration = loadFulfillmentProviderConfiguration();
     let fulfillment: { id: string; status: string } | null = null;
     if (providerConfiguration?.enabled) {
-      if (result.status === "PENDING") {
-        await application.transitionOrderLifecycle({
-          orderId: result.id,
-          expectedStatus: "PENDING",
-          nextStatus: "CONFIRMED",
-        });
-      }
-
+      if (result.status === "PENDING") await application.transitionOrderLifecycle({ orderId: result.id, expectedStatus: "PENDING", nextStatus: "CONFIRMED" });
       try {
-        const created = await fulfillmentApplication.createFulfillment({
-          orderId: result.id,
-          idempotencyKey: `order-${result.id}-fulfillment`,
-        });
+        const created = await fulfillmentApplication.createFulfillment({ orderId: result.id, idempotencyKey: `order-${result.id}-fulfillment` });
         const submitted = await fulfillmentApplication.submitFulfillment({ fulfillmentId: created.id });
         fulfillment = { id: submitted.id, status: submitted.status };
-
         try {
-          const shipment = await shippingApplication.createShipmentFromFulfillment({
-            orderId: result.id,
-            fulfillmentId: submitted.id,
-            idempotencyKey: `fulfillment-${submitted.id}-shipment`,
-          });
-          logShippingObservation({
-            operation: "handoff",
-            shipmentId: shipment?.id,
-            fulfillmentId: submitted.id,
-            orderId: result.id,
-            providerId: submitted.provider,
-            result: "success",
-          });
+          const shipment = await shippingApplication.createShipmentFromFulfillment({ orderId: result.id, fulfillmentId: submitted.id, idempotencyKey: `fulfillment-${submitted.id}-shipment` });
+          logShippingObservation({ operation: "handoff", shipmentId: shipment?.id, fulfillmentId: submitted.id, orderId: result.id, providerId: submitted.provider, result: "success" });
         } catch {
-          logShippingObservation({
-            operation: "handoff",
-            fulfillmentId: submitted.id,
-            orderId: result.id,
-            providerId: submitted.provider,
-            result: "reconciliation-required",
-            errorCode: "SHIPMENT_RECONCILIATION_REQUIRED",
-          });
+          logShippingObservation({ operation: "handoff", fulfillmentId: submitted.id, orderId: result.id, providerId: submitted.provider, result: "reconciliation-required", errorCode: "SHIPMENT_RECONCILIATION_REQUIRED" });
         }
-      } catch {
-        // The Order remains authoritative. The fulfillment service persists
-        // retryable/ambiguous provider failures independently of payment/order state.
-      }
+      } catch {}
     } else if (result.status === "PENDING") {
-      await application.transitionOrderLifecycle({
-        orderId: result.id,
-        expectedStatus: "PENDING",
-        nextStatus: "CONFIRMED",
-      });
+      await application.transitionOrderLifecycle({ orderId: result.id, expectedStatus: "PENDING", nextStatus: "CONFIRMED" });
     }
-
-    return orderJson({
-      order: {
-        id: result.id,
-        orderNumber: result.orderNumber,
-        status: "CONFIRMED",
-        total: result.total,
-        currency: result.currency,
-        createdAt: result.createdAt,
-      },
-      fulfillment,
-    }, 201);
+    return orderJson({ order: { id: result.id, orderNumber: result.orderNumber, status: "CONFIRMED", total: result.total, currency: result.currency, createdAt: result.createdAt }, fulfillment }, 201);
   } catch (error) {
     return orderErrorResponse(error, "create");
   }
@@ -132,17 +67,11 @@ export async function POST(request: Request) {
 
 export async function GET(request: Request) {
   try {
-    const url = new URL(request.url);
-    const pageRaw = url.searchParams.get("page");
-    const pageSizeRaw = url.searchParams.get("pageSize");
-    const allowed = new Set(["page", "pageSize"]);
-    for (const key of url.searchParams.keys()) {
-      if (!allowed.has(key)) throw new OrderDomainError("ORDER_INVALID_REQUEST", "Unsupported Order list parameter.");
-    }
-    const page = pageRaw === null ? undefined : Number(pageRaw);
-    const pageSize = pageSizeRaw === null ? undefined : Number(pageSizeRaw);
-    if ((pageRaw !== null && !/^\d+$/.test(pageRaw)) || (pageSizeRaw !== null && !/^\d+$/.test(pageSizeRaw))) {
-      throw new OrderDomainError("ORDER_INVALID_REQUEST", "Order pagination parameters are invalid.");
+    let page: number | undefined;
+    let pageSize: number | undefined;
+    try { ({ page, pageSize } = parsePositivePagination(request)); } catch (error) {
+      if (error instanceof ApiContractError) throw new OrderDomainError("ORDER_INVALID_REQUEST", error.message);
+      throw error;
     }
     return orderJson(await application.listCustomerOrders({ request, page, pageSize }));
   } catch (error) {
