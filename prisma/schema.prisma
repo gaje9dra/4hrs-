@@ -1676,3 +1676,45 @@ model ExperimentAssignment {
   @@index([experimentId, variantKey])
 }
 
+
+
+enum MerchandisingRuleAction {
+  PIN
+  BOOST
+  PROMOTE
+  DEMOTE
+  BURY
+}
+
+enum MerchandisingRuleScope {
+  GLOBAL
+  CATEGORY
+  COLLECTION
+  QUERY
+  PRODUCT
+  LOCALE
+}
+
+model MerchandisingRule {
+  id            String                 @id @default(uuid()) @db.Uuid
+  name          String                 @db.VarChar(160)
+  description   String?                @db.VarChar(1000)
+  environment   FeatureFlagEnvironment
+  action        MerchandisingRuleAction
+  scope         MerchandisingRuleScope
+  scopeValue    String?                @db.VarChar(255)
+  productId     String?                @db.Uuid
+  locale        String?                @db.VarChar(16)
+  priority      Int                    @default(0)
+  active        Boolean                @default(false)
+  startAt       DateTime?
+  endAt         DateTime?
+  version       Int                    @default(1)
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+
+  @@index([environment, active, startAt, endAt])
+  @@index([scope, scopeValue, priority])
+  @@index([productId, priority])
+  @@index([locale, priority])
+}

@@ -18,7 +18,11 @@ export type MetricName =
   | "feature_flag_evaluations_total"
   | "feature_flag_evaluation_latency_ms"
   | "experiment_assignments_total"
-  | "experiment_exposures_total";
+  | "experiment_exposures_total"
+  | "discovery_signal_calculations_total"
+  | "discovery_signal_calculation_latency_ms"
+  | "search_quality_observations_total"
+  | "merchandising_rule_evaluations_total";
 
 export type MetricLabels = Readonly<Record<string, string>>;
 
