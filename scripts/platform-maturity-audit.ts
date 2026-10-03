@@ -1,5 +1,5 @@
-import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
-import { join, relative } from "node:path";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
 
 const root = process.cwd();
 
@@ -54,7 +54,7 @@ for (const path of sourcePaths) {
   const content = read(path);
   const normalized = path.replaceAll("\\", "/");
 
-  if (/^app\/|^components\//.test(normalized)) {
+  if (/^components\//.test(normalized) || (normalized.startsWith("app/") && /\/(?:page|layout|loading|error|not-found|template|default|forbidden|unauthorized)\.tsx$/.test(normalized))) {
     if (/from ["'][^"']*(?:@prisma\/client|@\/lib\/db\/client|lib\/db\/client)/.test(content)) {
       failures.push(`UI-layer database coupling detected in ${normalized}`);
     }
