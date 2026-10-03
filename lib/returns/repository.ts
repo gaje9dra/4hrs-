@@ -14,7 +14,7 @@ export function createReturnsRepository(client:ReturnsClient=db){
     getCancellation(reference:string,customerId:string){return client.cancellationRequest.findFirst({where:{cancellationReference:reference,customerId},include:{order:true}});},
     listActiveReturnQuantities(orderItemIds:string[]){return client.returnItem.findMany({where:{orderItemId:{in:orderItemIds},returnRequest:{status:{notIn:["REJECTED"]}}},select:{orderItemId:true,quantity:true}});},
     audit(data:Prisma.CommerceExceptionAuditEventUncheckedCreateInput){return client.commerceExceptionAuditEvent.create({data});},
-    async notify(data:Pick<Prisma.NotificationEventUncheckedCreateInput,"customerId"|"orderId"|"returnRequestId"|"type"|"payload"> & { idempotencyKey?: string | null; correlationId?: string | null }){
+    async notify(data:{customerId:string;orderId?:string|null;returnRequestId?:string|null;type:Prisma.NotificationEventUncheckedCreateInput["type"];payload?:Prisma.InputJsonValue|null;idempotencyKey?:string|null;correlationId?:string|null}){
       const idempotencyKey = data.idempotencyKey ?? [data.type,data.customerId,data.orderId ?? "none",data.returnRequestId ?? "none"].join(":");
       return enqueueNotificationEvent(client, {
         customerId:data.customerId,
