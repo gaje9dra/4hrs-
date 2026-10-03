@@ -532,7 +532,11 @@ export async function deleteCustomerData(
       });
       await tx.notificationDelivery.updateMany({
         where: { customerId },
-        data: { recipientAddress: null, suppressionReason: "CUSTOMER_DELETED" },
+        data: { recipientAddress: null },
+      });
+      await tx.notificationDelivery.updateMany({
+        where: { customerId, status: { in: ["PENDING", "PROCESSING", "RETRY_SCHEDULED"] } },
+        data: { suppressionReason: "CUSTOMER_DELETED" },
       });
       await tx.communicationUnsubscribeToken.deleteMany({ where: { customerId } });
       await tx.customerCommunicationPreferenceAudit.deleteMany({ where: { customerId } });
