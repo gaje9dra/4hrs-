@@ -1,11 +1,11 @@
-import type { NotificationChannel, NotificationDeliveryStatus, NotificationEventType, NotificationFailureCategory } from "@prisma/client";
+import { Prisma, type NotificationChannel, type NotificationDeliveryStatus, type NotificationEventType, type NotificationFailureCategory } from "@prisma/client";
 
 export type NotificationEventInput = {
   customerId: string;
   orderId?: string | null;
   returnRequestId?: string | null;
   type: NotificationEventType;
-  payload?: Record<string, unknown> | null;
+  payload?: Prisma.InputJsonValue | null;
   idempotencyKey: string;
   correlationId?: string | null;
 };
