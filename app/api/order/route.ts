@@ -67,7 +67,12 @@ export async function POST(request: Request) {
 
 export async function GET(request: Request) {
   try {
-    let page: number | undefined;\n    let pageSize: number | undefined;\n    try { ({ page, pageSize } = parsePositivePagination(request)); } catch (error) {\n      if (error instanceof ApiContractError) throw new OrderDomainError("ORDER_INVALID_REQUEST", error.message);\n      throw error;\n    }
+    let page: number | undefined;
+    let pageSize: number | undefined;
+    try { ({ page, pageSize } = parsePositivePagination(request)); } catch (error) {
+      if (error instanceof ApiContractError) throw new OrderDomainError("ORDER_INVALID_REQUEST", error.message);
+      throw error;
+    }
     return orderJson(await application.listCustomerOrders({ request, page, pageSize }));
   } catch (error) {
     return orderErrorResponse(error, "list");
