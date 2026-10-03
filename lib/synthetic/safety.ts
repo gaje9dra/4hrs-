@@ -17,7 +17,7 @@ export type SyntheticSafety = {
 export function evaluateSyntheticSafety(mode: SyntheticMode): SyntheticSafety {
   const environment = process.env.NODE_ENV === "production" ? "PRODUCTION" : (process.env.NODE_ENV ?? "development").toUpperCase();
   const reasons: string[] = [];
-  const baseUrl = process.env.SYNTHETIC_ALLOWED_BASE_URL?.trim().replace(//+$/, "") || null;
+  const baseUrl = process.env.SYNTHETIC_ALLOWED_BASE_URL?.trim().replace(/\/+$/,"") || null;
   const paymentMode = process.env.SYNTHETIC_PAYMENT_MODE === "boundary" ? "boundary" : "unsupported";
   const providerMode = ["disabled","mock","sandbox"].includes(process.env.SYNTHETIC_PROVIDER_MODE ?? "") ? (process.env.SYNTHETIC_PROVIDER_MODE as "disabled"|"mock"|"sandbox") : "disabled";
   const notificationMode = process.env.SYNTHETIC_NOTIFICATION_MODE === "sink" ? "sink" : "suppress";
