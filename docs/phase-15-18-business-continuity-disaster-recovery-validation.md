@@ -392,11 +392,11 @@ The script records:
 - measured total recovery duration;
 - explicit data-loss boundary.
 
-**Current result:** pending execution on the Phase 15.18 branch/CI. No production restore is claimed from repository inspection alone.
+**Recorded CI result (2026-10-03):** the Phase 15.18 Recovery Drill completed successfully on CI run #491. The drill created a custom-format PostgreSQL backup, restored it into an isolated temporary database, passed all restore validations, and terminated the temporary database session before cleanup. Measured recovery duration was **1.190 seconds**, consisting of **1.091 seconds** to database availability and **0.099 seconds** for validation. No production restore is claimed.
 
 ## 29. Measured RTO/RPO
 
-Measured CI recovery duration is evidence for the **CI PostgreSQL exercise only**. It must not be presented as a production RTO.
+Measured CI recovery duration is evidence for the **CI PostgreSQL exercise only**. It must not be presented as a production RTO. The successful run recorded 47 completed migrations, 178 primary/unique/foreign-key constraints, required critical tables and indexes, and no invalid domain values.
 
 The CI exercise uses an approved test database without production customer data. Therefore its data-loss boundary is:
 
@@ -541,14 +541,14 @@ Inherited blockers remain documented and prevent a READY declaration.
 - Data-loss boundary: CI exercise explicitly does not represent production data loss
 
 **CI**
-- lint: pending current Phase 15.18 run
-- typecheck: pending current Phase 15.18 run
-- test: pending current Phase 15.18 run
-- build: pending current Phase 15.18 run
+- lint: PASS — CI run #491
+- typecheck: PASS — CI run #491
+- test: PASS — 635 tests, 635 passed, CI run #491
+- build: PASS — CI run #491
 
 **BLOCKERS**
 - Production backup/PITR recoverability has not been evidenced by an approved production-like restore exercise.
-- Current Phase 15.18 CI/recovery exercise results must be recorded before readiness can be reconsidered.
+- Production backup/PITR recoverability still requires provider evidence and an approved production-like restore exercise before production recovery readiness can be declared.
 
 **REGRESSIONS**
 - None introduced by the Phase 15.18 changes currently known.
