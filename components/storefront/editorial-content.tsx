@@ -14,10 +14,10 @@ function Block({ block, media, links }: { block: ContentBlock; media: MediaMap; 
     if (!asset) return null;
     return <figure className="my-10 overflow-hidden border-4 border-border bg-white shadow-hard-md"><Image src={asset.url} alt={block.decorative ? "" : block.altText || asset.altText || ""} width={1400} height={900} className="h-auto w-full object-cover" /><figcaption className="sr-only">{block.decorative ? "" : block.altText}</figcaption></figure>;
   }
-  if (block.type === "link" || block.type === "cta") return <Link href={block.href} className="motion-link mt-6 inline-flex min-h-11 items-center border-2 border-border bg-white px-5 py-3 text-sm font-black uppercase shadow-hard-sm">{block.label}</Link>;
-  if (block.type === "product") return <Link href={links[block.productId] ?? "/shop"} className="motion-link mt-6 inline-flex min-h-11 items-center border-2 border-border bg-primary-yellow px-5 py-3 text-sm font-black uppercase shadow-hard-sm">View product</Link>;
-  if (block.type === "category") return <Link href={links[block.categoryId] ?? "/shop"} className="motion-link mt-6 inline-flex min-h-11 items-center border-2 border-border bg-primary-yellow px-5 py-3 text-sm font-black uppercase shadow-hard-sm">View category</Link>;
-  return <Link href={links[block.collectionId] ?? "/shop"} className="motion-link mt-6 inline-flex min-h-11 items-center border-2 border-border bg-primary-yellow px-5 py-3 text-sm font-black uppercase shadow-hard-sm">View collection</Link>;
+  if (block.type === "link" || block.type === "cta") return <Link href={block.href} data-content-cta-block={block.type} className="motion-link mt-6 inline-flex min-h-11 items-center border-2 border-border bg-white px-5 py-3 text-sm font-black uppercase shadow-hard-sm">{block.label}</Link>;
+  if (block.type === "product") return <Link href={links[block.productId] ?? "/shop"} data-content-cta-block="product" className="motion-link mt-6 inline-flex min-h-11 items-center border-2 border-border bg-primary-yellow px-5 py-3 text-sm font-black uppercase shadow-hard-sm">View product</Link>;
+  if (block.type === "category") return <Link href={links[block.categoryId] ?? "/shop"} data-content-cta-block="category" className="motion-link mt-6 inline-flex min-h-11 items-center border-2 border-border bg-primary-yellow px-5 py-3 text-sm font-black uppercase shadow-hard-sm">View category</Link>;
+  return <Link href={links[block.collectionId] ?? "/shop"} data-content-cta-block="collection" className="motion-link mt-6 inline-flex min-h-11 items-center border-2 border-border bg-primary-yellow px-5 py-3 text-sm font-black uppercase shadow-hard-sm">View collection</Link>;
 }
 
 export function EditorialContent({ snapshot, media, links }: { snapshot: ContentSnapshot; media: MediaMap; links: Record<string, string> }) {
