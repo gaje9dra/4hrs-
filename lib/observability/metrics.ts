@@ -12,11 +12,12 @@ export type MetricName =
   | "fulfillment_operations_total"
   | "shipping_operations_total"
   | "security_events_total"
-  | "notification_operations_total";
+  | "notification_operations_total"
+  | "communication_preference_operations_total";
 
 export type MetricLabels = Readonly<Record<string, string>>;
 
-const ALLOWED_LABELS = new Set(["route", "method", "status_class", "error_class", "provider", "operation", "environment", "metric"]);
+const ALLOWED_LABELS = new Set(["route", "method", "status_class", "error_class", "provider", "operation", "environment", "metric", "category", "channel", "reason"]);
 
 export function boundedMetricLabels(labels: MetricLabels): MetricLabels {
   const result: Record<string, string> = {};

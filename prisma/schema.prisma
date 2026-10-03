@@ -379,6 +379,9 @@ model Customer {
   assignedCases Case[] @relation("CaseAssignee")
   authoredCaseNotes CaseNote[]
   notificationDeliveries NotificationDelivery[]
+  communicationPreferences CustomerCommunicationPreference[]
+  communicationPreferenceAudits CustomerCommunicationPreferenceAudit[]
+  communicationUnsubscribeTokens CommunicationUnsubscribeToken[]
   caseAssignments CaseAssignment[]
   caseAuditActors CaseAuditEvent[] @relation("CaseAuditActor")
   adminUser        AdminUser?
@@ -950,6 +953,7 @@ enum NotificationDeliveryStatus {
   DELIVERED
   RETRY_SCHEDULED
   FAILED
+  SUPPRESSED
   AMBIGUOUS
 }
 
@@ -964,6 +968,44 @@ enum NotificationFailureCategory {
   MALFORMED_RESPONSE
   AMBIGUOUS_RESULT
   RENDERING
+}
+
+
+
+enum CommunicationCategory {
+  REQUIRED_TRANSACTIONAL
+  OPTIONAL_SERVICE
+  MARKETING_PROMOTIONAL
+}
+
+enum CommunicationChannel {
+  EMAIL
+}
+
+enum CommunicationPreferenceState {
+  OPTED_IN
+  OPTED_OUT
+}
+
+enum CommunicationPreferenceSource {
+  CUSTOMER_SETTINGS
+  UNSUBSCRIBE
+  ADMIN
+  SYSTEM
+}
+
+enum CommunicationPreferenceActorType {
+  CUSTOMER
+  ADMIN
+  SYSTEM
+}
+
+enum CommunicationSuppressionReason {
+  CUSTOMER_OPTED_OUT
+  CONSENT_NOT_PRESENT
+  CHANNEL_UNAVAILABLE
+  POLICY_RESTRICTION
+  CUSTOMER_DELETED
 }
 
 enum NotificationEventType {
@@ -1121,12 +1163,65 @@ model CommerceExceptionAuditEvent {
   @@index([correlationId, createdAt])
 }
 
+model CustomerCommunicationPreference {
+  id          String                        @id @default(uuid()) @db.Uuid
+  customerId  String                        @db.Uuid
+  category    CommunicationCategory
+  channel     CommunicationChannel
+  state       CommunicationPreferenceState
+  source      CommunicationPreferenceSource
+  version     Int                           @default(1)
+  createdAt   DateTime                      @default(now())
+  updatedAt   DateTime                      @updatedAt
+  customer    Customer                      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@unique([customerId, category, channel])
+  @@index([customerId, updatedAt])
+  @@index([category, channel, state])
+}
+
+model CustomerCommunicationPreferenceAudit {
+  id             String                           @id @default(uuid()) @db.Uuid
+  customerId     String                           @db.Uuid
+  category       CommunicationCategory
+  channel        CommunicationChannel
+  previousState  CommunicationPreferenceState?
+  newState       CommunicationPreferenceState
+  source         CommunicationPreferenceSource
+  actorType      CommunicationPreferenceActorType
+  correlationId  String?                          @db.VarChar(128)
+  idempotencyKey  String?                          @unique @db.VarChar(255)
+  reason          String?                          @db.VarChar(1000)
+  createdAt      DateTime                         @default(now())
+  customer       Customer                         @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId, createdAt])
+  @@index([category, channel, createdAt])
+  @@index([correlationId, createdAt])
+}
+
+model CommunicationUnsubscribeToken {
+  id          String                @id @default(uuid()) @db.Uuid
+  customerId  String                @db.Uuid
+  tokenHash   String                @unique @db.VarChar(128)
+  category    CommunicationCategory
+  channel     CommunicationChannel
+  expiresAt   DateTime
+  usedAt      DateTime?
+  createdAt   DateTime              @default(now())
+  customer    Customer              @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId, expiresAt])
+  @@index([expiresAt, usedAt])
+}
+
 model NotificationEvent {
   id              String                 @id @default(uuid()) @db.Uuid
   customerId      String                 @db.Uuid
   orderId         String?                @db.Uuid
   returnRequestId String?                @db.Uuid
   type            NotificationEventType
+  communicationCategory CommunicationCategory @default(REQUIRED_TRANSACTIONAL)
   payload         Json?
   idempotencyKey  String?                @unique @db.VarChar(255)
   correlationId   String?                @db.VarChar(128)
@@ -1158,6 +1253,7 @@ model NotificationDelivery {
   providerId          String?                   @db.VarChar(64)
   providerReference   String?                   @db.VarChar(255)
   failureCategory     NotificationFailureCategory?
+  suppressionReason   CommunicationSuppressionReason?
   failureCode         String?                   @db.VarChar(120)
   correlationId       String?                   @db.VarChar(128)
   idempotencyKey      String                    @unique @db.VarChar(255)
