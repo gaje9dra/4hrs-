@@ -13,7 +13,6 @@ export default function CustomerCommunicationPreferencesAdmin({ customerId, canM
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   async function save(state: "OPTED_IN" | "OPTED_OUT") {
-    if (!preference) return;
     if (reason.trim().length < 3) { setMessage("A reason is required."); return; }
     setBusy(true); setMessage("");
     try {
@@ -24,7 +23,7 @@ export default function CustomerCommunicationPreferencesAdmin({ customerId, canM
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error?.message ?? "Preference change failed.");
-      setReason(""); setMessage("Saved.");
+      setPreference(body.preference); setReason(""); setMessage("Saved.");
     } catch (error) { setMessage(error instanceof Error ? error.message : "Preference change failed."); }
     finally { setBusy(false); }
   }
