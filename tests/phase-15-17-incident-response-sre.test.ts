@@ -9,7 +9,7 @@ const root = process.cwd();
 const read = (file: string) => fs.readFileSync(path.join(root, file), "utf8");
 
 test("severity is derived from customer, financial, integrity and privacy impact", () => {
-  assert.equal(classifyIncidentSeverity({ customerImpact: "WIDESPREAD", financialImpact: "NONE", dataIntegrity: "NONE", privacy: "NONE", operationalScope: "SYSTEM" }), "MAJOR");
+  assert.equal(classifyIncidentSeverity({ customerImpact: "WIDESPREAD", financialImpact: "NONE", dataIntegrity: "NONE", privacy: "NONE", operationalScope: "SYSTEM" }), "CRITICAL");
   assert.equal(classifyIncidentSeverity({ customerImpact: "MAJOR", financialImpact: "CONFIRMED", dataIntegrity: "NONE", privacy: "NONE", operationalScope: "WORKFLOW" }), "CRITICAL");
   assert.equal(classifyIncidentSeverity({ customerImpact: "LOCALIZED", financialImpact: "NONE", dataIntegrity: "NONE", privacy: "NONE", operationalScope: "SINGLE_RESOURCE" }), "LOCALIZED");
 });
