@@ -4,7 +4,7 @@ import { recordReliabilityFindings } from "@/lib/reliability/service";
 import { incidentFingerprint } from "@/lib/reliability/incidents";
 import { evaluateSyntheticSafety } from "./safety";
 import { getWorkflow, WORKFLOW_REGISTRY } from "./registry";
-import type { SyntheticMode, SyntheticStatus } from "./model";
+import type { SyntheticFailureCode, SyntheticMode, SyntheticStatus } from "./model";
 
 function envName(){return process.env.NODE_ENV==="production"?"PRODUCTION":(process.env.NODE_ENV??"development").toUpperCase();}
 function releaseId(){return process.env.APP_VERSION??process.env.COMMIT_REF??null;}
@@ -40,7 +40,7 @@ export async function executeSyntheticWorkflow(workflowId:string, mode:Synthetic
   const started=new Date();
   const execution=await db.syntheticExecution.create({data:{workflowId,mode,environment:safety.environment,status:"UNKNOWN",startedAt:started,correlationId,traceId:correlationId,releaseId:releaseId(),deploymentId:process.env.NETLIFY_DEPLOY_ID??process.env.DEPLOYMENT_ID??null,featureFlagState:{mode},dependencyVersions:{app:releaseId()},syntheticIdentityId:(await identityFor(workflowId,safety.environment,correlationId)).id}});
   const stepResults:SyntheticStatus[]=[];
-  let failureCode:any=undefined;
+  let failureCode:SyntheticFailureCode|undefined=undefined;
   try {
     for(let i=0;i<workflow.steps.length;i++){
       const step=workflow.steps[i]; const ss=new Date();
@@ -74,7 +74,7 @@ export async function syntheticSummary(){
   ]);
   return {total,healthy,failing,blocked,latest};
 }
-export async function listSyntheticExecutions(options:{workflowId?:string;status?:any;environment?:string;limit?:number}={}){
+export async function listSyntheticExecutions(options:{workflowId?:string;status?:SyntheticStatus;environment?:string;limit?:number}={}){
   return db.syntheticExecution.findMany({where:{...(options.workflowId?{workflowId}:{}),...(options.status?{status:options.status}:{}),...(options.environment?{environment:options.environment}:{})},orderBy:{startedAt:"desc"},take:Math.min(Math.max(options.limit??100,1),200),include:{steps:{orderBy:{stepOrder:"asc"}}}});
 }
 export async function evaluateReadiness(environment=envName()){
