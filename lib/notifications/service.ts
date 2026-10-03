@@ -20,7 +20,7 @@ export async function enqueueNotificationEvent(client: DbClient, input: Notifica
   if (existing) return { eventId: existing.id, deliveryId: existing.deliveries[0]?.id ?? null, created: false };
 
   const event = await client.notificationEvent.create({
-    data: { customerId: input.customerId, orderId: input.orderId ?? null, returnRequestId: input.returnRequestId ?? null, type: input.type, payload: input.payload ?? undefined, idempotencyKey: input.idempotencyKey.slice(0,255), correlationId: input.correlationId?.slice(0,128) ?? null },
+    data: { customerId: input.customerId, orderId: input.orderId ?? null, returnRequestId: input.returnRequestId ?? null, type: input.type, payload: input.payload === null ? undefined : input.payload, idempotencyKey: input.idempotencyKey.slice(0,255), correlationId: input.correlationId?.slice(0,128) ?? null },
   });
 
   const customer = await client.customer.findUnique({ where: { id: input.customerId }, select: { email: true, status: true, anonymizedAt: true } });
