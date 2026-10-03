@@ -318,7 +318,6 @@ function mapProduct(product: {
   status: "ACTIVE" | "DRAFT" | "ARCHIVED";
   images: Array<{ id: string; url: string; altText: string | null }>;
   variants: Array<{
-    id: string;
     price: Prisma.Decimal | string | number | null;
     compareAtPrice: Prisma.Decimal | string | number | null;
     inventory: {
