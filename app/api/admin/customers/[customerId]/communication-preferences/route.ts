@@ -1,6 +1,7 @@
 import { requireAdmin, requireHighRiskReason } from "@/lib/admin/authorization";
 import { auditAdminAction } from "@/lib/admin/audit";
 import { adminErrorResponse, adminJson } from "@/lib/admin/http";
+import { db } from "@/lib/db/client";
 import { CommunicationPreferenceError, getCustomerCommunicationPreferences, updateCustomerCommunicationPreference } from "@/lib/communications/preferences";
 import { consumeCommunicationRateLimit } from "@/lib/communications/rate-limit";
 
@@ -14,7 +15,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ cust
     const { customerId } = await params;
     const preferences = await getCustomerCommunicationPreferences(customerId);
     const audit = context.permissions.has("communication.preference.audit.read")
-      ? await (await import("@/lib/db/client")).db.customerCommunicationPreferenceAudit.findMany({
+      ? await db.customerCommunicationPreferenceAudit.findMany({
           where: { customerId },
           orderBy: [{ createdAt: "desc" }, { id: "desc" }],
           take: 100,
