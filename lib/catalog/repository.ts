@@ -1,5 +1,7 @@
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { db } from "@/lib/db/client";
+import { normalizeEnvironment } from "@/lib/feature-flags/service";
+import { merchandisingOrderSql } from "@/lib/discovery/merchandising";
 
 export const CATALOG_PAGE_DEFAULT = 24;
 export const CATALOG_PAGE_MAX = 100;
@@ -567,7 +569,14 @@ function buildSearchRelevanceWhereSql(options: CatalogSearchRepositoryOptions): 
 
 function buildSearchRelevanceOrderSql(options: CatalogSearchRepositoryOptions): Prisma.Sql {
   const q = options.query;
+  const merchandisingOrder = merchandisingOrderSql({
+    environment: normalizeEnvironment(),
+    query: q,
+    categorySlug: options.filters?.categorySlug,
+    collectionSlug: options.filters?.collectionSlug,
+  });
   return Prisma.sql`
+    ${merchandisingOrder},
     CASE
       WHEN p."title" ILIKE ${q} ESCAPE CHR(92) THEN 0
       ${options.mode === "INTERNAL" ? Prisma.sql`WHEN EXISTS (
