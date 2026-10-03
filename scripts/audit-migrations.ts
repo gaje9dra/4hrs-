@@ -2,9 +2,9 @@ import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 
 const root = join(process.cwd(), "prisma", "migrations");
-const migrationNamePattern = /^(\\d{14})_[a-z0-9][a-z0-9_-]*$/;
+const migrationNamePattern = /^(\d{14})_[a-z0-9][a-z0-9_-]*$/;
 const riskyPatterns = [
-  /\\bDROP\\s+TABLE\\b/i,
+  /\bDROP\s+TABLE\b/i,
   /\bDROP\s+COLUMN\b/i,
   /\bTRUNCATE\b/i,
   /\bALTER\s+TYPE\b.*\bRENAME\b/i,
