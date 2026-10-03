@@ -56,7 +56,7 @@ export function createReturnsApplication(dependencies:ReturnsApplicationDependen
       const status:CancellationLifecycle=eligibility==="eligible" ? "APPROVED" : "REQUIRES_REVIEW";
       const created=await tx.cancellationRequest.create({data:{cancellationReference:ref("CAN-"),customerId:c.id,orderId:order.id,status:"REQUESTED",reason,customerDescription:description}});
       await repo.audit({actorType:"CUSTOMER",actorId:c.id,action:"CANCELLATION_REQUESTED",previousState:null,newState:"REQUESTED",reason,orderId:order.id,cancellationRequestId:created.id});
-      await repo.notify({customerId:c.id,orderId:order.id,type:"CANCELLATION_REQUESTED"});
+      await repo.notify({customerId:c.id,orderId:order.id,type:"CANCELLATION_REQUESTED",idempotencyKey:`CANCELLATION_REQUESTED:${created.cancellationReference}`,payload:{orderNumber:order.orderNumber,cancellationReference:created.cancellationReference}});
       {assertCancellationTransition("REQUESTED",status);await tx.cancellationRequest.update({where:{id:created.id},data:{status,reviewedAt:new Date()}});await repo.audit({actorType:"SYSTEM",action:"CANCELLATION_APPROVED",previousState:"REQUESTED",newState:status,reason:eligibility==="eligible"?"commercially_eligible":"operational_review_required",orderId:order.id,cancellationRequestId:created.id});}
       return tx.cancellationRequest.findUnique({where:{id:created.id},include:{order:true}});
     }));
@@ -101,7 +101,7 @@ export function createReturnsApplication(dependencies:ReturnsApplicationDependen
     for(const [id,qty] of quantities){const oi=orderItems.get(id);if(!oi)throw new ReturnDomainError("RETURN_ITEM_INVALID","Return item is not part of this order.");const used=existingMap.get(id)??0;if(used+qty>oi.quantity)throw new ReturnDomainError("RETURN_QUANTITY_EXCEEDED","Requested return quantity exceeds the purchased quantity.");}
     const created=await tx.returnRequest.create({data:{returnReference:ref("RET-"),customerId:c.id,orderId:order.id,status:"REQUESTED",reasonCode:input.reasonCode,customerDescription:description,items:{create:[...quantities.entries()].map(([orderItemId,quantity])=>({orderItemId,quantity}))}}});
     await repo.audit({actorType:"CUSTOMER",actorId:c.id,action:"RETURN_REQUESTED",previousState:null,newState:"REQUESTED",orderId:order.id,returnRequestId:created.id});
-    await repo.notify({customerId:c.id,orderId:order.id,returnRequestId:created.id,type:"RETURN_REQUESTED"});
+    await repo.notify({customerId:c.id,orderId:order.id,returnRequestId:created.id,type:"RETURN_REQUESTED",idempotencyKey:`RETURN_REQUESTED:${created.returnReference}`,payload:{orderNumber:order.orderNumber,returnReference:created.returnReference}});
     return tx.returnRequest.findUnique({where:{id:created.id},include:{items:{include:{orderItem:true}},order:true,shipment:true,inspection:true,resolution:true}});
    })));
   }catch(e){return mapError(e);}
