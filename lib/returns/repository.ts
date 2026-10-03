@@ -1,5 +1,6 @@
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { db } from "@/lib/db/client";
+import { enqueueNotificationEvent } from "@/lib/notifications/service";
 export type ReturnsClient=PrismaClient|Prisma.TransactionClient;
 export type ReturnsOrder = Prisma.OrderGetPayload<{include:{items:true,payment:true,fulfillment:{include:{shipments:true}},shipments:true,cancellationRequests:true,returnRequests:{include:{items:true,shipment:true,inspection:true,resolution:true}}}}>;
 export type ReturnRecord = Prisma.ReturnRequestGetPayload<{include:{items:{include:{orderItem:true}},order:true,shipment:true,inspection:true,resolution:true}}>;
@@ -13,6 +14,17 @@ export function createReturnsRepository(client:ReturnsClient=db){
     getCancellation(reference:string,customerId:string){return client.cancellationRequest.findFirst({where:{cancellationReference:reference,customerId},include:{order:true}});},
     listActiveReturnQuantities(orderItemIds:string[]){return client.returnItem.findMany({where:{orderItemId:{in:orderItemIds},returnRequest:{status:{notIn:["REJECTED"]}}},select:{orderItemId:true,quantity:true}});},
     audit(data:Prisma.CommerceExceptionAuditEventUncheckedCreateInput){return client.commerceExceptionAuditEvent.create({data});},
-    notify(data:Prisma.NotificationEventUncheckedCreateInput){return client.notificationEvent.create({data});},
+    async notify(data:Pick<Prisma.NotificationEventUncheckedCreateInput,"customerId"|"orderId"|"returnRequestId"|"type"|"payload"> & { idempotencyKey?: string | null; correlationId?: string | null }){
+      const idempotencyKey = data.idempotencyKey ?? [data.type,data.customerId,data.orderId ?? "none",data.returnRequestId ?? "none"].join(":");
+      return enqueueNotificationEvent(client, {
+        customerId:data.customerId,
+        orderId:data.orderId,
+        returnRequestId:data.returnRequestId,
+        type:data.type,
+        payload:(data.payload as Record<string,unknown> | null | undefined) ?? null,
+        idempotencyKey,
+        correlationId:data.correlationId,
+      });
+    },
   };
 }
