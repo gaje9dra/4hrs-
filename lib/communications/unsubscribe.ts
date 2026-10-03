@@ -47,6 +47,13 @@ async function verifySignature(token: string): Promise<{ exp: number; nonce: str
   return { exp: value.exp, nonce: value.nonce };
 }
 
+export async function validateUnsubscribeToken(token: unknown): Promise<void> {
+  if (typeof token !== "string" || token.length < 40 || token.length > 2048) throw new CommunicationPreferenceError("PREFERENCE_DATABASE_ERROR", "The unsubscribe link is invalid or expired.");
+  await verifySignature(token);
+  const record = await db.communicationUnsubscribeToken.findUnique({ where: { tokenHash: hashToken(token) }, select: { expiresAt: true, usedAt: true } });
+  if (!record || record.usedAt || record.expiresAt.getTime() <= Date.now()) throw new CommunicationPreferenceError("PREFERENCE_DATABASE_ERROR", "The unsubscribe link is invalid or expired.");
+}
+
 export async function consumeUnsubscribeToken(token: unknown, correlationId?: string | null): Promise<{ status: "unsubscribed" }> {
   if (typeof token !== "string" || token.length < 40 || token.length > 2048) {
     throw new CommunicationPreferenceError("PREFERENCE_DATABASE_ERROR", "The unsubscribe link is invalid or expired.");
