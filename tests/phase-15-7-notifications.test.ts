@@ -45,19 +45,16 @@ test("production notification provider cannot silently fall back to the test ada
   const previous = {
     enabled: process.env.NOTIFICATION_PROVIDER_ENABLED,
     mode: process.env.NOTIFICATION_PROVIDER_MODE,
-    nodeEnv: process.env.NODE_ENV,
     id: process.env.NOTIFICATION_PROVIDER_ID,
   };
   process.env.NOTIFICATION_PROVIDER_ENABLED = "true";
   process.env.NOTIFICATION_PROVIDER_MODE = "production";
   process.env.NOTIFICATION_PROVIDER_ID = "none";
-  process.env.NODE_ENV = "production";
   const provider = resolveNotificationProvider();
   assert.equal(provider.id, "unconfigured");
   process.env.NOTIFICATION_PROVIDER_ENABLED = previous.enabled;
   process.env.NOTIFICATION_PROVIDER_MODE = previous.mode;
   process.env.NOTIFICATION_PROVIDER_ID = previous.id;
-  process.env.NODE_ENV = previous.nodeEnv;
 });
 
 test("notification event creation is idempotent and creates a durable delivery", async () => {
