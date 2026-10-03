@@ -1,6 +1,7 @@
 import { CatalogServiceError } from "@/lib/catalog/errors";
 import { NextResponse } from "next/server";
 import { AdminError } from "@/lib/admin/errors";
+import { isTrustedStateChangingRequest } from "@/lib/security/request";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 export function isValidAdminId(value: unknown): value is string { return typeof value === "string" && UUID_PATTERN.test(value.trim()); }
@@ -22,9 +23,9 @@ export function adminErrorResponse(error: unknown) {
   return adminJson({ error: { code: "DATABASE_ERROR", message: "The administrative operation could not be completed safely." } }, { status: 503 });
 }
 export function assertAdminSameOrigin(request: Request): void {
-  const origin = request.headers.get("origin");
-  if (!origin) return;
-  if (origin !== new URL(request.url).origin) throw new AdminError("FORBIDDEN", "The request origin is not allowed.");
+  if (!isTrustedStateChangingRequest(request)) {
+    throw new AdminError("FORBIDDEN", "The request origin is not allowed.");
+  }
 }
 export async function readAdminJson(request: Request): Promise<Record<string, unknown>> {
   const length = request.headers.get("content-length");
