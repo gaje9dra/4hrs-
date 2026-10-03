@@ -23,6 +23,6 @@ function Block({ block, media, links }: { block: ContentBlock; media: MediaMap; 
 export function EditorialContent({ snapshot, media, links }: { snapshot: ContentSnapshot; media: MediaMap; links: Record<string, string> }) {
   return <article>
     {snapshot.summary ? <p className="max-w-3xl text-xl font-medium leading-8">{snapshot.summary}</p> : null}
-    <div>{snapshot.body.map((block, index) => <Block key={index} block={block} media={media} />)}</div>
+    <div>{snapshot.body.map((block, index) => <Block key={index} block={block} media={media} links={links} />)}</div>
   </article>;
 }
