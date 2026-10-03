@@ -1816,6 +1816,217 @@ model ContentRevision {
 }
 
 
+enum GovernanceControlDomain {
+  SECURITY
+  PRIVACY
+  DATA_PROTECTION
+  ACCESS_CONTROL
+  AUTHENTICATION
+  AUTHORIZATION
+  AUDITABILITY
+  OBSERVABILITY
+  RELEASE
+  DEPLOYMENT
+  BACKUP
+  DISASTER_RECOVERY
+  INCIDENT_RESPONSE
+  BUSINESS_CONTINUITY
+  API_GOVERNANCE
+  PAYMENT_SAFETY
+  ORDER_INTEGRITY
+  FULFILLMENT
+  SHIPPING
+  CUSTOMER_ACCOUNT
+  NOTIFICATIONS
+  ANALYTICS
+  CONTENT
+  SEARCH
+  FEATURE_FLAGS
+  THIRD_PARTY_INTEGRATIONS
+  DATA_RETENTION
+  DATA_LIFECYCLE
+}
+
+enum GovernanceControlStatus {
+  NOT_ASSESSED
+  IMPLEMENTED
+  CONFIGURED
+  VERIFIED
+  MONITORED
+  FAILED
+  BLOCKED
+  NOT_APPLICABLE
+  UNKNOWN
+}
+
+enum GovernanceControlCriticality {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum GovernanceApplicability {
+  REQUIRED
+  CONDITIONAL
+  NOT_APPLICABLE
+}
+
+enum GovernanceEvidenceType {
+  AUTOMATED_TEST
+  CI_RESULT
+  DEPLOYMENT_VERIFICATION
+  CONFIGURATION_VALIDATION
+  MIGRATION_VALIDATION
+  BACKUP_VERIFICATION
+  RESTORE_TEST
+  SECURITY_SCAN
+  AUDIT_EVENT
+  INCIDENT_REVIEW
+  RUNBOOK_VERIFICATION
+  MONITORING_VERIFICATION
+  MANUAL_REVIEW
+  OPERATIONAL_CHECKLIST
+  CONTROL_ASSERTION
+}
+
+enum GovernanceEvidenceStatus {
+  VALID
+  EXPIRED
+  SUPERSEDED
+  REJECTED
+}
+
+enum GovernanceVerificationResult {
+  PASS
+  FAIL
+  BLOCKED
+  UNKNOWN
+}
+
+enum GovernanceControlEventType {
+  CREATED
+  STATUS_CHANGED
+  VERIFIED
+  FAILED
+  BLOCKED
+  OWNERSHIP_CHANGED
+  REVIEWED
+  EXCEPTION_CREATED
+  EXCEPTION_EXPIRED
+}
+
+enum GovernanceExceptionStatus {
+  ACTIVE
+  APPROVED
+  EXPIRED
+  REVOKED
+}
+
+model GovernanceControl {
+  id                   String                    @id @default(uuid()) @db.Uuid
+  key                  String                    @unique @db.VarChar(120)
+  domain               GovernanceControlDomain
+  title                String                    @db.VarChar(200)
+  description          String                    @db.VarChar(2000)
+  criticality          GovernanceControlCriticality
+  ownerRole            String                    @db.VarChar(120)
+  status               GovernanceControlStatus   @default(NOT_ASSESSED)
+  applicability        GovernanceApplicability  @default(REQUIRED)
+  verificationMethod   String                    @db.VarChar(500)
+  evidenceRequirements Json?
+  lastVerifiedAt       DateTime?
+  nextReviewAt         DateTime?
+  version              Int                       @default(1)
+  createdAt            DateTime                  @default(now())
+  updatedAt            DateTime                  @updatedAt
+  evidence             GovernanceEvidence[]
+  verifications        GovernanceVerification[]
+  events               GovernanceControlEvent[]
+  exceptions           GovernanceException[]
+  @@index([domain, status])
+  @@index([criticality, status])
+  @@index([nextReviewAt])
+  @@index([ownerRole, status])
+}
+
+model GovernanceEvidence {
+  id               String                    @id @default(uuid()) @db.Uuid
+  controlId        String                    @db.Uuid
+  evidenceType     GovernanceEvidenceType
+  source            String                    @db.VarChar(255)
+  reference        String                    @db.VarChar(1000)
+  capturedAt       DateTime                  @default(now())
+  capturedByAdminId String?                  @db.Uuid
+  status            GovernanceEvidenceStatus  @default(VALID)
+  metadata         Json?
+  integrityHash    String?                   @db.VarChar(128)
+  expiresAt        DateTime?
+  idempotencyKey   String                    @unique @db.VarChar(255)
+  createdAt        DateTime                  @default(now())
+  control          GovernanceControl         @relation(fields: [controlId], references: [id], onDelete: Restrict)
+  @@index([controlId, capturedAt])
+  @@index([status, expiresAt])
+  @@index([capturedByAdminId, capturedAt])
+}
+
+model GovernanceVerification {
+  id                String                     @id @default(uuid()) @db.Uuid
+  controlId         String                     @db.Uuid
+  result            GovernanceVerificationResult
+  method            String                     @db.VarChar(255)
+  source            String                     @db.VarChar(255)
+  reference         String?                    @db.VarChar(1000)
+  checkedAt         DateTime                   @default(now())
+  checkedByAdminId   String?                   @db.Uuid
+  durationMs        Int?
+  correlationId     String?                    @db.VarChar(128)
+  releaseId         String?                    @db.VarChar(128)
+  deploymentId      String?                    @db.VarChar(128)
+  details           Json?
+  createdAt         DateTime                   @default(now())
+  control           GovernanceControl          @relation(fields: [controlId], references: [id], onDelete: Restrict)
+  @@index([controlId, checkedAt])
+  @@index([result, checkedAt])
+  @@index([releaseId, deploymentId])
+}
+
+model GovernanceControlEvent {
+  id             String                      @id @default(uuid()) @db.Uuid
+  controlId      String                      @db.Uuid
+  type           GovernanceControlEventType
+  actorAdminId   String?                     @db.Uuid
+  previousStatus GovernanceControlStatus?
+  newStatus      GovernanceControlStatus?
+  reason         String?                     @db.VarChar(1000)
+  correlationId  String?                     @db.VarChar(128)
+  metadata       Json?
+  createdAt      DateTime                    @default(now())
+  control        GovernanceControl            @relation(fields: [controlId], references: [id], onDelete: Restrict)
+  @@index([controlId, createdAt])
+  @@index([type, createdAt])
+}
+
+model GovernanceException {
+  id                  String                    @id @default(uuid()) @db.Uuid
+  controlId           String                    @db.Uuid
+  reason              String                    @db.VarChar(2000)
+  scope               String                    @db.VarChar(1000)
+  riskStatement       String                    @db.VarChar(2000)
+  ownerRole           String                    @db.VarChar(120)
+  approvalRole        String?                   @db.VarChar(120)
+  approvalReason      String?                   @db.VarChar(1000)
+  remediationReference String?                  @db.VarChar(1000)
+  status              GovernanceExceptionStatus @default(ACTIVE)
+  createdAt           DateTime                  @default(now())
+  approvedAt          DateTime?
+  expiresAt           DateTime
+  revokedAt           DateTime?
+  control             GovernanceControl         @relation(fields: [controlId], references: [id], onDelete: Restrict)
+  @@index([controlId, status, expiresAt])
+  @@index([status, expiresAt])
+}
+
 enum ReliabilityIncidentSeverity {
   CRITICAL
   MAJOR
