@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { type CostMeasurementStatus } from "@prisma/client";
+import { Prisma, type CostMeasurementStatus } from "@prisma/client";
 import { db } from "@/lib/db/client";
 import { auditAdminAction } from "@/lib/admin/audit";
 import type { AdminAuthorizationContext } from "@/lib/admin/authorization";
@@ -44,7 +44,7 @@ export async function recordResourceMetric(input:{
   return db.costResourceMetric.create({data:{
     resourceId:resource.id, metricKey:input.metricKey.trim(), value:input.value, unit:input.unit.trim(),
     status, service:input.service?.trim().slice(0,120), correlationId:input.correlationId?.trim().slice(0,128),
-    metadata:sanitizeMetricMetadata(input.metadata),
+    metadata:sanitizeMetricMetadata(input.metadata) as Prisma.InputJsonValue,
   }});
 }
 
