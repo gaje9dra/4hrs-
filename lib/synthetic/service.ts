@@ -13,9 +13,8 @@ function safeMeta(value: unknown): Prisma.InputJsonValue {
   if(!value||typeof value!=="object"||Array.isArray(value)) return {};
   const input=value as Record<string,unknown>; const out:Record<string,unknown>={};
   const sensitive=/(token|secret|password|authorization|cookie|api.?key|email|phone|address|payment|credential)/i;
+  for(const [k,v] of Object.entries(input)){ if(sensitive.test(k)) continue; out[k]=typeof v==="string"?v.slice(0,300):v; }
   return JSON.parse(JSON.stringify(out)) as Prisma.InputJsonValue;
-  return out;
-}
 function combineStatus(statuses:SyntheticStatus[]):SyntheticStatus{
   if(statuses.includes("FAILING")) return "FAILING";
   if(statuses.includes("BLOCKED")) return "BLOCKED";
