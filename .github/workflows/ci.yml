@@ -55,7 +55,7 @@ jobs:
         run: npm install --global npm@11.6.0
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Validate Prisma schema
         run: npx prisma validate
@@ -89,7 +89,7 @@ jobs:
           node-version: 24.21.0
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Run ESLint
         run: npm run lint
@@ -108,7 +108,7 @@ jobs:
           node-version: 24.21.0
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Run TypeScript typecheck
         run: npm run typecheck
@@ -149,14 +149,13 @@ jobs:
           node-version: 24.21.0
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Apply database migrations
         run: npx prisma migrate deploy
 
       - name: Build application
         run: npm run build
-
 
   recovery-drill:
     name: Recovery Drill
@@ -187,7 +186,7 @@ jobs:
         with:
           node-version: 24.21.0
       - name: Install dependencies
-        run: npm install
+        run: npm ci
       - name: Validate Prisma schema
         run: npx prisma validate
       - name: Apply migrations
