@@ -3,6 +3,13 @@ import { logger } from "@/lib/observability/logger";
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
+type QueryLogEvent = { duration: number; target: string };
+type ErrorLogEvent = { target: string; message: string };
+type PrismaEventClient = {
+  $on(event: "query", listener: (event: QueryLogEvent) => void): void;
+  $on(event: "error", listener: (event: ErrorLogEvent) => void): void;
+};
+
 export const db = globalForPrisma.prisma ?? new PrismaClient({
   log: [
     { emit: "event", level: "query" },
@@ -10,28 +17,23 @@ export const db = globalForPrisma.prisma ?? new PrismaClient({
   ],
 });
 
-db.$on("query", (event) => {
+const events = db as unknown as PrismaEventClient;
+events.$on("query", (event) => {
   if (event.duration >= 500) {
     logger.warn("db.query.slow", {
       resourceType: "database",
       outcome: "success",
       durationMs: event.duration,
-    }, {
-      target: event.target,
-      // Deliberately do not log event.query or parameters.
-    });
+    }, { target: event.target });
   }
 });
 
-db.$on("error", (event) => {
+events.$on("error", (event) => {
   logger.error("db.query.failed", {
     resourceType: "database",
     outcome: "failure",
     errorCode: "DATABASE_ERROR",
-  }, {
-    target: event.target,
-    message: event.message,
-  });
+  }, { target: event.target, message: event.message });
 });
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = db;
