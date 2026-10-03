@@ -10,14 +10,10 @@ type Preference = {
 };
 
 export function CustomerCommunicationPreferences({ initialPreference }: { initialPreference: Preference }) {
-  const [preference, setPreference] = useState<Preference | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState<string | null>(null);
-
   const [preference, setPreference] = useState<Preference>(initialPreference);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
   async function setMarketingOptIn(enabled: boolean) {
-    if (!preference) return;
     setBusy(true);
     setMessage(null);
     try {
