@@ -387,6 +387,7 @@ model Customer {
   communicationPreferenceAudits CustomerCommunicationPreferenceAudit[]
   communicationUnsubscribeTokens CommunicationUnsubscribeToken[]
   caseAssignments CaseAssignment[]
+  featureFlagAssignments FeatureFlagAssignment[]
   caseAuditActors CaseAuditEvent[] @relation("CaseAuditActor")
   adminUser        AdminUser?
   @@index([status])
@@ -1552,4 +1553,144 @@ model AdminAuditLog {
   @@index([resourceType, resourceId, createdAt])
   @@index([action, createdAt])
   @@index([createdAt])
+}
+
+
+enum FeatureFlagType {
+  BOOLEAN
+  MULTIVARIANT
+}
+
+enum FeatureFlagLifecycle {
+  DRAFT
+  ACTIVE
+  PAUSED
+  DEPRECATED
+  RETIRED
+}
+
+enum FeatureFlagEnvironment {
+  DEVELOPMENT
+  TEST
+  STAGING
+  PRODUCTION
+}
+
+enum ExperimentStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  COMPLETED
+  RETIRED
+}
+
+enum ExperimentSubjectType {
+  ANONYMOUS
+  CUSTOMER
+}
+
+model FeatureFlag {
+  id                  String                 @id @default(uuid()) @db.Uuid
+  key                 String                 @db.VarChar(100)
+  name                String                 @db.VarChar(160)
+  description         String?                @db.VarChar(1000)
+  type                FeatureFlagType
+  lifecycle           FeatureFlagLifecycle   @default(DRAFT)
+  environment         FeatureFlagEnvironment
+  defaultEnabled      Boolean                @default(false)
+  defaultVariantKey   String?                @db.VarChar(64)
+  rolloutPercentage   Int                    @default(0)
+  version             Int                    @default(1)
+  expiresAt           DateTime?
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  variants            FeatureFlagVariant[]
+  assignments         FeatureFlagAssignment[]
+
+  @@unique([key, environment])
+  @@index([environment, lifecycle])
+  @@index([expiresAt])
+}
+
+model FeatureFlagVariant {
+  id               String      @id @default(uuid()) @db.Uuid
+  flagId           String      @db.Uuid
+  key              String      @db.VarChar(64)
+  weightBasisPoints Int
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  flag             FeatureFlag @relation(fields: [flagId], references: [id], onDelete: Cascade)
+
+  @@unique([flagId, key])
+  @@index([flagId, weightBasisPoints])
+}
+
+model Experiment {
+  id                 String           @id @default(uuid()) @db.Uuid
+  key                String           @unique @db.VarChar(100)
+  name               String           @db.VarChar(160)
+  description        String?          @db.VarChar(1000)
+  status             ExperimentStatus @default(DRAFT)
+  environment        FeatureFlagEnvironment
+  startAt            DateTime?
+  endAt              DateTime?
+  version             Int              @default(1)
+  primaryMetricEvent  String?          @db.VarChar(64)
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+  variants            ExperimentVariant[]
+  assignments         ExperimentAssignment[]
+
+  @@index([environment, status])
+  @@index([startAt, endAt])
+}
+
+model ExperimentVariant {
+  id               String     @id @default(uuid()) @db.Uuid
+  experimentId     String     @db.Uuid
+  key              String     @db.VarChar(64)
+  weightBasisPoints Int
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  experiment       Experiment @relation(fields: [experimentId], references: [id], onDelete: Cascade)
+
+  @@unique([experimentId, key])
+  @@index([experimentId, weightBasisPoints])
+}
+
+model ExperimentAssignment {
+  id            String               @id @default(uuid()) @db.Uuid
+  experimentId  String               @db.Uuid
+  subjectHash   String               @db.VarChar(64)
+  subjectType   ExperimentSubjectType
+  customerId    String?              @db.Uuid
+  variantKey    String               @db.VarChar(64)
+  experimentVersion Int
+  assignedAt    DateTime             @default(now())
+  expiresAt     DateTime?
+  experiment    Experiment           @relation(fields: [experimentId], references: [id], onDelete: Cascade)
+  customer      Customer?            @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@unique([experimentId, subjectHash])
+  @@index([customerId, assignedAt])
+  @@index([expiresAt])
+  @@index([experimentId, variantKey])
+}
+
+model FeatureFlagAssignment {
+  id              String               @id @default(uuid()) @db.Uuid
+  flagId          String               @db.Uuid
+  subjectHash     String               @db.VarChar(64)
+  subjectType     ExperimentSubjectType
+  customerId      String?              @db.Uuid
+  variantKey      String?              @db.VarChar(64)
+  assignedEnabled Boolean
+  flagVersion     Int
+  assignedAt      DateTime             @default(now())
+  flag             FeatureFlag          @relation(fields: [flagId], references: [id], onDelete: Cascade)
+  customer        Customer?            @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@unique([flagId, subjectHash])
+  @@index([customerId, assignedAt])
+  @@index([flagId, assignedAt])
 }
