@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Container } from "@/components/layout/container";
 import { CustomerProfileForm } from "@/components/storefront/customer-profile-form";
+import { CustomerPrivacyControls } from "@/components/storefront/customer-privacy-controls";
 import { requireCurrentCustomer } from "@/lib/auth/context";
 
 export const dynamic = "force-dynamic";
@@ -29,6 +30,7 @@ export default async function AccountProfilePage() {
         <p className="mt-4 text-base leading-7">Update the editable profile information on your customer account.</p>
       </header>
       <CustomerProfileForm initialCustomer={current.customer} />
+      <CustomerPrivacyControls />
     </Container>
   );
 }
