@@ -111,7 +111,7 @@ AdminAuditLog and domain audit records are part of the PostgreSQL recovery surfa
 ## Media recovery
 Product media stores URL/storageReference metadata in PostgreSQL. The repository does not contain a standalone object-storage backup service. If production media is backed by an external object provider, its bucket/container backup/versioning and access policy are a separate recovery dependency. Restored records pointing to missing objects must be detected before declaring full recovery.
 
-## Recovery drill
+## Recovery drills
 The repository includes `npm run recovery:drill`. In a non-production PostgreSQL environment it creates a custom-format `pg_dump`, computes an integrity hash of the backup artifact, creates an isolated temporary database, restores the dump with `pg_restore`, runs restore validation, and drops the temporary database. It refuses to run when `NODE_ENV=production`.
 CI should run this drill against the ephemeral PostgreSQL service so backup/restore behavior is exercised without touching production.
 Application rollback, migration failure, provider outage and webhook-loss scenarios are covered as controlled regression scenarios: they validate that recovery remains state-preserving and does not invoke irreversible provider actions automatically.
