@@ -1,4 +1,4 @@
-name: Lockfile Artifact Bootstrap
+name: Lockfile Bootstrap
 
 on:
   pull_request:
@@ -6,27 +6,40 @@ on:
       - main
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  generate-lockfile:
+  generate-and-commit-lockfile:
+    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout PR branch
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 24.21.0
+
       - name: Pin npm
         run: npm install --global npm@11.6.0
-      - name: Generate authoritative lockfile
+
+      - name: Generate lockfile
         run: npm install --package-lock-only --ignore-scripts
-      - name: Verify lockfile
+
+      - name: Verify lockfile reproducibility
         run: npm ci --ignore-scripts
-      - name: Upload lockfile
-        uses: actions/upload-artifact@v4
-        with:
-          name: generated-package-lock
-          path: package-lock.json
-          if-no-files-found: error
+
+      - name: Commit lockfile
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json
+          git diff --cached --quiet && exit 0
+          git commit -m "chore: add authoritative npm package lockfile"
+          git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
