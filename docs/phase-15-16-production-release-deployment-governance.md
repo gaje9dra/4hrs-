@@ -283,7 +283,7 @@ RELEASE ENGINEERING:
 - Webhooks: READY
 - Background jobs: READY
 - Secrets: READY
-- CI/CD: READY WITH LOCKFILE BLOCKER
+- CI/CD: READY
 - Observability: READY
 - Disaster recovery: READY
 
@@ -297,14 +297,13 @@ CI:
 - environment validation: PASS
 
 BLOCKERS:
-- Committed authoritative package-lock.json is missing.
+- None.
 
 REGRESSIONS:
 - None identified in the implementation audit.
 - Historical duplicate migration timestamp prefix documented; no migration identity was renamed.
 
 DEFERRED:
-- Deterministic npm ci adoption after lockfile commit.
 - Separate dependency-version alignment review.
 
 NEXT_PHASE:
