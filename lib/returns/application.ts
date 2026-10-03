@@ -56,7 +56,7 @@ export function createReturnsApplication(dependencies:ReturnsApplicationDependen
       const status:CancellationLifecycle=eligibility==="eligible" ? "APPROVED" : "REQUIRES_REVIEW";
       const created=await tx.cancellationRequest.create({data:{cancellationReference:ref("CAN-"),customerId:c.id,orderId:order.id,status:"REQUESTED",reason,customerDescription:description}});
       await repo.audit({actorType:"CUSTOMER",actorId:c.id,action:"CANCELLATION_REQUESTED",previousState:null,newState:"REQUESTED",reason,orderId:order.id,cancellationRequestId:created.id});
-      await repo.notify({customerId:c.id,orderId:order.id,type:"CANCELLATION_REQUESTED"});
+      await repo.notify({customerId:c.id,orderId:order.id,type:"CANCELLATION_REQUESTED",idempotencyKey:`CANCELLATION_REQUESTED:${created.cancellationReference}`,payload:{orderNumber:order.orderNumber,cancellationReference:created.cancellationReference}});
       {assertCancellationTransition("REQUESTED",status);await tx.cancellationRequest.update({where:{id:created.id},data:{status,reviewedAt:new Date()}});await repo.audit({actorType:"SYSTEM",action:"CANCELLATION_APPROVED",previousState:"REQUESTED",newState:status,reason:eligibility==="eligible"?"commercially_eligible":"operational_review_required",orderId:order.id,cancellationRequestId:created.id});}
       return tx.cancellationRequest.findUnique({where:{id:created.id},include:{order:true}});
     }));
@@ -79,7 +79,7 @@ export function createReturnsApplication(dependencies:ReturnsApplicationDependen
       assertCancellationTransition(row.status as CancellationLifecycle,next);
       await tx.cancellationRequest.update({where:{id:row.id},data:{status:next,reviewedAt:new Date(),operationalReason:reason}});
       await tx.commerceExceptionAuditEvent.create({data:{actorType:"ADMIN",actorId:admin.customer.id,action:input.decision==="APPROVE"?"CANCELLATION_APPROVED":"CANCELLATION_REJECTED",previousState:row.status,newState:next,reason,orderId:row.orderId,cancellationRequestId:row.id,correlationId:input.idempotencyKey}});
-      await tx.notificationEvent.create({data:{customerId:row.customerId,orderId:row.orderId,type:input.decision==="APPROVE"?"CANCELLATION_APPROVED":"CANCELLATION_REJECTED"}});
+      await createReturnsRepository(tx).notify({customerId:row.customerId,orderId:row.orderId,type:input.decision==="APPROVE"?"CANCELLATION_APPROVED":"CANCELLATION_REJECTED",idempotencyKey:input.idempotencyKey??`${input.decision}:${row.cancellationReference}`,correlationId:input.idempotencyKey,payload:{orderNumber:row.order.orderNumber,cancellationReference:row.cancellationReference}});
       return tx.cancellationRequest.findUnique({where:{id:row.id},include:{order:true}});
     },{isolationLevel:Prisma.TransactionIsolationLevel.Serializable});
     return toCancellationDto(result);
@@ -101,7 +101,7 @@ export function createReturnsApplication(dependencies:ReturnsApplicationDependen
     for(const [id,qty] of quantities){const oi=orderItems.get(id);if(!oi)throw new ReturnDomainError("RETURN_ITEM_INVALID","Return item is not part of this order.");const used=existingMap.get(id)??0;if(used+qty>oi.quantity)throw new ReturnDomainError("RETURN_QUANTITY_EXCEEDED","Requested return quantity exceeds the purchased quantity.");}
     const created=await tx.returnRequest.create({data:{returnReference:ref("RET-"),customerId:c.id,orderId:order.id,status:"REQUESTED",reasonCode:input.reasonCode,customerDescription:description,items:{create:[...quantities.entries()].map(([orderItemId,quantity])=>({orderItemId,quantity}))}}});
     await repo.audit({actorType:"CUSTOMER",actorId:c.id,action:"RETURN_REQUESTED",previousState:null,newState:"REQUESTED",orderId:order.id,returnRequestId:created.id});
-    await repo.notify({customerId:c.id,orderId:order.id,returnRequestId:created.id,type:"RETURN_REQUESTED"});
+    await repo.notify({customerId:c.id,orderId:order.id,returnRequestId:created.id,type:"RETURN_REQUESTED",idempotencyKey:`RETURN_REQUESTED:${created.returnReference}`,payload:{orderNumber:order.orderNumber,returnReference:created.returnReference}});
     return tx.returnRequest.findUnique({where:{id:created.id},include:{items:{include:{orderItem:true}},order:true,shipment:true,inspection:true,resolution:true}});
    })));
   }catch(e){return mapError(e);}
@@ -123,7 +123,7 @@ export function createReturnsApplication(dependencies:ReturnsApplicationDependen
       if(row.status!==next) assertReturnTransition(row.status as ReturnLifecycle,next);
       await tx.returnRequest.update({where:{id:row.id},data:{status:next,reviewedAt:new Date(),operationalReason:reason}});
       await tx.commerceExceptionAuditEvent.create({data:{actorType:"ADMIN",actorId:admin.customer.id,action:input.decision==="APPROVE"?"RETURN_APPROVED":"RETURN_REJECTED",previousState:row.status,newState:next,reason,orderId:row.orderId,returnRequestId:row.id,correlationId:input.idempotencyKey}});
-      await tx.notificationEvent.create({data:{customerId:row.customerId,orderId:row.orderId,returnRequestId:row.id,type:input.decision==="APPROVE"?"RETURN_APPROVED":"RETURN_REJECTED"}});
+      await createReturnsRepository(tx).notify({customerId:row.customerId,orderId:row.orderId,returnRequestId:row.id,type:input.decision==="APPROVE"?"RETURN_APPROVED":"RETURN_REJECTED",idempotencyKey:input.idempotencyKey??`${input.decision}:${row.returnReference}`,correlationId:input.idempotencyKey,payload:{orderNumber:row.order.orderNumber,returnReference:row.returnReference}});
       return tx.returnRequest.findUnique({where:{id:row.id},include:{items:{include:{orderItem:true}},order:true,shipment:true,inspection:true,resolution:true}});
     },{isolationLevel:Prisma.TransactionIsolationLevel.Serializable});
     return toReturnDto(result);
@@ -161,7 +161,7 @@ export function createReturnsApplication(dependencies:ReturnsApplicationDependen
       await tx.returnShipment.update({where:{returnRequestId:row.id},data:{status:"RETURN_RECEIVED"}});
       await tx.returnRequest.update({where:{id:row.id},data:{status:"RETURN_RECEIVED"}});
       await tx.commerceExceptionAuditEvent.create({data:{actorType:"ADMIN",actorId:admin.customer.id,action:"RETURN_RECEIVED",previousState:row.status,newState:"RETURN_RECEIVED",orderId:row.orderId,returnRequestId:row.id,correlationId:input.idempotencyKey}});
-      await tx.notificationEvent.create({data:{customerId:row.customerId,orderId:row.orderId,returnRequestId:row.id,type:"RETURN_RECEIVED"}});
+      await createReturnsRepository(tx).notify({customerId:row.customerId,orderId:row.orderId,returnRequestId:row.id,type:"RETURN_RECEIVED",idempotencyKey:input.idempotencyKey??`RETURN_RECEIVED:${row.returnReference}`,correlationId:input.idempotencyKey,payload:{orderNumber:row.order.orderNumber,returnReference:row.returnReference}});
       return tx.returnRequest.findUnique({where:{id:row.id},include:{items:{include:{orderItem:true}},order:true,shipment:true,inspection:true,resolution:true}});
     },{isolationLevel:Prisma.TransactionIsolationLevel.Serializable});
     return toReturnDto(result);
@@ -201,7 +201,7 @@ export function createReturnsApplication(dependencies:ReturnsApplicationDependen
       assertReturnTransition(row.status as ReturnLifecycle,"RESOLUTION_PENDING");await tx.returnRequest.update({where:{id:row.id},data:{status:"RESOLUTION_PENDING"}});
       assertReturnTransition("RESOLUTION_PENDING","RESOLVED");await tx.returnRequest.update({where:{id:row.id},data:{status:"RESOLVED",resolvedAt:new Date()}});
       await tx.commerceExceptionAuditEvent.create({data:{actorType:"ADMIN",actorId:admin.customer.id,action:"RETURN_RESOLVED",previousState:row.status,newState:"RESOLVED",reason:input.note??"rejected_resolution",orderId:row.orderId,returnRequestId:row.id,correlationId:input.idempotencyKey}});
-      await tx.notificationEvent.create({data:{customerId:row.customerId,orderId:row.orderId,returnRequestId:row.id,type:"RETURN_RESOLUTION_COMPLETED"}});
+      await createReturnsRepository(tx).notify({customerId:row.customerId,orderId:row.orderId,returnRequestId:row.id,type:"RETURN_RESOLUTION_COMPLETED",idempotencyKey:input.idempotencyKey??`RETURN_RESOLUTION_COMPLETED:${row.returnReference}`,correlationId:input.idempotencyKey,payload:{orderNumber:row.order.orderNumber,returnReference:row.returnReference}});
       return tx.returnRequest.findUnique({where:{id:row.id},include:{items:{include:{orderItem:true}},order:true,shipment:true,inspection:true,resolution:true}});
     },{isolationLevel:Prisma.TransactionIsolationLevel.Serializable});
     return toReturnDto(result);

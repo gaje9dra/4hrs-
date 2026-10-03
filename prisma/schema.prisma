@@ -378,6 +378,7 @@ model Customer {
   cases Case[]
   assignedCases Case[] @relation("CaseAssignee")
   authoredCaseNotes CaseNote[]
+  notificationDeliveries NotificationDelivery[]
   caseAssignments CaseAssignment[]
   caseAuditActors CaseAuditEvent[] @relation("CaseAuditActor")
   adminUser        AdminUser?
@@ -938,7 +939,46 @@ enum CommerceExceptionAction {
   REFUND_INTENT_CREATED
 }
 
+enum NotificationChannel {
+  EMAIL
+}
+
+enum NotificationDeliveryStatus {
+  PENDING
+  PROCESSING
+  SENT
+  DELIVERED
+  RETRY_SCHEDULED
+  FAILED
+  AMBIGUOUS
+}
+
+enum NotificationFailureCategory {
+  VALIDATION
+  CONFIGURATION
+  RATE_LIMIT
+  TEMPORARY_PROVIDER
+  TIMEOUT
+  CONNECTION
+  PERMANENT_RECIPIENT
+  MALFORMED_RESPONSE
+  AMBIGUOUS_RESULT
+  RENDERING
+}
+
 enum NotificationEventType {
+  ORDER_CONFIRMED
+  PAYMENT_SUCCEEDED
+  PAYMENT_FAILED
+  FULFILLMENT_SUBMITTED
+  FULFILLMENT_FAILED
+  SHIPMENT_CREATED
+  SHIPMENT_IN_TRANSIT
+  SHIPMENT_OUT_FOR_DELIVERY
+  SHIPMENT_DELIVERED
+  SHIPMENT_DELIVERY_FAILED
+  CASE_CREATED
+  CASE_RESOLVED
   CANCELLATION_REQUESTED
   CANCELLATION_APPROVED
   CANCELLATION_REJECTED
@@ -1082,16 +1122,55 @@ model CommerceExceptionAuditEvent {
 }
 
 model NotificationEvent {
-  id            String               @id @default(uuid()) @db.Uuid
-  customerId    String               @db.Uuid
-  orderId       String?              @db.Uuid
-  returnRequestId String?            @db.Uuid
-  type          NotificationEventType
-  payload       Json?
-  createdAt     DateTime             @default(now())
+  id              String                 @id @default(uuid()) @db.Uuid
+  customerId      String                 @db.Uuid
+  orderId         String?                @db.Uuid
+  returnRequestId String?                @db.Uuid
+  type            NotificationEventType
+  payload         Json?
+  idempotencyKey  String?                @unique @db.VarChar(255)
+  correlationId   String?                @db.VarChar(128)
+  createdAt       DateTime               @default(now())
+  deliveries      NotificationDelivery[]
   @@index([customerId, createdAt])
   @@index([orderId, createdAt])
   @@index([returnRequestId, createdAt])
+  @@index([type, createdAt])
+  @@index([idempotencyKey])
+}
+
+model NotificationDelivery {
+  id                  String                    @id @default(uuid()) @db.Uuid
+  notificationEventId String                    @db.Uuid
+  customerId          String                    @db.Uuid
+  channel             NotificationChannel
+  templateKey         String                    @db.VarChar(120)
+  templateVersion     Int                       @default(1)
+  locale              String                    @default("en-IN") @db.VarChar(16)
+  recipientAddress    String?                   @db.VarChar(320)
+  status              NotificationDeliveryStatus @default(PENDING)
+  attempts            Int                       @default(0)
+  maxAttempts         Int                       @default(5)
+  nextAttemptAt       DateTime?
+  lastAttemptAt       DateTime?
+  sentAt              DateTime?
+  deliveredAt         DateTime?
+  providerId          String?                   @db.VarChar(64)
+  providerReference   String?                   @db.VarChar(255)
+  failureCategory     NotificationFailureCategory?
+  failureCode         String?                   @db.VarChar(120)
+  correlationId       String?                   @db.VarChar(128)
+  idempotencyKey      String                    @unique @db.VarChar(255)
+  createdAt           DateTime                  @default(now())
+  updatedAt           DateTime                  @updatedAt
+  notificationEvent   NotificationEvent        @relation(fields: [notificationEventId], references: [id], onDelete: Cascade)
+  customer            Customer                 @relation(fields: [customerId], references: [id], onDelete: Restrict)
+
+  @@index([status, nextAttemptAt, createdAt])
+  @@index([customerId, createdAt])
+  @@index([notificationEventId])
+  @@index([providerId, providerReference])
+  @@index([correlationId, createdAt])
 }
 
 

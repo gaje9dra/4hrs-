@@ -23,7 +23,8 @@
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "tailwindcss": "^4.1.14",
-    "@prisma/client": "^6.19.0"
+    "@prisma/client": "^6.19.0",
+    "@netlify/functions": "^6.0.2"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

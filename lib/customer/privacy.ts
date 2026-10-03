@@ -518,6 +518,10 @@ export async function deleteCustomerData(
         where: { customerId },
         data: { payload: Prisma.DbNull },
       });
+      await tx.notificationDelivery.updateMany({
+        where: { customerId },
+        data: { recipientAddress: null },
+      });
       await tx.paymentIdempotency.updateMany({
         where: { customerId },
         data: { response: Prisma.DbNull },
