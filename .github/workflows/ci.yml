@@ -55,6 +55,9 @@ jobs:
       - name: Validate Prisma schema
         run: npx prisma validate
 
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
+
       - name: Run migrations and tests
         run: npm test
 

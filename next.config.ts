@@ -6,6 +6,19 @@ const privateNoIndexRoutes = [
   '/api/:path*', '/dev/:path*', '/preview/:path*', '/debug/:path*',
 ]
 
+const securityHeaders = [
+  { key: 'X-Content-Type-Options', value: 'nosniff' },
+  { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+  { key: 'X-Frame-Options', value: 'DENY' },
+  { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+  { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
+  { key: 'X-DNS-Prefetch-Control', value: 'off' },
+  { key: 'X-Permitted-Cross-Domain-Policies', value: 'none' },
+  ...(process.env.NODE_ENV === 'production'
+    ? [{ key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains' }]
+    : []),
+]
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   async headers() {
@@ -18,13 +31,7 @@ const nextConfig: NextConfig = {
       ...privateHeaders,
       {
         source: '/:path*',
-        headers: [
-          { key: 'X-Content-Type-Options', value: 'nosniff' },
-          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
-          { key: 'X-Frame-Options', value: 'DENY' },
-          { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
-          { key: 'Content-Security-Policy', value: "frame-ancestors 'none'; object-src 'none'; base-uri 'self'" },
-        ],
+        headers: securityHeaders,
       },
     ]
   },

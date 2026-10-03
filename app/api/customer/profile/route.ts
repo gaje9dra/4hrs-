@@ -1,6 +1,6 @@
 import { requireCurrentCustomer } from "@/lib/auth/context";
 import { isAuthenticationError } from "@/lib/auth/errors";
-import { authJson } from "@/lib/auth/http";
+import { assertSameOrigin, authJson, readAuthJson } from "@/lib/auth/http";
 import { CustomerIdentityError } from "@/lib/customer/errors";
 import { createCustomerProfileService } from "@/lib/customer/service";
 import { validateDisplayName } from "@/lib/customer/validation";
@@ -36,11 +36,9 @@ export async function GET() {
 
 export async function PATCH(request: Request) {
   try {
-    const current = await requireCurrentCustomer();
-    const body = await request.json().catch(() => null) as Record<string, unknown> | null;
-    if (!body || typeof body !== "object" || Array.isArray(body)) {
-      throw new CustomerIdentityError("CUSTOMER_INVALID_EMAIL", "Profile update is invalid.");
-    }
+    assertSameOrigin(request);
+    const current = await requireCurrentCustomer(request);
+    const body = await readAuthJson(request);
     const keys = Object.keys(body);
     if (keys.some((key) => key !== "displayName")) {
       throw new CustomerIdentityError("CUSTOMER_INVALID_EMAIL", "Profile update contains an unsupported field.");

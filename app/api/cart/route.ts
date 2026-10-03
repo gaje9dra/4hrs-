@@ -1,3 +1,4 @@
+import { assertSameOrigin } from "@/lib/auth/http";
 import { createCartApplication } from "@/lib/cart/api";
 import { cartErrorResponse, cartJson, methodNotAllowed } from "@/lib/cart/http";
 
@@ -16,6 +17,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    assertSameOrigin(request);
     return cartJson(await application.addItem(request));
   } catch (error) {
     return cartErrorResponse(error, "addCartItem");
@@ -24,6 +26,7 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
+    assertSameOrigin(request);
     return cartJson(await application.clearCart(request));
   } catch (error) {
     return cartErrorResponse(error, "clearCart");

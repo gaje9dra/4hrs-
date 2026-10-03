@@ -1,3 +1,4 @@
+import { assertSameOrigin } from "@/lib/auth/http";
 import { createCartApplication } from "@/lib/cart/api";
 import { cartErrorResponse, cartJson, methodNotAllowed } from "@/lib/cart/http";
 
@@ -12,6 +13,7 @@ type RouteContext = {
 
 export async function PATCH(request: Request, context: RouteContext) {
   try {
+    assertSameOrigin(request);
     const { cartItemId } = await context.params;
     return cartJson(await application.updateItem(request, cartItemId));
   } catch (error) {
@@ -21,6 +23,7 @@ export async function PATCH(request: Request, context: RouteContext) {
 
 export async function DELETE(request: Request, context: RouteContext) {
   try {
+    assertSameOrigin(request);
     const { cartItemId } = await context.params;
     return cartJson(await application.removeItem(request, cartItemId));
   } catch (error) {

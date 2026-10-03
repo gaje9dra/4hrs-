@@ -160,11 +160,7 @@ function isSuccess(response: QikinkResponse, openApi: boolean): boolean {
   return response.code === 1 || response.code === "1";
 }
 
-function safeProviderMessage(response: QikinkResponse): string {
-  const candidates = [response.msg, response.message, response.error];
-  for (const candidate of candidates) {
-    if (typeof candidate === "string" && candidate.trim()) return candidate.trim().slice(0, 200);
-  }
+function safeProviderMessage(_response: QikinkResponse): string {
   return "Qikink rejected the fulfillment request.";
 }
 

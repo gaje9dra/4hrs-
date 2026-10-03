@@ -5,6 +5,7 @@ import { AdminError } from "@/lib/admin/errors";
 import type { AdminPermission } from "@/lib/admin/permissions";
 import { recordAdminAudit } from "@/lib/admin/audit";
 import { consumeAdminRateLimit } from "@/lib/admin/rate-limit";
+import { isTrustedStateChangingRequest } from "@/lib/security/request";
 
 export type AdminAuthorizationContext = {
   customer: { id: string; email: string; status: string };
@@ -27,9 +28,8 @@ export async function requireAdmin(request?: Request, permission?: AdminPermissi
     if (error instanceof AuthenticationError && (error.code === "SESSION_INVALID" || error.code === "SESSION_EXPIRED")) denied();
     throw error;
   }
-  if (request && request.method !== "GET" && request.method !== "HEAD" && request.method !== "OPTIONS") {
-    const origin = request.headers.get("origin");
-    if (origin && origin !== new URL(request.url).origin) throw new AdminError("FORBIDDEN", "The request origin is not allowed.");
+  if (request && !isTrustedStateChangingRequest(request)) {
+    throw new AdminError("FORBIDDEN", "The request origin is not allowed.");
   }
   const admin = await db.adminUser.findUnique({
     where: { customerId: current.customer.id },
