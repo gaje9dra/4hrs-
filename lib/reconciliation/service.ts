@@ -46,7 +46,7 @@ async function scanRule(rule: typeof RULES[number]): Promise<Finding[]> {
 async function persistFinding(finding:Finding, correlationId?:string) {
   const existing=await db.reconciliationCase.findFirst({
     where:{type:finding.type,domain:finding.domain,affectedEntityType:finding.affectedEntityType,affectedEntityId:finding.affectedEntityId,status:{notIn:["RESOLVED","IGNORED","NOT_REPRODUCIBLE"]}},
-    select:{id:true,version:true,retryCount:true},
+    select:{id:true,version:true,retryCount:true,severity:true,status:true,affectedEntityType:true,domain:true,type:true,description:true},
   });
   if(existing) return existing;
   return db.reconciliationCase.create({data:{
