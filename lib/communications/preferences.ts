@@ -81,7 +81,31 @@ export async function getCustomerCommunicationPreferences(customerId: string): P
   );
 }
 
-export async function evaluateNotificationEligibility(input: {
+
+export type CommunicationPreferenceAuditDto = Readonly<{
+  category: CommunicationCategory;
+  channel: CommunicationChannel;
+  previousState: CommunicationPreferenceState | null;
+  newState: CommunicationPreferenceState;
+  source: CommunicationPreferenceSource;
+  actorType: CommunicationPreferenceActorType | null;
+  correlationId: string | null;
+  reason: string | null;
+  createdAt: string;
+}>;
+
+export async function getCustomerCommunicationPreferenceAudit(customerId: string, limit = 100): Promise<CommunicationPreferenceAuditDto[]> {
+  const boundedLimit = Math.max(1, Math.min(100, Math.trunc(limit)));
+  await assertCustomer(customerId);
+  const rows = await db.customerCommunicationPreferenceAudit.findMany({
+    where: { customerId },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    take: boundedLimit,
+    select: { category: true, channel: true, previousState: true, newState: true, source: true, actorType: true, correlationId: true, reason: true, createdAt: true },
+  });
+  return rows.map((row) => ({ ...row, createdAt: row.createdAt.toISOString() }));
+}
+\nexport async function evaluateNotificationEligibility(input: {
   customerId: string;
   category: CommunicationCategory;
   channel: CommunicationChannel;
