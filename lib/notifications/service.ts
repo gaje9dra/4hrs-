@@ -8,6 +8,7 @@ import { NOTIFICATION_BATCH_SIZE, NOTIFICATION_MAX_ATTEMPTS } from "./config";
 import { resolveNotificationProvider, sendWithTimeout, type ProviderMessage } from "./provider";
 import { isRetryableFailure, retryDelaySeconds } from "./retry";
 import { evaluateNotificationEligibility } from "@/lib/communications/preferences";
+import { normalizeLocale } from "@/lib/i18n/registry";
 import type { NotificationDeliverySummary, NotificationEventInput } from "./types";
 
 type DbClient = typeof db | Prisma.TransactionClient;
@@ -24,10 +25,10 @@ export async function enqueueNotificationEvent(client: DbClient, input: Notifica
     data: { customerId: input.customerId, communicationCategory: input.communicationCategory ?? "REQUIRED_TRANSACTIONAL", orderId: input.orderId ?? null, returnRequestId: input.returnRequestId ?? null, type: input.type, payload: input.payload === null ? undefined : input.payload, idempotencyKey: input.idempotencyKey.slice(0,255), correlationId: input.correlationId?.slice(0,128) ?? null },
   });
 
-  const customer = await client.customer.findUnique({ where: { id: input.customerId }, select: { email: true, status: true, anonymizedAt: true } });
+  const customer = await client.customer.findUnique({ where: { id: input.customerId }, select: { email: true, status: true, anonymizedAt: true, locale: true } });
   if (!customer || customer.anonymizedAt || customer.status !== "ACTIVE") return { eventId: event.id, deliveryId: null, created: true };
 
-  const template = getNotificationTemplate(input.type);
+  const template = getNotificationTemplate(input.type, "en-IN");
   const eligibility = await evaluateNotificationEligibility({ customerId: input.customerId, category: input.communicationCategory ?? "REQUIRED_TRANSACTIONAL", channel: template.channel, client });
   const delivery = await client.notificationDelivery.create({
     data: {
@@ -36,7 +37,7 @@ export async function enqueueNotificationEvent(client: DbClient, input: Notifica
       channel: template.channel,
       templateKey: template.key,
       templateVersion: template.version,
-      locale: "en-IN",
+      locale: normalizeLocale(customer.locale),
       recipientAddress: customer.email,
       status: eligibility.eligible ? "PENDING" : "SUPPRESSED",
       suppressionReason: eligibility.eligible ? null : (eligibility.reason === "CUSTOMER_DELETED" ? "CUSTOMER_DELETED" : eligibility.reason === "CUSTOMER_OPTED_OUT" ? "CUSTOMER_OPTED_OUT" : eligibility.reason === "CONSENT_NOT_PRESENT" ? "CONSENT_NOT_PRESENT" : "CHANNEL_UNAVAILABLE"),
@@ -85,7 +86,7 @@ async function processOne(delivery: NonNullable<Awaited<ReturnType<typeof claimD
   }
 
   try {
-    const template = getNotificationTemplate(delivery.notificationEvent.type);
+    const template = getNotificationTemplate(delivery.notificationEvent.type, normalizeLocale(delivery.locale));
     const rendered = renderNotificationTemplate(template, (delivery.notificationEvent.payload ?? null) as Record<string, unknown> | null);
     const finalEligibility = await evaluateNotificationEligibility({ customerId: delivery.customerId, category: delivery.notificationEvent.communicationCategory, channel: delivery.channel });
     if (!finalEligibility.eligible) {
