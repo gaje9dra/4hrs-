@@ -257,13 +257,14 @@ export async function expireGovernanceExceptions(now=new Date()) {
 
 export async function exportGovernancePackage() {
   await expireGovernanceExceptions();
-  const [controls,evidence,verifications,exceptions,incidents,audit]=await Promise.all([
+  const [controls,evidence,verifications,exceptions,events,incidents,audit]=await Promise.all([
     db.governanceControl.findMany({orderBy:{key:"asc"},select:{key:true,domain:true,title:true,criticality:true,ownerRole:true,status:true,applicability:true,verificationMethod:true,lastVerifiedAt:true,nextReviewAt:true}}),
     db.governanceEvidence.findMany({orderBy:{capturedAt:"desc"},take:1000,select:{id:true,controlId:true,evidenceType:true,source:true,reference:true,capturedAt:true,status:true,integrityHash:true,expiresAt:true}}),
     db.governanceVerification.findMany({orderBy:{checkedAt:"desc"},take:1000,select:{id:true,controlId:true,result:true,method:true,source:true,reference:true,checkedAt:true,durationMs:true,correlationId:true,releaseId:true,deploymentId:true}}),
     db.governanceException.findMany({orderBy:{createdAt:"desc"},take:500,select:{id:true,controlId:true,reason:true,scope:true,riskStatement:true,ownerRole:true,approvalRole:true,remediationReference:true,status:true,createdAt:true,approvedAt:true,expiresAt:true,revokedAt:true}}),
+    db.governanceControlEvent.findMany({orderBy:{createdAt:"desc"},take:1000,select:{id:true,controlId:true,type:true,actorAdminId:true,previousStatus:true,newStatus:true,reason:true,correlationId:true,createdAt:true}}),
     db.reliabilityIncident.findMany({orderBy:{lastSeenAt:"desc"},take:200,select:{id:true,fingerprint:true,severity:true,category:true,capability:true,title:true,status:true,firstSeenAt:true,lastSeenAt:true,resolvedAt:true,occurrenceCount:true,correlationId:true,deploymentId:true}}),
     db.adminAuditLog.findMany({orderBy:{createdAt:"desc"},take:500,select:{id:true,actorAdminId:true,action:true,resourceType:true,resourceId:true,success:true,reason:true,correlationId:true,createdAt:true}}),
   ]);
-  return {exportedAt:new Date().toISOString(),controls,evidence,verifications,exceptions,incidents,audit};
+  return {exportedAt:new Date().toISOString(),controls,evidence,verifications,exceptions,events,incidents,audit};
 }
