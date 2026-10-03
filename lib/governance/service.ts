@@ -43,7 +43,7 @@ export function verificationToStatus(result: GovernanceVerification["result"]): 
   return "UNKNOWN";
 }
 async function tableExists(table: string): Promise<boolean> {
-  const rows = await db.$queryRaw<Array<{ table_name: string }>>(Prisma.sql`SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name=\${table} LIMIT 1`);
+  const rows = await db.$queryRaw<Array<{ table_name: string }>>(Prisma.sql`SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name=${table} LIMIT 1`);
   return rows.length === 1;
 }
 async function hasValidEvidence(controlId: string, evidenceType: GovernanceEvidenceType): Promise<boolean> {
