@@ -1676,20 +1676,3 @@ model ExperimentAssignment {
   @@index([experimentId, variantKey])
 }
 
-model FeatureFlagAssignment {
-  id              String               @id @default(uuid()) @db.Uuid
-  flagId          String               @db.Uuid
-  subjectHash     String               @db.VarChar(64)
-  subjectType     ExperimentSubjectType
-  customerId      String?              @db.Uuid
-  variantKey      String?              @db.VarChar(64)
-  assignedEnabled Boolean
-  flagVersion     Int
-  assignedAt      DateTime             @default(now())
-  flag             FeatureFlag          @relation(fields: [flagId], references: [id], onDelete: Cascade)
-  customer        Customer?            @relation(fields: [customerId], references: [id], onDelete: Cascade)
-
-  @@unique([flagId, subjectHash])
-  @@index([customerId, assignedAt])
-  @@index([flagId, assignedAt])
-}
