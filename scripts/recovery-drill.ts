@@ -77,7 +77,12 @@ async function main() {
     const admin = new URL(adminUrl);
     admin.pathname = "/postgres";
     admin.searchParams.delete("schema");
-    try { run("psql", [admin.toString(), "-v", "ON_ERROR_STOP=1", "-c", `DROP DATABASE IF EXISTS "${targetName}"`]); } catch {}
+    try {
+      run("psql", [admin.toString(), "-v", "ON_ERROR_STOP=1", "-c", `SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '${targetName}' AND pid <> pg_backend_pid()`]);
+      run("psql", [admin.toString(), "-v", "ON_ERROR_STOP=1", "-c", `DROP DATABASE IF EXISTS "${targetName}"`]);
+    } catch (error) {
+      console.error(`[WARN] recovery drill cleanup failed for temporary database "${targetName}"; manual cleanup may be required.`);
+    }
     rmSync(tempDir, { recursive: true, force: true });
   }
 }
