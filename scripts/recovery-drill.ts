@@ -12,7 +12,7 @@ function requiredEnv(name: string): string {
 }
 function cliDatabaseUrl(base: string, name?: string): string {
   const url = new URL(base);
-  url.pathname = `/${name ?? url.pathname.replace(/^\\//, "")}`;
+  if (name) url.pathname = `/${name}`;
   url.searchParams.delete("schema");
   return url.toString();
 }
