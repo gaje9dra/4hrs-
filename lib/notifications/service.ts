@@ -7,6 +7,7 @@ import { getNotificationTemplate, renderNotificationTemplate } from "./templates
 import { NOTIFICATION_BATCH_SIZE, NOTIFICATION_MAX_ATTEMPTS } from "./config";
 import { resolveNotificationProvider, sendWithTimeout, type ProviderMessage } from "./provider";
 import { isRetryableFailure, retryDelaySeconds } from "./retry";
+import { evaluateNotificationEligibility } from "@/lib/communications/preferences";
 import type { NotificationDeliverySummary, NotificationEventInput } from "./types";
 
 type DbClient = typeof db | Prisma.TransactionClient;
@@ -20,7 +21,7 @@ export async function enqueueNotificationEvent(client: DbClient, input: Notifica
   if (existing) return { eventId: existing.id, deliveryId: existing.deliveries[0]?.id ?? null, created: false };
 
   const event = await client.notificationEvent.create({
-    data: { customerId: input.customerId, orderId: input.orderId ?? null, returnRequestId: input.returnRequestId ?? null, type: input.type, payload: input.payload === null ? undefined : input.payload, idempotencyKey: input.idempotencyKey.slice(0,255), correlationId: input.correlationId?.slice(0,128) ?? null },
+    data: { customerId: input.customerId, communicationCategory: input.communicationCategory ?? "REQUIRED_TRANSACTIONAL", orderId: input.orderId ?? null, returnRequestId: input.returnRequestId ?? null, type: input.type, payload: input.payload === null ? undefined : input.payload, idempotencyKey: input.idempotencyKey.slice(0,255), correlationId: input.correlationId?.slice(0,128) ?? null },
   });
 
   const customer = await client.customer.findUnique({ where: { id: input.customerId }, select: { email: true, status: true, anonymizedAt: true } });
@@ -60,6 +61,13 @@ async function claimDelivery() {
 }
 
 async function processOne(delivery: NonNullable<Awaited<ReturnType<typeof claimDelivery>>>): Promise<NotificationDeliverySummary> {
+  const eligibility = await evaluateNotificationEligibility({ customerId: delivery.customerId, category: delivery.notificationEvent.communicationCategory, channel: delivery.channel });
+  if (!eligibility.eligible) {
+    const suppressionReason = eligibility.reason === "CUSTOMER_DELETED" ? "CUSTOMER_DELETED" : eligibility.reason === "CUSTOMER_OPTED_OUT" ? "CUSTOMER_OPTED_OUT" : eligibility.reason === "CONSENT_NOT_PRESENT" ? "CONSENT_NOT_PRESENT" : "CHANNEL_UNAVAILABLE";
+    await db.notificationDelivery.update({ where: { id: delivery.id }, data: { status: "SUPPRESSED", suppressionReason, nextAttemptAt: null, failureCategory: null, failureCode: null } });
+    incrementMetric("notification_operations_total" as never, { operation: "suppressed", reason: suppressionReason });
+    return { id: delivery.id, status: "SUPPRESSED", attempts: delivery.attempts };
+  }
   if (!delivery.recipientAddress) {
     await db.notificationDelivery.update({ where: { id: delivery.id }, data: { status: "FAILED", failureCategory: "PERMANENT_RECIPIENT", failureCode: "RECIPIENT_REDACTED" } });
     return { id: delivery.id, status: "FAILED", attempts: delivery.attempts };
