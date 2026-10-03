@@ -87,7 +87,7 @@ export function stableSubject(context: FeatureFlagEvaluationContext | Experiment
 }
 
 function validatePercentage(value: unknown): number {
-  if (!Number.isInteger(value) || value < 0 || value > 100) throw new FeatureFlagError("INVALID_CONFIGURATION", "Rollout percentage must be an integer from 0 to 100.");
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 0 || value > 100) throw new FeatureFlagError("INVALID_CONFIGURATION", "Rollout percentage must be an integer from 0 to 100.");
   return value;
 }
 
