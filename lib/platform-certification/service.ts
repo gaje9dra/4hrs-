@@ -2,13 +2,14 @@ import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
 import { db } from "@/lib/db/client";
+import type { PlatformCertificationReadiness } from "@prisma/client";
 import { createQikinkFulfillmentProvider } from "@/lib/fulfillment/providers/qikink";
 import { LOCKED_STACK, readinessFor, type CertificationFinding, type ReadinessState } from "./model";
 
 function packageJson(){return JSON.parse(readFileSync(join(process.cwd(),"package.json"),"utf8")) as {version?:string;dependencies?:Record<string,string>;devDependencies?:Record<string,string>;engines?:Record<string,string>;packageManager?:string};}
 function dep(pkg:ReturnType<typeof packageJson>,name:string){return pkg.dependencies?.[name]??pkg.devDependencies?.[name]??null;}
 function expectedRuntimeFindings(pkg:ReturnType<typeof packageJson>):CertificationFinding[]{
-  const checks:[[string,string|null,string,string]]|never[] = [];
+
   const findings:CertificationFinding[]=[];
   const expected:[string,string,string,string][]=[
     ["next",dep(pkg,"next"),LOCKED_STACK.next,"Locked Next.js version drift."],
@@ -58,7 +59,7 @@ export async function collectPlatformCertification(options:{persist?:boolean;eva
   };
   const record={certificationId,releaseVersion:pkg.version??"unknown",commitSha:options.commitSha??process.env.COMMIT_REF??null,deploymentId:options.deploymentId??process.env.NETLIFY_DEPLOY_ID??null,environment:options.environment??(process.env.NODE_ENV==="production"?"PRODUCTION":"CI"),timestamp:new Date().toISOString(),evaluator:options.evaluator??"platform-certification-engine",testMatrix,findings,readiness};
   if(options.persist){
-    await db.platformCertification.create({data:{certificationId,releaseVersion:record.releaseVersion,commitSha:record.commitSha,deploymentId:record.deploymentId,environment:record.environment,evaluator:record.evaluator,readiness:readiness as never,testMatrix,results:{findings},blockers:findings.filter(f=>f.level==="BLOCKER"),limitations:findings.filter(f=>f.level!=="BLOCKER"),evidence:{source:"platform-certification-engine",phase:"15.24"}}});
+    await db.platformCertification.create({data:{certificationId,releaseVersion:record.releaseVersion,commitSha:record.commitSha,deploymentId:record.deploymentId,environment:record.environment,evaluator:record.evaluator,readiness:readiness as PlatformCertificationReadiness,testMatrix,results:{findings},blockers:findings.filter(f=>f.level==="BLOCKER"),limitations:findings.filter(f=>f.level!=="BLOCKER"),evidence:{source:"platform-certification-engine",phase:"15.24"}}});
   }
   return record;
 }
