@@ -28,7 +28,7 @@ export function classifyCostStatus(input: {
   return "UNKNOWN";
 }
 
-export function evaluateCapacity(value: number, threshold: number, kind: "HARD"|"SOFT", severity: string, action: string, escalationPath: string): CapacityEvaluation {
+export function evaluateCapacity(value: number, threshold: number, severity: string, action: string, escalationPath: string): CapacityEvaluation {
   if (!Number.isFinite(value) || !Number.isFinite(threshold) || threshold < 0) throw new Error("Capacity values must be finite and non-negative.");
   return { triggered: value >= threshold, severity: severity.trim().slice(0,32), action: action.trim().slice(0,1000), escalationPath: escalationPath.trim().slice(0,500) };
 }
