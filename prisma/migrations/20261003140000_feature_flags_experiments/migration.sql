@@ -112,7 +112,7 @@ INSERT INTO "AdminPermission" ("id","key","description","createdAt","updatedAt")
 VALUES
   (gen_random_uuid(),'feature_flags.read','Read feature flag configuration' ,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP),
   (gen_random_uuid(),'feature_flags.manage','Create and modify feature flags',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP),
-  (gen_random_uuid(),'experiments.read','Read experiment configuration','now()','now()'),
+  (gen_random_uuid(),'experiments.read','Read experiment configuration',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP),
   (gen_random_uuid(),'experiments.manage','Create and modify experiments','now()','now()')
 ON CONFLICT ("key") DO NOTHING;
 
