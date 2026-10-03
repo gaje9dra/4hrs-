@@ -47,7 +47,7 @@ export function CustomerSecurityControls() {
     }
   }
 
-  useEffect(() => { void loadSessions(); }, []);
+  useEffect(() => {\n    let cancelled = false;\n    fetch("/api/customer/security/sessions", { credentials: "same-origin", cache: "no-store" })\n      .then(async (response) => {\n        const body = await response.json().catch(() => null) as { sessions?: Session[]; error?: { message?: string } } | null;\n        if (!response.ok || !body?.sessions) throw new Error(body?.error?.message ?? "Sessions could not be loaded.");\n        if (!cancelled) setSessions(body.sessions);\n      })\n      .catch((cause) => {\n        if (!cancelled) setSessionError(cause instanceof Error ? cause.message : "Sessions could not be loaded.");\n      })\n      .finally(() => {\n        if (!cancelled) setLoadingSessions(false);\n      });\n    return () => { cancelled = true; };\n  }, []);
 
   async function changePassword(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
