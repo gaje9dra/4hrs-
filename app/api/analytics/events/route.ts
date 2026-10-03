@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { requireCurrentCustomer } from "@/lib/auth/context";
 import { assertSameOrigin, readAuthJson } from "@/lib/auth/http";
+import { getCustomerRegionalPreferences } from "@/lib/regionalization/customer-preferences";
 import { createInMemoryAuthenticationRateLimiter } from "@/lib/auth/rate-limit";
 import {
   ANALYTICS_CONSENT_COOKIE,
@@ -80,7 +81,8 @@ export async function PUT(request: Request) {
     if (Object.keys(body).some((key) => !["eventId","eventName","eventVersion","occurredAt","properties","anonymousId","sessionId","locale"].includes(key))) {
       throw new AnalyticsError("INVALID_EVENT", "The analytics event request contains unsupported fields.");
     }
-    limiter.consume(rateLimitKey(request, current.customer.id), 120, 60 * 60 * 1000);
+    limiter.consume(rateLimitKey(request, current?.customer.id), 120, 60 * 60 * 1000);
+    const locale = typeof body.locale === "string" ? body.locale : null;
     const result = await recordAnalyticsEvent({
       eventId: body.eventId,
       eventName: body.eventName,
@@ -91,7 +93,7 @@ export async function PUT(request: Request) {
       anonymousId: body.anonymousId,
       sessionId: body.sessionId,
       customerId: current?.customer.id ?? null,
-      locale: current ? (await getCustomerRegionalPreferences(current.customer.id)).locale : (typeof body.locale === "string" ? body.locale : null),
+      locale: current ? (await getCustomerRegionalPreferences(current.customer.id)).locale : locale,
       consent: true,
     });
     return NextResponse.json(result, { status: result.created ? 201 : 200 });
