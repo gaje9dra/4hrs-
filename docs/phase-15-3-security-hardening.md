@@ -10,6 +10,8 @@ Phase 15.3 hardens the existing 4HRS+ security boundaries without changing the d
 
 The repository was on Next.js 16.3.5. The official September 30, 2026 Next.js security release identifies 16.3.8 as the patched 16.3 Active LTS release, addressing one High, five Medium, and one Low severity vulnerabilities. The project is therefore pinned to Next.js 16.3.8 and eslint-config-next 16.3.8 for this security patch only.
 
+CI also exposed GHSA-ggr8-5vv4-36mx (CVE-2026-40345) through Prisma's transitive deepmerge-ts dependency. The patched deepmerge-ts release is 8.0.0 or later; the repository uses an npm override at ^8.0.2 rather than forcing a Prisma downgrade. The override is intentionally isolated and should be removed once the Prisma config dependency itself moves to the patched major.
+
 No unrelated major/minor dependency upgrades were introduced.
 
 ### CSP and browser security headers
