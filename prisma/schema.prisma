@@ -2234,3 +2234,122 @@ model CostAnomaly {
   @@index([resourceId, metricKey, detectedAt])
   @@index([status, severity, detectedAt])
 }
+
+
+enum ReconciliationDomain {
+  CATALOG
+  CART
+  CHECKOUT
+  PAYMENT
+  ORDER
+  FULFILLMENT
+  SHIPPING
+  RETURNS
+  CANCELLATIONS
+  CUSTOMER
+  PRIVACY
+  CONTENT
+  SEARCH
+  ANALYTICS
+  NOTIFICATIONS
+  FEATURE_FLAGS
+  GOVERNANCE
+  BACKGROUND_JOBS
+  WEBHOOKS
+  PROVIDERS
+}
+
+enum ReconciliationDiscrepancyType {
+  MISSING_DEPENDENCY
+  ORPHAN_RECORD
+  STATE_MISMATCH
+  DUPLICATE_RECORD
+  INVALID_REFERENCE
+  STALE_PROJECTION
+  DUPLICATE_EVENT
+  MISSING_EVENT
+  INVALID_TRANSITION
+  FINANCIAL_MISMATCH
+  OWNERSHIP_MISMATCH
+  PROVIDER_MISMATCH
+  TIMING_MISMATCH
+  UNKNOWN
+}
+
+enum ReconciliationSeverity {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum ReconciliationStatus {
+  DETECTED
+  INVESTIGATING
+  AUTO_RESOLVABLE
+  AWAITING_REVIEW
+  RECONCILING
+  RESOLVED
+  FAILED
+  ESCALATED
+  IGNORED
+  NOT_REPRODUCIBLE
+}
+
+enum ReconciliationActionType {
+  DETECT
+  PLAN
+  APPLY_SAFE_REPAIR
+  MANUAL_RESOLUTION
+  RETRY
+  ESCALATE
+}
+
+model ReconciliationCase {
+  id                   String                         @id @default(uuid()) @db.Uuid
+  type                 ReconciliationDiscrepancyType
+  domain               ReconciliationDomain
+  severity             ReconciliationSeverity
+  status               ReconciliationStatus          @default(DETECTED)
+  detectedAt           DateTime                       @default(now())
+  detectedBy           String                         @db.VarChar(120)
+  source               String                         @db.VarChar(120)
+  correlationId        String?                        @db.VarChar(128)
+  authoritativeDomain  String                         @db.VarChar(80)
+  affectedEntityType   String                         @db.VarChar(120)
+  affectedEntityId     String                         @db.VarChar(255)
+  description          String                         @db.VarChar(2000)
+  evidence             Json?
+  resolution           Json?
+  resolvedAt           DateTime?
+  resolvedBy           String?                        @db.VarChar(120)
+  retryCount           Int                            @default(0)
+  version              Int                            @default(1)
+  createdAt            DateTime                       @default(now())
+  updatedAt            DateTime                       @updatedAt
+  actions              ReconciliationAction[]
+  @@index([status, severity, detectedAt])
+  @@index([domain, type, status])
+  @@index([affectedEntityType, affectedEntityId])
+  @@index([authoritativeDomain, status])
+  @@index([correlationId])
+}
+
+model ReconciliationAction {
+  id                String                    @id @default(uuid()) @db.Uuid
+  reconciliationId  String                    @db.Uuid
+  actionType        ReconciliationActionType
+  idempotencyKey    String                    @unique @db.VarChar(255)
+  actorAdminId      String?                   @db.Uuid
+  beforeState       Json?
+  afterState        Json?
+  reason            String?                   @db.VarChar(1000)
+  success           Boolean                   @default(false)
+  errorCode         String?                   @db.VarChar(120)
+  correlationId     String?                   @db.VarChar(128)
+  createdAt         DateTime                  @default(now())
+  reconciliation   ReconciliationCase         @relation(fields: [reconciliationId], references: [id], onDelete: Restrict)
+  @@index([reconciliationId, createdAt])
+  @@index([actionType, createdAt])
+  @@index([actorAdminId, createdAt])
+}
