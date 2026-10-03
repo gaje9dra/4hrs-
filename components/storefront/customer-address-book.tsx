@@ -70,8 +70,6 @@ export function CustomerAddressBook() {
     }
   }
 
-  useEffect(() => { void load(); }, []);
-
   function setField<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((current) => ({ ...current, [key]: value }));
   }
