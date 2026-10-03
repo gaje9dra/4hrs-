@@ -13,7 +13,8 @@ export type MetricName =
   | "shipping_operations_total"
   | "security_events_total"
   | "notification_operations_total"
-  | "communication_preference_operations_total";
+  | "communication_preference_operations_total"
+  | "analytics_events_total";
 
 export type MetricLabels = Readonly<Record<string, string>>;
 
