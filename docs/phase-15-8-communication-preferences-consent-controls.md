@@ -9,6 +9,10 @@ The current implementation supports EMAIL and a customer-facing MARKETING_PROMOT
 A communication preference is an operational choice such as opting out of promotional email. It is not a legal consent record and does not establish a legal basis, statutory compliance, or jurisdiction-specific consent evidence.
 No separate legal-consent evidence model was added because the repository currently has no documented business/legal requirement defining such evidence. Legal interpretation, notice wording, retention obligations, and jurisdiction-specific requirements require business/legal review before production marketing use.
 
+## Transactional and marketing classification
+
+Required transactional communication remains separate from optional marketing communication.
+
 ## 3. Communication categories
 - REQUIRED_TRANSACTIONAL: account/security, order, payment, fulfillment, shipping, returns, cancellation, case, and other operational messages represented by the current notification catalog.
 - OPTIONAL_SERVICE: reserved for explicitly supported optional operational communications.
@@ -67,7 +71,7 @@ This prevents future optional delivery to the deleted customer.
 Current preference state is mutable customer data.
 Historical preference audit data is retained only while the customer record exists under the current engineering model. No longer-term legal-consent retention is claimed. If later required, legal consent evidence must be a separate explicit model.
 
-## 15. Deletion/anonymization and queued notifications
+## 15. Queued notifications and deletion/anonymization
 Customer deletion runs in the existing Phase 15.6 serializable privacy transaction.
 Queued optional deliveries are checked against current customer status and preference before provider invocation. Already-sent messages cannot be unsent. A narrow race can still exist at the provider boundary if an external provider accepts a message immediately before an opt-out transaction commits; exactly-once cancellation of external delivery is not claimed.
 
