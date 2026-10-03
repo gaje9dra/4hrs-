@@ -7,7 +7,7 @@ export const ADMIN_PERMISSIONS = [
   "returns.read","returns.manage","cancellation.read","cancellation.approve","cancellation.execute","cancellation.audit.read","return.read","return.review","return.approve","return.reject","return.inspect","return.resolve","return.shipment.manage","return.refund","return.audit.read",
   "customers.read","customers.search","customers.update","customers.status.manage","customers.address.read","customers.financial.read","customers.case.read","customers.case.create","customers.audit.read","customers.manage",
   "cases.read","case.read","case.create","case.update","case.assign","case.respond","case.resolve","case.reopen","case.audit.read","cases.manage",
-  "analytics.read","analytics.financial.read","analytics.operations.read","analytics.customer.read",
+  "analytics.read","analytics.financial.read","analytics.operations.read","analytics.customer.read","notifications.read","notifications.manage",
   "admin.users.read","admin.users.manage","admin.audit.read",
   "system.settings.read","system.settings.manage",
 ] as const;
