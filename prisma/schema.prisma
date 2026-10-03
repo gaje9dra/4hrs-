@@ -1493,6 +1493,10 @@ model AdminUser {
   customer     Customer          @relation(fields: [customerId], references: [id], onDelete: Restrict)
   roles        AdminUserRole[]
   auditLogs    AdminAuditLog[]   @relation("AdminAuditActor")
+  createdContent ContentItem[] @relation("ContentCreatedBy")
+  updatedContent ContentItem[] @relation("ContentUpdatedBy")
+  publishedContent ContentItem[] @relation("ContentPublishedBy")
+  contentRevisions ContentRevision[] @relation("ContentRevisionAuthor")
   @@index([status])
   @@index([updatedAt])
 }
@@ -1717,4 +1721,94 @@ model MerchandisingRule {
   @@index([scope, scopeValue, priority])
   @@index([productId, priority])
   @@index([locale, priority])
+}
+
+
+enum ContentType {
+  HOMEPAGE_SECTION
+  LANDING_PAGE
+  COLLECTION_PAGE
+  CATEGORY_EDITORIAL
+  PRODUCT_EDITORIAL
+  PROMOTIONAL_BANNER
+  CONTENT_BLOCK
+}
+
+enum ContentStatus {
+  DRAFT
+  IN_REVIEW
+  APPROVED
+  SCHEDULED
+  PUBLISHED
+  UNPUBLISHED
+  ARCHIVED
+}
+
+enum ContentTranslationStatus {
+  ORIGINAL
+  IN_PROGRESS
+  CURRENT
+  STALE
+}
+
+model ContentItem {
+  id                   String                   @id @default(uuid()) @db.Uuid
+  type                 ContentType
+  internalName         String                   @db.VarChar(160)
+  slug                 String?                  @db.VarChar(200)
+  status               ContentStatus            @default(DRAFT)
+  locale               String                   @db.VarChar(16)
+  title                String                   @db.VarChar(200)
+  summary              String?                  @db.VarChar(500)
+  body                 Json
+  seoTitle             String?                  @db.VarChar(200)
+  seoDescription       String?                  @db.VarChar(500)
+  canonicalUrl          String?                  @db.VarChar(2048)
+  robots               String?                  @db.VarChar(64)
+  openGraphTitle       String?                  @db.VarChar(200)
+  openGraphDescription String?                  @db.VarChar(500)
+  mediaReferences      String[]                 @default([])
+  linkedReferences     Json                     @default("[]")
+  publicationStartAt   DateTime?
+  publicationEndAt     DateTime?
+  publishedAt          DateTime?
+  publishedVersion     Int?
+  version              Int                      @default(1)
+  translationStatus    ContentTranslationStatus @default(ORIGINAL)
+  sourceContentId      String?                  @db.Uuid
+  sourceVersion        Int?
+  position             Int                      @default(0)
+  createdByAdminId     String                   @db.Uuid
+  updatedByAdminId     String                   @db.Uuid
+  publishedByAdminId   String?                  @db.Uuid
+  createdAt            DateTime                 @default(now())
+  updatedAt            DateTime                 @updatedAt
+  createdBy            AdminUser                @relation("ContentCreatedBy", fields: [createdByAdminId], references: [id], onDelete: Restrict)
+  updatedBy            AdminUser                @relation("ContentUpdatedBy", fields: [updatedByAdminId], references: [id], onDelete: Restrict)
+  publishedBy          AdminUser?               @relation("ContentPublishedBy", fields: [publishedByAdminId], references: [id], onDelete: SetNull)
+  sourceContent        ContentItem?             @relation("ContentTranslations", fields: [sourceContentId], references: [id], onDelete: SetNull)
+  translations         ContentItem[]            @relation("ContentTranslations")
+  revisions            ContentRevision[]
+
+  @@unique([type, locale, slug])
+  @@index([status, locale, type])
+  @@index([type, locale, status, position])
+  @@index([publicationStartAt, publicationEndAt])
+  @@index([sourceContentId, translationStatus])
+  @@index([updatedAt])
+}
+
+model ContentRevision {
+  id               String      @id @default(uuid()) @db.Uuid
+  contentId        String      @db.Uuid
+  version          Int
+  snapshot         Json
+  changeSummary    String?     @db.VarChar(1000)
+  createdByAdminId  String      @db.Uuid
+  createdAt        DateTime    @default(now())
+  content          ContentItem @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  createdBy         AdminUser   @relation("ContentRevisionAuthor", fields: [createdByAdminId], references: [id], onDelete: Restrict)
+
+  @@unique([contentId, version])
+  @@index([contentId, createdAt])
 }

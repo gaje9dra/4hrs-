@@ -39,6 +39,7 @@ export type StorefrontProductDetail = Omit<PublishedProductDetailResult, "availa
 
 
 export type StorefrontCategory = {
+  id: string;
   name: string;
   slug: string;
   description: string | null;
@@ -159,6 +160,7 @@ export const getStorefrontCategory = cache(async function getStorefrontCategory(
       throw new CatalogServiceError("CATEGORY_NOT_FOUND", "Category was not found.");
     }
     return {
+      id: category.id,
       name: category.name,
       slug: category.slug,
       description: category.description,

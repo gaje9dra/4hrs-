@@ -8,6 +8,9 @@ import { collectionPath } from "@/lib/catalog/routes";
 import { getStorefrontCollection, getStorefrontCollectionProducts, getStorefrontListingFilters } from "@/lib/storefront/catalog";
 import { CatalogListing } from "@/components/storefront/catalog-listing";
 import { catalogQueryFromSearchParams, type StorefrontSearchParams } from "@/lib/storefront/query-params";
+import { resolveRequestLocale } from "@/lib/i18n/resolution";
+import { listPublishedEditorialForReference, resolvePublishedContentPresentation } from "@/lib/content/service";
+import { EditorialSlot } from "@/components/storefront/editorial-slot";
 type Params = Promise<{ slug: string }>;
 async function loadCollection(slug: string) { try { return await getStorefrontCollection(slug); } catch (error) { if (error instanceof CatalogServiceError && (error.code === "COLLECTION_NOT_FOUND" || error.code === "INVALID_QUERY")) notFound(); throw error; } }
 export async function generateMetadata({ params, searchParams }: { params: Params; searchParams: Promise<StorefrontSearchParams> }): Promise<Metadata> {
@@ -21,7 +24,10 @@ export async function generateMetadata({ params, searchParams }: { params: Param
 export default async function CollectionPage({ params, searchParams }: { params: Params; searchParams: Promise<StorefrontSearchParams> }) {
   const { slug } = await params; const paramsObject = await searchParams; const collection = await loadCollection(slug); const query = catalogQueryFromSearchParams({ ...paramsObject, collection: collection.slug });
   const [products, filters] = await Promise.all([getStorefrontCollectionProducts(collection.slug, query), getStorefrontListingFilters("collection")]);
+  const locale = await resolveRequestLocale();
+  const editorial = await listPublishedEditorialForReference("COLLECTION_PAGE", "COLLECTION", collection.id, locale);
+  const editorialSections = await resolvePublishedContentPresentation(editorial);
   const collectionParams: StorefrontSearchParams = { ...paramsObject, collection: collection.slug };
   const breadcrumbs = breadcrumbJsonLd([{ name: "Home", url: absoluteSiteUrl("/") }, { name: "Shop", url: absoluteSiteUrl("/shop") }, { name: collection.name, url: absoluteSiteUrl(collectionPath(collection)) }]);
-  return <><CatalogListing pathname={collectionPath(collection)} title={collection.name} eyebrow="Catalog / Collection" description={collection.description} products={products} params={collectionParams} {...filters} fixedCollection={collection.slug} emptyTitle={collection.hasPublishedProducts ? undefined : "This collection is empty"} emptyDescription={collection.hasPublishedProducts ? undefined : "This collection does not currently have any published products."} breadcrumbs={[{ label: "Shop", href: "/shop" }, { label: collection.name }]} /><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(breadcrumbs) }} /></>;
+  return <><EditorialSlot eyebrow="Collection editorial" sections={editorialSections} /><CatalogListing pathname={collectionPath(collection)} title={collection.name} eyebrow="Catalog / Collection" description={collection.description} products={products} params={collectionParams} {...filters} fixedCollection={collection.slug} emptyTitle={collection.hasPublishedProducts ? undefined : "This collection is empty"} emptyDescription={collection.hasPublishedProducts ? undefined : "This collection does not currently have any published products."} breadcrumbs={[{ label: "Shop", href: "/shop" }, { label: collection.name }]} /><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(breadcrumbs) }} /></>;
 }
