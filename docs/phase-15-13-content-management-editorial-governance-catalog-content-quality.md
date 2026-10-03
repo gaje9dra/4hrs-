@@ -4,7 +4,7 @@
 
 4HRS+ editorial content is a separate provider-neutral layer around the canonical catalog. Product, ProductVariant, price, inventory, fulfillment mapping, and transactional state remain owned by the catalog/order/fulfillment domains.
 
-ContentItem stores the current editorial working state. ContentRevision is an immutable, reconstructable snapshot. The published version is identified by publishedVersion, so editing a published item never destroys the production snapshot.
+ContentItem stores the current editorial working state. ContentRevision is an immutable, reconstructable snapshot. The published version is identified by publishedVersion and publishedAt, so editing a published item creates a new draft revision without destroying the live production snapshot. Public reads resolve the exact published revision rather than the mutable working copy.
 
 ## Content types
 
@@ -53,7 +53,7 @@ Privileged publication/scheduling/unpublishing/rollback/archive operations requi
 
 ## Concurrency, revisions and rollback
 
-Updates require expectedVersion. A stale version returns a conflict instead of overwriting another editor.
+Updates require expectedVersion. A stale version returns a conflict instead of overwriting another editor. While a live published revision exists, public identity fields (slug, type, locale) cannot be changed until unpublish; this prevents URL or locale ambiguity between the working copy and the live revision.
 
 Every create/update/rollback produces a revision. Rollback creates a new revision from an existing immutable snapshot; intervening revisions are retained.
 
@@ -75,7 +75,7 @@ Public editorial rendering is force-dynamic and locale-aware. Public APIs vary o
 
 ## Localization and translation freshness
 
-Content has an explicit locale and translation status. A translation can reference a source content record and source version. Publication is per locale; publishing an English record does not publish another locale.
+Content has an explicit locale and translation status. A translation can reference a source content record and source version. When an original source is updated, dependent CURRENT/IN_PROGRESS translations are marked STALE with the new source version. Publication is per locale; publishing an English record does not publish another locale.
 
 The current locale registry supports en-IN and en-US and the existing locale resolver is reused.
 
@@ -105,9 +105,9 @@ Public editorial pages are force-dynamic to prevent draft/public cache confusion
 
 No authenticated preview response is permitted to use a public cache key.
 
-## Analytics, experiments and privacy
+## Content quality diagnostics\n\nThe protected content quality endpoint provides advisory findings for missing SEO metadata, stale translations, expired/schedule-window problems, stale content, missing media, and inactive catalog references. Findings are warnings/errors for operational review; they never auto-publish, suppress, delete, or rewrite content.\n\n## Analytics, experiments and privacy
 
-Editorial content remains compatible with Phase 15.10 analytics and Phase 15.11 experiments, but neither is publication authority. No customer-private content data is stored in editorial records.
+Editorial content emits CONTENT_VIEWED and CONTENT_CTA_CLICKED through the existing consent-aware first-party analytics client. Events contain only content identifiers/type/locale or block type and never raw customer content or PII. Phase 15.11 experiments may vary editorial presentation, but neither analytics nor experimentation is publication authority.
 
 No sensitive targeting, browser fingerprinting, or client-side publication control is introduced.
 
