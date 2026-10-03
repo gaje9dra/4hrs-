@@ -9,7 +9,9 @@ export async function GET(request:Request){
   const url=new URL(request.url);
   if(url.searchParams.get("workflows")==="1") return NextResponse.json({registry:registryHealth()});
   if(url.searchParams.get("summary")==="1") return NextResponse.json(await syntheticSummary());
-  const statusParam=url.searchParams.get("status");\n  const status=statusParam&&SYNTHETIC_STATUSES.includes(statusParam as SyntheticStatus)?statusParam as SyntheticStatus:undefined;\n  return NextResponse.json({executions:await listSyntheticExecutions({workflowId:url.searchParams.get("workflowId")??undefined,status,environment:url.searchParams.get("environment")??undefined})});
+  const statusParam=url.searchParams.get("status");
+  const status=statusParam&&SYNTHETIC_STATUSES.includes(statusParam as SyntheticStatus)?statusParam as SyntheticStatus:undefined;
+  return NextResponse.json({executions:await listSyntheticExecutions({workflowId:url.searchParams.get("workflowId")??undefined,status,environment:url.searchParams.get("environment")??undefined})});
 }
 export async function POST(request:Request){
   const body=await request.json().catch(()=>null) as Record<string,unknown>|null;
