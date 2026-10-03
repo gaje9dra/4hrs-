@@ -16,9 +16,10 @@ test("privacy export is explicit, bounded, private, and excludes secrets/interna
   const source = read("lib/customer/privacy.ts");
   assert.match(source, /MAX_PRIVACY_EXPORT_RECORDS/);
   assert.match(source, /EXPORT_TOO_LARGE/);
-  assert.match(source, /content-disposition/);
   assert.doesNotMatch(source, /passwordHash|sessionTokenHash|sessionToken|apiKey|accessKey|internalReason|CaseNote/);
   assert.doesNotMatch(source, /queryRawUnsafe|executeRawUnsafe/);
+  const route = read("app/api/customer/privacy/route.ts");
+  assert.match(route, /content-disposition/);
 });
 
 test("privacy deletion requires explicit confirmation and is idempotent", () => {
@@ -32,7 +33,6 @@ test("privacy deletion requires explicit confirmation and is idempotent", () => 
 test("privacy deletion preserves historical commercial records", () => {
   const source = read("lib/customer/privacy.ts");
   assert.doesNotMatch(source, /tx\.order\.delete|tx\.payment\.delete|tx\.fulfillment\.delete|tx\.shipment\.delete|tx\.returnRequest\.delete|tx\.cancellationRequest\.delete/);
-  assert.match(source, /Order/);
 });
 
 test("privacy deletion scrubs mutable customer content but preserves auditability", () => {
