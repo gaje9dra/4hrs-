@@ -201,7 +201,7 @@ export async function updateCustomerCommunicationPreference(input: {
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   } catch (error) {
     if (error instanceof CommunicationPreferenceError) throw error;
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && (error.code === "P2002" || error.code === "P2034")) {
       throw new CommunicationPreferenceError("PREFERENCE_CONFLICT", "The communication preference changed elsewhere. Refresh and try again.", { cause: error });
     }
     throw new CommunicationPreferenceError("PREFERENCE_DATABASE_ERROR", "The communication preference could not be updated safely.", { cause: error });
