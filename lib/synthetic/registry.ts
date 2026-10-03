@@ -2,7 +2,7 @@ import { db } from "@/lib/db/client";
 import type { WorkflowDefinition, StepResult } from "./model";
 
 const ok = (diagnostic: Record<string, unknown> = {}): StepResult => ({ status: "HEALTHY", diagnostic });
-const blocked = (code: "UNSUPPORTED_SYNTHETIC_CAPABILITY"|"SAFETY_GUARD_BLOCK", diagnostic: Record<string, unknown>): StepResult => ({ status: "BLOCKED", failureCode: code, diagnostic });
+const blocked = (code: "UNSUPPORTED_SYNTHETIC_CAPABILITY"|"SAFETY_GUARD_BLOCK"|"CONFIGURATION_FAILURE", diagnostic: Record<string, unknown>): StepResult => ({ status: "BLOCKED", failureCode: code, diagnostic });
 
 async function probe(ctx: Parameters<WorkflowDefinition["steps"][number]["execute"]>[0], path: string, marker?: string): Promise<StepResult> {
   if (!ctx.baseUrl) return blocked("CONFIGURATION_FAILURE", { reason: "No synthetic base URL configured." });
