@@ -129,7 +129,7 @@ export async function getAnalyticsConsent(customerId: string): Promise<Analytics
 }
 
 export async function setAnalyticsConsent(input: { customerId: string; state: AnalyticsConsentState }): Promise<{ state: AnalyticsConsentState; version: number }> {
-  const current = await db.customerAnalyticsConsent.findUnique({ where: { customerId }, select: { version: true } });
+  const current = await db.customerAnalyticsConsent.findUnique({ where: { customerId: input.customerId }, select: { version: true } });
   const version = (current?.version ?? 0) + 1;
   const row = await db.customerAnalyticsConsent.upsert({
     where: { customerId: input.customerId },
