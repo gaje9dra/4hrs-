@@ -46,6 +46,15 @@ function checkRateLimit(
   }
 }
 
+
+export type CustomerSessionDto = {
+  id: string;
+  createdAt: string;
+  expiresAt: string;
+  lastUsedAt: string | null;
+  current: boolean;
+};
+
 export type AuthSessionResult = {
   customer: CustomerDto;
   sessionToken: string;
@@ -156,6 +165,72 @@ export function createAuthenticationService(dependencies: AuthDependencies = {})
     }
   }
 
+  async function listActiveSessions(customerId: string, currentSessionId: string): Promise<CustomerSessionDto[]> {
+    try {
+      const sessions = await repository.listActiveSessions(customerId, now());
+      return sessions.map((session) => ({
+        id: session.id,
+        createdAt: session.createdAt.toISOString(),
+        expiresAt: session.expiresAt.toISOString(),
+        lastUsedAt: session.lastUsedAt?.toISOString() ?? null,
+        current: session.id === currentSessionId,
+      }));
+    } catch (error) {
+      safeDatabaseError(error);
+    }
+  }
+
+  async function revokeCustomerSession(customerId: string, sessionId: string, currentSessionId: string): Promise<{ revokedCurrent: boolean }> {
+    if (!sessionId || sessionId.length > 128) throw new AuthenticationError("INVALID_INPUT", "Session request is invalid.");
+    try {
+      const result = await repository.revokeCustomerSession(customerId, sessionId, now());
+      if (result.count !== 1) throw new AuthenticationError("SESSION_INVALID", "The requested session is no longer active.");
+      return { revokedCurrent: sessionId === currentSessionId };
+    } catch (error) {
+      if (error instanceof AuthenticationError) throw error;
+      safeDatabaseError(error);
+    }
+  }
+
+  async function logoutAllSessions(customerId: string, exceptSessionId?: string): Promise<number> {
+    try {
+      const result = await repository.revokeAllCustomerSessions(customerId, exceptSessionId, now());
+      return result.count;
+    } catch (error) {
+      safeDatabaseError(error);
+    }
+  }
+
+  async function changePassword(input: {
+    customerId: string;
+    currentPassword: string;
+    newPassword: string;
+    currentSessionId: string;
+  }): Promise<{ sessionsRevoked: number }> {
+    if (!input.currentSessionId) throw new AuthenticationError("SESSION_INVALID", "Authentication session is invalid.");
+    try {
+      const customer = await repository.findCustomerById(input.customerId);
+      if (!customer || customer.status !== "ACTIVE") throw new AuthenticationError("SESSION_INVALID", "Authentication session is invalid.");
+      const credential = await repository.findCredentialByCustomerId(input.customerId);
+      if (!credential || !(await verifyPassword(input.currentPassword, credential.passwordHash))) {
+        throw new AuthenticationError("INVALID_CREDENTIALS", "Current password is incorrect.");
+      }
+      if (await verifyPassword(input.newPassword, credential.passwordHash)) {
+        throw new AuthenticationError("INVALID_INPUT", "The new password must be different from the current password.");
+      }
+      const passwordHash = await hashPassword(input.newPassword);
+      const sessionsRevoked = await repository.withTransaction(async (tx) => {
+        await tx.updateCredentialHash(input.customerId, passwordHash);
+        const result = await tx.revokeAllCustomerSessions(input.customerId, input.currentSessionId, now());
+        return result.count;
+      });
+      return { sessionsRevoked };
+    } catch (error) {
+      if (error instanceof AuthenticationError) throw error;
+      safeDatabaseError(error);
+    }
+  }
+
   async function logout(sessionToken: string): Promise<void> {
     if (typeof sessionToken !== "string" || sessionToken.length < 32) return;
     try {
@@ -167,7 +242,7 @@ export function createAuthenticationService(dependencies: AuthDependencies = {})
     }
   }
 
-  return { register, login, resolveSession, logout };
+  return { register, login, resolveSession, logout, listActiveSessions, revokeCustomerSession, logoutAllSessions, changePassword };
 }
 
 export type AuthenticationService = ReturnType<typeof createAuthenticationService>;
