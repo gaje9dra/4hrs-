@@ -39,6 +39,8 @@ jobs:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/fourhrs_test?schema=public
       DIRECT_URL: postgresql://postgres:postgres@localhost:5432/fourhrs_test?schema=public
       NODE_ENV: test
+      NEXT_PUBLIC_SITE_URL: https://example.test
+      APP_VERSION: ci
 
     steps:
       - name: Checkout
@@ -49,11 +51,17 @@ jobs:
         with:
           node-version: 24.21.0
 
+      - name: Pin npm
+        run: npm install --global npm@11.6.0
+
       - name: Install dependencies
         run: npm install
 
       - name: Validate Prisma schema
         run: npx prisma validate
+
+      - name: Validate runtime configuration
+        run: npm run release:validate
 
       - name: Audit production dependencies
         run: npm audit --omit=dev --audit-level=high
