@@ -86,3 +86,49 @@ No new database migration is required. Existing domain-owned idempotency and web
 
 ## Production readiness decision
 Readiness requires the final commit to pass lint, typecheck, tests, build, relevant integration/security/contract tests, and repository recovery validation. This document describes implemented behavior and explicit limitations rather than aspirational controls.
+
+
+## 27. Final readiness gate
+
+PHASE: 15.15
+STATUS: READY
+
+AUDIT:
+- API architecture: READY — canonical audience classification documented and applied to standardized routes.
+- Authentication: READY — existing server-side customer session boundary preserved.
+- Authorization: READY — Phase 14 RBAC remains canonical; no duplicate RBAC introduced.
+- Validation: READY — shared bounded pagination and idempotency-key validation added; existing domain validation preserved.
+- Error contracts: READY — shared safe error model added without exposing implementation details.
+- Idempotency: READY — domain-owned payment/fulfillment/shipping mechanisms preserved; no competing persistence added.
+- Pagination/filtering: READY — explicit bounded pagination helper added and integrated into customer order listing.
+- Versioning: READY — compatibility policy documented; no artificial versioning added.
+- Rate limiting: READY WITH LIMITATION — existing risk-specific limits preserved; process-local limitation documented.
+- Webhooks: READY — provider verification and normalized application-service processing preserved.
+- Provider integrations: READY — provider-neutral boundaries preserved; Qikink remains fulfillment-only.
+- Privacy: READY — customer/admin/private responses remain private/no-store and customer-scoped.
+- Caching: READY — public content caching remains limited to published content; private account responses remain non-cacheable.
+- Observability: READY — shared responses support request IDs and existing redaction/classification remains authoritative.
+- Contract tests: READY — Phase 15.15 governance contract tests added.
+- Security: READY — focused API boundary review completed; no business-domain security bypass introduced.
+- Documentation: READY — this document records actual implementation, limitations, deferred work, and readiness.
+
+CI:
+- lint: PASS
+- typecheck: PASS
+- test: PASS
+- build: PASS
+
+BLOCKERS:
+- None.
+
+REGRESSIONS:
+- None identified by the completed CI and focused API boundary review.
+
+DEFERRED:
+- Distributed rate limiting after shared atomic infrastructure selection.
+- Formal OpenAPI publication when a stable external consumer boundary exists.
+- Further migration of legacy routes to the shared response helper where safe.
+- Additional provider-specific webhook contracts when new adapters are introduced.
+
+NEXT_PHASE:
+- 15.16
