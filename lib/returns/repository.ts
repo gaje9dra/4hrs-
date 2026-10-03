@@ -21,7 +21,7 @@ export function createReturnsRepository(client:ReturnsClient=db){
         orderId:data.orderId,
         returnRequestId:data.returnRequestId,
         type:data.type,
-        payload:(data.payload as Record<string,unknown> | null | undefined) ?? null,
+        payload:data.payload ?? null,
         idempotencyKey,
         correlationId:data.correlationId,
       });
