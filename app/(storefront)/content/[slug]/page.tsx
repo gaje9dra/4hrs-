@@ -4,6 +4,7 @@ import { resolveRequestLocale } from "@/lib/i18n/resolution";
 import { getPublicLandingPage, publicContentSnapshot, resolvePublishedMedia, resolvePublishedReferenceLinks } from "@/lib/content/service";
 import { EditorialContent } from "@/components/storefront/editorial-content";
 import { absoluteSiteUrl } from "@/config/site";
+import { EditorialAnalytics } from "@/components/storefront/editorial-analytics";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -44,7 +45,7 @@ export default async function EditorialLandingPage({ params }: { params: Params 
     <div className="mx-auto max-w-5xl px-5 py-12 sm:px-8 lg:py-20">
       <p className="text-xs font-black uppercase tracking-[.25em] text-primary-red">Editorial / {result.item.locale}</p>
       <h1 className="mt-3 text-5xl font-black uppercase leading-[.9] tracking-tight">{snapshot.title}</h1>
-      <div className="mt-10"><EditorialContent snapshot={result.snapshot} media={Object.fromEntries(media)} links={Object.fromEntries(links)} /></div>
+      <div className="mt-10"><EditorialAnalytics contentId={result.item.id} contentType={result.item.type} locale={result.item.locale}><EditorialContent snapshot={result.snapshot} media={Object.fromEntries(media)} links={Object.fromEntries(links)} /></EditorialAnalytics></div>
     </div>
   </main>;
 }
