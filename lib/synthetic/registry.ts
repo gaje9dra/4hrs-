@@ -26,7 +26,7 @@ async function activeProductSlug(): Promise<string | null> {
   return row?.slug ?? null;
 }
 
-async function activeCategorySlug(): Promise<string | null> {
+async function activeCategorySlug_DISABLED(): Promise<string | null> {
   const row = await db.category.findFirst({ where: { status: "ACTIVE" }, select: { slug: true }, orderBy: { updatedAt: "desc" } });
   return row?.slug ?? null;
 }
