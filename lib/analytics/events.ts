@@ -67,7 +67,7 @@ function sanitizeValue(value: unknown, depth = 0): unknown {
     if (typeof value === "number" && !Number.isFinite(value)) throw new AnalyticsError("INVALID_PROPERTIES", "Analytics properties contain an invalid number.");
     return value;
   }
-  if (typeof value === "string") return value.replace(/[\\u0000-\\u001F\\u007F]/g, " ").trim().slice(0, ANALYTICS_MAX_STRING_LENGTH);
+  if (typeof value === "string") return value.replace(/[\u0000-\u001F\u007F]/g, " ").trim().slice(0, ANALYTICS_MAX_STRING_LENGTH);
   if (Array.isArray(value)) {
     if (value.length > ANALYTICS_MAX_PROPERTIES) throw new AnalyticsError("INVALID_PROPERTIES", "Analytics property arrays are too large.");
     return value.map((item) => sanitizeValue(item, depth + 1));
