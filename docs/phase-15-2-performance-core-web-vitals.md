@@ -9,7 +9,7 @@ Phase 15.2 optimizes the existing 4HRS+ application without changing catalog sem
 A source-level production performance audit identified these relevant conditions before the Phase 15.2 changes:
 
 - Public catalog listing queries used a broad `publicCatalogListSelect` projection.
-- Listing results selected active variants with option/value-related data and also loaded category, collection, and tag relations even though `StorefrontProductCard` only renders title, image, price, compare-at price, currency, and availability.
+- Listing results selected active variant pricing/inventory data and also loaded category, collection, and tag relations even though `StorefrontProductCard` only renders title, image, price, compare-at price, currency, and availability.
 - The primary product-card image already used Next.js `Image`, explicit responsive `sizes`, and lazy loading.
 - The homepage hero image already used `priority` and an explicit responsive `sizes` value, making it the appropriate LCP candidate rather than prioritizing the entire product grid.
 - Catalog pagination is bounded by `CATALOG_QUERY_PAGE_MAX = 100` and `CATALOG_QUERY_PAGE_NUMBER_MAX = 10000`.
@@ -37,9 +37,6 @@ The listing projection no longer loads:
 - product category relations
 - collection relations
 - tag relations
-- variant option values
-- variant display metadata
-- variant images
 - product timestamps not consumed by the listing DTO
 
 This reduces database result width and server-side serialization/hydration work for every catalog grid page while preserving the existing price and inventory calculation path.
