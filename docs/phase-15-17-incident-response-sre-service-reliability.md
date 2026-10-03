@@ -62,7 +62,7 @@ The budget is an operational decision signal. Phase 15.16 release governance may
 
 Severity is based on impact, not raw error count.
 
-## Detection and alerting
+## Detection strategy and alerting
 
 The scheduled monitor detects:
 - database unavailability;
