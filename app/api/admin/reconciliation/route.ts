@@ -16,6 +16,7 @@ export async function GET(request:Request){
   const context=await requireAdmin(request,"reconciliation.read");
   const url=new URL(request.url);
   if(url.searchParams.get("health")==="1") return NextResponse.json(await reconciliationHealthCheck());
+  if(url.searchParams.get("export")==="1") { await requireAdmin(request,"reconciliation.export"); const cases=await listReconciliationCases({limit:200}); return NextResponse.json({exportedAt:new Date().toISOString(),cases}); }
   if(url.searchParams.get("summary")==="1") return NextResponse.json(await reconciliationSummary());
   const cases=await listReconciliationCases({
    status:(url.searchParams.get("status")||undefined) as never,
