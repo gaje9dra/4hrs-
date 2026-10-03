@@ -106,7 +106,7 @@ export async function resolveReconciliationCase(context:AdminAuthorizationContex
     const latest=await tx.reconciliationCase.findUnique({where:{id:input.id}});
     if(!latest||latest.version!==input.expectedVersion) throw new Error("Reconciliation case changed concurrently. Refresh and retry.");
     const action=await tx.reconciliationAction.create({data:{reconciliationId:latest.id,actionType:"MANUAL_RESOLUTION",idempotencyKey:`manual-resolution:${latest.id}:${latest.version}`,actorAdminId:context.adminUser.id,beforeState:{status:latest.status,version:latest.version},afterState:{status:"RESOLVED"},reason:input.reason.trim().slice(0,1000),success:true,correlationId:null}});
-    const row=await tx.reconciliationCase.update({where:{id:latest.id},data:{status:"RESOLVED",resolvedAt:new Date(),resolvedBy:context.adminUser.id,reason:undefined as never,resolution:resolution as Prisma.InputJsonValue,version:{increment:1}}});
+    const row=await tx.reconciliationCase.update({where:{id:latest.id},data:{status:"RESOLVED",resolvedAt:new Date(),resolvedBy:context.adminUser.id,resolution:resolution as Prisma.InputJsonValue,version:{increment:1}}});
     return {row,action};
   });
   await auditAdminAction(context,{action:"RECONCILIATION_CASE_RESOLVED",resourceType:"ReconciliationCase",resourceId:updated.row.id,success:true,reason:input.reason,metadata:{domain:current.domain,type:current.type,highRisk}});
