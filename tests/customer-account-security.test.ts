@@ -7,12 +7,12 @@ import type { CustomerRepository } from "../lib/customer/repository.ts";
 
 function fakeRepository(): CustomerRepository {
   const now = () => new Date("2026-10-03T10:00:00.000Z");
-  const customer = { id: "customer-1", email: "customer@example.com", displayName: null, status: "ACTIVE" as const, emailVerifiedAt: null, createdAt: now(), updatedAt: now() };
+  const customer = { id: "customer-1", email: "customer@example.com", displayName: null, status: "ACTIVE" as const, locale: "en-IN", timezone: "Asia/Kolkata", emailVerifiedAt: null, anonymizedAt: null, createdAt: now(), updatedAt: now() };
   const credential = { id: "credential-1", customerId: customer.id, passwordHash: "", createdAt: now(), updatedAt: now() };
   const sessions = new Map<string, { id: string; customerId: string; sessionTokenHash: string; createdAt: Date; expiresAt: Date; revokedAt: Date | null; lastUsedAt: Date | null }>();
   let sequence = 0;
   const repo: CustomerRepository = {
-    async withTransaction<T>(work) { return work(repo); },
+    async withTransaction<T>(work: (repository: CustomerRepository) => Promise<T>): Promise<T> { return work(repo); },
     async findCustomerById(id) { return id === customer.id ? customer : null; },
     async findCustomerByNormalizedEmail(email) { return email === customer.email ? customer : null; },
     async createCustomer() { return customer; },
