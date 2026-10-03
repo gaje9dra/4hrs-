@@ -11,7 +11,7 @@ function dep(pkg:ReturnType<typeof packageJson>,name:string){return pkg.dependen
 function expectedRuntimeFindings(pkg:ReturnType<typeof packageJson>):CertificationFinding[]{
 
   const findings:CertificationFinding[]=[];
-  const expected:[string,string,string,string][]=[
+  const expected:[string,string|null,string,string][]=[
     ["next",dep(pkg,"next"),LOCKED_STACK.next,"Locked Next.js version drift."],
     ["react",dep(pkg,"react"),LOCKED_STACK.react,"Locked React version drift."],
     ["react-dom",dep(pkg,"react-dom"),LOCKED_STACK.reactDom,"Locked React DOM version drift."],
@@ -20,13 +20,14 @@ function expectedRuntimeFindings(pkg:ReturnType<typeof packageJson>):Certificati
     ["tailwindcss",dep(pkg,"tailwindcss"),LOCKED_STACK.tailwind,"Locked Tailwind CSS version drift."],
     ["prisma",dep(pkg,"prisma")??dep(pkg,"@prisma/client"),LOCKED_STACK.prisma,"Locked Prisma version drift."],
   ];
-  void checks;
   for(const [name,actual,wanted,title] of expected){
     const normalized=actual?.replace(/^\^|^~/,"");
     if(normalized!==wanted) findings.push({id:"LOCKED_STACK_"+name.toUpperCase().replace(/[^A-Z0-9]/g,"_"),level:"BLOCKER",title,impact:"The final certification cannot assert the mandated runtime dependency baseline.",evidence:`package.json declares ${name}=${actual??"<missing>"}; required ${wanted}.`,owner:"release-engineering"});
   }
   return findings;
 }
+export async function getLatestPlatformCertification(){ return db.platformCertification.findFirst({orderBy:{timestamp:"desc"}}); }
+
 export async function collectPlatformCertification(options:{persist?:boolean;evaluator?:string;environment?:string;commitSha?:string;deploymentId?:string}={}){
   const pkg=packageJson();
   const findings:CertificationFinding[]=[...expectedRuntimeFindings(pkg)];
