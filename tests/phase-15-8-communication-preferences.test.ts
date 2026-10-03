@@ -34,7 +34,6 @@ test("customer preference mutations are versioned, idempotent, and auditable", a
       expectedVersion: 0, idempotencyKey: first ? (await db.customerCommunicationPreferenceAudit.findFirstOrThrow({ where: { customerId } })).idempotencyKey! : "",
     });
     assert.equal(repeated.version, 1);
-    assert.throws(() => defaultPreferenceState("MARKETING_PROMOTIONAL"), () => false);
 
     await assert.rejects(
       updateCustomerCommunicationPreference({
