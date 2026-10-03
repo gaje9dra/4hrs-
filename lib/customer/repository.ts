@@ -23,6 +23,9 @@ export type CustomerRepository = {
   findSessionByTokenHash(sessionTokenHash: string): Promise<SessionRecord | null>;
   revokeSession(sessionId: string, revokedAt?: Date): Promise<Prisma.CustomerSessionGetPayload<Record<string, never>>>;
   touchSession(sessionId: string, lastUsedAt?: Date): Promise<Prisma.CustomerSessionGetPayload<Record<string, never>>>;
+  listActiveSessions(customerId: string, now?: Date): Promise<Array<Prisma.CustomerSessionGetPayload<Record<string, never>>>>;
+  revokeCustomerSession(customerId: string, sessionId: string, revokedAt?: Date): Promise<{ count: number }>;
+  revokeAllCustomerSessions(customerId: string, exceptSessionId?: string, revokedAt?: Date): Promise<{ count: number }>;
   findCustomerCart(customerId: string): Promise<Prisma.CartGetPayload<Record<string, never>> | null>;
 };
 
@@ -123,6 +126,27 @@ export function createCustomerRepository(client?: CustomerRepositoryClient): Cus
       return database.customerSession.update({
         where: { id: sessionId },
         data: { lastUsedAt },
+      });
+    },
+
+    listActiveSessions(customerId: string, now = new Date()) {
+      return database.customerSession.findMany({
+        where: { customerId, revokedAt: null, expiresAt: { gt: now } },
+        orderBy: [{ lastUsedAt: "desc" }, { createdAt: "desc" }, { id: "asc" }],
+      });
+    },
+
+    revokeCustomerSession(customerId: string, sessionId: string, revokedAt = new Date()) {
+      return database.customerSession.updateMany({
+        where: { id: sessionId, customerId, revokedAt: null },
+        data: { revokedAt },
+      });
+    },
+
+    revokeAllCustomerSessions(customerId: string, exceptSessionId, revokedAt = new Date()) {
+      return database.customerSession.updateMany({
+        where: { customerId, revokedAt: null, ...(exceptSessionId ? { id: { not: exceptSessionId } } : {}) },
+        data: { revokedAt },
       });
     },
 
