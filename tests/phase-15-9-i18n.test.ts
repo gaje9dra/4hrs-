@@ -23,7 +23,7 @@ test("locale resolution uses deterministic precedence", () => {
 test("money formatting never performs currency conversion", () => {
   assert.equal(formatMoney("999.00", "INR", "en-IN"), "₹999.00");
   assert.equal(formatMoney("999.00", "INR", "en-US"), "₹999.00");
-  assert.equal(formatMoney("999.00", "USD", "en-US"), "$999.00");
+  assert.throws(() => formatMoney("999.00", "USD", "en-US"), /UNSUPPORTED_CURRENCY/);
   assert.throws(() => formatMoney("not-a-number", "INR", "en-IN"), /INVALID_MONEY_VALUE/);
 });
 
