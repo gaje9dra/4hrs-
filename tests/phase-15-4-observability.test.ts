@@ -48,7 +48,9 @@ test("error classification preserves operational categories", () => {
 
 test("proxy propagates request IDs while preserving Phase 15.3 CSP", () => {
   const proxy = read("proxy.ts");
-  assert.match(proxy, /x-request-id/);
+  assert.match(proxy, /REQUEST_ID_HEADER/);
+  assert.match(proxy, /requestHeaders\.set\(REQUEST_ID_HEADER/);
+  assert.match(proxy, /response\.headers\.set\(REQUEST_ID_HEADER/);
   assert.match(proxy, /resolveRequestId/);
   assert.match(proxy, /Content-Security-Policy/);
   assert.match(proxy, /strict-dynamic/);
