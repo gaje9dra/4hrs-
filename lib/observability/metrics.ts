@@ -22,7 +22,8 @@ export type MetricName =
   | "discovery_signal_calculations_total"
   | "discovery_signal_calculation_latency_ms"
   | "search_quality_observations_total"
-  | "merchandising_rule_evaluations_total";
+  | "merchandising_rule_evaluations_total"
+  | "content_operations_total";
 
 export type MetricLabels = Readonly<Record<string, string>>;
 
