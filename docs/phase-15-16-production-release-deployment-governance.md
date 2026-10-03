@@ -60,7 +60,7 @@ scripts/validate-environment.ts is the CI/operational entry point.
 
 Production migrations are explicit and continue to use prisma migrate deploy. CI and the recovery drill use isolated PostgreSQL databases.
 
-scripts/audit-migrations.ts validates migration directory naming, unique timestamp prefixes, presence of migration.sql, and destructive operation patterns requiring explicit expand/contract review.
+scripts/audit-migrations.ts validates migration directory naming, deterministic full-name ordering, presence of migration.sql, historical duplicate timestamp prefixes, and destructive operation patterns requiring explicit expand/contract review. Two existing migrations share the 20261003140000 prefix; their full migration names remain unique and lexicographically deterministic, so they are not renamed.
 
 No automatic destructive rollback is introduced.
 
@@ -288,16 +288,20 @@ RELEASE ENGINEERING:
 - Disaster recovery: READY
 
 CI:
-- lint: pending final phase CI
-- typecheck: pending final phase CI
-- test: pending final phase CI
-- build: pending final phase CI
+- lint: PASS
+- typecheck: PASS
+- test: PASS
+- build: PASS
+- recovery drill: PASS
+- migration safety audit: PASS
+- environment validation: PASS
 
 BLOCKERS:
 - Committed authoritative package-lock.json is missing.
 
 REGRESSIONS:
 - None identified in the implementation audit.
+- Historical duplicate migration timestamp prefix documented; no migration identity was renamed.
 
 DEFERRED:
 - Deterministic npm ci adoption after lockfile commit.
