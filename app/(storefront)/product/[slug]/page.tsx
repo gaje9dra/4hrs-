@@ -7,6 +7,9 @@ import { absoluteSiteUrl } from "@/config/site";
 import { breadcrumbJsonLd, productJsonLd, serializeJsonLd } from "@/lib/seo/structured-data";
 import { getStorefrontProduct, getStorefrontProductSeoInput, getStorefrontRelatedProducts } from "@/lib/storefront/catalog";
 import { ProductDetail } from "@/components/storefront/product-detail";
+import { EditorialSlot } from "@/components/storefront/editorial-slot";
+import { resolveRequestLocale } from "@/lib/i18n/resolution";
+import { listPublishedEditorialForReference, resolvePublishedContentPresentation } from "@/lib/content/service";
 
 type Params = Promise<{ slug: string }>;
 async function loadProduct(slug: string) { try { return await getStorefrontProduct(slug); } catch (error) { if (error instanceof CatalogServiceError && (error.code === "PRODUCT_NOT_FOUND" || error.code === "INVALID_QUERY")) notFound(); throw error; } }
@@ -21,8 +24,11 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 
 export default async function ProductPage({ params }: { params: Params }) {
   const product = await loadProductForRequest((await params).slug); const relatedProducts = await getStorefrontRelatedProducts(product);
+  const locale = await resolveRequestLocale();
+  const editorial = await listPublishedEditorialForReference("PRODUCT_EDITORIAL", "PRODUCT", product.id, locale);
+  const editorialSections = await resolvePublishedContentPresentation(editorial);
   const canonical = absoluteSiteUrl("/product/" + encodeURIComponent(product.slug));
   const productSchema = productJsonLd({ name: product.title, description: product.shortDescription ?? product.description ?? product.title, url: canonical, imageUrls: product.media.map((item) => item.url), price: product.price, currency: product.currency, sku: product.variants[0]?.sku, availability: product.availability.state });
   const breadcrumbs = breadcrumbJsonLd([{ name: "Home", url: absoluteSiteUrl("/") }, { name: "Shop", url: absoluteSiteUrl("/shop") }, ...(product.collections[0] ? [{ name: product.collections[0].name, url: absoluteSiteUrl("/collection/" + encodeURIComponent(product.collections[0].slug)) }] : []), ...(product.categories[0] ? [{ name: product.categories[0].name, url: absoluteSiteUrl("/category/" + encodeURIComponent(product.categories[0].slug)) }] : []), { name: product.title, url: canonical }]);
-  return <><ProductDetail product={product} relatedProducts={relatedProducts} /><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(productSchema) }} /><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(breadcrumbs) }} /></>;
+  return <><ProductDetail product={product} relatedProducts={relatedProducts} /><EditorialSlot eyebrow="Product editorial" sections={editorialSections} /><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(productSchema) }} /><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(breadcrumbs) }} /></>;
 }
