@@ -1,6 +1,6 @@
 import { authJson, readAuthJson } from "@/lib/auth/http";
 import { CommunicationPreferenceError } from "@/lib/communications/preferences";
-import { consumeUnsubscribeToken } from "@/lib/communications/unsubscribe";
+import { consumeUnsubscribeToken, validateUnsubscribeToken } from "@/lib/communications/unsubscribe";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -13,7 +13,7 @@ function errorResponse(error: unknown) {
 export async function GET(request: Request) {
   const token = new URL(request.url).searchParams.get("token");
   if (!token) return errorResponse(new CommunicationPreferenceError("PREFERENCE_DATABASE_ERROR", "The unsubscribe link is invalid or expired."));
-  return authJson({ valid: true, action: "unsubscribe", tokenRequiredForMutation: true });
+  try { await validateUnsubscribeToken(token); return authJson({ valid: true, action: "unsubscribe", tokenRequiredForMutation: true }); } catch (error) { return errorResponse(error); }
 }
 
 export async function POST(request: Request) {
