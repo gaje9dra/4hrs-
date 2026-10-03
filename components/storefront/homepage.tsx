@@ -9,6 +9,9 @@ import { GeometricLayer } from "@/components/bauhaus/geometric-composition";
 import { categoryPath, collectionPath } from "@/lib/catalog/routes";
 import type { StorefrontHomeData } from "@/lib/storefront/catalog";
 import { SectionHeading as SharedSectionHeading } from "@/components/ui/section-heading";
+import { EditorialContent } from "@/components/storefront/editorial-content";
+import { EditorialAnalytics } from "@/components/storefront/editorial-analytics";
+import type { ContentSnapshot } from "@/lib/content/service";
 
 function Hero({ data }: { data: StorefrontHomeData }) {
   const visualProduct = data.featuredProducts[0] ?? data.newArrivals[0];
@@ -223,7 +226,34 @@ function FinalCta() {
   );
 }
 
-export function Homepage({ data }: { data: StorefrontHomeData }) {
+type EditorialHomepageSection = {
+  item: { id: string; type: string; locale: string };
+  snapshot: ContentSnapshot;
+  version: number;
+  media: Record<string, { url: string; altText: string | null }>;
+  links: Record<string, string>;
+};
+
+function EditorialHomepageSections({ sections }: { sections: EditorialHomepageSection[] }) {
+  if (!sections.length) return null;
+  return <section aria-labelledby="editorial-content-title" className="border-b-2 border-border lg:border-b-4">
+    <Container className="py-14 sm:py-18 lg:py-24">
+      <SharedSectionHeading id="editorial-content-title" eyebrow="Editorial / 05" title="The 4HRS edit" description="Published editorial content layered over the live catalog." className="mb-10" />
+      <div className="grid gap-8">
+        {sections.map((section) => (
+          <article key={section.item.id} className="border-4 border-border bg-white p-7 shadow-hard-lg sm:p-10">
+            <h3 className="text-3xl font-black uppercase">{section.snapshot.title}</h3>
+            <EditorialAnalytics contentId={section.item.id} contentType={section.item.type} locale={section.item.locale}>
+              <EditorialContent snapshot={section.snapshot} media={section.media} links={section.links} />
+            </EditorialAnalytics>
+          </article>
+        ))}
+      </div>
+    </Container>
+  </section>;
+}
+
+export function Homepage({ data, editorialSections = [] }: { data: StorefrontHomeData; editorialSections?: EditorialHomepageSection[] }) {
   return (
     <>
       <Hero data={data} />
@@ -232,6 +262,7 @@ export function Homepage({ data }: { data: StorefrontHomeData }) {
       <NewArrivals products={data.newArrivals} />
       <CollectionDiscovery collections={data.collections} />
       <BrandValue />
+      <EditorialHomepageSections sections={editorialSections} />
       <FinalCta />
     </>
   );
