@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { AuthenticationError, isAuthenticationError } from "@/lib/auth/errors";
+import { isTrustedStateChangingRequest } from "@/lib/security/request";
 
 export function authJson<T>(data: T, init: ResponseInit = {}) {
   return NextResponse.json(data, {
@@ -43,11 +44,7 @@ export function authErrorResponse(error: unknown) {
 }
 
 export function assertSameOrigin(request: Request): void {
-  const origin = request.headers.get("origin");
-  if (!origin) return;
-
-  const requestUrl = new URL(request.url);
-  if (origin !== requestUrl.origin) {
+  if (!isTrustedStateChangingRequest(request)) {
     throw new AuthenticationError("CSRF_REJECTED", "The authentication request is not allowed.");
   }
 }
