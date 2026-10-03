@@ -47,7 +47,9 @@ export async function POST(request: Request) {
     }
     if (action === "control.update") {
       const context = await requireAdmin(request, "governance.manage");
-      if (typeof body.controlId !== "string" || typeof body.expectedVersion !== "number" || !Number.isInteger(body.expectedVersion)) return NextResponse.json({ error:{ code:"INVALID_REQUEST", message:"controlId and expectedVersion are required." } },{status:400});
+      if (typeof body.controlId !== "string" || !/^[0-9a-f-]{36}$/i.test(body.controlId) || typeof body.expectedVersion !== "number" || !Number.isInteger(body.expectedVersion)) return NextResponse.json({ error:{ code:"INVALID_REQUEST", message:"controlId and expectedVersion are required." } },{status:400});
+      if (body.criticality !== undefined && !["CRITICAL","HIGH","MEDIUM","LOW"].includes(String(body.criticality))) return NextResponse.json({ error:{ code:"INVALID_REQUEST", message:"criticality is invalid." } },{status:400});
+      if (body.applicability !== undefined && !["REQUIRED","CONDITIONAL","NOT_APPLICABLE"].includes(String(body.applicability))) return NextResponse.json({ error:{ code:"INVALID_REQUEST", message:"applicability is invalid." } },{status:400});
       const nextReviewAt = body.nextReviewAt === null || body.nextReviewAt === undefined ? undefined : new Date(String(body.nextReviewAt));
       if (nextReviewAt && Number.isNaN(nextReviewAt.getTime())) return NextResponse.json({ error:{ code:"INVALID_REQUEST", message:"nextReviewAt is invalid." } },{status:400});
       const updated = await updateGovernanceControl(context,{ id:body.controlId, expectedVersion:body.expectedVersion, description:body.description == null ? undefined : String(body.description), ownerRole:body.ownerRole == null ? undefined : String(body.ownerRole), criticality:body.criticality == null ? undefined : String(body.criticality), applicability:body.applicability == null ? undefined : String(body.applicability), verificationMethod:body.verificationMethod == null ? undefined : String(body.verificationMethod), nextReviewAt });
