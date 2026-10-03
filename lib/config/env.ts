@@ -92,9 +92,9 @@ export function validateServerEnvironment(): ServerEnvironment {
   return env;
 }
 
-export function publicReleaseIdentity(env = readServerEnvironment()) {
+export function publicReleaseIdentity(env?: Pick<ServerEnvironment, "appVersion" | "nodeEnv">) {
   return {
-    version: env.appVersion,
-    environment: env.nodeEnv,
+    version: env?.appVersion ?? nonEmpty("APP_VERSION", process.env.APP_VERSION) ?? "0.1.0",
+    environment: env?.nodeEnv ?? environmentName(process.env.NODE_ENV),
   };
 }
