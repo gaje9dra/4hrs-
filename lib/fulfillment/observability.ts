@@ -1,4 +1,6 @@
 import type { FulfillmentErrorCode } from "@/lib/fulfillment/errors";
+import { incrementMetric } from "@/lib/observability/metrics";
+import { logger } from "@/lib/observability/logger";
 
 export type FulfillmentObservation = Readonly<{
   operation: "eligibility" | "create" | "transition" | "provider-resolution" | "mapping" | "reconcile";
@@ -13,19 +15,23 @@ export type FulfillmentObservation = Readonly<{
 }>;
 
 export function logFulfillmentObservation(observation: FulfillmentObservation): void {
-  if (process.env.NODE_ENV === "test") return;
-  const payload = {
-    scope: "fulfillment",
+  incrementMetric("fulfillment_operations_total", {
     operation: observation.operation,
-    fulfillmentId: observation.fulfillmentId,
-    orderId: observation.orderId,
+    provider: observation.provider ?? "none",
+    metric: observation.result,
+  });
+  logger[observation.result === "success" ? "info" : "warn"]("fulfillment.operation", {
+    resourceType: "fulfillment",
+    resourceId: observation.fulfillmentId,
+    correlationId: undefined,
     provider: observation.provider,
+    durationMs: observation.durationMs,
+    outcome: observation.result === "success" ? "success" : "failure",
+    errorCode: observation.failureCode,
+  }, {
+    operation: observation.operation,
+    orderId: observation.orderId,
     from: observation.from,
     to: observation.to,
-    result: observation.result,
-    failureCode: observation.failureCode,
-    durationMs: observation.durationMs === undefined ? undefined : Math.round(observation.durationMs),
-  };
-  if (observation.result === "success") console.info("[fulfillment]", payload);
-  else console.warn("[fulfillment]", payload);
+  });
 }
