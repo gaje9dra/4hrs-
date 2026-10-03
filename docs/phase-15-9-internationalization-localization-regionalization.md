@@ -43,7 +43,7 @@ The existing domain remains authoritative:
 - Historical order-item pricing is not rewritten.
 - No currency conversion was introduced.
 
-Supported display/transaction currency codes are explicitly bounded to currencies already represented by this phase's supported regions: INR and USD. Currency code validation is centralized.
+Supported display/transaction currency codes are explicitly bounded to the existing repository currency evidence: INR. Currency code validation is centralized.
 
 Changing locale does not change a transaction's currency.
 
