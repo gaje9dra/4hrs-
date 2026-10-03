@@ -10,7 +10,7 @@ export type LocaleDefinition = {
   fallbackLocale: SupportedLocale;
   direction: "ltr";
   defaultTimezone: string;
-  defaultCurrency: "INR" | "USD";
+  defaultCurrency: "INR";
 };
 
 export const LOCALE_REGISTRY: Record<SupportedLocale, LocaleDefinition> = {
@@ -32,11 +32,11 @@ export const LOCALE_REGISTRY: Record<SupportedLocale, LocaleDefinition> = {
     fallbackLocale: "en-IN",
     direction: "ltr",
     defaultTimezone: "America/New_York",
-    defaultCurrency: "USD",
+    defaultCurrency: "INR",
   },
 };
 
-export const SUPPORTED_CURRENCIES = ["INR", "USD"] as const;
+export const SUPPORTED_CURRENCIES = ["INR"] as const;
 export type SupportedCurrency = (typeof SUPPORTED_CURRENCIES)[number];
 
 export function isSupportedLocale(value: unknown): value is SupportedLocale {
