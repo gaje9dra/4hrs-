@@ -386,6 +386,7 @@ model Customer {
   communicationPreferences CustomerCommunicationPreference[]
   communicationPreferenceAudits CustomerCommunicationPreferenceAudit[]
   communicationUnsubscribeTokens CommunicationUnsubscribeToken[]
+  experimentAssignments ExperimentAssignment[]
   caseAssignments CaseAssignment[]
   caseAuditActors CaseAuditEvent[] @relation("CaseAuditActor")
   adminUser        AdminUser?
