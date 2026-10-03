@@ -201,10 +201,11 @@ export function validateFeatureFlagInput(input: {
   let variants: Array<{ key: string; weightBasisPoints: number }> = [];
   if (input.type === "MULTIVARIANT") {
     if (!Array.isArray(input.variants)) throw new FeatureFlagError("INVALID_CONFIGURATION", "Multivariant flags require variants.");
-    variants = validateVariants(input.variants.map((value) => {
+    variants = validateVariants(input.variants.map((value: unknown) => {
       if (!value || typeof value !== "object") throw new FeatureFlagError("INVALID_CONFIGURATION", "Variant is invalid.");
       const item = value as Record<string, unknown>;
-      return { key: item.key as string, weightPercentage: item.weightPercentage as number };
+      if (typeof item.key !== "string" || typeof item.weightPercentage !== "number") throw new FeatureFlagError("INVALID_CONFIGURATION", "Variant is invalid.");
+      return { key: item.key, weightPercentage: item.weightPercentage };
     }));
     if (typeof input.defaultVariantKey !== "string" || !variants.some((variant) => variant.key === input.defaultVariantKey)) {
       throw new FeatureFlagError("INVALID_CONFIGURATION", "Default variant must reference a configured variant.");
@@ -318,10 +319,11 @@ export function validateExperimentInput(input: {
   const endAt = parseDate(input.endAt);
   if (startAt && endAt && startAt >= endAt) throw new FeatureFlagError("INVALID_CONFIGURATION", "Experiment end must be after start.");
   if (!Array.isArray(input.variants)) throw new FeatureFlagError("INVALID_CONFIGURATION", "Experiments require variants.");
-  const variants = validateVariants(input.variants.map((value) => {
+  const variants = validateVariants(input.variants.map((value: unknown) => {
     if (!value || typeof value !== "object") throw new FeatureFlagError("INVALID_CONFIGURATION", "Experiment variant is invalid.");
     const item = value as Record<string, unknown>;
-    return { key: item.key as string, weightPercentage: item.weightPercentage as number };
+    if (typeof item.key !== "string" || typeof item.weightPercentage !== "number") throw new FeatureFlagError("INVALID_CONFIGURATION", "Experiment variant is invalid.");
+    return { key: item.key, weightPercentage: item.weightPercentage };
   }));
   return {
     key: input.key,
