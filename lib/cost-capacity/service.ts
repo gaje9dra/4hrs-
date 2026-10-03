@@ -54,7 +54,7 @@ export async function evaluateCapacityPolicies() {
   for (const limit of limits) {
     const latest=await db.costResourceMetric.findFirst({where:{resourceId:limit.resourceId,metricKey:limit.metricKey},orderBy:{measuredAt:"desc"}});
     if (!latest) continue;
-    const evaluation=evaluateCapacity(Number(latest.value),Number(limit.threshold),limit.kind,limit.severity,limit.action,limit.escalationPath);
+    const evaluation=evaluateCapacity(Number(latest.value),Number(limit.threshold),limit.severity,limit.action,limit.escalationPath);
     results.push({resource:limit.resource.key,metricKey:limit.metricKey,latestValue:Number(latest.value),threshold:Number(limit.threshold),kind:limit.kind,...evaluation});
   }
   return results;
