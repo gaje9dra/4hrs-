@@ -1,4 +1,4 @@
-const SENSITIVE_KEY = /password|passwd|secret|token|authorization|cookie|set-cookie|credential|api[-_]?key|access[-_]?key|private[-_]?key|cvv|card[-_]?number|session/i;
+const SENSITIVE_KEY = /password|passwd|secret|token|authorization|cookie|set-cookie|credential|api[-_]?key|access[-_]?key|private[-_]?key|database[-_]?url|cvv|card[-_]?number|session/i;
 const MAX_DEPTH = 5;
 const MAX_KEYS = 40;
 const MAX_ARRAY = 40;
