@@ -88,6 +88,8 @@ test("notification eligibility separates required transactional communication fr
 
 test("queued optional notifications are suppressed after an opt-out and never reach the provider", async () => {
   const customerId = randomUUID();
+  const previousProviderEnabled = process.env.NOTIFICATION_PROVIDER_ENABLED;
+  const previousProviderMode = process.env.NOTIFICATION_PROVIDER_MODE;
   await db.customer.create({ data: { id: customerId, email: `queue-${customerId}@example.invalid`, status: "ACTIVE" } });
   try {
     await updateCustomerCommunicationPreference({
@@ -117,6 +119,8 @@ test("queued optional notifications are suppressed after an opt-out and never re
     await db.customerCommunicationPreferenceAudit.deleteMany({ where: { customerId } });
     await db.customerCommunicationPreference.deleteMany({ where: { customerId } });
     await db.customer.delete({ where: { id: customerId } });
+    process.env.NOTIFICATION_PROVIDER_ENABLED = previousProviderEnabled;
+    process.env.NOTIFICATION_PROVIDER_MODE = previousProviderMode;
   }
 });
 
