@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { headers } from 'next/headers'
 import { Outfit } from 'next/font/google'
 import './globals.css'
 import { Header } from '@/components/layout/header'
@@ -21,13 +22,15 @@ export const metadata: Metadata = {
 }
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const requestHeaders = await headers()
+  const nonce = requestHeaders.get('x-nonce')
   const navigation = await getStorefrontNavigation()
   const footerGroups = storefrontNavigationToFooterGroups(navigation)
   const identityJsonLd = process.env.NEXT_PUBLIC_SITE_URL ? [organizationJsonLd(), websiteJsonLd()] : []
   return (
     <html lang="en"><body className={`${outfit.variable} antialiased`}>
       <SkipLink /><Header items={navigation} /><main id="main-content" tabIndex={-1}>{children}</main><Footer navigationGroups={footerGroups} />
-      {identityJsonLd.map((value) => <script key={value['@type'] as string} type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(value) }} />)}
+      {identityJsonLd.map((value) => <script key={value['@type'] as string} nonce={nonce ?? undefined} type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(value) }} />)}
     </body></html>
   )
 }
