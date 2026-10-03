@@ -29,7 +29,11 @@ export async function POST(request: Request) {
     const body = await readAdminJson(request);
     const reason = typeof body.reason === "string" ? body.reason : null;
     if (body.environment === "PRODUCTION" && body.active === true) requireHighRiskReason(reason);
-    const rule = await createMerchandisingRule(body);
+    const rule = await createMerchandisingRule({
+      name: body.name, description: body.description, environment: body.environment, action: body.action, scope: body.scope,
+      scopeValue: body.scopeValue, productId: body.productId, locale: body.locale, priority: body.priority, active: body.active,
+      startAt: body.startAt, endAt: body.endAt,
+    });
     await auditAdminAction(context, {
       action: "MERCHANDISING_RULE_CREATED",
       resourceType: "MerchandisingRule",
