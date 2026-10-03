@@ -1,4 +1,3 @@
-import { NextResponse } from "next/server";
 import { requireAdmin, requireHighRiskReason } from "@/lib/admin/authorization";
 import { adminErrorResponse, adminJson, assertAdminSameOrigin, readAdminJson } from "@/lib/admin/http";
 import { auditAdminAction } from "@/lib/admin/audit";
@@ -11,7 +10,7 @@ export const revalidate = 0;
 
 export async function GET(request: Request) {
   try {
-    const context = await requireAdmin(request, "feature_flags.read");
+    await requireAdmin(request, "feature_flags.read");
     const url = new URL(request.url);
     const rawEnvironment = url.searchParams.get("environment");
     const environment = rawEnvironment ? rawEnvironment as FeatureFlagEnvironment : undefined;
