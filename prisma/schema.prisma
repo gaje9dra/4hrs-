@@ -2353,3 +2353,163 @@ model ReconciliationAction {
   @@index([actionType, createdAt])
   @@index([actorAdminId, createdAt])
 }
+
+
+enum SyntheticExecutionMode {
+  UNIT_LOCAL
+  CI
+  PREVIEW_STAGING
+  PRODUCTION_SAFE
+  MANUAL_DIAGNOSTIC
+}
+
+enum SyntheticCriticality {
+  P0
+  P1
+  P2
+  P3
+}
+
+enum SyntheticExecutionStatus {
+  HEALTHY
+  DEGRADED
+  FAILING
+  BLOCKED
+  UNAVAILABLE
+  NOT_CONFIGURED
+  UNKNOWN
+}
+
+enum SyntheticFailureCode {
+  STOREFRONT_UNAVAILABLE
+  CATALOG_UNAVAILABLE
+  SEARCH_FAILURE
+  PRODUCT_LOAD_FAILURE
+  CART_FAILURE
+  CHECKOUT_FAILURE
+  PAYMENT_FAILURE
+  ORDER_CREATION_FAILURE
+  ORDER_IDEMPOTENCY_FAILURE
+  FULFILLMENT_FAILURE
+  PROVIDER_MAPPING_FAILURE
+  PROVIDER_UNAVAILABLE
+  SHIPPING_FAILURE
+  TRACKING_FAILURE
+  RETURN_FAILURE
+  CUSTOMER_DATA_FAILURE
+  NOTIFICATION_FAILURE
+  ANALYTICS_CONTAMINATION
+  CONTENT_FAILURE
+  ADMIN_AUTH_FAILURE
+  ADMIN_RBAC_FAILURE
+  DATABASE_FAILURE
+  QUEUE_FAILURE
+  TIMEOUT
+  CONFIGURATION_FAILURE
+  SAFETY_GUARD_BLOCK
+  UNSUPPORTED_SYNTHETIC_CAPABILITY
+}
+
+enum SyntheticCleanupStatus {
+  NOT_REQUIRED
+  PENDING
+  SUCCEEDED
+  FAILED
+}
+
+enum SyntheticIdentityKind {
+  CUSTOMER
+  ADMIN_OPERATOR
+  CATALOG_FIXTURE
+  ORDER
+  PAYMENT_CONTEXT
+  FULFILLMENT_CONTEXT
+  SHIPMENT_CONTEXT
+}
+
+model SyntheticIdentity {
+  id               String               @id @default(uuid()) @db.Uuid
+  key              String               @unique @db.VarChar(160)
+  kind             SyntheticIdentityKind
+  environment      String               @db.VarChar(32)
+  deterministicKey String               @db.VarChar(160)
+  active           Boolean              @default(true)
+  correlationId    String?              @db.VarChar(128)
+  metadata         Json?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  executions       SyntheticExecution[]
+  @@unique([kind, environment, deterministicKey])
+  @@index([environment, kind, active])
+}
+
+model SyntheticExecution {
+  id                    String                  @id @default(uuid()) @db.Uuid
+  workflowId             String                  @db.VarChar(120)
+  mode                  SyntheticExecutionMode
+  environment           String                  @db.VarChar(32)
+  status                SyntheticExecutionStatus
+  failureCode           SyntheticFailureCode?
+  startedAt             DateTime
+  endedAt               DateTime?
+  durationMs             Int?
+  correlationId         String                  @db.VarChar(128)
+  traceId               String?                 @db.VarChar(128)
+  releaseId             String?                @db.VarChar(128)
+  deploymentId          String?                @db.VarChar(128)
+  featureFlagState      Json?
+  dependencyVersions    Json?
+  evidence              Json?
+  cleanupStatus         SyntheticCleanupStatus @default(NOT_REQUIRED)
+  cleanupError          String?                @db.VarChar(1000)
+  retryCount            Int                   @default(0)
+  syntheticIdentityId   String?                @db.Uuid
+  createdAt             DateTime               @default(now())
+  identity              SyntheticIdentity?     @relation(fields: [syntheticIdentityId], references: [id], onDelete: SetNull)
+  steps                 SyntheticStepExecution[]
+  @@index([workflowId, environment, startedAt])
+  @@index([status, startedAt])
+  @@index([mode, environment, status])
+  @@index([correlationId])
+  @@index([releaseId, deploymentId])
+}
+
+model SyntheticStepExecution {
+  id             String                  @id @default(uuid()) @db.Uuid
+  executionId    String                  @db.Uuid
+  stepKey        String                  @db.VarChar(120)
+  stepOrder      Int
+  status         SyntheticExecutionStatus
+  startedAt      DateTime
+  endedAt        DateTime?
+  durationMs     Int?
+  failureCode    SyntheticFailureCode?
+  diagnostic     Json?
+  dependency     String?                 @db.VarChar(120)
+  retryCount     Int                     @default(0)
+  execution      SyntheticExecution      @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  @@unique([executionId, stepKey])
+  @@index([executionId, stepOrder])
+  @@index([status, startedAt])
+}
+
+model SyntheticCertification {
+  id                    String                  @id @default(uuid()) @db.Uuid
+  environment           String                  @db.VarChar(32)
+  releaseId             String?                 @db.VarChar(128)
+  deploymentId          String?                 @db.VarChar(128)
+  evaluatedAt           DateTime                @default(now())
+  evaluator             String                  @db.VarChar(160)
+  readiness             String                  @db.VarChar(32)
+  workflowResults       Json
+  criticalFailures      Json
+  warnings              Json
+  blockedCapabilities   Json
+  unresolvedExceptions  Json
+  governanceEvidence    Json?
+  reconciliationStatus  Json?
+  createdAt             DateTime                @default(now())
+  @@index([environment, evaluatedAt])
+  @@index([readiness, evaluatedAt])
+  @@index([releaseId, deploymentId])
+}

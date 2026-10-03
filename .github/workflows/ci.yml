@@ -66,6 +66,10 @@ jobs:
         run: npm run architecture:audit
       - name: Run reconciliation architecture audit
         run: npm run reconciliation:audit
+      - name: Run synthetic architecture audit
+        run: npm run synthetic:validate
+      - name: Run synthetic CI safety validation
+        run: npm run synthetic:ci
 
       - name: Audit migration safety
         run: npm run db:audit-migrations

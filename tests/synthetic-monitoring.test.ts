@@ -1,0 +1,9 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { WORKFLOW_REGISTRY, validateWorkflowRegistry } from "../lib/synthetic/registry";
+import { evaluateSyntheticSafety } from "../lib/synthetic/safety";
+test("workflow registry is unique and bounded",()=>{assert.deepEqual(validateWorkflowRegistry(),[]);assert(WORKFLOW_REGISTRY.length>=30);assert(WORKFLOW_REGISTRY.length<=100);});
+test("production-safe workflows contain only production-safe steps",()=>{for(const w of WORKFLOW_REGISTRY.filter(w=>w.productionSafe)) assert(w.steps.every(s=>s.productionSafe),w.id);});
+test("payment/provider mutation workflows are blocked",()=>{for(const id of ["PAYMENT_SUCCESS_HANDLING","ORDER_CREATION","QIKINK_ADAPTER_BOUNDARY","FULFILLMENT_HANDOFF"]) assert.equal(WORKFLOW_REGISTRY.find(w=>w.id===id)?.productionSafe,false);});
+test("safety fails closed",()=>{const old=process.env.SYNTHETIC_MONITORING_ENABLED;delete process.env.SYNTHETIC_MONITORING_ENABLED;assert.equal(evaluateSyntheticSafety("PRODUCTION_SAFE").allowed,false);if(old!==undefined)process.env.SYNTHETIC_MONITORING_ENABLED=old;});
+test("production safety rejects live fulfillment mode",()=>{const old=process.env.SYNTHETIC_MONITORING_ENABLED;const oldProvider=process.env.FULFILLMENT_PROVIDER_MODE;process.env.SYNTHETIC_MONITORING_ENABLED="true";process.env.FULFILLMENT_PROVIDER_MODE="live";assert.equal(evaluateSyntheticSafety("PRODUCTION_SAFE").allowed,false);if(old===undefined)delete process.env.SYNTHETIC_MONITORING_ENABLED;else process.env.SYNTHETIC_MONITORING_ENABLED=old;if(oldProvider===undefined)delete process.env.FULFILLMENT_PROVIDER_MODE;else process.env.FULFILLMENT_PROVIDER_MODE=oldProvider;});

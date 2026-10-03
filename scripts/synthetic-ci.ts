@@ -1,0 +1,11 @@
+import assert from "node:assert/strict";
+import { evaluateSyntheticSafety } from "../lib/synthetic/safety";
+import { WORKFLOW_REGISTRY, validateWorkflowRegistry } from "../lib/synthetic/registry";
+assert.deepEqual(validateWorkflowRegistry(),[]);
+assert(WORKFLOW_REGISTRY.some(w=>w.id==="STOREFRONT_AVAILABILITY"&&w.productionSafe));
+assert(WORKFLOW_REGISTRY.some(w=>w.id==="PAYMENT_SUCCESS_HANDLING"&&!w.productionSafe));
+const original=process.env.SYNTHETIC_MONITORING_ENABLED;
+delete process.env.SYNTHETIC_MONITORING_ENABLED;
+assert.equal(evaluateSyntheticSafety("PRODUCTION_SAFE").allowed,false);
+if(original!==undefined) process.env.SYNTHETIC_MONITORING_ENABLED=original;
+console.log("Synthetic CI safety validation passed.");
