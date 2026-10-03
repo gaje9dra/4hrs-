@@ -28,6 +28,7 @@ CREATE TABLE "ContentItem" (
   "translationStatus" "ContentTranslationStatus" NOT NULL DEFAULT 'ORIGINAL',
   "sourceContentId" UUID,
   "sourceVersion" INTEGER,
+  "position" INTEGER NOT NULL DEFAULT 0,
   "createdByAdminId" UUID NOT NULL,
   "updatedByAdminId" UUID NOT NULL,
   "publishedByAdminId" UUID,
@@ -41,6 +42,7 @@ CREATE TABLE "ContentItem" (
 );
 CREATE UNIQUE INDEX "ContentItem_type_locale_slug_key" ON "ContentItem"("type","locale","slug");
 CREATE INDEX "ContentItem_status_locale_type_idx" ON "ContentItem"("status","locale","type");
+CREATE INDEX "ContentItem_type_locale_status_position_idx" ON "ContentItem"("type","locale","status","position");
 CREATE INDEX "ContentItem_publicationStartAt_publicationEndAt_idx" ON "ContentItem"("publicationStartAt","publicationEndAt");
 CREATE INDEX "ContentItem_sourceContentId_translationStatus_idx" ON "ContentItem"("sourceContentId","translationStatus");
 CREATE INDEX "ContentItem_updatedAt_idx" ON "ContentItem"("updatedAt");
