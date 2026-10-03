@@ -12,6 +12,9 @@ export const dynamic="force-dynamic";export const revalidate=0;
 export default async function CustomerDetailPage({params}:{params:Promise<{customerId:string}>}){
  const context=await requireAdmin(undefined,"customers.read");const {customerId}=await params;let detail;
  try{detail=await getAdminCustomerDetail(customerId,context.permissions);}catch(error){if(error instanceof Error&&"code" in error&&error.code==="NOT_FOUND")notFound();throw error;}
+ const communicationPreferenceData=context.permissions.has("communication.preference.read")?await getCustomerCommunicationPreferences(detail.customer.id):null;
+ const marketingEmailPreference=communicationPreferenceData?.find((item)=>item.category==="MARKETING_PROMOTIONAL"&&item.channel==="EMAIL");
+ const communicationAudit=context.permissions.has("communication.preference.audit.read")?await db.customerCommunicationPreferenceAudit.findMany({where:{customerId:detail.customer.id},orderBy:[{createdAt:"desc"},{id:"desc"}],take:100,select:{category:true,channel:true,previousState:true,newState:true,source:true,actorType:true,correlationId:true,reason:true,createdAt:true}}):null;
  return <section className="space-y-7">
   <div><Link href="/admin/customers" className="font-black uppercase underline">← Customers</Link></div>
   <header className="border-4 border-black bg-[#f7d51d] p-6 shadow-[8px_8px_0_0_#000]"><p className="text-xs font-black uppercase tracking-[0.2em]">Customer detail</p><h2 className="mt-2 text-4xl font-black uppercase">{detail.customer.displayName||"Unnamed customer"}</h2><p className="mt-2 break-all font-bold">{detail.customer.email}</p><p className="mt-1 text-sm">{detail.customer.id} · {detail.customer.status} · {detail.customer.emailVerifiedAt?"Verified":"Unverified"}</p></header>
