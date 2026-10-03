@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { Prisma, type GovernanceControlStatus, type GovernanceEvidenceType, type GovernanceExceptionStatus } from "@prisma/client";
 import { db } from "@/lib/db/client";
-import { auditAdminAction } from "@/lib/admin/audit";
+import { auditAdminAction, recordAdminAudit } from "@/lib/admin/audit";
 import type { AdminAuthorizationContext } from "@/lib/admin/authorization";
 import { validateServerEnvironment } from "@/lib/config/env";
 
@@ -172,7 +172,29 @@ export async function verifyGovernanceControl(controlKey: string, actorAdminId?:
     await tx.governanceControl.update({ where:{ id:control.id }, data:{ status, lastVerifiedAt:new Date(), version:{ increment:1 } } });
     await tx.governanceControlEvent.create({ data:{ controlId:control.id,type:verification.result==="PASS"?"VERIFIED":verification.result==="FAIL"?"FAILED":verification.result==="BLOCKED"?"BLOCKED":"REVIEWED",actorAdminId:actorAdminId ?? null,previousStatus:current.status,newStatus:status,reason:verification.details.reason ? String(verification.details.reason) : verification.result,correlationId:correlationId ?? null,metadata:sanitizeGovernanceMetadata({ method:verification.method,durationMs }) } });
   });
+  if (actorAdminId) await recordAdminAudit({ actorAdminId, action: "GOVERNANCE_CONTROL_VERIFIED", resourceType: "GovernanceControl", resourceId: control.id, success: verification.result === "PASS", reason: verification.details.reason ? String(verification.details.reason) : verification.result, correlationId });
   return { ...verification, durationMs, status };
+}
+
+export async function updateGovernanceControl(context: AdminAuthorizationContext, input: { id:string; expectedVersion:number; description?:string; ownerRole?:string; criticality?:string; applicability?:string; verificationMethod?:string; nextReviewAt?:Date|null }) {
+  if (!Number.isInteger(input.expectedVersion) || input.expectedVersion < 1) throw new Error("Expected control version is invalid.");
+  const updated = await db.$transaction(async (tx) => {
+    const current = await tx.governanceControl.findUnique({ where:{ id:input.id } });
+    if (!current) throw new Error("Governance control was not found.");
+    if (current.version !== input.expectedVersion) throw new Error("Governance control changed concurrently. Refresh and retry.");
+    const data: Prisma.GovernanceControlUpdateInput = { version:{ increment:1 } };
+    if (input.description !== undefined) data.description = input.description.trim().slice(0,2000);
+    if (input.ownerRole !== undefined) data.ownerRole = input.ownerRole.trim().slice(0,120);
+    if (input.criticality !== undefined) data.criticality = input.criticality as never;
+    if (input.applicability !== undefined) data.applicability = input.applicability as never;
+    if (input.verificationMethod !== undefined) data.verificationMethod = input.verificationMethod.trim().slice(0,500);
+    if (input.nextReviewAt !== undefined) data.nextReviewAt = input.nextReviewAt;
+    const row = await tx.governanceControl.update({ where:{ id:input.id }, data });
+    await tx.governanceControlEvent.create({ data:{ controlId:row.id,type:"REVIEWED",actorAdminId:context.adminUser.id,reason:"Governance control metadata updated.",metadata:sanitizeGovernanceMetadata({ expectedVersion:input.expectedVersion }) } });
+    return row;
+  });
+  await auditAdminAction(context,{action:"GOVERNANCE_CONTROL_UPDATED",resourceType:"GovernanceControl",resourceId:updated.id,success:true,reason:"Control metadata updated",metadata:{expectedVersion:input.expectedVersion}});
+  return updated;
 }
 
 export async function listGovernanceControls(options: { status?: GovernanceControlStatus; criticality?: string; domain?: string; limit?: number } = {}) {
