@@ -363,6 +363,7 @@ model Customer {
   displayName     String?              @db.VarChar(120)
   status          CustomerAccountStatus @default(ACTIVE)
   emailVerifiedAt DateTime?
+  anonymizedAt DateTime?
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
   credential      CustomerCredential?
