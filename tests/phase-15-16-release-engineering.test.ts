@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { publicReleaseIdentity, readServerEnvironment, validateServerEnvironment } from "@/lib/config/env";
 
-const original = { ...process.env };
+const original = { ...process.env };\n\nfunction setNodeEnv(value: string) {\n  Object.defineProperty(process.env, "NODE_ENV", { value, writable: true, configurable: true, enumerable: true });\n}
 
 function restoreEnvironment() {
   for (const key of Object.keys(process.env)) {
@@ -17,7 +17,7 @@ function restoreEnvironment() {
 test.afterEach(restoreEnvironment);
 
 test("runtime environment accepts CI-safe PostgreSQL configuration", () => {
-  process.env.NODE_ENV = "test";
+  setNodeEnv("test");
   process.env.DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/fourhrs_test?schema=public";
   process.env.NEXT_PUBLIC_SITE_URL = "https://example.test";
   process.env.APP_VERSION = "15.16-test";
@@ -30,7 +30,7 @@ test("runtime environment accepts CI-safe PostgreSQL configuration", () => {
 });
 
 test("production requires an HTTPS public site origin", () => {
-  process.env.NODE_ENV = "production";
+  setNodeEnv("production");
   process.env.DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/fourhrs";
   delete process.env.NEXT_PUBLIC_SITE_URL;
   assert.throws(() => readServerEnvironment(), /NEXT_PUBLIC_SITE_URL is required/);
@@ -40,7 +40,7 @@ test("production requires an HTTPS public site origin", () => {
 });
 
 test("live fulfillment requires its referenced secret", () => {
-  process.env.NODE_ENV = "test";
+  setNodeEnv("test");
   process.env.DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/fourhrs";
   process.env.FULFILLMENT_PROVIDER_ENABLED = "true";
   process.env.FULFILLMENT_PROVIDER_MODE = "live";
@@ -50,7 +50,7 @@ test("live fulfillment requires its referenced secret", () => {
 });
 
 test("private release identity does not expose commit or deployment identifiers", () => {
-  process.env.NODE_ENV = "test";
+  setNodeEnv("test");
   process.env.DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/fourhrs";
   process.env.APP_VERSION = "15.16-test";
   process.env.COMMIT_SHA = "secret-internal-sha";
