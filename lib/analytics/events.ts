@@ -30,6 +30,8 @@ export const ANALYTICS_EVENT_CATALOG = {
   ACCOUNT_CREATED: { version: 1, properties: [] },
   ACCOUNT_LOGIN: { version: 1, properties: [] },
   EXPERIMENT_EXPOSURE: { version: 1, properties: ["experimentKey", "experimentVersion", "variantKey", "subjectType"] },
+  CONTENT_VIEWED: { version: 1, properties: ["contentId", "contentType", "locale"] },
+  CONTENT_CTA_CLICKED: { version: 1, properties: ["contentId", "contentType", "blockType"] },
 } as const;
 
 export type AnalyticsEventName = keyof typeof ANALYTICS_EVENT_CATALOG;
