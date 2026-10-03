@@ -58,9 +58,10 @@ export async function POST(request: Request) {
     if (Object.keys(body).some((key) => key !== "state") || (body.state !== "OPTED_IN" && body.state !== "OPTED_OUT")) {
       return NextResponse.json({ error: { code: "INVALID_REQUEST", message: "Analytics consent state is invalid." } }, { status: 400 });
     }
-    if (current) await setAnalyticsConsent({ customerId: current.customer.id, state: body.state });
-    const response = NextResponse.json({ state: body.state });
-    response.cookies.set(ANALYTICS_CONSENT_COOKIE, body.state, cookieOptions());
+    const state = body.state as "OPTED_IN" | "OPTED_OUT";
+    if (current) await setAnalyticsConsent({ customerId: current.customer.id, state });
+    const response = NextResponse.json({ state });
+    response.cookies.set(ANALYTICS_CONSENT_COOKIE, state, cookieOptions());
     return response;
   } catch (error) {
     return NextResponse.json({ error: { code: "CONSENT_ERROR", message: error instanceof Error ? error.message : "Analytics consent could not be updated safely." } }, { status: 400 });
