@@ -17,7 +17,7 @@ export async function runIntegrityAudit(): Promise<IntegrityFinding[]> {
       items: { select: { id: true, quantity: true, unitPrice: true, lineTotal: true } },
       payment: { select: { id: true, amount: true, status: true } },
       fulfillment: { select: { id: true, items: { select: { id: true, orderItemId: true, quantity: true } } } },
-      returnRequests: { select: { id: true, items: { select: { orderItemId: true, quantity: true } } } },
+      returnRequests: { select: { id: true, items: { select: { id: true, orderItemId: true, quantity: true } } } },
     },
     orderBy: { createdAt: "asc" },
     take: 10000,
