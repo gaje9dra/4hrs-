@@ -474,7 +474,7 @@ export async function listPublishedEditorialForReference(
 }
 
 export async function resolvePublishedContentPresentation(
-  results: Array<{ item: { id: string }; snapshot: ContentSnapshot; version: number }>,
+  results: Array<{ item: { id: string; type: string; locale: string }; snapshot: ContentSnapshot; version: number }>,
 ) {
   const mediaIds = new Set<string>();
   const productIds = new Set<string>();
