@@ -6,6 +6,7 @@ import { Header } from '@/components/layout/header'
 import { SkipLink } from '@/components/layout/skip-link'
 import { Footer } from '@/components/layout/footer'
 import { WebVitalsTelemetry } from '@/components/observability/web-vitals'
+import { ClientErrorTelemetry } from '@/components/observability/client-errors'
 import { getStorefrontNavigation, storefrontNavigationToFooterGroups } from '@/lib/storefront/navigation'
 import { getSiteOrigin, siteConfig } from '@/config/site'
 import { organizationJsonLd, websiteJsonLd, serializeJsonLd } from '@/lib/seo/structured-data'
@@ -31,7 +32,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   return (
     <html lang="en"><body className={`${outfit.variable} antialiased`}>
       <SkipLink /><Header items={navigation} /><main id="main-content" tabIndex={-1}>{children}</main><Footer navigationGroups={footerGroups} />
-      <WebVitalsTelemetry />
+      <WebVitalsTelemetry /><ClientErrorTelemetry />
       {identityJsonLd.map((value) => <script key={value['@type'] as string} nonce={nonce ?? undefined} type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(value) }} />)}
     </body></html>
   )
