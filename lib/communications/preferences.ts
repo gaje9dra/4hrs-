@@ -54,13 +54,13 @@ export type CommunicationPreferenceDto = {
 };
 
 export async function getCustomerCommunicationPreferences(customerId: string): Promise<CommunicationPreferenceDto[]> {
-  const client = input.client ?? db;
+  const client = db;
   const customer = await client.customer.findUnique({ where: { id: customerId }, select: { id: true, status: true, anonymizedAt: true } });
   if (!customer || customer.anonymizedAt || customer.status !== "ACTIVE") {
     throw new CommunicationPreferenceError("CUSTOMER_NOT_FOUND", "Customer could not be found.");
   }
 
-  const rows = await db.customerCommunicationPreference.findMany({
+  const rows = await client.customerCommunicationPreference.findMany({
     where: { customerId },
     orderBy: [{ category: "asc" }, { channel: "asc" }],
     select: { category: true, channel: true, state: true, version: true, source: true, updatedAt: true },
@@ -90,7 +90,8 @@ export async function evaluateNotificationEligibility(input: {
   if (input.category === "REQUIRED_TRANSACTIONAL") return { eligible: true, reason: "REQUIRED_TRANSACTIONAL" };
   if (input.channel !== "EMAIL") return { eligible: false, reason: "CHANNEL_UNAVAILABLE" };
 
-  const customer = await db.customer.findUnique({ where: { id: input.customerId }, select: { status: true, anonymizedAt: true } });
+  const client = input.client ?? db;
+  const customer = await client.customer.findUnique({ where: { id: input.customerId }, select: { status: true, anonymizedAt: true } });
   if (!customer || customer.anonymizedAt || customer.status !== "ACTIVE") return { eligible: false, reason: "CUSTOMER_DELETED" };
 
   const preference = await client.customerCommunicationPreference.findUnique({
@@ -125,6 +126,7 @@ export async function updateCustomerCommunicationPreference(input: {
   if (input.state !== "OPTED_IN" && input.state !== "OPTED_OUT") {
     throw new CommunicationPreferenceError("INVALID_STATE", "The communication preference state is invalid.");
   }
+  const state: CommunicationPreferenceState = input.state;
   if (!Number.isInteger(input.expectedVersion) || Number(input.expectedVersion) < 0) {
     throw new CommunicationPreferenceError("PREFERENCE_CONFLICT", "A current preference version is required.");
   }
@@ -162,7 +164,7 @@ export async function updateCustomerCommunicationPreference(input: {
         throw new CommunicationPreferenceError("PREFERENCE_CONFLICT", "The communication preference changed elsewhere. Refresh and try again.");
       }
 
-      if (current?.state === input.state) {
+      if (current && current.state === state) {
         return { ...current, updatedAt: current.updatedAt.toISOString() };
       }
 
@@ -170,13 +172,13 @@ export async function updateCustomerCommunicationPreference(input: {
       const updated = current
         ? (await tx.customerCommunicationPreference.updateMany({
             where: { customerId: input.customerId, category, channel, version: expectedVersion },
-            data: { state: input.state, source, version: nextVersion },
+            data: { state, source, version: nextVersion },
           }), await tx.customerCommunicationPreference.findUniqueOrThrow({
             where: { customerId_category_channel: { customerId: input.customerId, category, channel } },
             select: { category: true, channel: true, state: true, version: true, source: true, updatedAt: true },
           }))
         : await tx.customerCommunicationPreference.create({
-            data: { customerId: input.customerId, category, channel, state: input.state, source, version: 1 },
+            data: { customerId: input.customerId, category, channel, state, source, version: 1 },
             select: { category: true, channel: true, state: true, version: true, source: true, updatedAt: true },
           });
 
@@ -186,7 +188,7 @@ export async function updateCustomerCommunicationPreference(input: {
           category,
           channel,
           previousState: current?.state ?? null,
-          newState: input.state,
+          newState: state,
           source,
           actorType,
           correlationId: input.correlationId?.slice(0, 128) ?? null,
@@ -194,7 +196,7 @@ export async function updateCustomerCommunicationPreference(input: {
           reason: input.reason?.trim().slice(0, 1000) || null,
         },
       });
-      incrementMetric("communication_preference_operations_total" as never, { operation: input.state === "OPTED_IN" ? "opt_in" : "opt_out", category, channel });
+      incrementMetric("communication_preference_operations_total" as never, { operation: state === "OPTED_IN" ? "opt_in" : "opt_out", category, channel });
       return { ...updated, updatedAt: updated.updatedAt.toISOString() };
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   } catch (error) {
