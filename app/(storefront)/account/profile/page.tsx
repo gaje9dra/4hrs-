@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { Container } from "@/components/layout/container";
 import { CustomerProfileForm } from "@/components/storefront/customer-profile-form";
 import { CustomerPrivacyControls } from "@/components/storefront/customer-privacy-controls";
+import { CustomerSecurityControls } from "@/components/storefront/customer-security-controls";
 import { CustomerCommunicationPreferences } from "@/components/storefront/customer-communication-preferences";
 import { requireCurrentCustomer } from "@/lib/auth/context";
 import { getCustomerCommunicationPreferences } from "@/lib/communications/preferences";
@@ -37,6 +38,7 @@ export default async function AccountProfilePage() {
       <CustomerProfileForm initialCustomer={current.customer} />
       <CustomerCommunicationPreferences initialPreference={{ category: "MARKETING_PROMOTIONAL", channel: "EMAIL", state: marketingEmailPreference.state, version: marketingEmailPreference.version }} />
       <CustomerPrivacyControls />
+      <CustomerSecurityControls />
     </Container>
   );
 }
