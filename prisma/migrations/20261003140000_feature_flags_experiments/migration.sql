@@ -85,28 +85,10 @@ CREATE INDEX "ExperimentAssignment_customerId_assignedAt_idx" ON "ExperimentAssi
 CREATE INDEX "ExperimentAssignment_expiresAt_idx" ON "ExperimentAssignment"("expiresAt");
 CREATE INDEX "ExperimentAssignment_experimentId_variantKey_idx" ON "ExperimentAssignment"("experimentId", "variantKey");
 
-CREATE TABLE "FeatureFlagAssignment" (
-  "id" UUID NOT NULL DEFAULT gen_random_uuid(),
-  "flagId" UUID NOT NULL,
-  "subjectHash" VARCHAR(64) NOT NULL,
-  "subjectType" "ExperimentSubjectType" NOT NULL,
-  "customerId" UUID,
-  "variantKey" VARCHAR(64),
-  "assignedEnabled" BOOLEAN NOT NULL,
-  "flagVersion" INTEGER NOT NULL,
-  "assignedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT "FeatureFlagAssignment_pkey" PRIMARY KEY ("id")
-);
-CREATE UNIQUE INDEX "FeatureFlagAssignment_flagId_subjectHash_key" ON "FeatureFlagAssignment"("flagId", "subjectHash");
-CREATE INDEX "FeatureFlagAssignment_customerId_assignedAt_idx" ON "FeatureFlagAssignment"("customerId", "assignedAt");
-CREATE INDEX "FeatureFlagAssignment_flagId_assignedAt_idx" ON "FeatureFlagAssignment"("flagId", "assignedAt");
-
 ALTER TABLE "FeatureFlagVariant" ADD CONSTRAINT "FeatureFlagVariant_flagId_fkey" FOREIGN KEY ("flagId") REFERENCES "FeatureFlag"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "ExperimentVariant" ADD CONSTRAINT "ExperimentVariant_experimentId_fkey" FOREIGN KEY ("experimentId") REFERENCES "Experiment"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "ExperimentAssignment" ADD CONSTRAINT "ExperimentAssignment_experimentId_fkey" FOREIGN KEY ("experimentId") REFERENCES "Experiment"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "ExperimentAssignment" ADD CONSTRAINT "ExperimentAssignment_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "Customer"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "FeatureFlagAssignment" ADD CONSTRAINT "FeatureFlagAssignment_flagId_fkey" FOREIGN KEY ("flagId") REFERENCES "FeatureFlag"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "FeatureFlagAssignment" ADD CONSTRAINT "FeatureFlagAssignment_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "Customer"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 INSERT INTO "AdminPermission" ("id","key","description","createdAt","updatedAt")
 VALUES
