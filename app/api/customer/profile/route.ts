@@ -1,9 +1,10 @@
 import { requireCurrentCustomer } from "@/lib/auth/context";
 import { isAuthenticationError } from "@/lib/auth/errors";
-import { assertSameOrigin, authJson, readAuthJson } from "@/lib/auth/http";
+import { assertSameOrigin, readAuthJson } from "@/lib/auth/http";
 import { CustomerIdentityError } from "@/lib/customer/errors";
 import { createCustomerProfileService } from "@/lib/customer/service";
-import { validateDisplayName } from "@/lib/customer/validation";\nimport { apiResponse, noStoreClassification } from "@/lib/api/governance";
+import { validateDisplayName } from "@/lib/customer/validation";
+import { apiResponse, noStoreClassification } from "@/lib/api/governance";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
