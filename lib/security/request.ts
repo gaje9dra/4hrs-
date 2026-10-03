@@ -21,7 +21,7 @@ export function isTrustedStateChangingRequest(request: Request): boolean {
   if (origin) return expectedOrigin ? origin === expectedOrigin : origin === new URL(request.url).origin;
 
   const fetchSite = request.headers.get("sec-fetch-site")?.trim().toLowerCase();
-  if (fetchSite && fetchSite !== "same-origin" && fetchSite !== "none") return false;
+  if (fetchSite === "cross-site" || fetchSite === "same-site") return false;
 
   return true;
 }
