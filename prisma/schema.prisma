@@ -2174,6 +2174,7 @@ model CostResource {
   updatedAt          DateTime               @updatedAt
   metrics            CostResourceMetric[]
   limits             CapacityLimit[]
+  anomalies          CostAnomaly[]
 
   @@index([category, environment, active])
   @@index([measurementStatus, environment])
