@@ -274,6 +274,9 @@ const publicCatalogSelect = {
   },
 } satisfies Prisma.ProductSelect;
 
+// Product-card/listing DTOs only need the canonical display price, primary image,
+// and variant inventory state. Keep this projection deliberately narrow so public
+// catalog grids do not hydrate unrelated taxonomy or option data.
 const publicCatalogListSelect = {
   id: true,
   title: true,
@@ -282,8 +285,6 @@ const publicCatalogListSelect = {
   compareAtPrice: true,
   currency: true,
   status: true,
-  createdAt: true,
-  updatedAt: true,
   images: {
     where: { productId: { not: null } },
     orderBy: [{ isPrimary: "desc" as const }, { sortOrder: "asc" as const }, { id: "asc" as const }],
@@ -292,9 +293,7 @@ const publicCatalogListSelect = {
   },
   variants: {
     where: { status: "ACTIVE" },
-    orderBy: [{ createdAt: "asc" as const }, { id: "asc" as const }],
     select: {
-      id: true,
       price: true,
       compareAtPrice: true,
       inventory: {
@@ -302,9 +301,6 @@ const publicCatalogListSelect = {
       },
     },
   },
-  categories: { select: { category: { select: { id: true, name: true, slug: true } } } },
-  collections: { select: { collection: { select: { id: true, name: true, slug: true } } } },
-  tags: { select: { tag: { select: { id: true, name: true, slug: true } } } },
 } satisfies Prisma.ProductSelect;
 
 const publicCatalogSearchListSelect = publicCatalogListSelect;
