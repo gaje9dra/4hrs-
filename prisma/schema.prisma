@@ -387,7 +387,6 @@ model Customer {
   communicationPreferenceAudits CustomerCommunicationPreferenceAudit[]
   communicationUnsubscribeTokens CommunicationUnsubscribeToken[]
   caseAssignments CaseAssignment[]
-  featureFlagAssignments FeatureFlagAssignment[]
   caseAuditActors CaseAuditEvent[] @relation("CaseAuditActor")
   adminUser        AdminUser?
   @@index([status])
