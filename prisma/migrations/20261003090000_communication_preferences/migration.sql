@@ -38,6 +38,7 @@ CREATE TABLE "CustomerCommunicationPreferenceAudit" (
   "actorType" "CommunicationPreferenceActorType" NOT NULL,
   "correlationId" VARCHAR(128),
   "idempotencyKey" VARCHAR(255),
+  "reason" VARCHAR(1000),
   "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT "CustomerCommunicationPreferenceAudit_pkey" PRIMARY KEY ("id")
 );
