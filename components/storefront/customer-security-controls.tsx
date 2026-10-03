@@ -47,7 +47,22 @@ export function CustomerSecurityControls() {
     }
   }
 
-  useEffect(() => {\n    let cancelled = false;\n    fetch("/api/customer/security/sessions", { credentials: "same-origin", cache: "no-store" })\n      .then(async (response) => {\n        const body = await response.json().catch(() => null) as { sessions?: Session[]; error?: { message?: string } } | null;\n        if (!response.ok || !body?.sessions) throw new Error(body?.error?.message ?? "Sessions could not be loaded.");\n        if (!cancelled) setSessions(body.sessions);\n      })\n      .catch((cause) => {\n        if (!cancelled) setSessionError(cause instanceof Error ? cause.message : "Sessions could not be loaded.");\n      })\n      .finally(() => {\n        if (!cancelled) setLoadingSessions(false);\n      });\n    return () => { cancelled = true; };\n  }, []);
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/customer/security/sessions", { credentials: "same-origin", cache: "no-store" })
+      .then(async (response) => {
+        const body = await response.json().catch(() => null) as { sessions?: Session[]; error?: { message?: string } } | null;
+        if (!response.ok || !body?.sessions) throw new Error(body?.error?.message ?? "Sessions could not be loaded.");
+        if (!cancelled) setSessions(body.sessions);
+      })
+      .catch((cause) => {
+        if (!cancelled) setSessionError(cause instanceof Error ? cause.message : "Sessions could not be loaded.");
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingSessions(false);
+      });
+    return () => { cancelled = true; };
+  }, []);
 
   async function changePassword(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
