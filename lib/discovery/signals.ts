@@ -58,7 +58,7 @@ export async function getDiscoverySignals(input: {
   const started = performance.now();
 
   try {
-    const rows = await db.$queryRaw<SignalEventRow[]>\`
+    const rows = await db.$queryRaw<SignalEventRow[]>`
       SELECT
         COALESCE(properties->>'productId','') AS "productId",
         COUNT(*) FILTER (WHERE "eventName" = 'PRODUCT_VIEWED')::bigint AS views,
@@ -73,7 +73,7 @@ export async function getDiscoverySignals(input: {
       GROUP BY properties->>'productId'
       ORDER BY "addToCarts" DESC, views DESC, "productId" ASC
       LIMIT 200
-    \`;
+    `;
     const allowed = input.productIds ? new Set(input.productIds.slice(0, 200)) : null;
     const signals = rows.filter((row) => /^[0-9a-fA-F-]{36}$/.test(row.productId) && (!allowed || allowed.has(row.productId))).map(scoreRow);
     incrementMetric("discovery_signal_calculations_total", { operation: "signals", environment: input.environment ?? "unknown" });
