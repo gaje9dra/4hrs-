@@ -460,6 +460,22 @@ export async function processScheduledContent(limit = 50) {
   return results;
 }
 
+export async function resolvePublishedReferenceLinks(snapshot: ContentSnapshot) {
+  const productIds = snapshot.body.flatMap((block) => block.type === "product" ? [block.productId] : []);
+  const categoryIds = snapshot.body.flatMap((block) => block.type === "category" ? [block.categoryId] : []);
+  const collectionIds = snapshot.body.flatMap((block) => block.type === "collection" ? [block.collectionId] : []);
+  const [products, categories, collections] = await Promise.all([
+    productIds.length ? db.product.findMany({ where: { id: { in: [...new Set(productIds)] }, status: "ACTIVE" }, select: { id: true, slug: true } }) : [],
+    categoryIds.length ? db.category.findMany({ where: { id: { in: [...new Set(categoryIds)] }, status: "ACTIVE" }, select: { id: true, slug: true } }) : [],
+    collectionIds.length ? db.collection.findMany({ where: { id: { in: [...new Set(collectionIds)] }, status: "ACTIVE" }, select: { id: true, slug: true } }) : [],
+  ]);
+  const links = new Map<string, string>();
+  products.forEach((item) => links.set(item.id, "/product/" + encodeURIComponent(item.slug)));
+  categories.forEach((item) => links.set(item.id, "/category/" + encodeURIComponent(item.slug)));
+  collections.forEach((item) => links.set(item.id, "/collection/" + encodeURIComponent(item.slug)));
+  return links;
+}
+
 export async function resolvePublishedMedia(snapshot: ContentSnapshot) {
   if (!snapshot.mediaReferences.length) return new Map<string, { url: string; altText: string | null }>();
   const media = await db.productImage.findMany({
