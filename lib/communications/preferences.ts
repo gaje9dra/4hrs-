@@ -105,7 +105,7 @@ export async function getCustomerCommunicationPreferenceAudit(customerId: string
   });
   return rows.map((row) => ({ ...row, createdAt: row.createdAt.toISOString() }));
 }
-\nexport async function evaluateNotificationEligibility(input: {
+export async function evaluateNotificationEligibility(input: {
   customerId: string;
   category: CommunicationCategory;
   channel: CommunicationChannel;
