@@ -148,10 +148,11 @@ export class DatabaseSearchAdapter implements CatalogSearchProvider {
 
 export function normalizeCatalogSearchQueryParameter(value: string): string {
   const normalized = value
+    .normalize("NFKC")
     .replace(/[\u0000-\u001F\u007F]/g, " ")
     .trim()
     .replace(/\s+/g, " ")
-    .toLowerCase();
+    .toLocaleLowerCase("en-IN");
 
   if (!normalized) {
     throw new CatalogServiceError("INVALID_QUERY", "Search query cannot be empty.");
