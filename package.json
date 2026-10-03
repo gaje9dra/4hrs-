@@ -12,7 +12,9 @@
     "db:migrate": "prisma migrate deploy",
     "test": "prisma migrate deploy && tsx --test --test-concurrency=1",
     "postinstall": "prisma generate",
-    "admin:provision": "tsx scripts/provision-admin.ts"
+    "admin:provision": "tsx scripts/provision-admin.ts",
+    "recovery:validate": "tsx scripts/recovery-validate.ts",
+    "recovery:drill": "tsx scripts/recovery-drill.ts"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.1.14",
