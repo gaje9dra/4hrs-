@@ -84,8 +84,9 @@ export async function PUT(request: Request) {
     }
     limiter.consume(rateLimitKey(request, current?.customer.id), 120, 60 * 60 * 1000);
     const locale = typeof body.locale === "string" ? body.locale : null;
+    const eventId = typeof body.eventId === "string" ? body.eventId : undefined;
     const result = await recordAnalyticsEvent({
-      eventId: body.eventId,
+      eventId,
       eventName: body.eventName,
       eventVersion: body.eventVersion,
       occurredAt: body.occurredAt,
