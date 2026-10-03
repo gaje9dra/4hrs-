@@ -116,6 +116,7 @@ export async function updateCustomerCommunicationPreference(input: {
   source?: CommunicationPreferenceSource;
   actorType?: CommunicationPreferenceActorType;
   correlationId?: string | null;
+  reason?: string | null;
 }): Promise<CommunicationPreferenceDto> {
   const category = normalizePreferenceCategory(input.category);
   const channel = normalizePreferenceChannel(input.channel);
@@ -188,6 +189,7 @@ export async function updateCustomerCommunicationPreference(input: {
           actorType,
           correlationId: input.correlationId?.slice(0, 128) ?? null,
           idempotencyKey,
+          reason: input.reason?.trim().slice(0, 1000) || null,
         },
       });
       incrementMetric("communication_preference_operations_total" as never, { operation: input.state === "OPTED_IN" ? "opt_in" : "opt_out", category, channel });
