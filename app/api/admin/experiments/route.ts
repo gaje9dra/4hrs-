@@ -1,7 +1,7 @@
 import { requireAdmin, requireHighRiskReason } from "@/lib/admin/authorization";
 import { adminErrorResponse, adminJson, assertAdminSameOrigin, readAdminJson } from "@/lib/admin/http";
 import { auditAdminAction } from "@/lib/admin/audit";
-import { createExperiment, listExperiments, normalizeEnvironment } from "@/lib/feature-flags/service";
+import { createExperiment, listExperiments } from "@/lib/feature-flags/service";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
