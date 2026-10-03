@@ -1191,6 +1191,7 @@ model CustomerCommunicationPreferenceAudit {
   actorType      CommunicationPreferenceActorType
   correlationId  String?                          @db.VarChar(128)
   idempotencyKey  String?                          @unique @db.VarChar(255)
+  reason          String?                          @db.VarChar(1000)
   createdAt      DateTime                         @default(now())
   customer       Customer                         @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
