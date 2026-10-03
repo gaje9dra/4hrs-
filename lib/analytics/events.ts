@@ -116,7 +116,7 @@ export function validateAnalyticsEvent(input: {
   if (!input.properties || typeof input.properties !== "object" || Array.isArray(input.properties)) throw new AnalyticsError("INVALID_PROPERTIES", "Analytics properties must be an object.");
   forbiddenPropertyScan(input.properties);
   const properties = sanitizeValue(input.properties) as Record<string, unknown>;
-  const allowed = new Set(definition.properties);
+  const allowed = new Set<string>(definition.properties);
   for (const key of Object.keys(properties)) if (!allowed.has(key)) throw new AnalyticsError("INVALID_PROPERTIES", "Analytics event contains an unsupported property.");
   const serialized = JSON.stringify(properties);
   if (byteLength(serialized) > ANALYTICS_MAX_PAYLOAD_BYTES) throw new AnalyticsError("PAYLOAD_TOO_LARGE", "Analytics payload is too large.");
@@ -184,7 +184,7 @@ export async function recordAnalyticsEvent(input: {
         sessionId,
         customerId: input.customerId ?? null,
         locale: normalizedLocale,
-        properties: validated.properties,
+        properties: validated.properties as Prisma.InputJsonValue,
         source: input.source,
         expiresAt,
       },
