@@ -54,7 +54,7 @@ export function buildAnonymizedCustomerEmail(customerId: string): string {
 }
 
 async function assertExportWithinBound(customerId: string, tx: Prisma.TransactionClient) {
-  const [addresses, orders, payments, returns, cancellations, cases, notifications, communicationPreferences] = await Promise.all([
+  const [addresses, orders, payments, returns, cancellations, cases, notifications] = await Promise.all([
     tx.customerAddress.count({ where: { customerId } }),
     tx.order.count({ where: { customerId } }),
     tx.payment.count({ where: { customerId } }),
@@ -94,7 +94,7 @@ async function buildExport(customerId: string, tx: Prisma.TransactionClient): Pr
 
   await assertExportWithinBound(customerId, tx);
 
-  const [addresses, orders, payments, returns, cancellations, cases, notifications] = await Promise.all([
+  const [addresses, orders, payments, returns, cancellations, cases, notifications, communicationPreferences] = await Promise.all([
     tx.customerAddress.findMany({
       where: { customerId },
       orderBy: [{ createdAt: "asc" }, { id: "asc" }],
@@ -288,7 +288,12 @@ async function buildExport(customerId: string, tx: Prisma.TransactionClient): Pr
       where: { customerId },
       orderBy: [{ category: "asc" }, { channel: "asc" }],
       select: { category: true, channel: true, state: true, source: true, version: true, createdAt: true, updatedAt: true },
+    })    tx.customerCommunicationPreference.findMany({
+      where: { customerId },
+      orderBy: [{ category: "asc" }, { channel: "asc" }],
+      select: { category: true, channel: true, state: true, source: true, version: true, createdAt: true, updatedAt: true },
     }),
+,
   ]);
 
   return {
