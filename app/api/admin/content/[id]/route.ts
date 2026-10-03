@@ -30,9 +30,10 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     assertSameOrigin(request);
     const id = (await params).id;
     const body = await request.json() as { expectedVersion?: unknown; input?: ContentInput; changeSummary?: unknown };
-    if (!Number.isInteger(body.expectedVersion) || !body.input) return json({ error: { code: "INVALID_REQUEST", message: "expectedVersion and input are required." } }, 400);
+    const expectedVersion = typeof body.expectedVersion === "number" && Number.isInteger(body.expectedVersion) ? body.expectedVersion : null;
+    if (expectedVersion === null || !body.input) return json({ error: { code: "INVALID_REQUEST", message: "expectedVersion and input are required." } }, 400);
     const changeSummary = typeof body.changeSummary === "string" ? body.changeSummary : null;
-    return json({ content: await updateContent(context, id, body.expectedVersion, body.input, changeSummary) });
+    return json({ content: await updateContent(context, id, expectedVersion, body.input, changeSummary) });
   } catch (error) {
     if (error instanceof AdminError) return adminErrorResponse(error);
     if (error instanceof ContentError) return json({ error: { code: error.code, message: error.message, details: error.details } }, error.code === "CONFLICT" ? 409 : 400);
