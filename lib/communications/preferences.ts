@@ -54,7 +54,8 @@ export type CommunicationPreferenceDto = {
 };
 
 export async function getCustomerCommunicationPreferences(customerId: string): Promise<CommunicationPreferenceDto[]> {
-  const customer = await db.customer.findUnique({ where: { id: customerId }, select: { id: true, status: true, anonymizedAt: true } });
+  const client = input.client ?? db;
+  const customer = await client.customer.findUnique({ where: { id: customerId }, select: { id: true, status: true, anonymizedAt: true } });
   if (!customer || customer.anonymizedAt || customer.status !== "ACTIVE") {
     throw new CommunicationPreferenceError("CUSTOMER_NOT_FOUND", "Customer could not be found.");
   }
@@ -84,6 +85,7 @@ export async function evaluateNotificationEligibility(input: {
   customerId: string;
   category: CommunicationCategory;
   channel: CommunicationChannel;
+  client?: typeof db | Prisma.TransactionClient;
 }): Promise<{ eligible: boolean; reason: "REQUIRED_TRANSACTIONAL" | "CUSTOMER_OPTED_OUT" | "CONSENT_NOT_PRESENT" | "CHANNEL_UNAVAILABLE" | "CUSTOMER_DELETED" }> {
   if (input.category === "REQUIRED_TRANSACTIONAL") return { eligible: true, reason: "REQUIRED_TRANSACTIONAL" };
   if (input.channel !== "EMAIL") return { eligible: false, reason: "CHANNEL_UNAVAILABLE" };
@@ -91,7 +93,7 @@ export async function evaluateNotificationEligibility(input: {
   const customer = await db.customer.findUnique({ where: { id: input.customerId }, select: { status: true, anonymizedAt: true } });
   if (!customer || customer.anonymizedAt || customer.status !== "ACTIVE") return { eligible: false, reason: "CUSTOMER_DELETED" };
 
-  const preference = await db.customerCommunicationPreference.findUnique({
+  const preference = await client.customerCommunicationPreference.findUnique({
     where: { customerId_category_channel: { customerId: input.customerId, category: input.category, channel: input.channel } },
     select: { state: true },
   });
