@@ -37,9 +37,9 @@ Secrets are never emitted by the validation script, health endpoint, or release 
 
 Node 24.21.0 is pinned by .nvmrc, package.json engines, and Netlify configuration. npm 11.6.0 is declared by packageManager, engines, and Netlify configuration.
 
-The repository currently has no committed package-lock.json. A CI-only generation run successfully produced a lockfile artifact from the existing manifest, but repository write permission prevented committing it back through the temporary generation workflow. This remains a production-readiness blocker because a committed lockfile is required for authoritative reproducible npm installs.
+The repository now contains a committed package-lock.json and CI installs with npm ci. This closes the lockfile reproducibility blocker described by the original Phase 15.16 implementation note.
 
-No dependency versions were upgraded merely for this phase. The repository's current versions are retained even where they differ from the historical locked-stack document; the existing repository state is treated as authoritative until a separately justified dependency migration is performed.
+The current package versions still differ from the historical locked-stack target. No dependency versions were changed merely to satisfy that historical target; a separately justified compatibility-tested dependency migration remains required if exact baseline alignment is still desired.
 
 ## 5. Configuration validation
 
@@ -241,7 +241,7 @@ For a release-induced incident:
 
 ## 26. Known limitations
 
-1. package-lock.json is not currently committed. CI successfully generated an artifact, but the repository workflow token could not write it back. This prevents a READY production decision.
+1. The repository now contains a committed package-lock.json and CI uses npm ci; the historical lockfile blocker is resolved.
 2. Current package versions differ from the historical locked-stack target; this phase deliberately does not perform speculative dependency upgrades.
 3. Netlify deployment verification is operationally supported through /api/health, /api/readiness, and npm run release:verify, but an external production URL is not executed by repository CI.
 4. Existing process-local rate limiting remains governed by earlier phases.
@@ -258,7 +258,7 @@ For a release-induced incident:
 
 STATUS: NOT READY
 
-The release-engineering architecture is implemented and CI validation is being applied, but the missing committed npm lockfile is a material reproducibility blocker. The phase must not claim production readiness until the lockfile is committed and CI validates against it.
+The release-engineering architecture remains implemented. The previously documented missing-lockfile blocker is no longer current because package-lock.json is committed and CI uses npm ci. Remaining readiness limitations are the separately documented dependency-baseline alignment and external production-evidence requirements.
 
 ## Final readiness gate
 
