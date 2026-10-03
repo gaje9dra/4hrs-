@@ -22,8 +22,6 @@ function mode(): "test" | "live" {
 }
 
 function baseUrl(): string {
-  const configured = process.env.QIKINK_API_BASE_URL?.trim();
-  if (configured) return configured.replace(/\/$/, "");
   return mode() === "live" ? "https://api.qikink.com" : "https://sandbox.qikink.com";
 }
 
