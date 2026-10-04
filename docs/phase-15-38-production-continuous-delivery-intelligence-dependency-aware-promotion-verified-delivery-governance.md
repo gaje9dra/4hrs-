@@ -83,3 +83,16 @@ Production completion remains dependent on repository-wide CI, migration, securi
 ## Readiness
 
 Phase 15.38 must not be marked READY FOR PHASE 15.39 until every required gate in the supplied Phase 15.38 specification is evidenced as passing.
+
+## Phase 15.38 completion addendum
+
+The completion layer closes the governance lifecycle gaps identified by the final readiness audit:
+- explicit approval request/approve/hold/block/re-evaluate transitions;
+- material-condition invalidation and bounded maintenance for stale assessments, approvals, locks and certifications;
+- immutable-after-activation policy handling across DRAFT, REVIEW, APPROVED, ACTIVE, DEPRECATED and RETIRED states;
+- structured governance-event audit records with actor, state transition, reason, policy and evidence references;
+- idempotent maintenance job execution with bounded batches;
+- privacy and cost/capacity promotion gates;
+- completion validation plus security, failure-injection and performance-oriented automated tests.
+
+The maintenance job is `npm run delivery-intelligence:maintenance`; CI enforces `delivery-intelligence:completion:validate` and the Phase 15.38 governance completion test suite. The job performs only typed database governance updates and does not execute infrastructure/provider commands.
