@@ -34,7 +34,8 @@
     "resilience:catalog:seed": "tsx scripts/resilience-catalog-seed.ts",
     "rehearsal:validate": "tsx scripts/rehearsal-validate.ts",
     "rehearsal:test": "tsx --test tests/phase-15-29-rehearsal.test.ts",
-    "improvement:validate": "tsx scripts/improvement-validate.ts"
+    "improvement:validate": "tsx scripts/improvement-validate.ts",
+    "architecture:validate": "tsx scripts/architecture-validate.ts"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.1.14",
