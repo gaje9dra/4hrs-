@@ -41,7 +41,8 @@
     "change-governance:validate": "tsx scripts/change-governance-validate.ts",
     "release-governance:validate": "tsx scripts/release-governance-validate.ts",
     "deployment-control:validate": "tsx scripts/deployment-control-validate.ts",
-    "delivery-orchestration:validate": "tsx scripts/delivery-orchestration-validate.ts"
+    "delivery-orchestration:validate": "tsx scripts/delivery-orchestration-validate.ts",
+    "delivery-intelligence:validate": "tsx scripts/delivery-intelligence-validate.ts"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.1.14",
