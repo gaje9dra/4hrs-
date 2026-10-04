@@ -64,8 +64,11 @@ export async function evaluateAutomation(policyId:string,input:EvaluationInput){
  const dryRun=Boolean(input.dryRun||policy.dryRun);
  if(dryRun){
   const targetScope=boundedScope({environment:input.environment,resourceId:input.targetResource});
-  await db.automationDryRun.create({data:{policyId,policyVersionId:version?.id??null,trigger:{fingerprint:input.triggerFingerprint,environment:input.environment},conditions:conditionsOf(policy.conditions),target:{resource:input.targetResource,scope:targetScope},proposedAction:{actions},risk,authorization:policy.authorization,expectedImpact:"No production mutation is performed.",rollbackCapability:"Simulation only; no rollback is claimed.",blastRadius:targetScope,decisionReason:reason}});
-  await db.automationSimulation.create({data:{policyId,policyVersionId:version?.id??null,input:{triggerFingerprint:input.triggerFingerprint,values:input.values,environment:input.environment,targetResource:input.targetResource},output:{conditionsPass,guards,requiresApproval,actions},synthetic:true}});
+  const conditionJson=JSON.parse(JSON.stringify(conditionsOf(policy.conditions))) as Prisma.InputJsonValue;
+  const authorizationJson=JSON.parse(JSON.stringify(policy.authorization)) as Prisma.InputJsonValue;
+  const inputJson=JSON.parse(JSON.stringify({triggerFingerprint:input.triggerFingerprint,values:input.values,environment:input.environment,targetResource:input.targetResource})) as Prisma.InputJsonValue;
+  await db.automationDryRun.create({data:{policyId,policyVersionId:version?.id??null,trigger:{fingerprint:input.triggerFingerprint,environment:input.environment},conditions:conditionJson,target:{resource:input.targetResource,scope:targetScope},proposedAction:{actions},risk,authorization:authorizationJson,expectedImpact:"No production mutation is performed.",rollbackCapability:"Simulation only; no rollback is claimed.",blastRadius:targetScope,decisionReason:reason}});
+  await db.automationSimulation.create({data:{policyId,policyVersionId:version?.id??null,input:inputJson,output:JSON.parse(JSON.stringify({conditionsPass,guards,requiresApproval,actions})) as Prisma.InputJsonValue,synthetic:true}});
  }
  const state:AutomationExecutionState=dryRun?"BLOCKED":allowed?"RUNNING":guards.allowed&&conditionsPass?"PENDING_APPROVAL":"BLOCKED";
  const safety=await db.automationSafetyEvaluation.create({data:{policyId,allowed,risk,reason,environment:input.environment,details:{conditionsPass,guards,requiresApproval,dryRun,policyVersion:policy.version}}});
