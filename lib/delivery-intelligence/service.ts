@@ -48,7 +48,8 @@ export function evaluatePromotion(input:PromotionInput){
  if(x.featureFlags?.partialExposure)requiredValidations.push("FEATURE_EXPOSURE_VALIDATION");
  if(x.simulation?.required&&!["PASS","VERIFIED"].includes(status(x.simulation.status)))blockers.push("SIMULATION_REQUIRED");
  if(x.resilience?.required&&!["PASS","VERIFIED"].includes(status(x.resilience.status)))blockers.push("RESILIENCE_EVIDENCE_REQUIRED");
- if(x.capacity?.exhaustionRisk||x.capacity?.costRisk||((x.capacity?.expectedGrowthPercent??0)>50))requiredApprovals.push("CAPACITY_OR_COST_RISK");\n if(x.privacy?.highRiskChange||x.privacy?.piiExposure||x.privacy?.consentImpact||["BLOCKED","CRITICAL","FAIL"].includes(status(x.privacy?.status))){gate(gates,"PRIVACY","FAIL",true,"High-risk privacy evidence requires governance approval.");blockers.push("PRIVACY_BLOCK");}
+ if(x.capacity?.exhaustionRisk||x.capacity?.costRisk||((x.capacity?.expectedGrowthPercent??0)>50))requiredApprovals.push("CAPACITY_OR_COST_RISK");
+ if(x.privacy?.highRiskChange||x.privacy?.piiExposure||x.privacy?.consentImpact||["BLOCKED","CRITICAL","FAIL"].includes(status(x.privacy?.status))){gate(gates,"PRIVACY","FAIL",true,"High-risk privacy evidence requires governance approval.");blockers.push("PRIVACY_BLOCK");}
  if(x.customerImpact?.level&&["HIGH","CRITICAL"].includes(status(x.customerImpact.level)))requiredApprovals.push("CUSTOMER_IMPACT");
  if(x.lock?.available===false)blockers.push("DELIVERY_LOCK_UNAVAILABLE");
  if(x.promotionWindow?.allowed===false)blockers.push("PROMOTION_WINDOW:"+(x.promotionWindow.reason??"NOT_ALLOWED"));
