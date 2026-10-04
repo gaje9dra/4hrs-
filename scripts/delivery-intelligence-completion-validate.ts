@@ -1,6 +1,6 @@
 import fs from "node:fs";
 const read=(p:string)=>fs.readFileSync(p,"utf8");
-const files=["lib/delivery-intelligence/service.ts","app/api/admin/delivery/intelligence/route.ts","scripts/delivery-intelligence-maintenance.ts","tests/phase-15-38-governance-completion.test.ts","docs/phase-15-38-production-continuous-delivery-intelligence-dependency-aware-promotion-verified-delivery-governance.md"];
+const files=["prisma/schema.prisma","lib/delivery-intelligence/service.ts","app/api/admin/delivery/intelligence/route.ts","scripts/delivery-intelligence-maintenance.ts","tests/phase-15-38-governance-completion.test.ts","docs/phase-15-38-production-continuous-delivery-intelligence-dependency-aware-promotion-verified-delivery-governance.md"];
 const required=["requestApproval","decideApproval","reEvaluateAssessment","runGovernanceMaintenance","invalidateForMaterialChange","managePolicy","recordGovernanceEvent","deliveryGovernanceJobRun","DeliveryPromotionApproval","DeliveryGovernanceEvent","MAINTENANCE","POLICY"];
 for(const p of files)if(!fs.existsSync(p))throw new Error("Missing required Phase 15.38 file: "+p);
 const corpus=files.map(read).join("\n");
