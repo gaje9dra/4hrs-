@@ -80,6 +80,8 @@ jobs:
         run: npm run resilience:validate
       - name: Validate continuous verification and digital twin safety
         run: npm run rehearsal:validate
+      - name: Validate continuous improvement governance safety
+        run: npm run improvement:validate
 
       - name: Audit migration safety
         run: npm run db:audit-migrations
