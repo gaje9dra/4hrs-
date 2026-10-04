@@ -11,7 +11,7 @@ type JsonRecord=Record<string,unknown>;
 const json=(v:unknown)=>JSON.parse(JSON.stringify(v)) as Prisma.InputJsonValue;
 const hash=(v:string)=>createHash("sha256").update(v).digest("hex");
 const safe=(v:unknown):Prisma.InputJsonValue=>{
- const walk=(x:unknown,d=0):unknown=>{if(d>5)return "[TRUNCATED]";if(x===null||typeof x==="string"||typeof x==="boolean"||typeof x==="number")return x;if(Array.isArray(x))return x.slice(0,100).map(y=>walk(y,d+1));if(typeof x==="object"){const o:JsonRecord={};for(const[k,y]of Object.entries(x)){if(/password|secret|token|cookie|authorization|apiKey|accessKey|privateKey|cardNumber|cvv/i.test(k))continue;o[k]=walk(y,d+1);}return o;}return String(x);};return walk(v) as Prisma.InputJsonValue;
+ const walk=(x:unknown,d=0):unknown=>{if(d>5)return "[TRUNCATED]";if(x===null||typeof x==="string"||typeof x==="boolean"||typeof x==="number")return x;if(Array.isArray(x))return x.slice(0,100).map(y=>walk(y,d+1));if(typeof x==="object"){const o:JsonRecord={};for(const[k,y]of Object.entries(x)){if(/password|secret|token|cookie|authorization|apiKey|accessKey|privateKey|cardNumber|cvv/i.test(k) && typeof y!=="boolean")continue;o[k]=walk(y,d+1);}return o;}return String(x);};return walk(v) as Prisma.InputJsonValue;
 };
 
 export const ISOLATION_REQUIREMENTS=["separateCredentials","separateDatabase","separateQueues","separateCache","separateSearch","separateStorage","separateProviderConfiguration","separateNotificationDestinations","productionWriteBlocked","productionSecretsAbsent"] as const;
