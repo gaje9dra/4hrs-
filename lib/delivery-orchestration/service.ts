@@ -57,7 +57,7 @@ async function load(id:string){
   const p=await db.deliveryPipeline.findUnique({where:{id},include:{stages:{orderBy:{ordinal:"asc"}},runs:{orderBy:{createdAt:"desc"},take:10},gates:true,evidence:{orderBy:{createdAt:"desc"},take:50}}});
   if(!p)throw new Error("Delivery pipeline not found");return p;
 }
-function graphHasCycle(stages:Array<{name:string;prerequisites:unknown}>){
+function graphHasCycle(stages:Array<{name:string;prerequisites?:unknown}>){
   const names=new Set(stages.map(s=>s.name));const edges=new Map<string,string[]>();
   for(const s of stages){const ps=Array.isArray(s.prerequisites)?s.prerequisites.filter(x=>typeof x==="string") as string[]:[];for(const p of ps){if(!names.has(p))throw new Error(`Unknown stage prerequisite: ${p}`);(edges.get(p)??edges.set(p,[]).get(p)!).push(s.name);}}
   const visiting=new Set<string>(),visited=new Set<string>();
