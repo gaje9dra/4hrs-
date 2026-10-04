@@ -5091,3 +5091,202 @@ model ChangeLock {
   changeRequest ChangeRequest @relation(fields:[changeRequestId],references:[id],onDelete:Cascade)
   @@index([scope,status])
 }
+enum ReleaseStatus { DRAFT READY_CHECK READY SCHEDULED CANARY_PENDING CANARY_RUNNING CANARY_VALIDATING CANARY_APPROVED PROGRESSIVE_ROLLOUT ROLLOUT_VALIDATING FULL_RELEASE_PENDING FULL_RELEASE POST_RELEASE_MONITORING VERIFIED CERTIFIED BLOCKED REJECTED PAUSED ABORTED ROLLED_BACK ROLLBACK_FAILED FAILED EXPIRED SUPERSEDED INVALIDATED }
+enum ReleaseStrategy { CANARY COHORT PERCENTAGE FEATURE_FLAG REGION CUSTOMER_SEGMENT FULL_RELEASE }
+enum ReleaseStageStatus { PENDING RUNNING VALIDATING PASSED PAUSED ABORTED ROLLED_BACK FAILED SKIPPED }
+enum ReleaseGateResult { PASS FAIL BLOCKED UNKNOWN }
+enum ReleaseDecisionType { READY SCHEDULE START PROGRESS PAUSE RESUME ABORT ROLLBACK VALIDATE CERTIFY INVALIDATE }
+enum ReleasePauseReason { HEALTH INCIDENT RECONCILIATION SECURITY PRIVACY CAPACITY COST DEPENDENCY FEATURE_FLAG_DRIFT POLICY MANUAL }
+enum ReleaseEvidenceType { READINESS ARTIFACT POLICY DEPENDENCY BASELINE HEALTH COHORT PROGRESSION PAUSE ABORT ROLLBACK VALIDATION CERTIFICATION GRAPH DIGITAL_TWIN RECONCILIATION }
+enum ReleaseCertificationStatus { CERTIFIED STALE REVOKED FAILED }
+enum ReleaseLockStatus { ACTIVE RELEASED EXPIRED }
+model Release {
+ id String @id @default(uuid()) @db.Uuid
+ stableId String @unique @db.VarChar(200)
+ changeRequestId String @db.Uuid
+ changeRevision Int
+ artifactId String @db.Uuid
+ environment String @db.VarChar(80)
+ target Json
+ ownerId String @db.VarChar(120)
+ strategy ReleaseStrategy
+ status ReleaseStatus @default(DRAFT)
+ risk String @db.VarChar(32)
+ policyVersion String @db.VarChar(80)
+ validationStrategy Json
+ rollbackStrategy Json
+ releaseWindowId String? @db.Uuid
+ correlationId String @db.VarChar(120)
+ version Int @default(1)
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ stages ReleaseStage[]
+ gates ReleaseGate[]
+ decisions ReleaseDecision[]
+ pauses ReleasePause[]
+ rollbacks ReleaseRollback[]
+ certifications ReleaseCertification[]
+ evidence ReleaseEvidence[]
+ invalidations ReleaseInvalidation[]
+ locks ReleaseLock[]
+ @@index([changeRequestId,status])
+ @@index([environment,status])
+}
+model ReleaseArtifact {
+ id String @id @default(uuid()) @db.Uuid
+ stableId String @unique @db.VarChar(200)
+ applicationVersion String @db.VarChar(160)
+ commitSha String? @db.VarChar(80)
+ buildIdentifier String @db.VarChar(160)
+ migrationVersion String? @db.VarChar(160)
+ configurationVersion String? @db.VarChar(160)
+ featureFlagVersion String? @db.VarChar(160)
+ dependencyLockHash String? @db.VarChar(128)
+ provenance Json
+ integrityHash String @db.VarChar(128)
+ approved Boolean @default(false)
+ superseded Boolean @default(false)
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ releases Release[]
+ @@index([approved,superseded])
+}
+model ReleaseStage {
+ id String @id @default(uuid()) @db.Uuid
+ releaseId String @db.Uuid
+ ordinal Int
+ name String @db.VarChar(80)
+ exposure Json
+ minObservationSeconds Int
+ maxExposure Int
+ progressionPolicy Json
+ rollbackPolicy Json
+ status ReleaseStageStatus @default(PENDING)
+ startedAt DateTime?
+ completedAt DateTime?
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ release Release @relation(fields:[releaseId],references:[id],onDelete:Cascade)
+ executions ReleaseStageExecution[]
+ @@unique([releaseId,ordinal])
+}
+model ReleaseStageExecution {
+ id String @id @default(uuid()) @db.Uuid
+ stageId String @db.Uuid
+ idempotencyKey String @unique @db.VarChar(200)
+ actorId String @db.VarChar(120)
+ result ReleaseStageStatus
+ evaluatedAt DateTime @default(now())
+ healthSnapshot Json
+ decision Json
+ correlationId String @db.VarChar(120)
+ stage ReleaseStage @relation(fields:[stageId],references:[id],onDelete:Cascade)
+}
+model ReleaseGate {
+ id String @id @default(uuid()) @db.Uuid
+ releaseId String @db.Uuid
+ key String @db.VarChar(100)
+ category String @db.VarChar(80)
+ metric String @db.VarChar(160)
+ baseline Json
+ threshold Json
+ evaluationWindowSeconds Int
+ minimumSampleSize Int
+ failureTolerance Json
+ action String @db.VarChar(32)
+ required Boolean @default(true)
+ result ReleaseGateResult @default(UNKNOWN)
+ observed Json?
+ evaluatedAt DateTime?
+ release Release @relation(fields:[releaseId],references:[id],onDelete:Cascade)
+ @@unique([releaseId,key])
+}
+model ReleaseDecision {
+ id String @id @default(uuid()) @db.Uuid
+ releaseId String @db.Uuid
+ decisionType ReleaseDecisionType
+ fromStatus ReleaseStatus
+ toStatus ReleaseStatus
+ actorId String @db.VarChar(120)
+ policyVersion String @db.VarChar(80)
+ reason String @db.VarChar(1000)
+ evidenceHash String @db.VarChar(128)
+ correlationId String @db.VarChar(120)
+ createdAt DateTime @default(now())
+ release Release @relation(fields:[releaseId],references:[id],onDelete:Cascade)
+ @@index([releaseId,createdAt])
+}
+model ReleasePause {
+ id String @id @default(uuid()) @db.Uuid
+ releaseId String @db.Uuid
+ reason ReleasePauseReason
+ details Json
+ stageOrdinal Int
+ healthSnapshot Json
+ actorId String @db.VarChar(120)
+ createdAt DateTime @default(now())
+ resumedAt DateTime?
+ release Release @relation(fields:[releaseId],references:[id],onDelete:Cascade)
+}
+model ReleaseRollback {
+ id String @id @default(uuid()) @db.Uuid
+ releaseId String @db.Uuid
+ stageOrdinal Int
+ trigger String @db.VarChar(120)
+ policy Json
+ strategy Json
+ result String @db.VarChar(40)
+ remainingImpact Json
+ actorId String @db.VarChar(120)
+ validated Boolean @default(false)
+ createdAt DateTime @default(now())
+ release Release @relation(fields:[releaseId],references:[id],onDelete:Cascade)
+}
+model ReleaseCertification {
+ id String @id @default(uuid()) @db.Uuid
+ releaseId String @db.Uuid
+ status ReleaseCertificationStatus
+ artifactHash String @db.VarChar(128)
+ policyVersion String @db.VarChar(80)
+ dependencySnapshot Json
+ healthEvidence Json
+ validationEvidence Json
+ validUntil DateTime
+ certifiedBy String @db.VarChar(120)
+ certifiedAt DateTime @default(now())
+ release Release @relation(fields:[releaseId],references:[id],onDelete:Cascade)
+}
+model ReleaseEvidence {
+ id String @id @default(uuid()) @db.Uuid
+ releaseId String @db.Uuid
+ evidenceType ReleaseEvidenceType
+ source String @db.VarChar(160)
+ reference String @db.VarChar(255)
+ integrityHash String @db.VarChar(128)
+ payload Json
+ immutable Boolean @default(true)
+ capturedBy String @db.VarChar(120)
+ createdAt DateTime @default(now())
+ release Release @relation(fields:[releaseId],references:[id],onDelete:Cascade)
+}
+model ReleaseInvalidation {
+ id String @id @default(uuid()) @db.Uuid
+ releaseId String @db.Uuid
+ reason String @db.VarChar(500)
+ changedDomain String @db.VarChar(120)
+ previousVersion Int
+ actorId String @db.VarChar(120)
+ createdAt DateTime @default(now())
+ release Release @relation(fields:[releaseId],references:[id],onDelete:Cascade)
+}
+model ReleaseLock {
+ id String @id @default(uuid()) @db.Uuid
+ releaseId String @db.Uuid
+ scope String @db.VarChar(160)
+ ownerId String @db.VarChar(120)
+ expiresAt DateTime
+ status ReleaseLockStatus @default(ACTIVE)
+ createdAt DateTime @default(now())
+ release Release @relation(fields:[releaseId],references:[id],onDelete:Cascade)
+ @@unique([scope,status])
+}
