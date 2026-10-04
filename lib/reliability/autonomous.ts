@@ -83,7 +83,9 @@ async function safetyGates(targetResource:string,environment:string){
  const [reconciliation,cost,security,cooldown,recent]=await Promise.all([
   db.reconciliationCase.count({where:{severity:"CRITICAL",status:{notIn:["RESOLVED","IGNORED","NOT_REPRODUCIBLE"]}}}),
   db.costAnomaly.count({where:{severity:"CRITICAL",status:"OPEN"}}),
-  db.reliabilityIncident.count({where:{category:"SECURITY",severity:{in:["CRITICAL","MAJOR"]},status:{in:["OPEN","ACKNOWLEDGED"]}}})
+  db.reliabilityIncident.count({where:{category:"SECURITY",severity:{in:["CRITICAL","MAJOR"]},status:{in:["OPEN","ACKNOWLEDGED"]}}}),
+  policy?db.automationCooldown.findFirst({where:{policyId:policy.id,targetResource,endsAt:{gt:now}}}):Promise.resolve(null),
+  policy?db.automationExecution.count({where:{policyId:policy.id,targetResource,createdAt:{gte:new Date(now.getTime()-3600000)},state:{notIn:["BLOCKED","CANCELLED"]}}}):Promise.resolve(0)
  ]);
  const blocked:string[]=[];
  if(reconciliation)blocked.push("critical-reconciliation");
