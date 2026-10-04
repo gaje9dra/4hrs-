@@ -72,6 +72,8 @@ jobs:
         run: npm run synthetic:ci
       - name: Run final platform certification audit
         run: npm run platform:certify
+      - name: Validate production operations control plane
+        run: npm run operations:validate
 
       - name: Audit migration safety
         run: npm run db:audit-migrations
