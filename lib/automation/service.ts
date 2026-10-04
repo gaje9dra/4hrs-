@@ -13,6 +13,7 @@ function actionKeys(value:unknown){return Array.isArray(value)?value.filter((x):
 function jsonObject(value:unknown):JsonObject{ return value&&typeof value==="object"&&!Array.isArray(value)?value as JsonObject:{}; }
 function windowSeconds(policy:JsonObject){const raw=policy.windowSeconds;return typeof raw==="number"&&Number.isInteger(raw)&&raw>0?Math.min(raw,86400):3600;}
 function nowPlus(seconds:number){return new Date(Date.now()+seconds*1000);}
+function safeJson(value:unknown):Prisma.InputJsonValue { const seen=new WeakSet<object>(); const walk=(v:unknown,depth=0):unknown=>{ if(v===null||typeof v==="string"||typeof v==="boolean"||typeof v==="number") return typeof v==="number"&& !Number.isFinite(v)?String(v):v; if(depth>5)return "[TRUNCATED]"; if(Array.isArray(v))return v.slice(0,50).map(x=>walk(x,depth+1)); if(typeof v==="object"){ if(seen.has(v))return "[CIRCULAR]"; seen.add(v); const out:Record<string,unknown>={}; for(const [k,x] of Object.entries(v).slice(0,50)){if(/password|hash|secret|token|cookie|credential|authorization|apiKey|accessKey|privateKey|email|phone|address/i.test(k))continue; out[k]=walk(x,depth+1);} return out;} return String(v); }; return walk(value) as Prisma.InputJsonValue; }
 
 async function openCircuit(policyId:string,reason:string){
  await db.automationCircuit.upsert({where:{policyId},create:{policyId,state:"OPEN",openedAt:new Date(),lastFailureAt:new Date(),reason},update:{state:"OPEN",openedAt:new Date(),lastFailureAt:new Date(),reason}});
@@ -30,7 +31,7 @@ async function enforceGuards(policy:Awaited<ReturnType<typeof db.automationPolic
  const since=new Date(Date.now()-windowSeconds(jsonObject(policy.idempotencyPolicy))*1000);
  const recent=await db.automationExecution.count({where:{policyId:policy.id,targetResource:input.targetResource,createdAt:{gte:since},state:{notIn:["BLOCKED","CANCELLED"]}}});
  if(recent>=policy.maxExecutionsPerWindow) return {allowed:false,reason:"Automation execution-rate limit has been reached."};
- const active=await db.automationExecution.count({where:{policyId:policy.id,targetResource:input.targetResource,state:{in:["RUNNING","APPROVED","PENDING_APPROVAL"]}}});
+ const [active,criticalReconciliation,criticalCost,securityIncidents]=await Promise.all([\n  db.automationExecution.count({where:{policyId:policy.id,targetResource:input.targetResource,state:{in:["RUNNING","APPROVED","PENDING_APPROVAL"]}}}),\n  db.reconciliationCase.count({where:{severity:"CRITICAL",status:{notIn:["RESOLVED","IGNORED","NOT_REPRODUCIBLE"]}}}),\n  db.costAnomaly.count({where:{severity:"CRITICAL",status:"OPEN"}}),\n  db.reliabilityIncident.count({where:{category:"SECURITY",severity:{in:["CRITICAL","MAJOR"]},status:{in:["OPEN","ACKNOWLEDGED"]}}}),\n ]);\n if(criticalReconciliation>0)return {allowed:false,reason:"Critical reconciliation discrepancies are open; automation is fail-closed."};\n if(criticalCost>0)return {allowed:false,reason:"Critical cost anomalies are open; automation is fail-closed."};\n if(securityIncidents>0)return {allowed:false,reason:"Critical security incidents are open; automation is fail-closed."};
  const concurrency=jsonObject(policy.concurrencyPolicy).maxConcurrent;
  if(typeof concurrency==="number"&&active>=Math.max(1,Math.min(10,Math.floor(concurrency)))) return {allowed:false,reason:"Automation concurrency limit has been reached."};
  return {allowed:true,reason:"Safety controls passed."};
@@ -73,7 +74,7 @@ export async function evaluateAutomation(policyId:string,input:EvaluationInput){
  const state:AutomationExecutionState=dryRun?"BLOCKED":allowed?"RUNNING":guards.allowed&&conditionsPass?"PENDING_APPROVAL":"BLOCKED";
  const safety=await db.automationSafetyEvaluation.create({data:{policyId,allowed,risk,reason,environment:input.environment,details:{conditionsPass,guards,requiresApproval,dryRun,policyVersion:policy.version}}});
  const execution=await db.automationExecution.create({data:{policyId,policyVersionId:version?.id??null,triggerId:input.triggerId??null,triggerFingerprint:input.triggerFingerprint,idempotencyKey:input.triggerFingerprint+"::"+policy.version,targetResource:input.targetResource,targetScope:boundedScope({environment:input.environment,resourceId:input.targetResource}),risk,state,environment:input.environment,correlationId:input.correlationId,reason,requestedBy:input.requestedBy??null,result:{conditionsPass,guards,requiresApproval,dryRun}}});
- await db.automationSafetyEvaluation.update({where:{id:safety.id},data:{executionId:execution.id}});
+ await db.automationSafetyEvaluation.update({where:{id:safety.id},data:{executionId:execution.id}});\n await db.automationEvidence.create({data:{executionId:execution.id,policyId, type:dryRun?"SIMULATION":"SAFETY_EVALUATION",reference:safety.id,metadata:safeJson({conditionsPass,guards,requiresApproval,dryRun,policyVersion:policy.version})}});
  return {policy,execution,safetyId:safety.id,actions:actions.map(key=>getRegisteredAction(key)).filter(Boolean),registeredActions:listRegisteredActions()};
 }
 
@@ -125,7 +126,7 @@ export async function executeAutomation(executionId:string,input:{reason:string;
   return db.automationExecution.update({where:{id:execution.id},data:{state:"SUCCEEDED",finishedAt:new Date(),result:{results:results as Prisma.InputJsonValue}}});
  }catch(error){
   const message=error instanceof Error?error.message:"Automation execution failed.";
-  await db.automationFailure.create({data:{executionId:execution.id,class:"UNKNOWN",message:message.slice(0,2000),metadata:{correlationId:execution.correlationId},retryCount:execution.retryCount}});
+  await db.automationFailure.create({data:{executionId:execution.id,class:"UNKNOWN",message:message.slice(0,2000),metadata:safeJson({correlationId:execution.correlationId}),retryCount:execution.retryCount}});\n  await db.automationEvidence.create({data:{executionId:execution.id,type:"FAILURE",reference:execution.id,metadata:safeJson({message,correlationId:execution.correlationId})}});
   const circuit=await db.automationCircuit.update({where:{policyId:policy.id},data:{state:"OPEN",consecutiveFailures:{increment:1},totalFailures:{increment:1},openedAt:new Date(),lastFailureAt:new Date(),reason:message.slice(0,1000)}});
   await db.automationEscalation.create({data:{executionId:execution.id,reason:message.slice(0,2000),severity:"HIGH",status:"OPEN"}});
   await recordReliabilityFindings([{fingerprint:incidentFingerprint("automation","OPERATIONS",policy.stableId),severity:"MAJOR",category:"OPERATIONS",capability:"operations-automation",title:`Automation ${policy.name} failed`,summary:message.slice(0,2000),metadata:{executionId:execution.id,policyId:policy.id,correlationId:execution.correlationId,circuitState:circuit.state}}]);
@@ -190,8 +191,8 @@ export async function disableAutomation(policyId:string,reason:string){
 
 export async function ingestAutomationTrigger(input:{policyId:string;kind:string;fingerprint:string;environment:string;severity?:string;confidence?:number;evidence?:unknown;dependencyState?:unknown;maintenanceActive?:boolean;incidentId?:string;values?:Record<string,unknown>;targetResource:string;reason:string;correlationId:string;requestedBy?:string}){
  if(input.maintenanceActive) return {accepted:false,reason:"Automation trigger suppressed during maintenance."};
- const existing=await db.automationTrigger.findFirst({where:{policyId:input.policyId,fingerprint:input.fingerprint,environment:input.environment,observedAt:{gte:new Date(Date.now()-15*60*1000)}},orderBy:{observedAt:"desc"}});
- if(existing) return {accepted:false,reason:"Duplicate trigger fingerprint suppressed.",triggerId:existing.id};
+ const windowStart=new Date(Date.now()-15*60*1000);\n const [existing,causalExecution]=await Promise.all([\n  db.automationTrigger.findFirst({where:{policyId:input.policyId,fingerprint:input.fingerprint,environment:input.environment,observedAt:{gte:windowStart}},orderBy:{observedAt:"desc"}}),\n  db.automationExecution.findFirst({where:{policyId:input.policyId,correlationId:input.correlationId,createdAt:{gte:windowStart},state:{notIn:["BLOCKED","CANCELLED"]}},orderBy:{createdAt:"desc"}}),\n ]);
+ if(existing) return {accepted:false,reason:"Duplicate trigger fingerprint suppressed.",triggerId:existing.id};\n if(causalExecution) return {accepted:false,reason:"Automation-induced trigger loop suppressed by correlation.",executionId:causalExecution.id};
  const trigger=await db.automationTrigger.create({data:{policyId:input.policyId,kind:input.kind,fingerprint:input.fingerprint,environment:input.environment,severity:input.severity,confidence:input.confidence,evidence:input.evidence as Prisma.InputJsonValue|undefined,dependencyState:input.dependencyState as Prisma.InputJsonValue|undefined,maintenanceActive:false,incidentId:input.incidentId,accepted:true}});
  const evaluation=await evaluateAutomation(input.policyId,{environment:input.environment,values:input.values??{},triggerFingerprint:input.fingerprint,targetResource:input.targetResource,reason:input.reason,correlationId:input.correlationId,requestedBy:input.requestedBy,triggerId:trigger.id});
  return {accepted:true,triggerId:trigger.id,evaluation};
