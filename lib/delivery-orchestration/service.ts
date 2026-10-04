@@ -112,13 +112,13 @@ export async function createPipeline(input:{
 export async function preflight(id:string,actorId:string){
   const p=await load(id);
   if(!["CREATED","PREFLIGHT","PAUSED"].includes(p.status))throw new Error("Pipeline is not eligible for preflight");
-  const [change,release,deployment,artifact,environment]=await Promise.all([
+  const [change,release,deployment,environment]=await Promise.all([
     db.changeRequest.findUnique({where:{id:p.changeRequestId}}),
     db.release.findUnique({where:{id:p.releaseId}}),
     db.deployment.findUnique({where:{id:p.deploymentId}}),
-    db.deploymentArtifact.findUnique({where:{id:p.deploymentId ? (await db.deployment.findUnique({where:{id:p.deploymentId}}))?.artifactId : ""}}),
     db.deploymentEnvironment.findUnique({where:{name:p.environment}}),
   ]);
+  const artifact=deployment ? await db.deploymentArtifact.findUnique({where:{id:deployment.artifactId}}) : null;
   const freeze=await db.deploymentFreeze.findFirst({where:{active:true,expiresAt:{gt:new Date()},OR:[{scope:"GLOBAL"},{scope:"ENVIRONMENT",scopeReference:p.environment}]}}).catch(()=>null);
   const checks=[
     ["CHANGE_APPROVAL",!!change&&change.revision===change.version&&["APPROVED","REHEARSAL_CERTIFIED","READY_FOR_RELEASE","RELEASE_WINDOW_OPEN"].includes(change.status)],
