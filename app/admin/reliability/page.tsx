@@ -1,18 +1,11 @@
 import { requireAdmin } from "@/lib/admin/authorization";
-import { db } from "@/lib/db/client";
+import { getReliabilityOverview } from "@/lib/reliability/autonomous";
 
 export const dynamic="force-dynamic";
 
 export default async function ReliabilityPage(){
  await requireAdmin(undefined,"reliability.read");
- const [assessments,signals,anomalies,strategies,circuits,regressions]=await Promise.all([
-  db.reliabilityAssessment.findMany({orderBy:{updatedAt:"desc"},take:20}),
-  db.reliabilitySignal.findMany({orderBy:{observedAt:"desc"},take:20}),
-  db.reliabilityAnomaly.findMany({orderBy:{detectedAt:"desc"},take:20}),
-  db.reliabilityStrategy.findMany({orderBy:{updatedAt:"desc"},take:20}),
-  db.reliabilityCircuit.findMany({orderBy:{updatedAt:"desc"},take:20}),
-  db.reliabilityRegression.findMany({orderBy:{createdAt:"desc"},take:20})
- ]);
+ const {assessments,signals,anomalies,strategies,circuits,regressions}=await getReliabilityOverview();
  return <section className="space-y-8">
   <header className="border-4 border-black bg-white p-6 shadow-[8px_8px_0_0_#000]">
    <p className="text-sm font-black uppercase tracking-[0.2em]">Reliability intelligence</p>
