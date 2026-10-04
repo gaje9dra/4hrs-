@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { db } from "@/lib/db/client";
 import { hashPassword } from "@/lib/auth/password";
 import { createSessionToken, hashSessionToken, CUSTOMER_SESSION_TTL_SECONDS } from "@/lib/auth/session";
-import { requireAdmin, requireHighRiskReason } from "@/lib/admin/authorization";
+import { requireAdmin, requireHighRiskReason, type AdminAuthorizationContext } from "@/lib/admin/authorization";
 import { AdminError } from "@/lib/admin/errors";
 import { updateAdminUser } from "@/lib/admin/application";
 import { recordAdminAudit } from "@/lib/admin/audit";
@@ -110,11 +110,11 @@ test("the permanent super administrator keeps full access and cannot be modified
   }
 });
 
-function actorContext(f: Awaited<ReturnType<typeof fixture>>) {
+function actorContext(f: Awaited<ReturnType<typeof fixture>>): AdminAuthorizationContext {
   return {
     customer: { id: f.customer.id, email: f.customer.email, status: f.customer.status },
     adminUser: { id: f.admin.id, customerId: f.admin.customerId, status: f.admin.status, version: f.admin.version, roles: ["SUPER_ADMIN"] },
-    permissions: new Set(["admin.users.manage"]) as any,
+    permissions: new Set(["admin.users.manage"]),
     roles: new Set(["SUPER_ADMIN"]),
   };
 }
