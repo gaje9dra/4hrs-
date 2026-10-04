@@ -101,6 +101,9 @@ jobs:
       - name: Validate delivery orchestration safety
         run: npm run delivery-orchestration:validate
 
+      - name: Validate delivery intelligence safety
+        run: npm run delivery-intelligence:validate
+
       - name: Audit migration safety
         run: npm run db:audit-migrations
 

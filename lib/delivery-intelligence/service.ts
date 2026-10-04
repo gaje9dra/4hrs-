@@ -1,0 +1,98 @@
+import { createHash } from "node:crypto";
+import { Prisma } from "@prisma/client";
+import { db } from "@/lib/db/client";
+
+export const DELIVERY_INTELLIGENCE_STATUSES = ["CREATED","COLLECTING_EVIDENCE","EVIDENCE_READY","DEPENDENCY_EVALUATING","RISK_EVALUATING","GATE_EVALUATING","PROMOTION_ASSESSING","DECISION_READY","APPROVAL_REQUIRED","APPROVED","PROMOTION_ELIGIBLE","PROMOTING","VALIDATING","VERIFIED","CERTIFIED","HOLD","BLOCKED","PROHIBITED","EXPIRED","INVALIDATED","ABORTED","FAILED","SUPERSEDED"] as const;
+export const PROMOTION_DECISIONS = ["ALLOW","ALLOW_WITH_APPROVAL","ALLOW_WITH_ADDITIONAL_VALIDATION","HOLD","BLOCK","PROHIBIT"] as const;
+export const GATE_STATUSES = ["PASS","PASS_WITH_WARNING","FAIL","NOT_EVALUATED","EXPIRED","UNKNOWN","NOT_APPLICABLE"] as const;
+export const RISK_LEVELS = ["LOW","MEDIUM","HIGH","CRITICAL","PROHIBITED"] as const;
+export const CONFIDENCE_LEVELS = ["UNKNOWN","LOW","MEDIUM","HIGH","VERIFIED"] as const;
+
+type JsonMap = Record<string, unknown>;
+export type Evidence = { id?:string; type?:string; source?:string; version?:string; generatedAt?:string; validFrom?:string; expiresAt?:string; subject?:string; provenance?:unknown; status?:string; value?:unknown };
+export type PromotionInput = {
+ pipelineId:string; deliveryRunId?:string; sourceEnvironment:string; targetEnvironment:string; revisionId?:string; policyVersion:string; evidenceVersion:string; evaluatedAt:string; expiresAt:string;
+ evidence?:Evidence[];
+ dependencies?:Array<{class:string;reference:string;status:string;severity?:string;expiresAt?:string;evidenceReference?:string}>;
+ signals?:{incident?:{active:boolean;severity?:string;domain?:string;freeze?:boolean};slo?:{status?:string;errorBudgetConsumed?:number;regression?:boolean};security?:{status?:string;criticalFindings?:number};reconciliation?:{status?:string;criticalDiscrepancies?:number};artifact?:{status?:string;identity?:string;assessedIdentity?:string};migration?:{status?:string;destructive?:boolean;rollbackFeasible?:boolean;longRunningRisk?:boolean};paymentChange?:boolean;fulfillmentChange?:boolean;shippingChange?:boolean;customerImpact?:{level?:string;journeys?:string[]};capacity?:{status?:string;exhaustionRisk?:boolean};featureFlags?:{status?:string;conflicting?:boolean;stale?:boolean;partialExposure?:boolean};simulation?:{status?:string;required?:boolean};resilience?:{status?:string;required?:boolean};approval?:{required?:boolean;valid?:boolean};lock?:{available?:boolean};promotionWindow?:{allowed?:boolean;reason?:string}};
+};
+
+const stable=(v:unknown):unknown=>Array.isArray(v)?v.map(stable):v&&typeof v==="object"?Object.fromEntries(Object.entries(v as JsonMap).sort(([a],[b])=>a.localeCompare(b)).map(([k,x])=>[k,stable(x)])):v;
+export function deterministicHash(v:unknown){return createHash("sha256").update(JSON.stringify(stable(v))).digest("hex");}
+const status=(v:unknown)=>typeof v==="string"?v.toUpperCase():"UNKNOWN";
+const expired=(v:string|undefined,at:Date)=>Boolean(v&&new Date(v).getTime()<=at.getTime());
+function gate(gates:JsonMap[],key:string,s:string,blocking:boolean,explanation:string,evidenceReference?:string){gates.push({gateType:key,status:s,blocking,explanation,evidenceReference:evidenceReference??null});}
+
+export function evaluatePromotion(input:PromotionInput){
+ const at=new Date(input.evaluatedAt); const expiry=new Date(input.expiresAt);
+ if(Number.isNaN(at.getTime())) throw new Error("evaluatedAt must be an ISO timestamp.");
+ if(Number.isNaN(expiry.getTime())||expiry<=at) throw new Error("expiresAt must be later than evaluatedAt.");
+ const gates:JsonMap[]=[],blockers:string[]=[],warnings:string[]=[],requiredApprovals:string[]=[],requiredValidations:string[]=[];
+ for(const e of input.evidence??[]){if(expired(e.expiresAt,at)){gate(gates,"EVIDENCE_FRESHNESS","EXPIRED",true,"Evidence "+(e.id??e.type??"unknown")+" is expired.",e.id);blockers.push("STALE_EVIDENCE");}else if(status(e.status)==="FAIL"){gate(gates,e.type??"EVIDENCE","FAIL",true,"Evidence "+(e.id??e.type??"unknown")+" reports failure.",e.id);blockers.push("EVIDENCE_FAILURE:"+(e.type??"UNKNOWN"));}}
+ for(const d of input.dependencies??[]){const s=status(d.status),stale=expired(d.expiresAt,at),critical=status(d.severity)==="CRITICAL";if(stale||s==="UNKNOWN"){gate(gates,"DEPENDENCY:"+d.class,"UNKNOWN",critical,"Dependency "+d.reference+" is "+(stale?"stale":"unknown")+".",d.evidenceReference);(critical?blockers:warnings).push("DEPENDENCY_"+(stale?"STALE":"UNKNOWN")+":"+d.reference);}else if(["UNAVAILABLE","FAILING","DEGRADED","CRITICAL"].includes(s)){const blocking=critical||s==="FAILING"||s==="CRITICAL";gate(gates,"DEPENDENCY:"+d.class,"FAIL",blocking,"Dependency "+d.reference+" is "+s+".",d.evidenceReference);(blocking?blockers:warnings).push("DEPENDENCY_UNHEALTHY:"+d.reference);}else gate(gates,"DEPENDENCY:"+d.class,"PASS",false,"Dependency "+d.reference+" is healthy.",d.evidenceReference);}
+ const x=input.signals??{};
+ if(x.incident?.active){const sev=status(x.incident.severity);if(x.incident.freeze||["SEV-1","CRITICAL"].includes(sev)||(x.incident.domain==="PAYMENT"&&x.paymentChange)||(x.incident.domain==="FULFILLMENT"&&x.fulfillmentChange)){gate(gates,"INCIDENT_STATE","FAIL",true,"Active incident or freeze conflicts with this promotion.");blockers.push("INCIDENT_BLOCK");}else warnings.push("ACTIVE_INCIDENT");}
+ if(x.slo?.status&&["BREACH","FAILING","CRITICAL"].includes(status(x.slo.status))){gate(gates,"SLO_HEALTH","FAIL",true,"SLO health is below policy.");blockers.push("SLO_BLOCK");}else if(x.slo?.regression){gate(gates,"SLO_REGRESSION","PASS_WITH_WARNING",false,"Recent regression requires additional observation.");warnings.push("SLO_REGRESSION");}
+ if((x.security?.criticalFindings??0)>0||["BLOCKED","CRITICAL","FAIL"].includes(status(x.security?.status))){gate(gates,"SECURITY","FAIL",true,"Critical security evidence blocks promotion.");blockers.push("SECURITY_BLOCK");}
+ if((x.reconciliation?.criticalDiscrepancies??0)>0||["BLOCKED","CRITICAL","FAIL"].includes(status(x.reconciliation?.status))){gate(gates,"RECONCILIATION","FAIL",true,"Critical reconciliation discrepancies remain unresolved.");blockers.push("RECONCILIATION_BLOCK");}
+ if(x.artifact?.status&&status(x.artifact.status)!=="PASS"){gate(gates,"ARTIFACT_INTEGRITY","FAIL",true,"Artifact identity is not verified.");blockers.push("ARTIFACT_MISMATCH");}
+ if(x.artifact?.assessedIdentity&&x.artifact.identity&&x.artifact.identity!==x.artifact.assessedIdentity){gate(gates,"ARTIFACT_IDENTITY","FAIL",true,"Artifact differs from assessed revision.");blockers.push("ARTIFACT_MISMATCH");}
+ if(x.migration?.destructive){requiredApprovals.push("DESTRUCTIVE_DATABASE_CHANGE");if(x.migration.rollbackFeasible===false)blockers.push("MIGRATION_ROLLBACK_UNSAFE");else requiredValidations.push("MIGRATION_SAFETY");}
+ if(x.migration?.longRunningRisk)requiredValidations.push("MIGRATION_RUNTIME_VALIDATION");
+ if(["BLOCKED","FAIL","CRITICAL"].includes(status(x.migration?.status)))blockers.push("MIGRATION_BLOCK");
+ if(x.paymentChange){requiredApprovals.push("PAYMENT_CHANGE");requiredValidations.push("PAYMENT_RECONCILIATION","PAYMENT_POST_DEPLOYMENT_MONITORING","ROLLBACK_READINESS");}
+ const fulfillment=input.dependencies?.find(d=>status(d.class)==="FULFILLMENT"),shipping=input.dependencies?.find(d=>status(d.class)==="SHIPPING");
+ if(x.fulfillmentChange&&fulfillment&&["DEGRADED","FAILING","BLOCKED"].includes(status(fulfillment.status)))blockers.push("FULFILLMENT_PROVIDER_BLOCK");
+ if(x.shippingChange&&shipping&&["DEGRADED","FAILING","BLOCKED"].includes(status(shipping.status)))blockers.push("SHIPPING_PROVIDER_BLOCK");
+ if(x.featureFlags?.conflicting||x.featureFlags?.stale)blockers.push("FEATURE_FLAG_INCOMPATIBILITY");
+ if(x.featureFlags?.partialExposure)requiredValidations.push("FEATURE_EXPOSURE_VALIDATION");
+ if(x.simulation?.required&&!["PASS","VERIFIED"].includes(status(x.simulation.status)))blockers.push("SIMULATION_REQUIRED");
+ if(x.resilience?.required&&!["PASS","VERIFIED"].includes(status(x.resilience.status)))blockers.push("RESILIENCE_EVIDENCE_REQUIRED");
+ if(x.capacity?.exhaustionRisk)requiredApprovals.push("CAPACITY_RISK");
+ if(x.customerImpact?.level&&["HIGH","CRITICAL"].includes(status(x.customerImpact.level)))requiredApprovals.push("CUSTOMER_IMPACT");
+ if(x.lock?.available===false)blockers.push("DELIVERY_LOCK_UNAVAILABLE");
+ if(x.promotionWindow?.allowed===false)blockers.push("PROMOTION_WINDOW:"+(x.promotionWindow.reason??"NOT_ALLOWED"));
+ const score=blockers.length*30+requiredApprovals.length*10+warnings.length*3;
+ const riskLevel=blockers.some(v=>v.includes("SECURITY")||v.includes("ARTIFACT")||v.includes("PAYMENT"))?"CRITICAL":score>=60?"HIGH":score>=25?"MEDIUM":"LOW";
+ const approvalRequired=requiredApprovals.length>0||Boolean(x.approval?.required),approvalValid=x.approval?.valid!==false;
+ let decision:"ALLOW"|"ALLOW_WITH_APPROVAL"|"ALLOW_WITH_ADDITIONAL_VALIDATION"|"HOLD"|"BLOCK"|"PROHIBIT"="ALLOW";
+ if(blockers.length)decision=riskLevel==="CRITICAL"?"PROHIBIT":"BLOCK"; else if(approvalRequired&&!approvalValid)decision="ALLOW_WITH_APPROVAL"; else if(requiredValidations.length)decision="ALLOW_WITH_ADDITIONAL_VALIDATION";
+ if(!blockers.length&&gates.some(g=>g.status==="UNKNOWN"&&g.blocking))decision="HOLD";
+ const confidence=decision==="ALLOW"&&gates.every(g=>["PASS","PASS_WITH_WARNING","NOT_APPLICABLE"].includes(String(g.status)))?"VERIFIED":gates.length?"MEDIUM":"LOW";
+ return {decision,riskLevel,confidence,gates,blockers,warnings,requiredApprovals,requiredValidations,reasonSummary:blockers.length?blockers.join("; "):decision==="ALLOW_WITH_APPROVAL"?"Promotion requires explicit approval.":"Promotion satisfies current deterministic delivery policy.",deterministicInputHash:deterministicHash(input)};
+}
+
+export async function collectGraphImpact(stableId:string,maxNodes=100){
+ const node=await db.platformGraphNode.findUnique({where:{stableId},include:{outgoing:{where:{active:true},take:Math.min(maxNodes,50),include:{toNode:true}},incoming:{where:{active:true},take:Math.min(maxNodes,50),include:{fromNode:true}}}});
+ if(!node)return {found:false,nodes:[],relationships:[]};
+ const outgoing=node.outgoing.map(r=>({stableId:r.stableId,relationType:r.relationType,sourceIdentifier:r.sourceIdentifier,confidence:r.confidence,freshness:r.freshness,from:node.stableId,to:r.toNode.stableId}));
+ const incoming=node.incoming.map(r=>({stableId:r.stableId,relationType:r.relationType,sourceIdentifier:r.sourceIdentifier,confidence:r.confidence,freshness:r.freshness,from:r.fromNode.stableId,to:node.stableId}));
+ const relationships=[...outgoing,...incoming];
+ const nodes=Array.from(new Set([node.stableId,...relationships.flatMap(r=>[r.from,r.to])])).slice(0,maxNodes);
+ return {found:true,nodes,relationships};
+}
+
+export async function acquireDeliveryLock(pipelineId:string,scope:string,ownerId:string,ttlSeconds=900){
+ const expiresAt=new Date(Date.now()+Math.min(Math.max(ttlSeconds,30),3600)*1000);
+ try{return await db.deliveryLock.create({data:{pipelineId,scope:scope.trim().slice(0,160),ownerId,status:"ACTIVE",expiresAt}});}catch{throw new Error("DELIVERY_LOCK_CONFLICT");}
+}
+export async function releaseDeliveryLock(id:string,ownerId:string){const lock=await db.deliveryLock.findUnique({where:{id}});if(!lock)throw new Error("Delivery lock was not found.");if(lock.ownerId!==ownerId)throw new Error("Only the lock owner may release this lock.");return db.deliveryLock.update({where:{id},data:{status:"RELEASED"}});}
+
+export async function createAssessment(input:PromotionInput,actorId:string){
+ const evaluation=evaluatePromotion(input);
+ const impact=input.signals?.artifact?.identity?await collectGraphImpact(input.signals.artifact.identity):{found:false,nodes:[],relationships:[]};
+ const snapshot=await db.deliveryIntelligenceSnapshot.create({data:{pipelineId:input.pipelineId,deliveryRunId:input.deliveryRunId,revisionId:input.revisionId,environmentId:input.targetEnvironment,generatedAt:new Date(input.evaluatedAt),expiresAt:new Date(input.expiresAt),status:"EVIDENCE_READY",provenance:{actorId,source:"delivery-intelligence",version:input.evidenceVersion},payload:JSON.parse(JSON.stringify({input,evaluation,impact})) as Prisma.InputJsonValue,version:1}});
+ const assessment=await db.promotionAssessment.create({data:{pipelineId:input.pipelineId,deliveryRunId:input.deliveryRunId,sourceEnvironment:input.sourceEnvironment,targetEnvironment:input.targetEnvironment,revisionId:input.revisionId,riskLevel:evaluation.riskLevel,decision:evaluation.decision,confidence:evaluation.confidence,evaluatedAt:new Date(input.evaluatedAt),expiresAt:new Date(input.expiresAt),policyVersion:input.policyVersion,evidenceVersion:input.evidenceVersion,reasonSummary:evaluation.reasonSummary,blockingGates:evaluation.blockers,warnings:evaluation.warnings,requiredApprovals:evaluation.requiredApprovals,requiredValidations:evaluation.requiredValidations,evidenceReferences:(input.evidence??[]).map(e=>e.id??e.type??"unknown"),deterministicInputHash:evaluation.deterministicInputHash,gates:{create:evaluation.gates.map(g=>({gateType:String(g.gateType),status:String(g.status),evidenceReference:typeof g.evidenceReference==="string"?g.evidenceReference:undefined,policyVersion:input.policyVersion,expiresAt:new Date(input.expiresAt),blockingSeverity:g.blocking?"BLOCKING":"WARNING",explanation:String(g.explanation)}))}} ,include:{gates:true}});
+ await db.deliveryRiskAssessment.create({data:{pipelineId:input.pipelineId,deliveryRunId:input.deliveryRunId,riskLevel:evaluation.riskLevel,scoreBasis:{blockers:evaluation.blockers.length,warnings:evaluation.warnings.length,approvals:evaluation.requiredApprovals.length},evaluatedAt:new Date(input.evaluatedAt),expiresAt:new Date(input.expiresAt),policyVersion:input.policyVersion,deterministicInputHash:evaluation.deterministicInputHash}});
+ return {snapshot,assessment};
+}
+export async function invalidateAssessment(id:string,reason:string){const row=await db.promotionAssessment.findUnique({where:{id}});if(!row)throw new Error("Promotion assessment was not found.");return db.promotionAssessment.update({where:{id},data:{decision:"BLOCK",invalidatedAt:new Date(),invalidationReason:reason.slice(0,1000)}});}
+export async function certifyDelivery(input:{pipelineId:string;deliveryRunId?:string;policyVersion:string;evidenceReferences:string[];expiresAt:string;reason:string}){
+ const assessment=await db.promotionAssessment.findFirst({where:{pipelineId:input.pipelineId,invalidatedAt:null},orderBy:{evaluatedAt:"desc"}});
+ if(!assessment)throw new Error("No valid promotion assessment exists.");if(assessment.expiresAt<=new Date())throw new Error("Promotion assessment evidence is expired.");
+ if(!["ALLOW","ALLOW_WITH_ADDITIONAL_VALIDATION"].includes(assessment.decision))throw new Error("Delivery is not eligible for certification.");
+ return db.deliveryCertification.create({data:{pipelineId:input.pipelineId,deliveryRunId:input.deliveryRunId,certificationState:"CERTIFIED",evidenceReferences:input.evidenceReferences,policyVersion:input.policyVersion,expiresAt:new Date(input.expiresAt),reason:input.reason.slice(0,2000)}});
+}
+export async function invalidateCertification(id:string,reason:string){return db.deliveryCertification.update({where:{id},data:{certificationState:"INVALIDATED",invalidatedAt:new Date(),invalidationReason:reason.slice(0,1000)}});}
+export async function getAssessment(id:string){return db.promotionAssessment.findUnique({where:{id},include:{gates:true}});}
+export async function listAssessments(limit=50){return db.promotionAssessment.findMany({take:Math.min(Math.max(limit,1),100),orderBy:{evaluatedAt:"desc"},include:{gates:true}});}

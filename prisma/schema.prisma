@@ -5778,6 +5778,12 @@ model DeliveryPipeline {
   gates DeliveryGate[]
   evidence DeliveryEvidence[]
   locks DeliveryLock[]
+  intelligenceSnapshots DeliveryIntelligenceSnapshot[]
+  promotionAssessments PromotionAssessment[]
+  dependencyAssessments DependencyHealthAssessment[]
+  riskAssessments DeliveryRiskAssessment[]
+  policies DeliveryPolicy[]
+  certifications DeliveryCertification[]
   @@index([changeRequestId,status])
   @@index([releaseId,status])
   @@index([deploymentId,status])
@@ -5885,6 +5891,13 @@ model DeliveryDecision {
   actorId String @db.VarChar(120)
   evidenceHash String @db.VarChar(128)
   correlationId String @db.VarChar(120)
+  decisionStatus String? @db.VarChar(32)
+  deliveryRunId String? @db.Uuid
+  evidenceReferences Json?
+  dependencyState Json?
+  healthState Json?
+  affectedDelivery Json?
+  previousDecisionId String? @db.Uuid
   createdAt DateTime @default(now())
   pipeline DeliveryPipeline @relation(fields:[pipelineId],references:[id],onDelete:Cascade)
   @@index([pipelineId,createdAt])
@@ -5941,4 +5954,165 @@ model DeliveryLock {
   createdAt DateTime @default(now())
   pipeline DeliveryPipeline @relation(fields:[pipelineId],references:[id],onDelete:Cascade)
   @@unique([scope,status])
+}
+
+
+model DeliveryIntelligenceSnapshot {
+  id String @id @default(uuid()) @db.Uuid
+  pipelineId String @db.Uuid
+  deliveryRunId String? @db.Uuid
+  releaseId String? @db.Uuid
+  deploymentId String? @db.Uuid
+  environmentId String? @db.VarChar(120)
+  revisionId String? @db.Uuid
+  dependencySnapshotId String? @db.VarChar(120)
+  graphSnapshotId String? @db.VarChar(120)
+  healthSnapshotId String? @db.VarChar(120)
+  incidentSnapshotId String? @db.VarChar(120)
+  capacitySnapshotId String? @db.VarChar(120)
+  securitySnapshotId String? @db.VarChar(120)
+  reconciliationSnapshotId String? @db.VarChar(120)
+  readinessSnapshotId String? @db.VarChar(120)
+  generatedAt DateTime @default(now())
+  expiresAt DateTime
+  version Int @default(1)
+  status String @db.VarChar(32)
+  provenance Json
+  payload Json
+  createdAt DateTime @default(now())
+  pipeline DeliveryPipeline @relation(fields:[pipelineId],references:[id],onDelete:Cascade)
+  @@index([pipelineId,createdAt])
+  @@index([expiresAt,status])
+}
+
+model PromotionAssessment {
+  id String @id @default(uuid()) @db.Uuid
+  pipelineId String @db.Uuid
+  deliveryRunId String? @db.Uuid
+  sourceEnvironment String @db.VarChar(80)
+  targetEnvironment String @db.VarChar(80)
+  revisionId String? @db.Uuid
+  riskLevel String @db.VarChar(32)
+  decision String @db.VarChar(48)
+  confidence String @db.VarChar(32)
+  evaluatedAt DateTime @default(now())
+  expiresAt DateTime
+  policyVersion String @db.VarChar(80)
+  evidenceVersion String @db.VarChar(80)
+  reasonSummary String @db.VarChar(2000)
+  blockingGates Json
+  warnings Json
+  requiredApprovals Json
+  requiredValidations Json
+  evidenceReferences Json
+  deterministicInputHash String @db.VarChar(128)
+  invalidatedAt DateTime?
+  invalidationReason String? @db.VarChar(1000)
+  createdAt DateTime @default(now())
+  pipeline DeliveryPipeline @relation(fields:[pipelineId],references:[id],onDelete:Cascade)
+  gates PromotionGateResult[]
+  @@index([pipelineId,evaluatedAt])
+  @@index([expiresAt,decision])
+  @@index([targetEnvironment,decision])
+}
+
+model PromotionGateResult {
+  id String @id @default(uuid()) @db.Uuid
+  assessmentId String @db.Uuid
+  gateType String @db.VarChar(80)
+  status String @db.VarChar(32)
+  observedValue Json?
+  expectedThreshold Json?
+  evidenceReference String? @db.VarChar(255)
+  evaluatedAt DateTime @default(now())
+  policyVersion String @db.VarChar(80)
+  expiresAt DateTime
+  blockingSeverity String @db.VarChar(32)
+  explanation String @db.VarChar(2000)
+  assessment PromotionAssessment @relation(fields:[assessmentId],references:[id],onDelete:Cascade)
+  @@index([assessmentId,status])
+}
+
+model DependencyHealthAssessment {
+  id String @id @default(uuid()) @db.Uuid
+  pipelineId String @db.Uuid
+  deliveryRunId String? @db.Uuid
+  dependencyClass String @db.VarChar(80)
+  dependencyReference String @db.VarChar(255)
+  healthStatus String @db.VarChar(32)
+  severity String @db.VarChar(32)
+  observedAt DateTime @default(now())
+  expiresAt DateTime
+  evidenceReference String? @db.VarChar(255)
+  explanation String @db.VarChar(2000)
+  sourceVersion String @db.VarChar(80)
+  createdAt DateTime @default(now())
+  pipeline DeliveryPipeline @relation(fields:[pipelineId],references:[id],onDelete:Cascade)
+  @@index([pipelineId,dependencyClass,healthStatus])
+  @@index([expiresAt,healthStatus])
+}
+
+model DeliveryRiskAssessment {
+  id String @id @default(uuid()) @db.Uuid
+  pipelineId String @db.Uuid
+  deliveryRunId String? @db.Uuid
+  riskLevel String @db.VarChar(32)
+  scoreBasis Json
+  evaluatedAt DateTime @default(now())
+  expiresAt DateTime
+  policyVersion String @db.VarChar(80)
+  deterministicInputHash String @db.VarChar(128)
+  createdAt DateTime @default(now())
+  pipeline DeliveryPipeline @relation(fields:[pipelineId],references:[id],onDelete:Cascade)
+  @@index([pipelineId,evaluatedAt])
+  @@index([expiresAt,riskLevel])
+}
+
+model PromotionWindow {
+  id String @id @default(uuid()) @db.Uuid
+  environment String @db.VarChar(80)
+  startAt DateTime
+  endAt DateTime
+  timezone String @db.VarChar(80)
+  allowedReleaseClasses Json
+  excludedPeriods Json
+  incidentFreeze Boolean @default(false)
+  maintenance Boolean @default(false)
+  blackout Boolean @default(false)
+  approvalRequirements Json
+  active Boolean @default(true)
+  createdAt DateTime @default(now())
+  @@index([environment,startAt,endAt])
+}
+
+model DeliveryPolicy {
+  id String @id @default(uuid()) @db.Uuid
+  policyKey String @db.VarChar(120)
+  version String @db.VarChar(80)
+  status String @db.VarChar(32)
+  definition Json
+  activatedAt DateTime?
+  deprecatedAt DateTime?
+  createdBy String @db.VarChar(120)
+  pipelineId String? @db.Uuid
+  pipeline DeliveryPipeline? @relation(fields:[pipelineId],references:[id],onDelete:Restrict)
+  @@unique([policyKey,version])
+  @@index([policyKey,status])
+}
+
+model DeliveryCertification {
+  id String @id @default(uuid()) @db.Uuid
+  pipelineId String @db.Uuid
+  deliveryRunId String? @db.Uuid
+  certificationState String @db.VarChar(32)
+  evidenceReferences Json
+  policyVersion String @db.VarChar(80)
+  issuedAt DateTime @default(now())
+  expiresAt DateTime
+  invalidatedAt DateTime?
+  invalidationReason String? @db.VarChar(1000)
+  reason String @db.VarChar(2000)
+  pipeline DeliveryPipeline @relation(fields:[pipelineId],references:[id],onDelete:Cascade)
+  @@index([pipelineId,certificationState])
+  @@index([expiresAt,certificationState])
 }
