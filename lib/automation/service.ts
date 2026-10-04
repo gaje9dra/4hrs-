@@ -61,6 +61,10 @@ export async function evaluateAutomation(policyId:string,input:EvaluationInput){
  const requiresApproval=riskRequiresApproval(risk)||!autonomous;
  const allowed=guards.allowed&&conditionsPass&&!requiresApproval;
  const dryRun=Boolean(input.dryRun||policy.dryRun);
+ if(dryRun){
+  await db.automationDryRun.create({data:{policyId,policyVersionId:version?.id??null,trigger:{fingerprint:input.triggerFingerprint,environment:input.environment},conditions:conditionsOf(policy.conditions) as unknown as Prisma.InputJsonValue,target:{resource:input.targetResource,scope:boundedScope({environment:input.environment,resourceId:input.targetResource})},proposedAction:{actions},risk,authorization:policy.authorization as Prisma.InputJsonValue,expectedImpact:"No production mutation is performed.",rollbackCapability:"Simulation only; no rollback is claimed.",blastRadius:boundedScope({environment:input.environment,resourceId:input.targetResource}),decisionReason:reason}}});
+  await db.automationSimulation.create({data:{policyId,policyVersionId:version?.id??null,input:{triggerFingerprint:input.triggerFingerprint,values:input.values,environment:input.environment,targetResource:input.targetResource},output:{conditionsPass,guards,requiresApproval,actions},synthetic:true}});
+ }
  const state:AutomationExecutionState=dryRun?"BLOCKED":allowed?"RUNNING":guards.allowed&&conditionsPass?"PENDING_APPROVAL":"BLOCKED";
  const reason=!conditionsPass?"Conditions did not match.":guards.reason;
  const safety=await db.automationSafetyEvaluation.create({data:{policyId,allowed,risk,reason,environment:input.environment,details:{conditionsPass,guards,requiresApproval,dryRun,policyVersion:policy.version}}});
@@ -78,6 +82,10 @@ export async function executeAutomation(executionId:string,input:{reason:string;
  if(policy.version!==(await db.automationPolicyVersion.findFirst({where:{policyId:policy.id},orderBy:{version:"desc"}}))?.version)throw new Error("Automation policy has changed; historical execution cannot be executed against a newer policy.");
  if(execution.risk!=="SAFE_AUTOMATION"&&execution.risk!=="CONTROLLED_AUTOMATION")throw new Error("Automation execution requires explicit approval.");
  if(policy.dryRun)throw new Error("Automation policy is in dry-run mode.");
+ const latestApproval=execution.approvalId?await db.automationApproval.findUnique({where:{id:execution.approvalId}}):null;
+ if(execution.risk!=="SAFE_AUTOMATION"&&execution.risk!=="CONTROLLED_AUTOMATION"&&(!latestApproval||!latestApproval.approvedAt||latestApproval.expiresAt<=new Date())) throw new Error("Automation approval is missing or expired.");
+ const guard=await enforceGuards(policy,{environment:execution.environment,values:{},triggerFingerprint:execution.triggerFingerprint,targetResource:execution.targetResource,reason:input.reason,correlationId:execution.correlationId});
+ if(!guard.allowed)throw new Error(guard.reason);
  const actions=await ensurePolicyActions(policy);
  const circuit=await db.automationCircuit.findUnique({where:{policyId:policy.id}});
  if(circuit?.state==="OPEN")throw new Error("Automation circuit is open.");
@@ -169,4 +177,13 @@ export async function disableAutomation(policyId:string,reason:string){
  const updated=await db.automationPolicy.update({where:{id:policyId},data:{enabled:false,status:"DISABLED",version:{increment:1}}});
  await db.automationCircuit.upsert({where:{policyId},create:{policyId,state:"OPEN",reason},update:{state:"OPEN",reason}});
  return updated;
+}
+
+export async function ingestAutomationTrigger(input:{policyId:string;kind:string;fingerprint:string;environment:string;severity?:string;confidence?:number;evidence?:unknown;dependencyState?:unknown;maintenanceActive?:boolean;incidentId?:string;values?:Record<string,unknown>;targetResource:string;reason:string;correlationId:string;requestedBy?:string}){
+ if(input.maintenanceActive) return {accepted:false,reason:"Automation trigger suppressed during maintenance."};
+ const existing=await db.automationTrigger.findFirst({where:{policyId:input.policyId,fingerprint:input.fingerprint,environment:input.environment,observedAt:{gte:new Date(Date.now()-15*60*1000)}},orderBy:{observedAt:"desc"}});
+ if(existing) return {accepted:false,reason:"Duplicate trigger fingerprint suppressed.",triggerId:existing.id};
+ const trigger=await db.automationTrigger.create({data:{policyId:input.policyId,kind:input.kind,fingerprint:input.fingerprint,environment:input.environment,severity:input.severity,confidence:input.confidence,evidence:input.evidence as Prisma.InputJsonValue|undefined,dependencyState:input.dependencyState as Prisma.InputJsonValue|undefined,maintenanceActive:false,incidentId:input.incidentId,accepted:true}});
+ const evaluation=await evaluateAutomation(input.policyId,{environment:input.environment,values:input.values??{},triggerFingerprint:input.fingerprint,targetResource:input.targetResource,reason:input.reason,correlationId:input.correlationId,requestedBy:input.requestedBy,triggerId:trigger.id});
+ return {accepted:true,triggerId:trigger.id,evaluation};
 }
