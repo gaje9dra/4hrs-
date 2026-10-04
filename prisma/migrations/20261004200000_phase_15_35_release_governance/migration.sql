@@ -31,3 +31,6 @@ ALTER TABLE "ReleaseEvidence" ADD CONSTRAINT "ReleaseEvidence_releaseId_fkey" FO
 ALTER TABLE "ReleaseInvalidation" ADD CONSTRAINT "ReleaseInvalidation_releaseId_fkey" FOREIGN KEY ("releaseId") REFERENCES "Release"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "ReleaseLock" ADD CONSTRAINT "ReleaseLock_releaseId_fkey" FOREIGN KEY ("releaseId") REFERENCES "Release"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "Release" ADD CONSTRAINT "Release_artifactId_fkey" FOREIGN KEY ("artifactId") REFERENCES "ReleaseArtifact"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+CREATE TABLE "ReleaseWindow" ("id" UUID NOT NULL,"environment" VARCHAR(80) NOT NULL,"startsAt" TIMESTAMP(3) NOT NULL,"endsAt" TIMESTAMP(3) NOT NULL,"kind" VARCHAR(40) NOT NULL,"frozen" BOOLEAN NOT NULL DEFAULT false,"reason" VARCHAR(500),"policyVersion" VARCHAR(80) NOT NULL,"createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,CONSTRAINT "ReleaseWindow_pkey" PRIMARY KEY ("id"));
+CREATE INDEX "ReleaseWindow_environment_startsAt_endsAt_idx" ON "ReleaseWindow"("environment","startsAt","endsAt");
