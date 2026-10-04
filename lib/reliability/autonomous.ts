@@ -4,6 +4,8 @@ import { db } from "@/lib/db/client";
 import { executeRegisteredAction } from "@/lib/automation/actions";
 import { incidentFingerprint, type ReliabilityCategory } from "@/lib/reliability/incidents";
 import { recordReliabilityFindings } from "@/lib/reliability/service";
+import { runReliabilityChecks } from "@/lib/reliability/checks";
+import { SLO_CANDIDATES, ERROR_BUDGET_POLICY } from "@/lib/reliability/model";
 import { deterministicAnomaly, confidenceFromEvidence, safeConfidenceForMutation, assertReliabilityTransition, type ReliabilityConfidence } from "./model";
 
 type Json=Prisma.InputJsonValue;
@@ -149,4 +151,13 @@ export async function seedReliabilityStrategies(){
   create:{stableId:"synthetic-retry",name:"Registered synthetic diagnostic retry",status:"ACTIVE",symptom:"Registered synthetic workflow failure with corroborated reliability evidence",risk:"SAFE_AUTOMATION",evidenceRequirements:json(["synthetic failure","correlated operational signal"]),hypothesisRequirements:json(["deterministic signal corroboration"]),actions:json(["RERUN_SYNTHETIC_CHECK"]),preconditions:json(["policy-active","environment-allowed","circuit-closed","idempotency-clear","no-critical-reconciliation","no-critical-cost-anomaly","no-major-security-incident"]),postconditions:json(["synthetic execution reaches non-failing status"]),timeoutSeconds:300,retryLimit:0,cooldownSeconds:300,maxSteps:1,maxMutations:1,maxChainDurationSeconds:300,blastRadius:json({resource:"single-synthetic-workflow"}),rollback:json({mode:"NONE"}),verification:json({windowSeconds:60,metric:"synthetic-status"}),escalation:json({onFailure:"OPEN_CIRCUIT_AND_ESCALATE"}),owner:"operations"},
   update:{status:"ACTIVE",actions:json(["RERUN_SYNTHETIC_CHECK"]),updatedAt:new Date()}
  });
+}
+
+export async function evaluateOperationalReliability(input:{environment:string;correlationId:string}){
+ const findings=await runReliabilityChecks();
+ for(const finding of findings){
+  const signal=await ingestReliabilitySignal({kind:"OPERATIONAL_FINDING",service:finding.capability,dependency:finding.dependency,severity:finding.severity,environment:input.environment,value:{fingerprint:finding.fingerprint},evidence:finding.metadata,correlationId:input.correlationId});
+  await db.reliabilityAssessment.create({data:{state:"ASSESSED",confidence:"LOW",signals:json([signal.id]),evidence:redacted(finding.metadata??{}),contradictions:json([]),remediationConsidered:json(["SYNTHETIC_RETRY"]),selectionRationale:"Operational finding requires deterministic validation before any mutation.",incidentId:null,correlationFingerprint:finding.fingerprint}});
+ }
+ return {findings:findings.length,sloCandidates:SLO_CANDIDATES.length,errorBudgetPolicy:ERROR_BUDGET_POLICY.treatment};
 }
