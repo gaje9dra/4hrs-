@@ -76,6 +76,8 @@ jobs:
         run: npm run operations:validate
       - name: Validate autonomous reliability controls
         run: npm run reliability:autonomous:validate
+      - name: Validate resilience engineering controls
+        run: npm run resilience:validate
 
       - name: Audit migration safety
         run: npm run db:audit-migrations
