@@ -102,7 +102,9 @@ jobs:
         run: npm run delivery-orchestration:validate
 
       - name: Validate delivery intelligence safety
-        run: npm run delivery-intelligence:validate\n      - name: Validate Phase 15.38 completion governance\n        run: npm run delivery-intelligence:completion:validate
+        run: npm run delivery-intelligence:validate
+      - name: Validate Phase 15.38 completion governance
+        run: npm run delivery-intelligence:completion:validate
 
       - name: Audit migration safety
         run: npm run db:audit-migrations
