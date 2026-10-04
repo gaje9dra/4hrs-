@@ -1,0 +1,6 @@
+import {test} from "node:test";import assert from "node:assert/strict";import {classifyRisk,evaluatePolicy,generatePlan,rollbackEligible,canTransition} from "@/lib/change-governance/service";
+test("critical payment change",()=>assert.equal(classifyRisk({category:"PAYMENT",environment:"production",targets:["payment"],rollbackAvailable:false,unknownDependencies:1,validationCoverage:50,payment:true,provider:true,database:false,security:true,privacy:true}).risk,"CRITICAL"));
+test("unknown dependency blocks",()=>assert.equal(evaluatePolicy({risk:"HIGH",unknownDependencies:1}).decision,"BLOCK"));
+test("typed plan",()=>assert.ok(generatePlan({risk:"HIGH",requiresRehearsal:true}).every(x=>typeof x.operation==="string"&&!String(x.operation).includes("SHELL"))));
+test("unsafe rollback rejected",()=>assert.equal(rollbackEligible({deterministic:true,validated:true,dataLoss:true,financialMutation:false,duplicateProviderAction:false,bounded:true,policyAllows:true,evidence:true}),false));
+test("illegal lifecycle rejected",()=>assert.equal(canTransition("CERTIFIED","DEPLOYING"),false));
