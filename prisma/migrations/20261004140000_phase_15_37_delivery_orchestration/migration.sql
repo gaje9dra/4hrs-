@@ -29,9 +29,6 @@ CREATE INDEX "DeliveryPipeline_changeRequestId_status_idx" ON "DeliveryPipeline"
 CREATE INDEX "DeliveryPipeline_releaseId_status_idx" ON "DeliveryPipeline"("releaseId","status");
 CREATE INDEX "DeliveryPipeline_deploymentId_status_idx" ON "DeliveryPipeline"("deploymentId","status");
 CREATE INDEX "DeliveryPipeline_environment_status_idx" ON "DeliveryPipeline"("environment","status");
-ALTER TABLE "DeliveryPipeline" ADD CONSTRAINT "DeliveryPipeline_changeRequestId_fkey" FOREIGN KEY ("changeRequestId") REFERENCES "ChangeRequest"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-ALTER TABLE "DeliveryPipeline" ADD CONSTRAINT "DeliveryPipeline_releaseId_fkey" FOREIGN KEY ("releaseId") REFERENCES "Release"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-ALTER TABLE "DeliveryPipeline" ADD CONSTRAINT "DeliveryPipeline_deploymentId_fkey" FOREIGN KEY ("deploymentId") REFERENCES "Deployment"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 CREATE TABLE "DeliveryRevision" ("id" UUID NOT NULL,"pipelineId" UUID NOT NULL,"version" INTEGER NOT NULL,"definition" JSONB NOT NULL,"definitionHash" VARCHAR(128) NOT NULL,"invalidatesActiveRuns" BOOLEAN NOT NULL DEFAULT false,"createdBy" VARCHAR(120) NOT NULL,"createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,CONSTRAINT "DeliveryRevision_pkey" PRIMARY KEY ("id"));
 CREATE UNIQUE INDEX "DeliveryRevision_pipelineId_version_key" ON "DeliveryRevision"("pipelineId","version");
