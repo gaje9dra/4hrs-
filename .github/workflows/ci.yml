@@ -103,6 +103,8 @@ jobs:
 
       - name: Validate delivery intelligence safety
         run: npm run delivery-intelligence:validate
+      - name: Validate Phase 15.38 completion governance
+        run: npm run delivery-intelligence:completion:validate
 
       - name: Audit migration safety
         run: npm run db:audit-migrations

@@ -6116,3 +6116,55 @@ model DeliveryCertification {
   @@index([pipelineId,certificationState])
   @@index([expiresAt,certificationState])
 }
+
+
+model DeliveryPromotionApproval {
+  id String @id @default(uuid()) @db.Uuid
+  assessmentId String @unique @db.Uuid
+  pipelineId String @db.Uuid
+  actorId String @db.VarChar(120)
+  action String @db.VarChar(32)
+  status String @db.VarChar(32)
+  reason String @db.VarChar(1000)
+  policyVersion String @db.VarChar(80)
+  requestedAt DateTime @default(now())
+  decidedAt DateTime?
+  expiresAt DateTime
+  @@index([pipelineId,status])
+  @@index([expiresAt,status])
+}
+
+model DeliveryGovernanceEvent {
+  id String @id @default(uuid()) @db.Uuid
+  assessmentId String? @db.Uuid
+  pipelineId String? @db.Uuid
+  deliveryRunId String? @db.Uuid
+  actorId String @db.VarChar(120)
+  action String @db.VarChar(80)
+  previousState String? @db.VarChar(64)
+  resultingState String? @db.VarChar(64)
+  reason String @db.VarChar(2000)
+  policyVersion String? @db.VarChar(80)
+  evidenceReferences Json
+  correlationId String? @db.VarChar(160)
+  createdAt DateTime @default(now())
+  @@index([assessmentId,createdAt])
+  @@index([pipelineId,createdAt])
+  @@index([action,createdAt])
+}
+
+model DeliveryGovernanceJobRun {
+  id String @id @default(uuid()) @db.Uuid
+  jobKey String @db.VarChar(100)
+  idempotencyKey String @unique @db.VarChar(200)
+  status String @db.VarChar(32)
+  processed Int @default(0)
+  invalidated Int @default(0)
+  expired Int @default(0)
+  releasedLocks Int @default(0)
+  invalidatedCertifications Int @default(0)
+  startedAt DateTime @default(now())
+  completedAt DateTime?
+  error String? @db.VarChar(2000)
+  @@index([jobKey,startedAt])
+}
