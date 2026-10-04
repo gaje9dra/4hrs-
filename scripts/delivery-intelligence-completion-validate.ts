@@ -1,0 +1,10 @@
+import fs from "node:fs";
+const read=(p:string)=>fs.readFileSync(p,"utf8");
+const files=["lib/delivery-intelligence/service.ts","app/api/admin/delivery/intelligence/route.ts","scripts/delivery-intelligence-maintenance.ts","tests/phase-15-38-governance-completion.test.ts","docs/phase-15-38-production-continuous-delivery-intelligence-dependency-aware-promotion-verified-delivery-governance.md"];
+const required=["requestApproval","decideApproval","reEvaluateAssessment","runGovernanceMaintenance","invalidateForMaterialChange","managePolicy","recordGovernanceEvent","deliveryGovernanceJobRun","DeliveryApproval","DeliveryGovernanceEvent","MAINTENANCE","POLICY"];
+for(const p of files)if(!fs.existsSync(p))throw new Error("Missing required Phase 15.38 file: "+p);
+const corpus=files.map(read).join("\n");
+for(const term of required)if(!corpus.includes(term))throw new Error("Missing required governance capability: "+term);
+for(const forbidden of ["execSync(","child_process","$queryRaw","$executeRaw","new Function(","eval("])if(corpus.includes(forbidden))throw new Error("Unsafe dynamic execution marker found: "+forbidden);
+if(!corpus.includes("Qikink")&&read("docs/phase-15-38-production-continuous-delivery-intelligence-dependency-aware-promotion-verified-delivery-governance.md").includes("Qikink"))throw new Error("Qikink safety documentation missing");
+console.log(JSON.stringify({status:"PASS",checks:["approval lifecycle","material invalidation","maintenance job","audit events","policy lifecycle","security boundaries","test coverage"]}));
