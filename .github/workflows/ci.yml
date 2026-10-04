@@ -82,6 +82,8 @@ jobs:
         run: npm run rehearsal:validate
       - name: Validate continuous improvement governance safety
         run: npm run improvement:validate
+      - name: Validate architecture evolution governance safety
+        run: npm run architecture:validate
 
       - name: Audit migration safety
         run: npm run db:audit-migrations
