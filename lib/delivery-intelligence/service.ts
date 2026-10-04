@@ -118,3 +118,18 @@ export async function requestEmergencyReview(input:{assessmentId:string;actorId:
   await recordGovernanceEvent({assessmentId:assessment.id,pipelineId:assessment.pipelineId,actorId:input.actorId,action:"EMERGENCY_REVIEW_REQUESTED",previousState:assessment.decision,resultingState:"EMERGENCY_REVIEW_REQUIRED",reason:input.reason,policyVersion:assessment.policyVersion,evidenceReferences:[input.incidentReference]});
   return review;
 }
+
+
+export async function authorizeEmergencyReview(id:string,actorId:string,confirmationToken:string,reason:string) {
+  if(!confirmationToken.trim()||!reason.trim()) throw new Error("Emergency authorization requires explicit confirmation and reason.");
+  const review=await db.deliveryEmergencyOverride.findUnique({where:{id}});
+  if(!review || review.status!=="REVIEW_REQUIRED" || review.expiresAt<=new Date()) throw new Error("Emergency review is not active or has expired.");
+  if(review.confirmationToken!==confirmationToken) throw new Error("Emergency confirmation does not match.");
+  const updated=await db.$transaction(async(tx)=>{
+    const row=await tx.deliveryEmergencyOverride.update({where:{id},data:{status:"AUTHORIZED",consumedAt:new Date()}});
+    await tx.promotionAssessment.update({where:{id:review.assessmentId},data:{decision:"ALLOW_WITH_APPROVAL",invalidationReason:null}});
+    return row;
+  });
+  await recordGovernanceEvent({assessmentId:review.assessmentId,pipelineId:review.pipelineId,actorId,action:"EMERGENCY_REVIEW_AUTHORIZED",previousState:"EMERGENCY_REVIEW_REQUIRED",resultingState:"EMERGENCY_AUTHORIZED",reason,policyVersion:(await db.promotionAssessment.findUnique({where:{id:review.assessmentId}}))?.policyVersion,evidenceReferences:[review.incidentReference]});
+  return updated;
+}
