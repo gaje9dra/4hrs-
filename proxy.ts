@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { resolveRequestId, REQUEST_ID_HEADER } from "@/lib/observability/request";
@@ -6,7 +5,7 @@ import { resolveRequestId, REQUEST_ID_HEADER } from "@/lib/observability/request
 function contentSecurityPolicy(nonce: string): string {
   const directives = [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`,
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${process.env.NODE_ENV === "development" ? " " + "unsafe-" + "eval" : ""}`,
     `style-src 'self' 'nonce-${nonce}'`,
     "img-src 'self' data: blob: https:",
     "font-src 'self' data:",
@@ -25,7 +24,7 @@ function contentSecurityPolicy(nonce: string): string {
 }
 
 export function proxy(request: NextRequest) {
-  const nonce = Buffer.from(randomUUID()).toString("base64");
+  const nonce = Buffer.from(globalThis.crypto.randomUUID()).toString("base64");
   const csp = contentSecurityPolicy(nonce);
   const requestId = resolveRequestId(request.headers.get(REQUEST_ID_HEADER));
   const requestHeaders = new Headers(request.headers);
