@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db/client";
 import { executeRegisteredAction, getRegisteredAction, listRegisteredActions } from "./actions";
 import { assertExecutionTransition, autonomousAllowed, evaluateConditions, riskRequiresApproval, type AutomationRiskClass, type AutomationExecutionState, type StructuredCondition, validatePolicyDefinition, boundedScope } from "./model";
@@ -46,7 +47,7 @@ export async function executeAutomation(executionId:string,input:{reason:string;
    results.push({action:key,result});
  }
  assertExecutionTransition(execution.state as AutomationExecutionState,"SUCCEEDED");
- return db.automationExecution.update({where:{id:executionId},data:{state:"SUCCEEDED",startedAt:execution.startedAt??new Date(),finishedAt:new Date(),result:{results}}});
+ return db.automationExecution.update({where:{id:executionId},data:{state:"SUCCEEDED",startedAt:execution.startedAt??new Date(),finishedAt:new Date(),result:{results:results as unknown as Prisma.InputJsonValue}}});
 }
 
 export async function listAutomationExecutions(limit=50){
