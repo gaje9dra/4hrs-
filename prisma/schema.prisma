@@ -3702,3 +3702,253 @@ model TwinEvidence {
   createdAt DateTime @default(now())
   @@index([executionId,createdAt])
 }
+
+enum ImprovementConfidence { UNKNOWN LOW MEDIUM HIGH VERIFIED }
+enum ImprovementRiskClass { OBSERVE_ONLY SAFE_AUTOMATION CONTROLLED_AUTOMATION APPROVAL_REQUIRED HIGH_RISK PROHIBITED }
+enum ImprovementLifecycle { DISCOVERED TRIAGED ANALYZING PROPOSED REVIEW_REQUIRED APPROVED IMPLEMENTING VALIDATING VERIFIED CERTIFIED REJECTED DEFERRED ROLLED_BACK ABANDONED }
+enum ImprovementValidationState { NOT_STARTED RUNNING PASSED PASSED_WITH_LIMITATIONS FAILED BLOCKED ROLLED_BACK }
+enum ImprovementOutcome { SUCCESS PARTIAL_SUCCESS NO_MEASURABLE_EFFECT REGRESSION FAILED ROLLED_BACK }
+enum ImprovementCustomerImpact { NO_IMPACT LOW MEDIUM HIGH CRITICAL }
+
+model ImprovementOpportunity {
+  id String @id @default(uuid()) @db.Uuid
+  stableId String @unique @db.VarChar(160)
+  title String @db.VarChar(240)
+  problem String @db.VarChar(4000)
+  sourceType String @db.VarChar(80)
+  sourceId String @db.VarChar(255)
+  domain String @db.VarChar(120)
+  severity String @db.VarChar(32)
+  confidence ImprovementConfidence
+  riskClass ImprovementRiskClass
+  customerImpact ImprovementCustomerImpact
+  evidence Json
+  hypothesis Json
+  priority Json
+  lifecycle ImprovementLifecycle @default(DISCOVERED)
+  owner String @db.VarChar(160)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  proposals ImprovementProposal[]
+  patterns ImprovementPattern[]
+  transitions ImprovementTransition[]
+  @@index([lifecycle,updatedAt])
+  @@index([domain,severity,confidence])
+  @@index([riskClass,customerImpact])
+}
+
+model ImprovementEvidence {
+  id String @id @default(uuid()) @db.Uuid
+  opportunityId String?
+  proposalId String?
+  sourceType String @db.VarChar(80)
+  sourceId String @db.VarChar(255)
+  observedAt DateTime
+  environment String @db.VarChar(40)
+  domain String @db.VarChar(120)
+  severity String @db.VarChar(32)
+  observedBehavior String @db.VarChar(4000)
+  expectedBehavior String @db.VarChar(4000)
+  impact Json
+  metrics Json
+  references Json
+  redactionVersion String @db.VarChar(40)
+  integrityHash String @db.VarChar(128)
+  createdAt DateTime @default(now())
+  @@index([opportunityId,createdAt])
+  @@index([sourceType,sourceId,observedAt])
+}
+
+model ImprovementPattern {
+  id String @id @default(uuid()) @db.Uuid
+  opportunityId String?
+  stableId String @unique @db.VarChar(160)
+  statement String @db.VarChar(4000)
+  confidence ImprovementConfidence
+  observationWindow Json
+  methodologyVersion String @db.VarChar(40)
+  supportingEvents Json
+  counterEvidence Json
+  provenance Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([confidence,updatedAt])
+}
+
+model ImprovementProposal {
+  id String @id @default(uuid()) @db.Uuid
+  opportunityId String @db.Uuid
+  version Int
+  problem String @db.VarChar(4000)
+  hypothesis String @db.VarChar(4000)
+  proposedChange Json
+  affectedComponents Json
+  affectedDomains Json
+  riskClass ImprovementRiskClass
+  expectedBenefit Json
+  expectedFailureModes Json
+  rollbackStrategy Json
+  validationPlan Json
+  monitoringPlan Json
+  acceptanceCriteria Json
+  customerImpact Json
+  implementationState ImprovementLifecycle @default(PROPOSED)
+  validationState ImprovementValidationState @default(NOT_STARTED)
+  certificationState String @db.VarChar(40)
+  owner String @db.VarChar(160)
+  reviewers Json
+  dependencyAssessment Json
+  databaseAssessment Json
+  governanceRefs Json
+  featureFlagRefs Json
+  digitalTwinRefs Json
+  resilienceRefs Json
+  releaseRefs Json
+  costAssessment Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  opportunity ImprovementOpportunity @relation(fields:[opportunityId],references:[id],onDelete:Restrict)
+  approvals ImprovementApproval[]
+  validations ImprovementValidation[]
+  outcomes ImprovementOutcomeRecord[]
+  transitions ImprovementTransition[]
+  @@unique([opportunityId,version])
+  @@index([implementationState,validationState])
+}
+
+model ImprovementApproval {
+  id String @id @default(uuid()) @db.Uuid
+  proposalId String @db.Uuid
+  proposalVersion Int
+  approver String @db.VarChar(160)
+  role String @db.VarChar(80)
+  decision String @db.VarChar(32)
+  rationale String @db.VarChar(2000)
+  policyVersion String @db.VarChar(80)
+  evidenceVersion String @db.VarChar(80)
+  createdAt DateTime @default(now())
+  proposal ImprovementProposal @relation(fields:[proposalId],references:[id],onDelete:Restrict)
+  @@index([proposalId,proposalVersion])
+}
+
+model ImprovementValidation {
+  id String @id @default(uuid()) @db.Uuid
+  proposalId String @db.Uuid
+  validationVersion Int
+  state ImprovementValidationState
+  requiredTests Json
+  evidence Json
+  blockers Json
+  rollbackVerified Boolean @default(false)
+  observabilityAvailable Boolean @default(false)
+  customerImpact Json
+  governanceSatisfied Boolean @default(false)
+  digitalTwinVerified Boolean @default(false)
+  resilienceVerified Boolean @default(false)
+  startedAt DateTime?
+  completedAt DateTime?
+  createdAt DateTime @default(now())
+  proposal ImprovementProposal @relation(fields:[proposalId],references:[id],onDelete:Restrict)
+  @@index([proposalId,createdAt])
+}
+
+model ImprovementOutcomeRecord {
+  id String @id @default(uuid()) @db.Uuid
+  proposalId String @db.Uuid
+  outcome ImprovementOutcome
+  expectedBenefit Json
+  actualBenefit Json
+  regression Json
+  operationalImpact Json
+  customerImpact Json
+  costImpact Json
+  reliabilityImpact Json
+  sloImpact Json
+  errorBudgetImpact Json
+  evidence Json
+  measuredAt DateTime @default(now())
+  proposal ImprovementProposal @relation(fields:[proposalId],references:[id],onDelete:Restrict)
+  @@index([proposalId,measuredAt])
+}
+
+model ImprovementTransition {
+  id String @id @default(uuid()) @db.Uuid
+  opportunityId String
+  proposalId String?
+  fromState String @db.VarChar(40)
+  toState String @db.VarChar(40)
+  actor String @db.VarChar(160)
+  reason String @db.VarChar(2000)
+  proposalVersion Int?
+  metadata Json
+  createdAt DateTime @default(now())
+  opportunity ImprovementOpportunity @relation(fields:[opportunityId],references:[id],onDelete:Restrict)
+  proposal ImprovementProposal? @relation(fields:[proposalId],references:[id],onDelete:Restrict)
+  @@index([opportunityId,createdAt])
+  @@index([proposalId,createdAt])
+}
+
+model ImprovementCertification {
+  id String @id @default(uuid()) @db.Uuid
+  proposalId String @db.Uuid
+  status String @db.VarChar(40)
+  implementationStatus String @db.VarChar(40)
+  testStatus String @db.VarChar(40)
+  ciStatus String @db.VarChar(40)
+  securityStatus String @db.VarChar(40)
+  dataIntegrityStatus String @db.VarChar(40)
+  operationalStatus String @db.VarChar(40)
+  governanceStatus String @db.VarChar(40)
+  documentationStatus String @db.VarChar(40)
+  knownLimitations Json
+  unresolvedRisks Json
+  rollbackReadiness Json
+  owner String @db.VarChar(160)
+  certifiedAt DateTime @default(now())
+  @@index([proposalId,certifiedAt])
+}
+
+model ImprovementAutomationGuard {
+  id String @id @default(uuid()) @db.Uuid
+  stableId String @unique @db.VarChar(160)
+  riskClass ImprovementRiskClass
+  maxExecutions Int
+  windowSeconds Int
+  cooldownSeconds Int
+  circuitBreakerThreshold Int
+  blastRadius Json
+  preconditions Json
+  postconditions Json
+  rollbackConditions Json
+  loopKey String @db.VarChar(255)
+  enabled Boolean @default(true)
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+}
+
+model ImprovementAutomationExecution {
+  id String @id @default(uuid()) @db.Uuid
+  guardId String @db.Uuid
+  proposalId String @db.Uuid
+  idempotencyKey String @unique @db.VarChar(255)
+  state String @db.VarChar(32)
+  attempt Int @default(1)
+  startedAt DateTime @default(now())
+  endedAt DateTime?
+  result Json
+  guard ImprovementAutomationGuard @relation(fields:[guardId],references:[id],onDelete:Restrict)
+  @@index([guardId,startedAt])
+  @@index([proposalId,startedAt])
+}
+
+model ImprovementCertificationEvidence {
+  id String @id @default(uuid()) @db.Uuid
+  certificationId String @db.Uuid
+  evidenceType String @db.VarChar(80)
+  reference String @db.VarChar(1000)
+  integrityHash String @db.VarChar(128)
+  payload Json
+  immutable Boolean @default(true)
+  createdAt DateTime @default(now())
+  @@index([certificationId,createdAt])
+}
