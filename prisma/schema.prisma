@@ -4003,3 +4003,255 @@ model ImprovementCertificationEvidence {
   createdAt DateTime @default(now())
   @@index([certificationId,createdAt])
 }
+
+enum ArchitectureLifecycle {
+  IDENTIFIED
+  ASSESSED
+  PROPOSED
+  ARCHITECTURE_REVIEW
+  APPROVED
+  REHEARSAL
+  MIGRATING
+  VALIDATING
+  CERTIFIED
+  REJECTED
+  DEFERRED
+  ROLLED_BACK
+  ABANDONED
+}
+enum ArchitectureProblemCategory {
+  DOMAIN_BOUNDARY
+  API_BOUNDARY
+  DATA_MODEL
+  DATABASE
+  PERFORMANCE
+  SCALABILITY
+  RELIABILITY
+  SECURITY
+  PRIVACY
+  OBSERVABILITY
+  DEPENDENCY
+  INFRASTRUCTURE
+  DEPLOYMENT
+  TESTING
+  DEVELOPER_EXPERIENCE
+  OPERATIONAL_TOIL
+  COST
+  TECHNICAL_DEBT
+  DOCUMENTATION
+}
+
+model ArchitectureEvolution {
+  id String @id @default(uuid()) @db.Uuid
+  stableId String @unique @db.VarChar(160)
+  title String @db.VarChar(240)
+  description String @db.VarChar(4000)
+  originatingProblem String @db.VarChar(4000)
+  category String @db.VarChar(80)
+  owner String @db.VarChar(160)
+  affectedDomains Json
+  affectedComponents Json
+  risk String @db.VarChar(40)
+  blastRadius String @db.VarChar(20)
+  expectedBenefit Json
+  expectedCost Json
+  migrationStrategy String @db.VarChar(40)
+  rollbackStrategy Json
+  validationPlan Json
+  successCriteria Json
+  evidence Json
+  lifecycle ArchitectureLifecycle @default(IDENTIFIED)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([lifecycle,updatedAt])
+  @@index([category,risk,blastRadius])
+}
+
+model ArchitectureAssessment {
+  id String @id @default(uuid()) @db.Uuid
+  evolutionId String @db.Uuid
+  assessor String @db.VarChar(160)
+  result String @db.VarChar(40)
+  assessment Json
+  methodologyVersion String @db.VarChar(40)
+  createdAt DateTime @default(now())
+  @@index([evolutionId,createdAt])
+}
+
+model ArchitectureProposal {
+  id String @id @default(uuid()) @db.Uuid
+  evolutionId String @db.Uuid
+  version Int
+  options Json
+  decisionCriteria Json
+  selectedOption String?
+  proposal Json
+  owner String @db.VarChar(160)
+  status String @db.VarChar(40)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([evolutionId,version])
+}
+
+model ArchitectureDecision {
+  id String @id @default(uuid()) @db.Uuid
+  evolutionId String @db.Uuid
+  proposalId String @db.Uuid
+  decision String @db.VarChar(32)
+  rationale String @db.VarChar(4000)
+  approver String @db.VarChar(160)
+  decisionVersion Int
+  risks Json
+  tradeoffs Json
+  rejectedAlternatives Json
+  approval Boolean
+  createdAt DateTime @default(now())
+  @@index([evolutionId,decisionVersion])
+}
+
+model ArchitectureMigration {
+  id String @id @default(uuid()) @db.Uuid
+  evolutionId String @db.Uuid
+  strategy String @db.VarChar(40)
+  owner String @db.VarChar(160)
+  plan Json
+  rollback Json
+  forwardRecovery Json
+  compatibility Json
+  status String @db.VarChar(40)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([evolutionId,createdAt])
+}
+
+model ArchitectureValidation {
+  id String @id @default(uuid()) @db.Uuid
+  evolutionId String @db.Uuid
+  migrationId String?
+  status String @db.VarChar(40)
+  tests Json
+  evidence Json
+  rollbackVerified Boolean
+  observabilityVerified Boolean
+  securityVerified Boolean
+  privacyVerified Boolean
+  reconciliationVerified Boolean
+  digitalTwinVerified Boolean
+  resilienceVerified Boolean
+  createdAt DateTime @default(now())
+  @@index([evolutionId,createdAt])
+}
+
+model ArchitectureCertification {
+  id String @id @default(uuid()) @db.Uuid
+  evolutionId String @db.Uuid
+  status String @db.VarChar(40)
+  ciStatus String @db.VarChar(32)
+  testStatus String @db.VarChar(32)
+  securityStatus String @db.VarChar(32)
+  privacyStatus String @db.VarChar(32)
+  dataIntegrityStatus String @db.VarChar(32)
+  observabilityStatus String @db.VarChar(32)
+  rollbackReady Boolean
+  documentationComplete Boolean
+  digitalTwinVerified Boolean
+  resilienceVerified Boolean
+  reconciliationVerified Boolean
+  knownLimitations Json
+  owner String @db.VarChar(160)
+  certifiedAt DateTime @default(now())
+  @@index([evolutionId,certifiedAt])
+}
+
+model ArchitectureDependency {
+  id String @id @default(uuid()) @db.Uuid
+  evolutionId String @db.Uuid
+  name String @db.VarChar(200)
+  currentVersion String @db.VarChar(120)
+  targetVersion String?
+  reason String @db.VarChar(2000)
+  compatibility String @db.VarChar(80)
+  securityStatus String @db.VarChar(80)
+  runtimeImpact Json
+  rollback Json
+  createdAt DateTime @default(now())
+  @@index([evolutionId,createdAt])
+}
+
+model ArchitectureRisk {
+  id String @id @default(uuid()) @db.Uuid
+  evolutionId String @db.Uuid
+  riskClass String @db.VarChar(40)
+  description String @db.VarChar(2000)
+  likelihood String @db.VarChar(32)
+  impact String @db.VarChar(32)
+  mitigation Json
+  owner String @db.VarChar(160)
+  status String @db.VarChar(32)
+  createdAt DateTime @default(now())
+  @@index([evolutionId,status])
+}
+
+model ArchitectureEvidence {
+  id String @id @default(uuid()) @db.Uuid
+  evolutionId String @db.Uuid
+  sourceType String @db.VarChar(80)
+  sourceId String @db.VarChar(255)
+  environment String @db.VarChar(40)
+  observedAt DateTime
+  summary String @db.VarChar(4000)
+  references Json
+  metrics Json
+  integrityHash String @db.VarChar(128)
+  redactionVersion String @db.VarChar(40)
+  createdAt DateTime @default(now())
+  @@index([evolutionId,createdAt])
+  @@index([sourceType,sourceId,observedAt])
+}
+
+model ArchitectureTransition {
+  id String @id @default(uuid()) @db.Uuid
+  evolutionId String @db.Uuid
+  fromState String @db.VarChar(40)
+  toState String @db.VarChar(40)
+  actor String @db.VarChar(160)
+  reason String @db.VarChar(2000)
+  createdAt DateTime @default(now())
+  @@index([evolutionId,createdAt])
+}
+
+model ArchitectureDriftFinding {
+  id String @id @default(uuid()) @db.Uuid
+  evolutionId String?
+  kind String @db.VarChar(80)
+  scope String @db.VarChar(200)
+  classification String @db.VarChar(80)
+  evidence Json
+  integrityHash String @db.VarChar(128)
+  methodologyVersion String @db.VarChar(40)
+  owner String @db.VarChar(160)
+  status String @db.VarChar(32)
+  createdAt DateTime @default(now())
+  @@index([status,createdAt])
+  @@index([kind,scope])
+}
+
+model ArchitectureRoadmapItem {
+  id String @id @default(uuid()) @db.Uuid
+  stableId String @unique @db.VarChar(160)
+  evolutionId String?
+  problem String @db.VarChar(4000)
+  priority String @db.VarChar(32)
+  evidence Json
+  dependency Json
+  owner String @db.VarChar(160)
+  risk String @db.VarChar(40)
+  expectedBenefit Json
+  estimatedEffort Json
+  status String @db.VarChar(40)
+  targetMilestone String?
+  blockers Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([status,updatedAt])
+}

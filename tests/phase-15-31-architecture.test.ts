@@ -1,0 +1,9 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { transitionAllowed,validateProblemCategory,validateMigrationStrategy,validateBlastRadius,assessModernization,validateAutomationPolicy,detectDrift } from "@/lib/architecture/service";
+test("lifecycle is explicit",()=>{assert.equal(transitionAllowed("IDENTIFIED","ASSESSED"),true);assert.equal(transitionAllowed("IDENTIFIED","APPROVED"),false);assert.equal(transitionAllowed("CERTIFIED","IDENTIFIED"),false);});
+test("categories and blast radius are governed",()=>{assert.doesNotThrow(()=>validateProblemCategory("DATABASE"));assert.throws(()=>validateProblemCategory("MAGIC"));assert.doesNotThrow(()=>validateBlastRadius("HIGH"));});
+test("dual-write requires consistency governance",()=>{assert.throws(()=>validateMigrationStrategy("DUAL_WRITE"));assert.doesNotThrow(()=>validateMigrationStrategy("EXPAND_CONTRACT"));});
+test("assessment requires evidence and measurable criteria",()=>{assert.throws(()=>assessModernization({evidenceCount:0,successCriteriaCount:2,affectedDomains:1,blastRadius:"LOW",reversible:true,securitySensitive:false,privacySensitive:false,customerImpact:0}));const x=assessModernization({evidenceCount:2,successCriteriaCount:2,affectedDomains:1,blastRadius:"LOW",reversible:true,securitySensitive:false,privacySensitive:false,customerImpact:0});assert.equal(x.methodology,"15.31-v1");});
+test("dangerous automation is blocked",()=>{assert.throws(()=>validateAutomationPolicy("PAYMENT_MUTATION"));assert.doesNotThrow(()=>validateAutomationPolicy("ANALYSIS"));});
+test("drift evidence is integrity hashed",()=>{const x=detectDrift("PROVIDER_LEAKAGE",{provider:"external-provider"});assert.equal(x.classification,"GOVERNED_FINDING");assert.equal(typeof x.integrityHash,"string");});
