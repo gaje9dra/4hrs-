@@ -6118,7 +6118,23 @@ model DeliveryCertification {
 }
 
 
-model DeliveryPromotionApproval {\n  id String @id @default(uuid()) @db.Uuid\n  assessmentId String @unique @db.Uuid\n  pipelineId String @db.Uuid\n  actorId String @db.VarChar(120)\n  action String @db.VarChar(32)\n  status String @db.VarChar(32)\n  reason String @db.VarChar(1000)\n  policyVersion String @db.VarChar(80)\n  requestedAt DateTime @default(now())\n  decidedAt DateTime?\n  expiresAt DateTime\n  @@index([pipelineId,status])\n  @@index([expiresAt,status])\n}\n\nmodel DeliveryGovernanceEvent {
+model DeliveryPromotionApproval {
+  id String @id @default(uuid()) @db.Uuid
+  assessmentId String @unique @db.Uuid
+  pipelineId String @db.Uuid
+  actorId String @db.VarChar(120)
+  action String @db.VarChar(32)
+  status String @db.VarChar(32)
+  reason String @db.VarChar(1000)
+  policyVersion String @db.VarChar(80)
+  requestedAt DateTime @default(now())
+  decidedAt DateTime?
+  expiresAt DateTime
+  @@index([pipelineId,status])
+  @@index([expiresAt,status])
+}
+
+model DeliveryGovernanceEvent {
   id String @id @default(uuid()) @db.Uuid
   assessmentId String? @db.Uuid
   pipelineId String? @db.Uuid
