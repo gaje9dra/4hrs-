@@ -2,7 +2,7 @@ import { db } from "@/lib/db/client";
 import { executeRegisteredAction, getRegisteredAction, listRegisteredActions } from "./actions";
 import { assertExecutionTransition, autonomousAllowed, evaluateConditions, riskRequiresApproval, type AutomationRiskClass, type AutomationExecutionState, type StructuredCondition, validatePolicyDefinition, boundedScope } from "./model";
 
-type EvaluationInput={environment:string;values:Record<string,unknown>;triggerFingerprint:string;targetResource:string;reason:string;correlationId:string;dryRun?:boolean};
+type EvaluationInput={environment:string;values:Record<string,unknown>;triggerFingerprint:string;targetResource:string;reason:string;correlationId:string;dryRun?:boolean;requestedBy?:string};
 
 function conditionsOf(value:unknown):StructuredCondition[]{return Array.isArray(value)?value.filter((x):x is StructuredCondition=>Boolean(x&&typeof x==="object"&&typeof (x as Record<string,unknown>).key==="string")):[];}
 function actionKeys(value:unknown){return Array.isArray(value)?value.filter((x):x is string=>typeof x==="string"):[];}
@@ -24,7 +24,7 @@ export async function evaluateAutomation(policyId:string,input:EvaluationInput){
  const safety=await db.automationSafetyEvaluation.create({data:{policyId,allowed:allowed&&!requiresApproval,risk,reason:!conditionsPass?"Conditions did not match.":!envAllowed?"Environment is not allowed.":requiresApproval?"Human approval is required.":"Safety controls passed.",environment:input.environment,details:{conditionsPass,envAllowed,requiresApproval,risk}}});
  const dryRun=Boolean(input.dryRun||policy.dryRun);
  const state:AutomationExecutionState=dryRun?"BLOCKED":allowed&&!requiresApproval?"RUNNING":allowed?"PENDING_APPROVAL":"BLOCKED";
- const execution=await db.automationExecution.create({data:{policyId,policyVersionId:versions[0]?.id??null,triggerFingerprint:input.triggerFingerprint,idempotencyKey:input.triggerFingerprint+"::"+policy.version,targetResource:input.targetResource,targetScope:boundedScope({environment:input.environment,resourceId:input.targetResource}),risk,state,environment:input.environment,correlationId:input.correlationId,reason:input.reason,result:{conditionsPass,envAllowed,requiresApproval,dryRun}}});
+ const execution=await db.automationExecution.create({data:{policyId,policyVersionId:versions[0]?.id??null,triggerFingerprint:input.triggerFingerprint,idempotencyKey:input.triggerFingerprint+"::"+policy.version,targetResource:input.targetResource,targetScope:boundedScope({environment:input.environment,resourceId:input.targetResource}),risk,state,environment:input.environment,correlationId:input.correlationId,reason:input.reason,requestedBy:input.requestedBy??null,result:{conditionsPass,envAllowed,requiresApproval,dryRun}}});
  await db.automationSafetyEvaluation.update({where:{id:safety.id},data:{executionId:execution.id}});
  return {policy,execution,safetyId:safety.id,actions:actions.map(key=>getRegisteredAction(key)).filter(Boolean),registeredActions:listRegisteredActions()};
 }
@@ -61,4 +61,33 @@ export async function getAutomationOverview(){
    db.automationApproval.findMany({where:{approvedAt:null,rejectedAt:null,expiresAt:{gt:new Date()}},orderBy:{createdAt:"asc"},take:100})
  ]);
  return {policies,executions,circuits, pendingApprovals:approvals, registeredActions:listRegisteredActions()};
+}
+
+export async function approveAutomation(executionId:string,approverId:string,reason:string){
+ const execution=await db.automationExecution.findUnique({where:{id:executionId}});
+ if(!execution)throw new Error("Automation execution not found.");
+ if(execution.state!=="PENDING_APPROVAL")throw new Error("Automation execution is not awaiting approval.");
+ if(execution.requestedBy&&execution.requestedBy===approverId)throw new Error("Separation of duties prevents self-approval.");
+ const policy=await db.automationPolicy.findUnique({where:{id:execution.policyId}});
+ if(!policy||policy.status!=="ACTIVE"||!policy.enabled)throw new Error("Automation policy is not currently executable.");
+ const approval=await db.automationApproval.create({data:{executionId,policyId:execution.policyId,policyVersionId:execution.policyVersionId,requesterId:execution.requestedBy,approverId,target:execution.targetResource,action:actionKeys(policy.actions).join(","),reason,risk:execution.risk,expiresAt:new Date(Date.now()+15*60*1000),approvedAt:new Date()}});
+ await db.automationExecution.update({where:{id:executionId},data:{state:"APPROVED",approvedBy:approverId,approvalId:approval.id}});
+ return db.automationExecution.update({where:{id:executionId},data:{state:"RUNNING"}});
+}
+
+export async function rejectAutomation(executionId:string,approverId:string,reason:string){
+ const execution=await db.automationExecution.findUnique({where:{id:executionId}});
+ if(!execution)throw new Error("Automation execution not found.");
+ if(execution.state!=="PENDING_APPROVAL")throw new Error("Automation execution is not awaiting approval.");
+ if(execution.requestedBy&&execution.requestedBy===approverId)throw new Error("Separation of duties prevents self-rejection.");
+ await db.automationApproval.create({data:{executionId,policyId:execution.policyId,policyVersionId:execution.policyVersionId,requesterId:execution.requestedBy,approverId,target:execution.targetResource,action:"REJECT",reason,risk:execution.risk,expiresAt:new Date(),rejectedAt:new Date()}});
+ return db.automationExecution.update({where:{id:executionId},data:{state:"BLOCKED",escalationState:"REJECTED"}});
+}
+
+export async function disableAutomation(policyId:string,reason:string){
+ const policy=await db.automationPolicy.findUnique({where:{id:policyId}});
+ if(!policy)throw new Error("Automation policy not found.");
+ const updated=await db.automationPolicy.update({where:{id:policyId},data:{enabled:false,status:"DISABLED",version:{increment:1}}});
+ await db.automationCircuit.upsert({where:{policyId},create:{policyId,state:"OPEN",reason},update:{state:"OPEN",reason}});
+ return updated;
 }
