@@ -1,8 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { evaluatePromotion, deterministicHash } from "@/lib/delivery-intelligence/service";
+import { evaluatePromotion, deterministicHash, type PromotionInput } from "@/lib/delivery-intelligence/service";
 
-const base=()=>({
+const base=():PromotionInput=>({
  pipelineId:"pipeline-1",sourceEnvironment:"STAGING",targetEnvironment:"PRODUCTION",revisionId:"revision-1",
  policyVersion:"delivery-policy:v1",evidenceVersion:"evidence:v1",evaluatedAt:"2026-10-04T10:00:00.000Z",expiresAt:"2026-10-04T11:00:00.000Z",
  evidence:[{id:"ci-1",type:"CI",status:"PASS",expiresAt:"2026-10-04T10:30:00.000Z"}],
