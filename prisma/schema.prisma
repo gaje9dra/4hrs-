@@ -3222,3 +3222,249 @@ model ReliabilityCircuit {
   @@unique([strategyId])
   @@index([state, updatedAt])
 }
+
+
+model ResilienceExperiment {
+  id String @id @default(uuid()) @db.Uuid
+  stableId String @unique @db.VarChar(160)
+  version Int @default(1)
+  name String @db.VarChar(200)
+  state String @db.VarChar(32)
+  category String @db.VarChar(64)
+  mode String @db.VarChar(32)
+  owner String @db.VarChar(160)
+  reviewer String? @db.VarChar(160)
+  riskClass String @db.VarChar(32)
+  environment String @db.VarChar(32)
+  targetId String @db.Uuid
+  faultId String @db.Uuid
+  hypothesis Json
+  expectedBehavior Json
+  abortCriteria Json
+  blastRadius Json
+  expiration DateTime
+  timeoutSeconds Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([state, updatedAt])
+  @@index([mode, environment])
+  @@index([targetId])
+  @@index([faultId])
+}
+
+model ExperimentTarget {
+  id String @id @default(uuid()) @db.Uuid
+  stableId String @unique @db.VarChar(160)
+  name String @db.VarChar(200)
+  targetType String @db.VarChar(64)
+  environment String @db.VarChar(32)
+  syntheticOnly Boolean @default(true)
+  productionSafe Boolean @default(false)
+  allowlisted Boolean @default(true)
+  scope Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([environment, allowlisted])
+}
+
+model ExperimentFault {
+  id String @id @default(uuid()) @db.Uuid
+  stableId String @unique @db.VarChar(160)
+  name String @db.VarChar(160)
+  category String @db.VarChar(64)
+  riskClass String @db.VarChar(32)
+  supportedTargets Json
+  maximumDurationSeconds Int
+  maximumAffectedRequests Int
+  maximumAffectedJobs Int
+  rollbackBehavior Json
+  observabilityRequirements Json
+  enabled Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([category, enabled])
+}
+
+model ExperimentExecution {
+  id String @id @default(uuid()) @db.Uuid
+  experimentId String @db.Uuid
+  experimentVersion Int
+  state String @db.VarChar(32)
+  startedAt DateTime?
+  endedAt DateTime?
+  requestedBy String @db.VarChar(160)
+  correlationId String? @db.VarChar(128)
+  stopReason String?
+  blastRadiusObserved Json?
+  expected Json
+  actual Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([experimentId, createdAt])
+  @@index([state, createdAt])
+}
+
+model ExperimentStep {
+  id String @id @default(uuid()) @db.Uuid
+  executionId String @db.Uuid
+  stepNumber Int
+  action String @db.VarChar(120)
+  state String @db.VarChar(32)
+  startedAt DateTime?
+  endedAt DateTime?
+  input Json
+  output Json?
+  errorCode String?
+  createdAt DateTime @default(now())
+  @@unique([executionId, stepNumber])
+  @@index([state, createdAt])
+}
+
+model ExperimentGuardrail {
+  id String @id @default(uuid()) @db.Uuid
+  experimentId String @db.Uuid
+  version Int
+  name String @db.VarChar(160)
+  kind String @db.VarChar(64)
+  threshold Decimal? @db.Decimal(20, 6)
+  comparator String? @db.VarChar(16)
+  action String @db.VarChar(32)
+  enabled Boolean @default(true)
+  createdAt DateTime @default(now())
+  @@index([experimentId, version])
+}
+
+model ExperimentObservation {
+  id String @id @default(uuid()) @db.Uuid
+  executionId String @db.Uuid
+  metricKey String @db.VarChar(160)
+  observedValue Decimal? @db.Decimal(20, 6)
+  status String @db.VarChar(32)
+  evidence Json
+  observedAt DateTime @default(now())
+  @@index([executionId, observedAt])
+  @@index([metricKey, observedAt])
+}
+
+model ExperimentMetric {
+  id String @id @default(uuid()) @db.Uuid
+  executionId String @db.Uuid
+  metricKey String @db.VarChar(160)
+  expectedValue Decimal? @db.Decimal(20, 6)
+  actualValue Decimal? @db.Decimal(20, 6)
+  unit String? @db.VarChar(32)
+  passed Boolean
+  evidence Json
+  createdAt DateTime @default(now())
+  @@index([executionId, metricKey])
+}
+
+model ExperimentHypothesis {
+  id String @id @default(uuid()) @db.Uuid
+  experimentId String @db.Uuid
+  version Int
+  statement String @db.VarChar(2000)
+  expectedFailure Json
+  expectedRecovery Json
+  unacceptableOutcomes Json
+  measurableMetrics Json
+  createdAt DateTime @default(now())
+  @@unique([experimentId, version])
+}
+
+model ExperimentResult {
+  id String @id @default(uuid()) @db.Uuid
+  executionId String @db.Uuid
+  outcome String @db.VarChar(32)
+  expected Json
+  actual Json
+  assertions Json
+  recovery Json
+  customerImpact Json
+  residualRisk Json
+  createdAt DateTime @default(now())
+  @@index([executionId, createdAt])
+}
+
+model ExperimentEvidence {
+  id String @id @default(uuid()) @db.Uuid
+  experimentId String @db.Uuid
+  executionId String?
+  evidenceType String @db.VarChar(80)
+  reference String @db.VarChar(1000)
+  integrityHash String @db.VarChar(128)
+  payload Json
+  capturedBy String? @db.VarChar(160)
+  immutable Boolean @default(true)
+  createdAt DateTime @default(now())
+  @@index([experimentId, createdAt])
+  @@index([executionId, createdAt])
+}
+
+model ExperimentApproval {
+  id String @id @default(uuid()) @db.Uuid
+  experimentId String @db.Uuid
+  experimentVersion Int
+  targetId String @db.Uuid
+  faultId String @db.Uuid
+  durationSeconds Int
+  blastRadius Json
+  approvedBy String @db.VarChar(160)
+  reason String @db.VarChar(1000)
+  status String @db.VarChar(32)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  @@index([experimentId, experimentVersion])
+}
+
+model ExperimentRollback {
+  id String @id @default(uuid()) @db.Uuid
+  executionId String @db.Uuid
+  strategy String @db.VarChar(64)
+  state String @db.VarChar(32)
+  startedAt DateTime @default(now())
+  endedAt DateTime?
+  evidence Json
+  createdAt DateTime @default(now())
+  @@index([executionId, createdAt])
+}
+
+model ExperimentSchedule {
+  id String @id @default(uuid()) @db.Uuid
+  experimentId String @db.Uuid
+  scheduledFor DateTime
+  enabled Boolean @default(true)
+  createdBy String @db.VarChar(160)
+  revalidation Json
+  createdAt DateTime @default(now())
+  @@index([scheduledFor, enabled])
+}
+
+model ExperimentSuppression {
+  id String @id @default(uuid()) @db.Uuid
+  stableId String @unique @db.VarChar(160)
+  reason String @db.VarChar(1000)
+  expiresAt DateTime
+  disabledClass String? @db.VarChar(64)
+  createdAt DateTime @default(now())
+  @@index([expiresAt])
+}
+
+model ExperimentCertificate {
+  id String @id @default(uuid()) @db.Uuid
+  experimentId String? @db.Uuid
+  executionId String? @db.Uuid
+  status String @db.VarChar(32)
+  dimensions Json
+  testedScenarios Json
+  passedScenarios Json
+  failedScenarios Json
+  untestedScenarios Json
+  knownLimitations Json
+  residualRisks Json
+  approvalAuthority String @db.VarChar(160)
+  certifiedAt DateTime
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  @@index([status, expiresAt])
+}
