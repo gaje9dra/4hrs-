@@ -5402,3 +5402,338 @@ model ReleaseWindow {
  createdAt DateTime @default(now())
  @@index([environment,startsAt,endsAt])
 }
+
+
+
+model Deployment {
+  id String @id @default(uuid()) @db.Uuid
+  stableId String @unique @db.VarChar(200)
+  changeRequestId String @db.Uuid
+  releaseId String @db.Uuid
+  revision Int @default(1)
+  artifactId String @db.Uuid
+  environment String @db.VarChar(80)
+  target Json
+  status String @db.VarChar(40)
+  operationState String @db.VarChar(40)
+  recoveryClass String @db.VarChar(40)
+  policyVersion String @db.VarChar(80)
+  actorId String @db.VarChar(120)
+  correlationId String @db.VarChar(120)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  plans DeploymentPlan[]
+  gates DeploymentGate[]
+  decisions DeploymentDecision[]
+  pauses DeploymentPause[]
+  aborts DeploymentAbort[]
+  rollbacks DeploymentRollback[]
+  recoveries DeploymentRecovery[]
+  validations DeploymentValidation[]
+  evidence DeploymentEvidence[]
+  certifications DeploymentCertification[]
+  locks DeploymentLock[]
+  conflicts DeploymentConflict[]
+  incidents DeploymentIncident[]
+  observations DeploymentObservation[]
+  healthSnapshots DeploymentHealthSnapshot[]
+  baselines DeploymentBaseline[]
+  @@index([releaseId,status])
+  @@index([environment,status])
+  @@index([changeRequestId,createdAt])
+}
+
+model DeploymentArtifact {
+  id String @id @default(uuid()) @db.Uuid
+  stableId String @unique @db.VarChar(200)
+  commitSha String? @db.VarChar(80)
+  buildIdentifier String @db.VarChar(160)
+  packageIdentifier String? @db.VarChar(200)
+  migrationVersion String? @db.VarChar(160)
+  configurationVersion String? @db.VarChar(160)
+  featureFlagVersion String? @db.VarChar(160)
+  dependencyLockHash String? @db.VarChar(128)
+  provenance Json
+  integrityHash String @db.VarChar(128)
+  immutable Boolean @default(true)
+  approved Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([approved,immutable])
+}
+
+model DeploymentEnvironment {
+  id String @id @default(uuid()) @db.Uuid
+  name String @unique @db.VarChar(80)
+  state String @db.VarChar(32)
+  health String @db.VarChar(32)
+  activeIncidents Json
+  maintenanceMode Boolean @default(false)
+  frozen Boolean @default(false)
+  currentDeploymentId String? @db.Uuid
+  pendingMigrations Json
+  capacity Json
+  dependencyHealth Json
+  policyVersion String @db.VarChar(80)
+  updatedAt DateTime @updatedAt
+}
+
+model DeploymentPlan {
+  id String @id @default(uuid()) @db.Uuid
+  deploymentId String @db.Uuid
+  revision Int
+  status String @db.VarChar(32)
+  planHash String @db.VarChar(128)
+  steps Json
+  generatedAt DateTime @default(now())
+  generatedBy String @db.VarChar(120)
+  deployment Deployment @relation(fields:[deploymentId],references:[id],onDelete:Cascade)
+  @@unique([deploymentId,revision])
+}
+
+model DeploymentStep {
+  id String @id @default(uuid()) @db.Uuid
+  deploymentId String @db.Uuid
+  ordinal Int
+  operationType String @db.VarChar(80)
+  prerequisites Json
+  timeoutSeconds Int
+  retryPolicy Json
+  idempotencyKey String @unique @db.VarChar(200)
+  expectedOutcome Json
+  failureHandling Json
+  recoveryBehavior Json
+  evidenceRequirement Json
+  status String @db.VarChar(32)
+  result Json?
+  createdAt DateTime @default(now())
+  @@unique([deploymentId,ordinal])
+  @@index([deploymentId,status])
+}
+
+model DeploymentGate {
+  id String @id @default(uuid()) @db.Uuid
+  deploymentId String @db.Uuid
+  key String @db.VarChar(100)
+  category String @db.VarChar(80)
+  severity String @db.VarChar(32)
+  evidence Json
+  blocking Boolean @default(true)
+  result String @db.VarChar(32)
+  evaluatedAt DateTime?
+  deployment Deployment @relation(fields:[deploymentId],references:[id],onDelete:Cascade)
+  @@unique([deploymentId,key])
+}
+
+model DeploymentHealthSnapshot {
+  id String @id @default(uuid()) @db.Uuid
+  deploymentId String @db.Uuid
+  stage String @db.VarChar(80)
+  metrics Json
+  source String @db.VarChar(160)
+  capturedAt DateTime @default(now())
+  correlationId String @db.VarChar(120)
+  deployment Deployment @relation(fields:[deploymentId],references:[id],onDelete:Cascade)
+  @@index([deploymentId,capturedAt])
+}
+
+model DeploymentDecision {
+  id String @id @default(uuid()) @db.Uuid
+  deploymentId String @db.Uuid
+  decisionType String @db.VarChar(40)
+  fromStatus String @db.VarChar(40)
+  toStatus String @db.VarChar(40)
+  reason String @db.VarChar(1000)
+  policyVersion String @db.VarChar(80)
+  actorId String @db.VarChar(120)
+  evidenceHash String @db.VarChar(128)
+  correlationId String @db.VarChar(120)
+  createdAt DateTime @default(now())
+  deployment Deployment @relation(fields:[deploymentId],references:[id],onDelete:Cascade)
+  @@index([deploymentId,createdAt])
+}
+
+model DeploymentPause {
+  id String @id @default(uuid()) @db.Uuid
+  deploymentId String @db.Uuid
+  reason String @db.VarChar(80)
+  details Json
+  stage String @db.VarChar(80)
+  actorId String @db.VarChar(120)
+  createdAt DateTime @default(now())
+  resumedAt DateTime?
+  deployment Deployment @relation(fields:[deploymentId],references:[id],onDelete:Cascade)
+}
+
+model DeploymentAbort {
+  id String @id @default(uuid()) @db.Uuid
+  deploymentId String @db.Uuid
+  reason String @db.VarChar(500)
+  actorId String @db.VarChar(120)
+  evidence Json
+  createdAt DateTime @default(now())
+  deployment Deployment @relation(fields:[deploymentId],references:[id],onDelete:Cascade)
+}
+
+model DeploymentRollback {
+  id String @id @default(uuid()) @db.Uuid
+  deploymentId String @db.Uuid
+  stage String @db.VarChar(80)
+  classification String @db.VarChar(40)
+  trigger String @db.VarChar(120)
+  expectedArtifactId String? @db.Uuid
+  result String @db.VarChar(40)
+  validated Boolean @default(false)
+  evidence Json
+  actorId String @db.VarChar(120)
+  createdAt DateTime @default(now())
+  deployment Deployment @relation(fields:[deploymentId],references:[id],onDelete:Cascade)
+}
+
+model DeploymentRecovery {
+  id String @id @default(uuid()) @db.Uuid
+  deploymentId String @db.Uuid
+  classification String @db.VarChar(40)
+  plan Json
+  approval Json
+  validation Json
+  reconciliation Json
+  certification Json
+  status String @db.VarChar(40)
+  actorId String @db.VarChar(120)
+  createdAt DateTime @default(now())
+  deployment Deployment @relation(fields:[deploymentId],references:[id],onDelete:Cascade)
+}
+
+model DeploymentValidation {
+  id String @id @default(uuid()) @db.Uuid
+  deploymentId String @db.Uuid
+  validationType String @db.VarChar(80)
+  result String @db.VarChar(32)
+  checks Json
+  evidence Json
+  actorId String @db.VarChar(120)
+  createdAt DateTime @default(now())
+  deployment Deployment @relation(fields:[deploymentId],references:[id],onDelete:Cascade)
+  @@index([deploymentId,createdAt])
+}
+
+model DeploymentEvidence {
+  id String @id @default(uuid()) @db.Uuid
+  deploymentId String @db.Uuid
+  evidenceType String @db.VarChar(80)
+  source String @db.VarChar(160)
+  reference String @db.VarChar(255)
+  integrityHash String @db.VarChar(128)
+  payload Json
+  immutable Boolean @default(true)
+  capturedBy String @db.VarChar(120)
+  createdAt DateTime @default(now())
+  deployment Deployment @relation(fields:[deploymentId],references:[id],onDelete:Cascade)
+  @@index([deploymentId,createdAt])
+}
+
+model DeploymentCertification {
+  id String @id @default(uuid()) @db.Uuid
+  deploymentId String @db.Uuid
+  status String @db.VarChar(32)
+  artifactHash String @db.VarChar(128)
+  policyVersion String @db.VarChar(80)
+  validationEvidence Json
+  recoveryEvidence Json
+  reconciliationEvidence Json
+  validUntil DateTime
+  certifiedBy String @db.VarChar(120)
+  certifiedAt DateTime @default(now())
+  deployment Deployment @relation(fields:[deploymentId],references:[id],onDelete:Cascade)
+}
+
+model DeploymentPolicy {
+  id String @id @default(uuid()) @db.Uuid
+  stableId String @unique @db.VarChar(120)
+  version String @db.VarChar(80)
+  rules Json
+  active Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model DeploymentLock {
+  id String @id @default(uuid()) @db.Uuid
+  deploymentId String @db.Uuid
+  scope String @db.VarChar(160)
+  ownerId String @db.VarChar(120)
+  expiresAt DateTime
+  heartbeatAt DateTime?
+  status String @db.VarChar(32)
+  createdAt DateTime @default(now())
+  deployment Deployment @relation(fields:[deploymentId],references:[id],onDelete:Cascade)
+  @@unique([scope,status])
+}
+
+model DeploymentConflict {
+  id String @id @default(uuid()) @db.Uuid
+  deploymentId String @db.Uuid
+  scope String @db.VarChar(160)
+  conflictingDeploymentId String? @db.Uuid
+  severity String @db.VarChar(32)
+  reason String @db.VarChar(500)
+  resolved Boolean @default(false)
+  createdAt DateTime @default(now())
+  deployment Deployment @relation(fields:[deploymentId],references:[id],onDelete:Cascade)
+  @@index([scope,resolved])
+}
+
+model DeploymentIncident {
+  id String @id @default(uuid()) @db.Uuid
+  deploymentId String @db.Uuid
+  incidentReference String @db.VarChar(160)
+  severity String @db.VarChar(32)
+  affectedDomains Json
+  affectedDependencies Json
+  affectedJourneys Json
+  causalityConfidence String @db.VarChar(32)
+  decision String @db.VarChar(40)
+  evidence Json
+  createdAt DateTime @default(now())
+  deployment Deployment @relation(fields:[deploymentId],references:[id],onDelete:Cascade)
+  @@index([deploymentId,createdAt])
+}
+
+model DeploymentBaseline {
+  id String @id @default(uuid()) @db.Uuid
+  deploymentId String @db.Uuid
+  baselineType String @db.VarChar(80)
+  snapshot Json
+  capturedAt DateTime @default(now())
+  deployment Deployment @relation(fields:[deploymentId],references:[id],onDelete:Cascade)
+}
+
+model DeploymentObservation {
+  id String @id @default(uuid()) @db.Uuid
+  deploymentId String @db.Uuid
+  operation String @db.VarChar(80)
+  actorId String @db.VarChar(120)
+  durationMs Int
+  result String @db.VarChar(40)
+  retryCount Int @default(0)
+  failureReason String?
+  traceId String?
+  createdAt DateTime @default(now())
+  deployment Deployment @relation(fields:[deploymentId],references:[id],onDelete:Cascade)
+  @@index([deploymentId,createdAt])
+}
+
+model DeploymentFreeze {
+  id String @id @default(uuid()) @db.Uuid
+  scope String @db.VarChar(80)
+  scopeReference String @db.VarChar(160)
+  reason String @db.VarChar(500)
+  ownerId String @db.VarChar(120)
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  active Boolean @default(true)
+  emergencyOverride Boolean @default(false)
+  auditEvidence Json
+  @@index([scope,scopeReference,active])
+}

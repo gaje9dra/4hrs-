@@ -95,6 +95,9 @@ jobs:
       - name: Validate release governance safety
         run: npm run release-governance:validate
 
+      - name: Validate deployment control safety
+        run: npm run deployment-control:validate
+
       - name: Audit migration safety
         run: npm run db:audit-migrations
 
