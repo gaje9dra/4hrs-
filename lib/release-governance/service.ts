@@ -28,7 +28,7 @@ export async function evaluateStage(id:string,ordinal:number,actor:string){
  else if(r.status==="FULL_RELEASE")to="POST_RELEASE_MONITORING";
  else if(r.status==="POST_RELEASE_MONITORING")to=passed?"VERIFIED":"PAUSED";
  transition(r.status,to);
- await db.releaseStageExecution.create({data:{stageId:stage.id,idempotencyKey:hash({id,ordinal,r.version}),actorId:actor,result:passed?"PASSED":"FAILED",healthSnapshot:{evidenceCount,failedGate},decision:{passed,to},correlationId:randomUUID()}});
+const executionData={stageId:stage.id,idempotencyKey:hash({id,ordinal,version:r.version}),actorId:actor,result:passed?"PASSED":"FAILED",healthSnapshot:{evidenceCount,failedGate},decision:{passed:passed,next:to},correlationId:randomUUID()};await db.releaseStageExecution.create({data:executionData});
  await db.releaseStage.update({where:{id:stage.id},data:{status:passed?"PASSED":"FAILED",completedAt:new Date()}});
  await db.release.update({where:{id},data:{status:to as never}});
  await audit(id,"VALIDATE",r.status,to,actor,r.policyVersion,passed?"Stage passed":"Stage paused: missing health evidence or failed gate");
