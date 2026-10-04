@@ -5842,6 +5842,7 @@ model DeliveryRun {
   correlationId String @db.VarChar(120)
   startedAt DateTime?
   completedAt DateTime?
+  createdAt DateTime @default(now())
   blockedReason String? @db.VarChar(1000)
   pipeline DeliveryPipeline @relation(fields:[pipelineId],references:[id],onDelete:Cascade)
   stageExecutions DeliveryStageExecution[]
