@@ -50,10 +50,14 @@ export async function createExperiment(input:{stableId:string;name:string;catego
  if(target.environment!==input.environment)throw new Error("Target environment does not match experiment environment.");
  if(input.mode==="SYNTHETIC_PRODUCTION"&&(!target.productionSafe||!target.syntheticOnly))throw new Error("Synthetic production requires an isolated production-safe synthetic target.");
  if(input.mode==="CONTROLLED_PRODUCTION"&&!target.productionSafe)throw new Error("Controlled production requires an explicitly production-safe target.");
- if(input.environment==="production"&&input.mode==="SIMULATION"===false&&Number(input.blastRadius.maxAffectedCustomers)!==0&&input.mode!=="CONTROLLED_PRODUCTION")throw new Error("Non-controlled production experiments cannot affect customers.");
+ if(input.environment==="production"&&input.mode!=="SIMULATION"&&Number(input.blastRadius.maxAffectedCustomers)!==0&&input.mode!=="CONTROLLED_PRODUCTION")throw new Error("Non-controlled production experiments cannot affect customers.");
  const active=await db.resilienceExperiment.count({where:{environment:input.environment,state:{in:["RUNNING","PAUSING","STOPPING"]},riskClass:{in:["HIGH","CRITICAL"]}}});
  if(active>0&&input.mode!=="SIMULATION")throw new Error("A high-risk experiment is already active in this affected environment.");
- return db.resilienceExperiment.create({data:{stableId:input.stableId,name:input.name,version:1,state:"DRAFT",category:input.category,mode:input.mode,owner:input.owner,reviewer:input.reviewer??null,riskClass:fault.riskClass,environment:input.environment,targetId:target.id,faultId:fault.id,hypothesis:safePayload(input.hypothesis),expectedBehavior:safePayload(input.expectedBehavior),abortCriteria:safePayload(input.abortCriteria),blastRadius:safePayload(input.blastRadius),expiration:input.expiration,timeoutSeconds:input.timeoutSeconds}});
+ const created=await db.resilienceExperiment.create({data:{stableId:input.stableId,name:input.name,version:1,state:"DRAFT",category:input.category,mode:input.mode,owner:input.owner,reviewer:input.reviewer??null,riskClass:fault.riskClass,environment:input.environment,targetId:target.id,faultId:fault.id,hypothesis:safePayload(input.hypothesis),expectedBehavior:safePayload(input.expectedBehavior),abortCriteria:safePayload(input.abortCriteria),blastRadius:safePayload(input.blastRadius),expiration:input.expiration,timeoutSeconds:input.timeoutSeconds}});
+ await db.experimentHypothesis.create({data:{experimentId:created.id,version:1,statement:String(input.hypothesis.statement??"Measurable resilience hypothesis"),expectedFailure:safePayload(input.hypothesis.expectedFailure??{}),expectedRecovery:safePayload(input.hypothesis.expectedRecovery??{}),unacceptableOutcomes:safePayload(input.hypothesis.unacceptableOutcomes),measurableMetrics:safePayload(input.hypothesis.expectedMetrics)}});
+ const conditions=(input.abortCriteria.conditions as unknown[]).map(String);
+ for(const [i,condition] of conditions.entries()) await db.experimentGuardrail.create({data:{experimentId:created.id,version:1,name:condition,kind:"ABORT_CONDITION",action:"ABORT",enabled:true}});
+ return created;
 }
 
 export async function reviewExperiment(id:string){
@@ -90,12 +94,35 @@ async function safetyRevalidate(e:Awaited<ReturnType<typeof db.resilienceExperim
  if(!target?.allowlisted)throw new Error("Target is no longer allowlisted.");
  if(!fault?.enabled)throw new Error("Fault is disabled.");
  if(target.environment!==e.environment)throw new Error("Target environment changed.");
+ const supported=Array.isArray(fault.supportedTargets)?fault.supportedTargets.map(String):[];
+ if(!supported.includes(target.stableId))throw new Error("Fault is not approved for this target.");
  if(e.mode==="SYNTHETIC_PRODUCTION"&&(!target.productionSafe||!target.syntheticOnly))throw new Error("Synthetic production target safety changed.");
  if(e.mode==="CONTROLLED_PRODUCTION"&&!target.productionSafe)throw new Error("Controlled production target safety changed.");
  if(e.mode!=="SIMULATION")await exactApproval(e);
  const b=e.blastRadius as Record<string,unknown>;
  if(Number(b.maxAffectedCustomers)>0&&e.mode!=="CONTROLLED_PRODUCTION")throw new Error("Customer impact is not allowed for this mode.");
  return {target,fault};
+}
+
+export async function reviseExperiment(id:string,input:{targetStableId?:string;faultStableId?:string;timeoutSeconds?:number;blastRadius?:Record<string,unknown>;hypothesis?:Record<string,unknown>;expectedBehavior?:Record<string,unknown>;abortCriteria?:Record<string,unknown>}){
+ const e=await db.resilienceExperiment.findUnique({where:{id}});
+ if(!e)throw new Error("Experiment not found.");
+ if(["RUNNING","COMPLETED","FAILED","ABORTED","RETIRED"].includes(e.state))throw new Error("Completed or active execution history cannot be materially edited.");
+ const targetStableId=input.targetStableId??(await db.experimentTarget.findUnique({where:{id:e.targetId}}))?.stableId;
+ const faultStableId=input.faultStableId??(await db.experimentFault.findUnique({where:{id:e.faultId}}))?.stableId;
+ if(!targetStableId||!faultStableId)throw new Error("Target and fault are required.");
+ const target=await db.experimentTarget.findUnique({where:{stableId:targetStableId}});
+ const fault=await db.experimentFault.findUnique({where:{stableId:faultStableId}});
+ if(!target?.allowlisted||!fault?.enabled)throw new Error("Revised target/fault must remain allowlisted and enabled.");
+ const timeoutSeconds=input.timeoutSeconds??e.timeoutSeconds;
+ const blastRadius=input.blastRadius??(e.blastRadius as Record<string,unknown>);
+ const hypothesis=input.hypothesis??(e.hypothesis as Record<string,unknown>);
+ const expectedBehavior=input.expectedBehavior??(e.expectedBehavior as Record<string,unknown>);
+ const abortCriteria=input.abortCriteria??(e.abortCriteria as Record<string,unknown>);
+ validateExperimentDefinition({mode:e.mode,category:e.category,environment:e.environment,owner:e.owner,timeoutSeconds,expiration:e.expiration,blastRadius,hypothesis,expectedBehavior,abortCriteria});
+ const nextVersion=e.version+1;
+ await db.experimentApproval.updateMany({where:{experimentId:e.id,status:"APPROVED"},data:{status:"INVALIDATED"}});
+ return db.resilienceExperiment.update({where:{id:e.id},data:{version:nextVersion,state:"DRAFT",targetId:target.id,faultId:fault.id,riskClass:fault.riskClass,timeoutSeconds,blastRadius:safePayload(blastRadius),hypothesis:safePayload(hypothesis),expectedBehavior:safePayload(expectedBehavior),abortCriteria:safePayload(abortCriteria)}});
 }
 
 export async function scheduleExperiment(id:string,input:{scheduledFor:Date;createdBy:string}){
