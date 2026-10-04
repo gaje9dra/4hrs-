@@ -40,7 +40,8 @@ export async function POST(req:Request){
   if(action==="MAINTENANCE"){const r=await svc.runGovernanceMaintenance(auth.adminUser.id);return NextResponse.json({result:r});}
   if(action==="INVALIDATE_MATERIAL")return NextResponse.json({result:await svc.invalidateForMaterialChange(text(body.assessmentId),auth.adminUser.id,text(body.reason)||"Material condition changed")});
   if(action==="POLICY")return NextResponse.json({result:await svc.managePolicy(body.input as Parameters<typeof svc.managePolicy>[0])},{status:201});
-  if(action==="EMERGENCY_AUTHORIZE"){requireIdempotency(req);return NextResponse.json({result:await svc.authorizeEmergencyReview(text(body.id),auth.adminUser.id,text(body.confirmationToken),text(body.reason)||"Emergency authorization")});}\n  if(action==="EMERGENCY_REVIEW"){requireIdempotency(req);return NextResponse.json({result:await svc.requestEmergencyReview({assessmentId:text(body.assessmentId),actorId:auth.adminUser.id,reason:text(body.reason),incidentReference:text(body.incidentReference),confirmationToken:text(body.confirmationToken),ttlSeconds:Number(body.ttlSeconds)||900})},{status:201});}
+  if(action==="EMERGENCY_AUTHORIZE"){requireIdempotency(req);return NextResponse.json({result:await svc.authorizeEmergencyReview(text(body.id),auth.adminUser.id,text(body.confirmationToken),text(body.reason)||"Emergency authorization")});}
+  if(action==="EMERGENCY_REVIEW"){requireIdempotency(req);return NextResponse.json({result:await svc.requestEmergencyReview({assessmentId:text(body.assessmentId),actorId:auth.adminUser.id,reason:text(body.reason),incidentReference:text(body.incidentReference),confirmationToken:text(body.confirmationToken),ttlSeconds:Number(body.ttlSeconds)||900})},{status:201});}
   return NextResponse.json({error:"Unknown delivery intelligence action"},{status:400});
  }catch(e){return NextResponse.json({error:e instanceof Error?e.message:"Delivery intelligence operation failed safely"},{status:400});}
 }
