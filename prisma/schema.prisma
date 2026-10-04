@@ -5390,3 +5390,15 @@ model ReleaseLock {
  release Release @relation(fields:[releaseId],references:[id],onDelete:Cascade)
  @@unique([scope,status])
 }
+model ReleaseWindow {
+ id String @id @default(uuid()) @db.Uuid
+ environment String @db.VarChar(80)
+ startsAt DateTime
+ endsAt DateTime
+ kind String @db.VarChar(40)
+ frozen Boolean @default(false)
+ reason String? @db.VarChar(500)
+ policyVersion String @db.VarChar(80)
+ createdAt DateTime @default(now())
+ @@index([environment,startsAt,endsAt])
+}
