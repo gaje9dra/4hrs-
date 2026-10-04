@@ -2542,3 +2542,383 @@ model PlatformCertification {
   @@index([readiness, timestamp])
   @@index([commitSha])
 }
+
+
+enum AutomationRiskClass {
+  OBSERVE_ONLY
+  SAFE_AUTOMATION
+  CONTROLLED_AUTOMATION
+  APPROVAL_REQUIRED
+  HIGH_RISK
+  PROHIBITED
+}
+
+enum AutomationPolicyStatus {
+  DRAFT
+  PENDING_REVIEW
+  APPROVED
+  ACTIVE
+  PAUSED
+  DISABLED
+  EXPIRED
+  RETIRED
+}
+
+enum AutomationExecutionState {
+  CREATED
+  EVALUATING
+  BLOCKED
+  PENDING_APPROVAL
+  APPROVED
+  RUNNING
+  SUCCEEDED
+  FAILED
+  PARTIALLY_SUCCEEDED
+  ROLLING_BACK
+  ROLLED_BACK
+  ESCALATED
+  CANCELLED
+}
+
+enum AutomationCircuitState {
+  CLOSED
+  OPEN
+  HALF_OPEN
+}
+
+enum AutomationFailureClass {
+  VALIDATION
+  AUTHORIZATION
+  SAFETY
+  CONCURRENCY
+  TIMEOUT
+  TRANSIENT_DEPENDENCY
+  PERMANENT_DEPENDENCY
+  ROLLBACK
+  UNKNOWN
+  POLICY_VIOLATION
+}
+
+enum AutomationRollbackMode {
+  REVERSIBLE
+  CONDITIONALLY_REVERSIBLE
+  IRREVERSIBLE
+}
+
+model AutomationPolicy {
+  id                         String                 @id @default(uuid()) @db.Uuid
+  stableId                   String                 @unique @db.VarChar(120)
+  name                       String                 @db.VarChar(200)
+  description                String                 @db.VarChar(2000)
+  domain                     String                 @db.VarChar(80)
+  trigger                    Json
+  conditions                 Json
+  actions                    Json
+  risk                       AutomationRiskClass
+  authorization              Json
+  requiredPermissions        Json
+  allowedEnvironments        String[]
+  enabled                    Boolean                @default(false)
+  dryRun                     Boolean                @default(true)
+  cooldownSeconds            Int                    @default(300)
+  maxExecutionsPerWindow    Int                    @default(1)
+  timeoutSeconds             Int                    @default(300)
+  retryLimit                 Int                    @default(0)
+  concurrencyPolicy          Json
+  idempotencyPolicy          Json
+  rollbackPolicy             Json
+  escalationPolicy           Json
+  observabilityRequirements  Json
+  auditRequirements          Json
+  owner                      String                 @db.VarChar(160)
+  reviewer                   String?                @db.VarChar(160)
+  version                    Int                    @default(1)
+  status                     AutomationPolicyStatus @default(DRAFT)
+  reviewedAt                 DateTime?
+  expiresAt                  DateTime?
+  createdAt                  DateTime               @default(now())
+  updatedAt                  DateTime               @updatedAt
+  @@index([status, enabled])
+  @@index([risk, status])
+  @@index([domain, status])
+  @@index([expiresAt])
+}
+
+model AutomationPolicyVersion {
+  id             String   @id @default(uuid()) @db.Uuid
+  policyId       String   @db.Uuid
+  version        Int
+  snapshot       Json
+  createdBy      String?  @db.Uuid
+  createdAt      DateTime @default(now())
+  @@unique([policyId, version])
+  @@index([policyId, createdAt])
+}
+
+model AutomationTrigger {
+  id                 String   @id @default(uuid()) @db.Uuid
+  policyId           String   @db.Uuid
+  kind               String   @db.VarChar(120)
+  fingerprint        String   @db.VarChar(255)
+  observedAt         DateTime @default(now())
+  environment        String   @db.VarChar(32)
+  severity            String?  @db.VarChar(32)
+  confidence          Float?
+  evidence            Json?
+  dependencyState     Json?
+  maintenanceActive  Boolean  @default(false)
+  incidentId         String?  @db.Uuid
+  accepted           Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  @@index([policyId, observedAt])
+  @@index([fingerprint, observedAt])
+  @@index([environment, observedAt])
+}
+
+model AutomationCondition {
+  id          String   @id @default(uuid()) @db.Uuid
+  policyId    String   @db.Uuid
+  key         String   @db.VarChar(160)
+  operator    String   @db.VarChar(32)
+  value       Json
+  logicalGroup String? @db.VarChar(80)
+  negated     Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  @@index([policyId, key])
+}
+
+model AutomationAction {
+  id            String                @id @default(uuid()) @db.Uuid
+  policyId      String                @db.Uuid
+  actionKey     String                @db.VarChar(160)
+  risk          AutomationRiskClass
+  scope         Json
+  timeoutSeconds Int
+  retryLimit    Int                   @default(0)
+  rollbackMode  AutomationRollbackMode
+  parameters    Json?
+  enabled       Boolean               @default(true)
+  createdAt     DateTime              @default(now())
+  @@index([policyId, actionKey])
+  @@index([risk, enabled])
+}
+
+model AutomationExecution {
+  id                  String                  @id @default(uuid()) @db.Uuid
+  policyId            String                  @db.Uuid
+  policyVersionId     String?                 @db.Uuid
+  triggerId           String?                 @db.Uuid
+  triggerFingerprint  String                  @db.VarChar(255)
+  idempotencyKey      String                  @unique @db.VarChar(255)
+  targetResource      String                  @db.VarChar(255)
+  targetScope         Json
+  risk                AutomationRiskClass
+  state               AutomationExecutionState @default(CREATED)
+  environment         String                  @db.VarChar(32)
+  correlationId       String                  @db.VarChar(128)
+  reason              String?                 @db.VarChar(1000)
+  requestedBy         String?                 @db.Uuid
+  approvedBy          String?                 @db.Uuid
+  approvalId          String?                 @db.Uuid
+  result              Json?
+  errorClass          AutomationFailureClass?
+  errorMetadata       Json?
+  retryCount          Int                     @default(0)
+  rollbackStatus      String?                 @db.VarChar(64)
+  escalationState     String?                 @db.VarChar(64)
+  startedAt            DateTime?
+  finishedAt           DateTime?
+  createdAt            DateTime                @default(now())
+  @@index([policyId, createdAt])
+  @@index([state, createdAt])
+  @@index([risk, state])
+  @@index([targetResource, createdAt])
+  @@index([correlationId])
+}
+
+model AutomationExecutionStep {
+  id            String                  @id @default(uuid()) @db.Uuid
+  executionId  String                  @db.Uuid
+  stepOrder    Int
+  actionKey    String                  @db.VarChar(160)
+  state        AutomationExecutionState
+  startedAt    DateTime?
+  finishedAt   DateTime?
+  attempt      Int                     @default(1)
+  result       Json?
+  errorClass   AutomationFailureClass?
+  errorMetadata Json?
+  rollbackMode AutomationRollbackMode
+  @@unique([executionId, stepOrder])
+  @@index([executionId, state])
+}
+
+model AutomationApproval {
+  id             String    @id @default(uuid()) @db.Uuid
+  executionId    String    @db.Uuid
+  policyId       String    @db.Uuid
+  policyVersionId String?  @db.Uuid
+  requesterId    String?   @db.Uuid
+  approverId     String?   @db.Uuid
+  target         String    @db.VarChar(255)
+  action         String    @db.VarChar(160)
+  reason         String    @db.VarChar(1000)
+  risk           AutomationRiskClass
+  evidence       Json?
+  expiresAt      DateTime
+  approvedAt     DateTime?
+  rejectedAt     DateTime?
+  executionResult Json?
+  createdAt      DateTime  @default(now())
+  @@index([executionId])
+  @@index([approverId, createdAt])
+  @@index([expiresAt])
+}
+
+model AutomationLock {
+  id          String    @id @default(uuid()) @db.Uuid
+  lockKey     String    @unique @db.VarChar(255)
+  ownerId     String    @db.VarChar(160)
+  acquiredAt  DateTime  @default(now())
+  expiresAt   DateTime
+  heartbeatAt DateTime?
+  releasedAt  DateTime?
+  @@index([expiresAt])
+}
+
+model AutomationCooldown {
+  id             String   @id @default(uuid()) @db.Uuid
+  policyId       String   @db.Uuid
+  targetResource String   @db.VarChar(255)
+  startsAt       DateTime
+  endsAt         DateTime
+  executionCount Int      @default(1)
+  createdAt      DateTime @default(now())
+  @@index([policyId, targetResource, endsAt])
+}
+
+model AutomationFailure {
+  id             String                  @id @default(uuid()) @db.Uuid
+  executionId    String                  @db.Uuid
+  stepId         String?                 @db.Uuid
+  class          AutomationFailureClass
+  message        String                  @db.VarChar(2000)
+  metadata       Json?
+  retryCount     Int                     @default(0)
+  rollbackStatus String?                 @db.VarChar(64)
+  escalated      Boolean                 @default(false)
+  createdAt      DateTime                @default(now())
+  @@index([executionId, createdAt])
+  @@index([class, createdAt])
+}
+
+model AutomationEscalation {
+  id           String   @id @default(uuid()) @db.Uuid
+  executionId  String   @db.Uuid
+  reason       String   @db.VarChar(2000)
+  severity     String   @db.VarChar(32)
+  incidentId   String?  @db.Uuid
+  status       String   @db.VarChar(32)
+  createdAt    DateTime @default(now())
+  resolvedAt   DateTime?
+  @@index([executionId, createdAt])
+  @@index([status, createdAt])
+}
+
+model AutomationRollback {
+  id             String                  @id @default(uuid()) @db.Uuid
+  executionId    String                  @db.Uuid
+  rollbackMode   AutomationRollbackMode
+  deterministic  Boolean
+  eligible       Boolean
+  target         String                  @db.VarChar(255)
+  actionKey      String                  @db.VarChar(160)
+  result         Json?
+  status         String                  @db.VarChar(32)
+  createdAt      DateTime                @default(now())
+  completedAt    DateTime?
+  @@index([executionId, createdAt])
+}
+
+model AutomationEvidence {
+  id            String   @id @default(uuid()) @db.Uuid
+  executionId   String?  @db.Uuid
+  policyId      String?  @db.Uuid
+  type          String   @db.VarChar(80)
+  reference     String   @db.VarChar(1000)
+  integrityHash String?  @db.VarChar(128)
+  metadata      Json?
+  capturedBy    String?  @db.Uuid
+  createdAt     DateTime @default(now())
+  @@index([executionId, createdAt])
+  @@index([policyId, createdAt])
+}
+
+model AutomationDryRun {
+  id              String   @id @default(uuid()) @db.Uuid
+  policyId        String   @db.Uuid
+  policyVersionId String?  @db.Uuid
+  trigger         Json
+  conditions      Json
+  target          Json
+  proposedAction  Json
+  risk            AutomationRiskClass
+  authorization   Json
+  expectedImpact  String   @db.VarChar(2000)
+  rollbackCapability String @db.VarChar(500)
+  blastRadius     Json
+  decisionReason  String @db.VarChar(2000)
+  createdAt       DateTime @default(now())
+  @@index([policyId, createdAt])
+}
+
+model AutomationSimulation {
+  id             String   @id @default(uuid()) @db.Uuid
+  policyId       String   @db.Uuid
+  policyVersionId String?  @db.Uuid
+  input          Json
+  output         Json
+  synthetic      Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  @@index([policyId, createdAt])
+}
+
+model AutomationSuppression {
+  id             String   @id @default(uuid()) @db.Uuid
+  policyId       String   @db.Uuid
+  reason         String   @db.VarChar(1000)
+  targetScope    Json
+  startsAt       DateTime
+  endsAt         DateTime
+  actorAdminId   String?  @db.Uuid
+  createdAt      DateTime @default(now())
+  @@index([policyId, startsAt, endsAt])
+}
+
+model AutomationSafetyEvaluation {
+  id          String   @id @default(uuid()) @db.Uuid
+  policyId    String   @db.Uuid
+  executionId String?  @db.Uuid
+  allowed     Boolean
+  risk        AutomationRiskClass
+  reason      String   @db.VarChar(2000)
+  environment String   @db.VarChar(32)
+  details     Json?
+  evaluatedAt DateTime @default(now())
+  @@index([policyId, evaluatedAt])
+  @@index([allowed, evaluatedAt])
+}
+
+model AutomationCircuit {
+  id                 String                @id @default(uuid()) @db.Uuid
+  policyId           String                @unique @db.Uuid
+  state              AutomationCircuitState @default(CLOSED)
+  consecutiveFailures Int                  @default(0)
+  totalFailures      Int                   @default(0)
+  openedAt           DateTime?
+  lastFailureAt      DateTime?
+  halfOpenAt         DateTime?
+  reason             String?               @db.VarChar(1000)
+  updatedAt          DateTime              @updatedAt
+  @@index([state, updatedAt])
+}
