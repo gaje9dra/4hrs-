@@ -542,7 +542,7 @@ export async function certify(id: string, actorId: string) {
       status: "CERTIFIED",
       artifactHash: artifact.integrityHash,
       policyVersion: deployment.policyVersion,
-      validationEvidence: validation.evidence,
+      validationEvidence: validation.evidence as never,
       recoveryEvidence: { classification: deployment.recoveryClass },
       reconciliationEvidence: { required: true },
       validUntil: new Date(Date.now() + 86400000),
