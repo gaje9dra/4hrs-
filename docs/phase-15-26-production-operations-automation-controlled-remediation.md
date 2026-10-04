@@ -65,3 +65,6 @@ This implementation was added incrementally on the Phase 15.26 branch. Final rea
 ## Hard stop
 
 Phase 15.27 is not implemented by this phase.
+
+
+Final verification note: CI certification must be tied to the exact reviewed commit; no prior successful run is reused for a changed commit.
