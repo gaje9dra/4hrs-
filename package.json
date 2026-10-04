@@ -28,7 +28,8 @@
     "platform:certify": "tsx scripts/platform-certification.ts",
     "operations:validate": "tsx scripts/operations-validate.ts",
     "operations:verify-deployment": "tsx scripts/operations-verify-deployment.ts",
-    "automation:validate": "tsx scripts/automation-validate.ts"
+    "automation:validate": "tsx scripts/automation-validate.ts",
+    "reliability:autonomous:validate": "tsx scripts/reliability-autonomous-validate.ts"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.1.14",
