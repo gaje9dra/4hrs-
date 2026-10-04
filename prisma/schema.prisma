@@ -4712,3 +4712,382 @@ model SimulationCertification {
   @@index([scenarioId,status,freshness])
   @@index([expiresAt])
 }
+
+enum ChangeLifecycle {
+  DRAFT
+  SUBMITTED
+  IMPACT_ANALYZING
+  RISK_ASSESSING
+  PLAN_GENERATED
+  REVIEW_REQUIRED
+  APPROVAL_REQUIRED
+  APPROVED
+  REHEARSAL_REQUIRED
+  REHEARSING
+  REHEARSAL_CERTIFIED
+  READY_FOR_RELEASE
+  RELEASE_WINDOW_OPEN
+  DEPLOYING
+  POST_DEPLOYMENT_VALIDATING
+  VERIFIED
+  CERTIFIED
+  REJECTED
+  BLOCKED
+  ABORTED
+  ROLLED_BACK
+  ROLLBACK_FAILED
+  FAILED
+  EXPIRED
+  SUPERSEDED
+  CANCELLED
+}
+enum ChangeRisk {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+  PROHIBITED
+}
+enum ChangeApprovalDecision {
+  APPROVED
+  REJECTED
+  EXPIRED
+}
+enum ChangeRehearsalStatus {
+  REQUIRED
+  RUNNING
+  CERTIFIED
+  FAILED
+  BLOCKED
+  EXPIRED
+}
+enum ChangeReleaseStatus {
+  PLANNED
+  WINDOW_OPEN
+  DEPLOYING
+  VALIDATING
+  VERIFIED
+  HALTED
+  ROLLED_BACK
+  FAILED
+  CLOSED
+}
+enum ChangeValidationResult {
+  PASS
+  FAIL
+  UNKNOWN
+}
+enum ChangeCertificationStatus {
+  CERTIFIED
+  STALE
+  REVOKED
+  FAILED
+}
+enum ChangeEvidenceType {
+  IMPACT_ANALYSIS
+  POLICY_DECISION
+  APPROVAL
+  GRAPH_SNAPSHOT
+  REHEARSAL
+  SIMULATION
+  DEPLOYMENT
+  TEST
+  MONITORING
+  SLO
+  RECONCILIATION
+  SECURITY
+  PRIVACY
+  COST
+  ROLLBACK
+  CERTIFICATION
+}
+model ChangeRequest {
+  id String @id @default(uuid()) @db.Uuid
+  stableId String @unique @db.VarChar(200)
+  title String @db.VarChar(240)
+  purpose String @db.VarChar(2000)
+  rationale String @db.VarChar(2000)
+  scope Json
+  targets Json
+  category String @db.VarChar(64)
+  urgency String @db.VarChar(40)
+  environment String @db.VarChar(80)
+  requestedWindow String? @db.VarChar(120)
+  requesterId String @db.VarChar(120)
+  ownerId String @db.VarChar(120)
+  businessImpact Json
+  customerImpact Json
+  technicalImpact Json
+  rollbackStrategy String @db.VarChar(2000)
+  validationStrategy String @db.VarChar(2000)
+  requiredApprovals Json
+  status ChangeLifecycle @default(DRAFT)
+  risk ChangeRisk @default(LOW)
+  revision Int @default(1)
+  version Int @default(1)
+  policyVersion String @db.VarChar(80)
+  correlationId String @db.VarChar(120)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  riskAssessments ChangeRiskAssessment[]
+  impacts ChangeImpact[]
+  plans ChangePlan[]
+  approvals ChangeApproval[]
+  rehearsals ChangeRehearsal[]
+  releases ChangeRelease[]
+  validations ChangeValidation[]
+  rollbacks ChangeRollback[]
+  evidence ChangeEvidence[]
+  certifications ChangeCertification[]
+  graphSnapshots ChangeGraphSnapshot[]
+  dependencySnapshots ChangeDependencySnapshot[]
+  decisions ChangeDecision[]
+  policyDecisions ChangePolicyDecision[]
+  observations ChangeObservation[]
+  incidents ChangeIncident[]
+  locks ChangeLock[]
+  @@index([status,risk,updatedAt])
+  @@index([environment,category])
+}
+model ChangeRiskAssessment {
+  id String @id @default(uuid()) @db.Uuid
+  changeRequestId String @db.Uuid
+  risk ChangeRisk
+  reasons Json
+  signals Json
+  methodologyVersion String @db.VarChar(80)
+  confidence String @db.VarChar(32)
+  createdAt DateTime @default(now())
+  changeRequest ChangeRequest @relation(fields:[changeRequestId],references:[id],onDelete:Cascade)
+  @@index([changeRequestId,createdAt])
+}
+model ChangeImpact {
+  id String @id @default(uuid()) @db.Uuid
+  changeRequestId String @db.Uuid
+  directAffected Json
+  indirectAffected Json
+  transitiveAffected Json
+  unknownAffected Json
+  customerImpact Json
+  operationalImpact Json
+  financialImpact Json
+  securityImpact Json
+  privacyImpact Json
+  reliabilityImpact Json
+  performanceImpact Json
+  capacityImpact Json
+  dataIntegrityImpact Json
+  providerImpact Json
+  architecturalImpact Json
+  blastRadius ChangeRisk
+  confidence String @db.VarChar(32)
+  evidence Json
+  createdAt DateTime @default(now())
+  changeRequest ChangeRequest @relation(fields:[changeRequestId],references:[id],onDelete:Cascade)
+  @@index([changeRequestId,createdAt])
+}
+model ChangePlan {
+  id String @id @default(uuid()) @db.Uuid
+  changeRequestId String @db.Uuid
+  version Int
+  status String @db.VarChar(32)
+  executionMode String @db.VarChar(64)
+  steps Json
+  planHash String @db.VarChar(128)
+  generatedBy String @db.VarChar(120)
+  createdAt DateTime @default(now())
+  changeRequest ChangeRequest @relation(fields:[changeRequestId],references:[id],onDelete:Cascade)
+  @@index([changeRequestId,version])
+}
+model ChangeApproval {
+  id String @id @default(uuid()) @db.Uuid
+  changeRequestId String @db.Uuid
+  actorId String @db.VarChar(120)
+  approvalType String @db.VarChar(64)
+  decision ChangeApprovalDecision
+  revision Int
+  policyVersion String @db.VarChar(80)
+  evidenceHash String @db.VarChar(128)
+  createdAt DateTime @default(now())
+  changeRequest ChangeRequest @relation(fields:[changeRequestId],references:[id],onDelete:Cascade)
+  @@index([changeRequestId,revision])
+}
+model ChangeRehearsal {
+  id String @id @default(uuid()) @db.Uuid
+  changeRequestId String @db.Uuid
+  status ChangeRehearsalStatus
+  environment String @db.VarChar(80)
+  simulationOnly Boolean @default(true)
+  requestedBy String @db.VarChar(120)
+  certifiedBy String? @db.VarChar(120)
+  certifiedAt DateTime?
+  result String? @db.VarChar(32)
+  evidence Json?
+  correlationId String @db.VarChar(120)
+  createdAt DateTime @default(now())
+  changeRequest ChangeRequest @relation(fields:[changeRequestId],references:[id],onDelete:Cascade)
+  @@index([changeRequestId,createdAt])
+}
+model ChangeRelease {
+  id String @id @default(uuid()) @db.Uuid
+  changeRequestId String @db.Uuid
+  status ChangeReleaseStatus
+  releaseReference String @db.VarChar(160)
+  windowReference String @db.VarChar(160)
+  authorizedBy String @db.VarChar(120)
+  lastActorId String? @db.VarChar(120)
+  deploymentReference String? @db.VarChar(160)
+  correlationId String @db.VarChar(120)
+  startedAt DateTime?
+  validatedAt DateTime?
+  createdAt DateTime @default(now())
+  changeRequest ChangeRequest @relation(fields:[changeRequestId],references:[id],onDelete:Cascade)
+  @@index([status,createdAt])
+}
+model ChangeValidation {
+  id String @id @default(uuid()) @db.Uuid
+  changeRequestId String @db.Uuid
+  result ChangeValidationResult
+  checks Json
+  validatedBy String @db.VarChar(120)
+  correlationId String @db.VarChar(120)
+  createdAt DateTime @default(now())
+  changeRequest ChangeRequest @relation(fields:[changeRequestId],references:[id],onDelete:Cascade)
+  @@index([changeRequestId,createdAt])
+}
+model ChangeRollback {
+  id String @id @default(uuid()) @db.Uuid
+  changeRequestId String @db.Uuid
+  trigger String @db.VarChar(80)
+  reason String @db.VarChar(1000)
+  action String @db.VarChar(160)
+  result String @db.VarChar(32)
+  actorId String @db.VarChar(120)
+  evidence Json
+  createdAt DateTime @default(now())
+  changeRequest ChangeRequest @relation(fields:[changeRequestId],references:[id],onDelete:Cascade)
+  @@index([changeRequestId,createdAt])
+}
+model ChangeEvidence {
+  id String @id @default(uuid()) @db.Uuid
+  changeRequestId String @db.Uuid
+  evidenceType ChangeEvidenceType
+  source String @db.VarChar(160)
+  reference String @db.VarChar(255)
+  integrityHash String @db.VarChar(128)
+  payload Json
+  immutable Boolean @default(true)
+  capturedBy String @db.VarChar(120)
+  createdAt DateTime @default(now())
+  changeRequest ChangeRequest @relation(fields:[changeRequestId],references:[id],onDelete:Cascade)
+  @@index([changeRequestId,createdAt])
+}
+model ChangeCertification {
+  id String @id @default(uuid()) @db.Uuid
+  changeRequestId String @db.Uuid
+  status ChangeCertificationStatus
+  version Int
+  policyVersion String @db.VarChar(80)
+  graphSnapshotId String? @db.Uuid
+  rehearsalReference String? @db.VarChar(160)
+  validationEvidence Json
+  deploymentEvidence Json
+  approvalEvidence Json
+  certifiedBy String @db.VarChar(120)
+  validUntil DateTime
+  invalidationConditions Json
+  invalidationReason String? @db.VarChar(500)
+  certifiedAt DateTime @default(now())
+  changeRequest ChangeRequest @relation(fields:[changeRequestId],references:[id],onDelete:Cascade)
+  graphSnapshot ChangeGraphSnapshot? @relation(fields:[graphSnapshotId],references:[id],onDelete:SetNull)
+  @@index([changeRequestId,certifiedAt])
+}
+model ChangeGraphSnapshot {
+  id String @id @default(uuid()) @db.Uuid
+  changeRequestId String @db.Uuid
+  graphVersion String @db.VarChar(80)
+  graphFreshness String @db.VarChar(32)
+  unresolvedNodes Json
+  unresolvedRelationships Json
+  confidence String @db.VarChar(32)
+  staleDependencies Json
+  unknownDependencies Json
+  snapshot Json
+  integrityHash String @db.VarChar(128)
+  createdAt DateTime @default(now())
+  changeRequest ChangeRequest @relation(fields:[changeRequestId],references:[id],onDelete:Cascade)
+  certifications ChangeCertification[]
+  @@index([changeRequestId,createdAt])
+}
+model ChangeDependencySnapshot {
+  id String @id @default(uuid()) @db.Uuid
+  changeRequestId String @db.Uuid
+  version String @db.VarChar(80)
+  dependencies Json
+  unknownDependencies Json
+  capturedAt DateTime @default(now())
+  changeRequest ChangeRequest @relation(fields:[changeRequestId],references:[id],onDelete:Cascade)
+  @@index([changeRequestId,capturedAt])
+}
+model ChangeDecision {
+  id String @id @default(uuid()) @db.Uuid
+  changeRequestId String @db.Uuid
+  decision String @db.VarChar(80)
+  actorId String @db.VarChar(120)
+  fromStatus String? @db.VarChar(64)
+  toStatus String? @db.VarChar(64)
+  revision Int
+  correlationId String @db.VarChar(120)
+  evidenceHash String @db.VarChar(128)
+  createdAt DateTime @default(now())
+  changeRequest ChangeRequest @relation(fields:[changeRequestId],references:[id],onDelete:Cascade)
+  @@index([changeRequestId,createdAt])
+}
+model ChangePolicyDecision {
+  id String @id @default(uuid()) @db.Uuid
+  changeRequestId String @db.Uuid
+  policyVersion String @db.VarChar(80)
+  decision String @db.VarChar(64)
+  matchedRules Json
+  failedRules Json
+  evidence Json
+  evaluatorVersion String @db.VarChar(80)
+  actorId String @db.VarChar(120)
+  correlationId String @db.VarChar(120)
+  createdAt DateTime @default(now())
+  changeRequest ChangeRequest @relation(fields:[changeRequestId],references:[id],onDelete:Cascade)
+  @@index([changeRequestId,createdAt])
+}
+model ChangeObservation {
+  id String @id @default(uuid()) @db.Uuid
+  changeRequestId String @db.Uuid
+  metric String @db.VarChar(120)
+  status String @db.VarChar(32)
+  value Json
+  evidence Json
+  createdAt DateTime @default(now())
+  changeRequest ChangeRequest @relation(fields:[changeRequestId],references:[id],onDelete:Cascade)
+  @@index([changeRequestId,createdAt])
+}
+model ChangeIncident {
+  id String @id @default(uuid()) @db.Uuid
+  changeRequestId String @db.Uuid
+  incidentReference String @db.VarChar(160)
+  causalityConfidence String @db.VarChar(32)
+  details Json
+  createdAt DateTime @default(now())
+  changeRequest ChangeRequest @relation(fields:[changeRequestId],references:[id],onDelete:Cascade)
+  @@index([changeRequestId,createdAt])
+}
+model ChangeLock {
+  id String @id @default(uuid()) @db.Uuid
+  changeRequestId String @db.Uuid
+  scope String @db.VarChar(160)
+  ownerId String @db.VarChar(120)
+  expiresAt DateTime
+  heartbeatAt DateTime?
+  status String @default("ACTIVE") @db.VarChar(32)
+  createdAt DateTime @default(now())
+  changeRequest ChangeRequest @relation(fields:[changeRequestId],references:[id],onDelete:Cascade)
+  @@index([scope,status])
+}
