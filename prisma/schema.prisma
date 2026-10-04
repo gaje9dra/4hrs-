@@ -4255,3 +4255,178 @@ model ArchitectureRoadmapItem {
   updatedAt DateTime @updatedAt
   @@index([status,updatedAt])
 }
+
+
+enum PlatformGraphNodeType {
+ DOMAIN
+ SERVICE
+ MODULE
+ API
+ ROUTE
+ DATABASE
+ TABLE
+ COLUMN
+ EVENT
+ QUEUE
+ JOB
+ CACHE
+ SEARCH_INDEX
+ PROVIDER
+ EXTERNAL_SYSTEM
+ FEATURE_FLAG
+ WORKFLOW
+ CUSTOMER_JOURNEY
+ INCIDENT
+ SLO
+ ALERT
+ AUTOMATION
+ REMEDIATION
+ RESILIENCE_EXPERIMENT
+ DIGITAL_TWIN_SCENARIO
+ GOVERNANCE_CONTROL
+ RECONCILIATION_RULE
+ MIGRATION
+ DEPENDENCY
+ DEPLOYMENT
+ OWNER
+ DOCUMENT
+ ADR
+}
+enum PlatformGraphRelationType {
+ OWNS
+ CONTAINS
+ DEPENDS_ON
+ CALLS
+ READS
+ WRITES
+ PUBLISHES
+ CONSUMES
+ TRIGGERS
+ PROTECTS
+ MONITORS
+ ALERTS_ON
+ IMPLEMENTS
+ FULFILLS
+ USES
+ CONTROLS
+ FLAGS
+ VALIDATES
+ RECONCILES
+ MIGRATES
+ DEPLOYS
+ AFFECTS
+ IMPACTS
+ DOCUMENTS
+ GOVERNED_BY
+ TESTED_BY
+ RECOVERS_WITH
+ ROLLS_BACK_WITH
+}
+enum PlatformGraphProvenance {
+ CODE
+ DATABASE_SCHEMA
+ API_CONTRACT
+ CONFIGURATION
+ DEPLOYMENT
+ DOCUMENTATION
+ OBSERVABILITY
+ RUNTIME_TELEMETRY
+ CI
+ TEST
+ GOVERNANCE_RECORD
+ MANUAL_REVIEW
+ IMPORTED_METADATA
+}
+enum PlatformGraphConfidence {
+ UNKNOWN
+ LOW
+ MEDIUM
+ HIGH
+ VERIFIED
+}
+enum PlatformGraphFreshness {
+ CURRENT
+ AGING
+ STALE
+ UNKNOWN
+}
+enum PlatformGraphDriftSeverity {
+ INFO
+ LOW
+ MEDIUM
+ HIGH
+ CRITICAL
+}
+model PlatformGraphNode {
+  id String @id @default(uuid()) @db.Uuid
+  stableId String @unique @db.VarChar(200)
+  type PlatformGraphNodeType
+  name String @db.VarChar(240)
+  sourceOfTruth String? @db.VarChar(240)
+  owner String? @db.VarChar(160)
+  environment String? @db.VarChar(80)
+  status String? @db.VarChar(80)
+  confidence PlatformGraphConfidence @default(UNKNOWN)
+  metadata Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  outgoing PlatformGraphRelationship[] @relation("GraphFrom")
+  incoming PlatformGraphRelationship[] @relation("GraphTo")
+  @@index([type,name])
+  @@index([owner,type])
+}
+model PlatformGraphRelationship {
+  id String @id @default(uuid()) @db.Uuid
+  stableId String @unique @db.VarChar(240)
+  fromNodeId String @db.Uuid
+  toNodeId String @db.Uuid
+  relationType PlatformGraphRelationType
+  provenance PlatformGraphProvenance
+  sourceIdentifier String @db.VarChar(500)
+  confidence PlatformGraphConfidence @default(UNKNOWN)
+  verifier String? @db.VarChar(160)
+  discoveredAt DateTime @default(now())
+  lastVerifiedAt DateTime?
+  lastObservedAt DateTime?
+  staleThresholdSeconds Int @default(86400)
+  freshness PlatformGraphFreshness @default(UNKNOWN)
+  version Int @default(1)
+  active Boolean @default(true)
+  metadata Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  fromNode PlatformGraphNode @relation("GraphFrom",fields:[fromNodeId],references:[id],onDelete:Restrict)
+  toNode PlatformGraphNode @relation("GraphTo",fields:[toNodeId],references:[id],onDelete:Restrict)
+  evidence PlatformGraphEvidence[]
+  @@index([fromNodeId,relationType,active])
+  @@index([toNodeId,relationType,active])
+  @@index([freshness,active])
+  @@index([sourceIdentifier,version])
+}
+model PlatformGraphEvidence {
+  id String @id @default(uuid()) @db.Uuid
+  relationshipId String @db.Uuid
+  provenance PlatformGraphProvenance
+  sourceIdentifier String @db.VarChar(500)
+  observedAt DateTime
+  summary String @db.VarChar(2000)
+  integrityHash String @db.VarChar(128)
+  payload Json
+  createdAt DateTime @default(now())
+  relationship PlatformGraphRelationship @relation(fields:[relationshipId],references:[id],onDelete:Restrict)
+  @@index([relationshipId,observedAt])
+  @@index([sourceIdentifier,observedAt])
+}
+model PlatformGraphFinding {
+  id String @id @default(uuid()) @db.Uuid
+  kind String @db.VarChar(100)
+  severity PlatformGraphDriftSeverity
+  scope String @db.VarChar(300)
+  details Json
+  methodologyVersion String @db.VarChar(40)
+  status String @default("OPEN") @db.VarChar(32)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([status,severity,createdAt])
+  @@index([kind,scope])
+}

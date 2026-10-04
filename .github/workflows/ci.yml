@@ -84,6 +84,8 @@ jobs:
         run: npm run improvement:validate
       - name: Validate architecture evolution governance safety
         run: npm run architecture:validate
+      - name: Validate platform knowledge graph safety
+        run: npm run platform-graph:validate
 
       - name: Audit migration safety
         run: npm run db:audit-migrations

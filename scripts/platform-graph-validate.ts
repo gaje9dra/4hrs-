@@ -1,0 +1,10 @@
+import { GRAPH_CONFIDENCE,GRAPH_FRESHNESS,GRAPH_NODE_TYPES,GRAPH_PROVENANCE,GRAPH_RELATION_TYPES,freshnessFrom,isClosed } from "@/lib/platform-graph/model";
+import { normalizePageSize,normalizeTraversalDepth,validateGraphConfidence,validateGraphNodeType,validateGraphProvenance,validateGraphRelationType } from "@/lib/platform-graph/service";
+for(const x of GRAPH_NODE_TYPES)if(!isClosed(GRAPH_NODE_TYPES,x))throw new Error("Node vocabulary validation failed");
+for(const x of GRAPH_RELATION_TYPES)validateGraphRelationType(x);
+for(const x of GRAPH_PROVENANCE)validateGraphProvenance(x);
+for(const x of GRAPH_CONFIDENCE)validateGraphConfidence(x);
+if(normalizeTraversalDepth(99)!==5||normalizePageSize(999)!==50)throw new Error("Graph bounds failed");
+if(freshnessFrom(null,null,60)!=="UNKNOWN"||freshnessFrom(new Date(),null,60)!=="CURRENT")throw new Error("Freshness invariants failed");
+if(GRAPH_FRESHNESS.length!==4)throw new Error("Freshness vocabulary changed unexpectedly");
+console.log(JSON.stringify({phase:"15.32",nodeTypes:GRAPH_NODE_TYPES.length,relationshipTypes:GRAPH_RELATION_TYPES.length,provenance:GRAPH_PROVENANCE.length,confidence:GRAPH_CONFIDENCE.length}));
