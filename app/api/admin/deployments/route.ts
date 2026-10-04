@@ -48,8 +48,10 @@ export async function GET(req: Request) {
     if (action === "DETAIL") return NextResponse.json(await svc.detail(text(url.searchParams.get("id"))));
     if (action === "ENVIRONMENT") {
       const environment = text(url.searchParams.get("environment"));
-      const result = await svc.setEnvironment({ name: environment, actorId: auth.adminUser.id });
-      return NextResponse.json(result);
+      if (!["development","test","staging","production"].includes(environment)) {
+        return NextResponse.json({ error: "Unknown deployment environment" }, { status: 400 });
+      }
+      return NextResponse.json({ environment });
     }
     return NextResponse.json({ error: "Unknown deployment query" }, { status: 400 });
   } catch (error) {
