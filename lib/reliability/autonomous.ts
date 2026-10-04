@@ -6,7 +6,7 @@ import { incidentFingerprint, type ReliabilityCategory } from "@/lib/reliability
 import { recordReliabilityFindings } from "@/lib/reliability/service";
 import { runReliabilityChecks } from "@/lib/reliability/checks";
 import { SLO_CANDIDATES, ERROR_BUDGET_POLICY } from "@/lib/reliability/model";
-import { deterministicAnomaly, confidenceFromEvidence, safeConfidenceForMutation, assertReliabilityTransition, type ReliabilityConfidence } from "./model";
+import { deterministicAnomaly, confidenceFromEvidence, safeConfidenceForMutation, assertReliabilityTransition, type ReliabilityConfidence } from "./autonomous-model";
 
 type Json=Prisma.InputJsonValue;
 const json=(v:unknown)=>JSON.parse(JSON.stringify(v)) as Json;
@@ -52,9 +52,9 @@ export async function assessReliability(input:{service:string;environment:string
  }
  const signalCount=correlation.signalIds.length;
  const confidence:ReliabilityConfidence=confidenceFromEvidence({signalCount,contradictions:0,validated:false,stableBaseline:false});
- const hypothesis=await db.reliabilityHypothesis.create({data:{correlationId:correlation.id,statement:"Observed reliability degradation is associated with the correlated signal set; causal proof is not claimed.",domain:input.service,resources:[input.service],evidence:correlation.evidence,confidence,validationMethod:"Deterministic signal corroboration and postcondition verification",expiresAt:new Date(Date.now()+15*60_000)}});
+ const hypothesis=await db.reliabilityHypothesis.create({data:{correlationId:correlation.id,statement:"Observed reliability degradation is associated with the correlated signal set; causal proof is not claimed.",domain:input.service,resources:[input.service],evidence:redacted(correlation.evidence),confidence,validationMethod:"Deterministic signal corroboration and postcondition verification",expiresAt:new Date(Date.now()+15*60_000)}});
  const state=confidence==="UNKNOWN"||confidence==="LOW"?"AWAITING_VALIDATION":"ACTIONABLE";
- const assessment=await db.reliabilityAssessment.create({data:{correlationId:correlation.id,hypothesisId:hypothesis.id,state,confidence,signals:json(correlation.signalIds),evidence:correlation.evidence,contradictions:json([]),remediationConsidered:json(["SYNTHETIC_RETRY"]),selectionRationale:confidence==="HIGH"||confidence==="VERIFIED"?"Confidence permits evaluation of approved safe strategy subject to all server-side gates.":"Confidence is insufficient for autonomous mutation; observe/validate/escalate.",incidentId:input.incidentId??null,correlationFingerprint:correlation.fingerprint}});
+ const assessment=await db.reliabilityAssessment.create({data:{correlationId:correlation.id,hypothesisId:hypothesis.id,state,confidence,signals:json(correlation.signalIds),evidence:redacted(correlation.evidence),contradictions:json([]),remediationConsidered:json(["SYNTHETIC_RETRY"]),selectionRationale:confidence==="HIGH"||confidence==="VERIFIED"?"Confidence permits evaluation of approved safe strategy subject to all server-side gates.":"Confidence is insufficient for autonomous mutation; observe/validate/escalate.",incidentId:input.incidentId??null,correlationFingerprint:correlation.fingerprint}});
  const requiresApproval=!safeConfidenceForMutation(confidence);
  await db.reliabilityDecision.create({data:{assessmentId:assessment.id,decision:requiresApproval?"ESCALATE":"CONSIDER_SAFE_REMEDIATION",reason:input.reason,risk:"SAFE_AUTOMATION",requiresApproval,blockedConditions:json(requiresApproval?["confidence-below-high-or-unverified"]:[])}}); 
  return assessment;
