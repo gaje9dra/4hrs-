@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import { sanitizeTelemetryValue } from "@/lib/observability/redaction";
 
 export type LogSeverity = "debug" | "info" | "warn" | "error";
@@ -28,4 +27,4 @@ export const logger = {
   warn: (event: string, context?: LogContext, data?: unknown) => write("warn", event, context, data),
   error: (event: string, context?: LogContext, data?: unknown) => write("error", event, context, data),
 };
-export function createOperationId(): string { return randomUUID(); }
+export function createOperationId(): string { return globalThis.crypto.randomUUID(); }
