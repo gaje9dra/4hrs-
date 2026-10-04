@@ -1,3 +1,4 @@
+export {};
 const baseUrl=(process.env.RELEASE_BASE_URL??"").trim().replace(/\/$/,"");
 if(!baseUrl)throw new Error("RELEASE_BASE_URL is required for post-deployment verification.");
 async function check(path:string){const response=await fetch(baseUrl+path,{headers:{accept:"application/json"},cache:"no-store"});const body=await response.text();let parsed:unknown=null;try{parsed=JSON.parse(body);}catch{}return {path,status:response.status,ok:response.ok,body:parsed};}
