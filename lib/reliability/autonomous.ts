@@ -78,7 +78,7 @@ export async function detectReliabilityAnomaly(input:{baselineId:string;value:nu
 }
 
 async function safetyGates(targetResource:string,environment:string){
- const [reconciliation,cost,security]=await Promise.all([
+ const policy=await db.automationPolicy.findUnique({where:{stableId:"phase-15-26-synthetic-diagnostic"}});\n const now=new Date();\n const [reconciliation,cost,security,cooldown,recent]=await Promise.all([
   db.reconciliationCase.count({where:{severity:"CRITICAL",status:{notIn:["RESOLVED","IGNORED","NOT_REPRODUCIBLE"]}}}),
   db.costAnomaly.count({where:{severity:"CRITICAL",status:"OPEN"}}),
   db.reliabilityIncident.count({where:{category:"SECURITY",severity:{in:["CRITICAL","MAJOR"]},status:{in:["OPEN","ACKNOWLEDGED"]}}})
@@ -87,7 +87,7 @@ async function safetyGates(targetResource:string,environment:string){
  if(reconciliation)blocked.push("critical-reconciliation");
  if(cost)blocked.push("critical-cost-anomaly");
  if(security)blocked.push("major-critical-security-incident");
- if(environment!=="production"&&environment!=="staging"&&environment!=="test"&&environment!=="development")blocked.push("unknown-environment");
+ if(!policy)blocked.push("automation-policy-missing");\n if(policy&&(!policy.enabled||policy.dryRun||policy.status!=="ACTIVE"))blocked.push("automation-policy-not-active");\n if(policy&&policy.allowedEnvironments.length>0&&!policy.allowedEnvironments.includes(environment))blocked.push("environment-not-allowed");\n if(cooldown)blocked.push("automation-cooldown");\n if(policy&&recent>=policy.maxExecutionsPerWindow)blocked.push("automation-rate-limit");\n if(environment!=="production"&&environment!=="staging"&&environment!=="test"&&environment!=="development")blocked.push("unknown-environment");
  if(!targetResource.trim())blocked.push("empty-target");
  return blocked;
 }
@@ -115,7 +115,7 @@ export async function attemptSafeRemediation(input:{assessmentId:string;strategy
  await db.reliabilityAssessment.update({where:{id:assessment.id},data:{state:"REMEDIATING"}});
  try{
   const result=await executeRegisteredAction("RERUN_SYNTHETIC_CHECK",{reason:input.reason,correlationId:input.correlationId,environment:input.environment,targetResource:input.targetResource},{workflowId:input.workflowId});
-  const execution=await db.automationExecution.create({data:{policyId:"00000000-0000-0000-0000-000000000000",triggerFingerprint:executionFingerprint,idempotencyKey:executionFingerprint,targetResource:input.targetResource,targetScope:json({environment:input.environment,resourceId:input.targetResource,maxItems:1}),risk:"SAFE_AUTOMATION",state:"SUCCEEDED",environment:input.environment,correlationId:input.correlationId,reason:input.reason,requestedBy:input.requestedBy,result:redacted(result)}});
+  const policy=await db.automationPolicy.findUnique({where:{stableId:"phase-15-26-synthetic-diagnostic"}});\n  if(!policy)throw new Error("Synthetic diagnostic automation policy is missing.");\n  const execution=await db.automationExecution.create({data:{policyId:policy.id,policyVersionId:null,triggerFingerprint:executionFingerprint,idempotencyKey:executionFingerprint,targetResource:input.targetResource,targetScope:json({environment:input.environment,resourceId:input.targetResource,maxItems:1}),risk:"SAFE_AUTOMATION",state:"SUCCEEDED",environment:input.environment,correlationId:input.correlationId,reason:input.reason,requestedBy:input.requestedBy,result:redacted(result)}});
   await db.reliabilityEvaluation.create({data:{assessmentId:assessment.id,strategyId:strategy.id,phase:"POSTCONDITION",passed:true,checks:json({syntheticExecution:result})}});
   await db.reliabilityOutcome.create({data:{assessmentId:assessment.id,strategyId:strategy.id,executionId:execution.id,status:"SUCCESS",preconditions:json({blocked}),actionEvidence:redacted(result),postconditions:json({verified:true}),observationWindowSeconds:60,verifiedAt:new Date(),explanation:"Registered synthetic diagnostic completed; production business state was not mutated."}});
   await db.reliabilityAssessment.update({where:{id:assessment.id},data:{state:"VERIFYING"}});
