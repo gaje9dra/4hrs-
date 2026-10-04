@@ -47,6 +47,11 @@ export async function createExperiment(input:{stableId:string;name:string;catego
  ]);
  if(!target||!target.allowlisted)throw new Error("Target is not explicitly allowlisted.");
  if(!fault||!fault.enabled)throw new Error("Fault is not registered and enabled.");
+ const supported=Array.isArray(fault.supportedTargets)?fault.supportedTargets.map(String):[];
+ if(!supported.includes(target.stableId))throw new Error("Fault is not approved for this target.");
+ if(input.timeoutSeconds>fault.maximumDurationSeconds)throw new Error("Experiment timeout exceeds fault maximum duration.");
+ const br=input.blastRadius;
+ if(Number(br.maxAffectedRequests)>fault.maximumAffectedRequests||Number(br.maxAffectedJobs)>fault.maximumAffectedJobs)throw new Error("Experiment blast radius exceeds fault limits.");
  if(target.environment!==input.environment)throw new Error("Target environment does not match experiment environment.");
  if(input.mode==="SYNTHETIC_PRODUCTION"&&(!target.productionSafe||!target.syntheticOnly))throw new Error("Synthetic production requires an isolated production-safe synthetic target.");
  if(input.mode==="CONTROLLED_PRODUCTION"&&!target.productionSafe)throw new Error("Controlled production requires an explicitly production-safe target.");
@@ -56,7 +61,7 @@ export async function createExperiment(input:{stableId:string;name:string;catego
  const created=await db.resilienceExperiment.create({data:{stableId:input.stableId,name:input.name,version:1,state:"DRAFT",category:input.category,mode:input.mode,owner:input.owner,reviewer:input.reviewer??null,riskClass:fault.riskClass,environment:input.environment,targetId:target.id,faultId:fault.id,hypothesis:safePayload(input.hypothesis),expectedBehavior:safePayload(input.expectedBehavior),abortCriteria:safePayload(input.abortCriteria),blastRadius:safePayload(input.blastRadius),expiration:input.expiration,timeoutSeconds:input.timeoutSeconds}});
  await db.experimentHypothesis.create({data:{experimentId:created.id,version:1,statement:String(input.hypothesis.statement??"Measurable resilience hypothesis"),expectedFailure:safePayload(input.hypothesis.expectedFailure??{}),expectedRecovery:safePayload(input.hypothesis.expectedRecovery??{}),unacceptableOutcomes:safePayload(input.hypothesis.unacceptableOutcomes),measurableMetrics:safePayload(input.hypothesis.expectedMetrics)}});
  const conditions=(input.abortCriteria.conditions as unknown[]).map(String);
- for(const [i,condition] of conditions.entries()) await db.experimentGuardrail.create({data:{experimentId:created.id,version:1,name:condition,kind:"ABORT_CONDITION",action:"ABORT",enabled:true}});
+ for(const condition of conditions) await db.experimentGuardrail.create({data:{experimentId:created.id,version:1,name:condition,kind:"ABORT_CONDITION",action:"ABORT",enabled:true}});
  return created;
 }
 
