@@ -174,8 +174,13 @@ export async function rejectAutomation(executionId:string,approverId:string,reas
 export async function disableAutomation(policyId:string,reason:string){
  const policy=await db.automationPolicy.findUnique({where:{id:policyId}});
  if(!policy)throw new Error("Automation policy not found.");
- const updated=await db.automationPolicy.update({where:{id:policyId},data:{enabled:false,status:"DISABLED",version:{increment:1}}});
- await db.automationCircuit.upsert({where:{policyId},create:{policyId,state:"OPEN",reason},update:{state:"OPEN",reason}});
+ const nextVersion=policy.version+1;
+ const updated=await db.$transaction(async(tx)=>{
+  const row=await tx.automationPolicy.update({where:{id:policyId},data:{enabled:false,status:"DISABLED",version:nextVersion}});
+  await tx.automationPolicyVersion.create({data:{policyId,version:nextVersion,snapshot:{stableId:row.stableId,name:row.name,risk:row.risk,trigger:row.trigger,conditions:row.conditions,actions:row.actions,enabled:false,dryRun:row.dryRun,status:"DISABLED"}}});
+  await tx.automationCircuit.upsert({where:{policyId},create:{policyId,state:"OPEN",openedAt:new Date(),reason},update:{state:"OPEN",openedAt:new Date(),reason}});
+  return row;
+ });
  return updated;
 }
 
