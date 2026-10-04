@@ -4431,23 +4431,283 @@ model PlatformGraphFinding {
   @@index([kind,scope])
 }
 
-enum SimulationExecutionMode { SIMULATION STAGING SYNTHETIC_PRODUCTION CONTROLLED_PRODUCTION }
-enum SimulationScenarioType { DEPENDENCY_FAILURE API_CHANGE DATABASE_CHANGE EVENT_CHANGE JOB_FAILURE QUEUE_BACKLOG CACHE_FAILURE SEARCH_FAILURE NOTIFICATION_FAILURE PROVIDER_FAILURE PAYMENT_SIMULATION CHECKOUT_SIMULATION ORDER_SIMULATION FULFILLMENT_SIMULATION SHIPPING_SIMULATION RETURN_SIMULATION CUSTOMER_JOURNEY DEPLOYMENT_CHANGE FEATURE_FLAG_CHANGE CAPACITY_CHANGE SECURITY_CONTROL_CHANGE ARCHITECTURAL_CHANGE }
-enum SimulationLifecycle { DRAFT REVIEW_REQUIRED APPROVED READY RUNNING ASSERTING COMPLETED CERTIFIED FAILED BLOCKED ABORTED REJECTED EXPIRED }
-enum SimulationRisk { MINIMAL LOW MEDIUM HIGH CRITICAL }
-enum SimulationRunStatus { RUNNING ASSERTING COMPLETED FAILED BLOCKED ABORTED }
-enum SimulationResultStatus { PASSED PASSED_WITH_LIMITATIONS FAILED BLOCKED }
-enum SimulationCertificationFreshness { CURRENT AGING STALE INVALIDATED }
-enum SimulationAssertionResult { PASSED FAILED UNKNOWN BLOCKED }
-model SimulationScenario { id String @id @default(uuid()) @db.Uuid stableId String @unique @db.VarChar(200) name String @db.VarChar(240) description String @db.VarChar(4000) purpose String @db.VarChar(2000) owner String @db.VarChar(160) scenarioVersion Int @default(1) type SimulationScenarioType environment String @db.VarChar(80) executionMode SimulationExecutionMode scope Json risk SimulationRisk dependencies Json inputs Json expectedOutputs Json assertions Json status SimulationLifecycle @default(DRAFT) approval Json? createdAt DateTime @default(now()) updatedAt DateTime @updatedAt runs SimulationRun[] impacts SimulationImpact[] certifications SimulationCertification[] inputsRecords SimulationInput[] outputsRecords SimulationOutput[] dependenciesRecords SimulationDependency[] failures SimulationFailure[] @@index([status,risk,updatedAt]) @@index([type,environment]) }
-model SimulationInput { id String @id @default(uuid()) @db.Uuid scenarioId String @db.Uuid key String @db.VarChar(160) value Json syntheticOnly Boolean @default(true) scenario SimulationScenario @relation(fields:[scenarioId],references:[id],onDelete:Restrict) @@unique([scenarioId,key]) }
-model SimulationOutput { id String @id @default(uuid()) @db.Uuid scenarioId String @db.Uuid key String @db.VarChar(160) value Json status String @db.VarChar(40) scenario SimulationScenario @relation(fields:[scenarioId],references:[id],onDelete:Restrict) @@index([scenarioId,status]) }
-model SimulationDependency { id String @id @default(uuid()) @db.Uuid scenarioId String @db.Uuid graphNodeStableId String @db.VarChar(200) role String @db.VarChar(80) required Boolean @default(true) scenario SimulationScenario @relation(fields:[scenarioId],references:[id],onDelete:Restrict) @@unique([scenarioId,graphNodeStableId,role]) }
-model SimulationSnapshot { id String @id @default(uuid()) @db.Uuid stableId String @unique @db.VarChar(200) scenarioId String? @db.Uuid codeVersion String @db.VarChar(160) schemaVersion String @db.VarChar(160) configurationVersion String @db.VarChar(160) featureFlagState Json dependencyGraphVersion String @db.VarChar(160) architectureVersion String @db.VarChar(160) scenarioVersion Int environment String @db.VarChar(80) dataFixtureVersion String @db.VarChar(160) randomSeed String? @db.VarChar(160) immutable Boolean @default(true) createdAt DateTime @default(now()) scenario SimulationScenario? @relation(fields:[scenarioId],references:[id],onDelete:Restrict) runs SimulationRun[] @@index([scenarioId,createdAt]) }
-model SimulationRun { id String @id @default(uuid()) @db.Uuid scenarioId String @db.Uuid snapshotId String @db.Uuid status SimulationRunStatus @default(RUNNING) result SimulationResultStatus? environment String @db.VarChar(80) executionMode SimulationExecutionMode correlationId String @db.VarChar(128) lineageId String @db.VarChar(160) startedAt DateTime @default(now()) endedAt DateTime? randomSeed String? @db.VarChar(160) limits Json outputs Json? resourceUsage Json? abortReason String? @db.VarChar(1000) baselineRunId String? @db.Uuid scenario SimulationScenario @relation(fields:[scenarioId],references:[id],onDelete:Restrict) snapshot SimulationSnapshot @relation(fields:[snapshotId],references:[id],onDelete:Restrict) assertions SimulationAssertion[] failures SimulationFailure[] impacts SimulationImpact[] evidence SimulationEvidence[] certifications SimulationCertification[] inputs SimulationRunInput[] @@index([scenarioId,startedAt]) @@index([status,startedAt]) }
-model SimulationRunInput { id String @id @default(uuid()) @db.Uuid runId String @db.Uuid key String @db.VarChar(160) value Json syntheticOnly Boolean @default(true) run SimulationRun @relation(fields:[runId],references:[id],onDelete:Restrict) @@unique([runId,key]) }
-model SimulationAssertion { id String @id @default(uuid()) @db.Uuid runId String @db.Uuid assertionKey String @db.VarChar(160) assertionType String @db.VarChar(80) expected Json actual Json? result SimulationAssertionResult severity SimulationRisk evidence Json createdAt DateTime @default(now()) run SimulationRun @relation(fields:[runId],references:[id],onDelete:Restrict) @@index([runId,result]) }
-model SimulationFailure { id String @id @default(uuid()) @db.Uuid scenarioId String @db.Uuid runId String? @db.Uuid target String @db.VarChar(200) scope String @db.VarChar(1000) expectedBehavior Json abortConditions Json recoveryExpectation Json status String @db.VarChar(40) metadata Json scenario SimulationScenario @relation(fields:[scenarioId],references:[id],onDelete:Restrict) run SimulationRun? @relation(fields:[runId],references:[id],onDelete:Restrict) @@index([scenarioId,status]) @@index([target,status]) }
-model SimulationImpact { id String @id @default(uuid()) @db.Uuid scenarioId String @db.Uuid runId String? @db.Uuid changeReference String @db.VarChar(300) directlyAffected Json indirectlyAffected Json affectedDomains Json affectedApis Json affectedTables Json affectedWorkflows Json affectedJourneys Json affectedProviders Json affectedSlos Json affectedGovernance Json affectedReconciliation Json affectedResilience Json affectedDigitalTwin Json blastRadius SimulationRisk summary String @db.VarChar(4000) scenario SimulationScenario @relation(fields:[scenarioId],references:[id],onDelete:Restrict) run SimulationRun? @relation(fields:[runId],references:[id],onDelete:Restrict) @@index([scenarioId,blastRadius]) @@index([changeReference]) }
-model SimulationEvidence { id String @id @default(uuid()) @db.Uuid runId String @db.Uuid evidenceType String @db.VarChar(100) reference String @db.VarChar(1000) integrityHash String @db.VarChar(128) payload Json immutable Boolean @default(true) capturedBy String? @db.VarChar(160) createdAt DateTime @default(now()) run SimulationRun @relation(fields:[runId],references:[id],onDelete:Restrict) @@index([runId,createdAt]) }
-model SimulationCertification { id String @id @default(uuid()) @db.Uuid scenarioId String @db.Uuid runId String? @db.Uuid status SimulationResultStatus freshness SimulationCertificationFreshness @default(CURRENT) dimensions Json reviewer String? @db.VarChar(160) certifiedAt DateTime @default(now()) expiresAt DateTime policyVersion String @db.VarChar(80) limitations Json scenario SimulationScenario @relation(fields:[scenarioId],references:[id],onDelete:Restrict) run SimulationRun? @relation(fields:[runId],references:[id],onDelete:Restrict) @@index([scenarioId,status,freshness]) @@index([expiresAt]) }
+enum SimulationExecutionMode {
+  SIMULATION
+  STAGING
+  SYNTHETIC_PRODUCTION
+  CONTROLLED_PRODUCTION
+}
+enum SimulationScenarioType {
+  DEPENDENCY_FAILURE
+  API_CHANGE
+  DATABASE_CHANGE
+  EVENT_CHANGE
+  JOB_FAILURE
+  QUEUE_BACKLOG
+  CACHE_FAILURE
+  SEARCH_FAILURE
+  NOTIFICATION_FAILURE
+  PROVIDER_FAILURE
+  PAYMENT_SIMULATION
+  CHECKOUT_SIMULATION
+  ORDER_SIMULATION
+  FULFILLMENT_SIMULATION
+  SHIPPING_SIMULATION
+  RETURN_SIMULATION
+  CUSTOMER_JOURNEY
+  DEPLOYMENT_CHANGE
+  FEATURE_FLAG_CHANGE
+  CAPACITY_CHANGE
+  SECURITY_CONTROL_CHANGE
+  ARCHITECTURAL_CHANGE
+}
+enum SimulationLifecycle {
+  DRAFT
+  REVIEW_REQUIRED
+  APPROVED
+  READY
+  RUNNING
+  ASSERTING
+  COMPLETED
+  CERTIFIED
+  FAILED
+  BLOCKED
+  ABORTED
+  REJECTED
+  EXPIRED
+}
+enum SimulationRisk {
+  MINIMAL
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+enum SimulationRunStatus {
+  RUNNING
+  ASSERTING
+  COMPLETED
+  FAILED
+  BLOCKED
+  ABORTED
+}
+enum SimulationResultStatus {
+  PASSED
+  PASSED_WITH_LIMITATIONS
+  FAILED
+  BLOCKED
+}
+enum SimulationCertificationFreshness {
+  CURRENT
+  AGING
+  STALE
+  INVALIDATED
+}
+enum SimulationAssertionResult {
+  PASSED
+  FAILED
+  UNKNOWN
+  BLOCKED
+}
+model SimulationScenario {
+  id String @id @default(uuid()) @db.Uuid
+  stableId String @unique @db.VarChar(200)
+  name String @db.VarChar(240)
+  description String @db.VarChar(4000)
+  purpose String @db.VarChar(2000)
+  owner String @db.VarChar(160)
+  scenarioVersion Int @default(1)
+  type SimulationScenarioType
+  environment String @db.VarChar(80)
+  executionMode SimulationExecutionMode
+  scope Json
+  risk SimulationRisk
+  dependencies Json
+  inputs Json
+  expectedOutputs Json
+  assertions Json
+  status SimulationLifecycle @default(DRAFT)
+  approval Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  runs SimulationRun[]
+  impacts SimulationImpact[]
+  certifications SimulationCertification[]
+  inputsRecords SimulationInput[]
+  outputsRecords SimulationOutput[]
+  dependenciesRecords SimulationDependency[]
+  failures SimulationFailure[]
+  @@index([status,risk,updatedAt])
+  @@index([type,environment])
+}
+model SimulationInput {
+  id String @id @default(uuid()) @db.Uuid
+  scenarioId String @db.Uuid
+  key String @db.VarChar(160)
+  value Json
+  syntheticOnly Boolean @default(true)
+  scenario SimulationScenario @relation(fields:[scenarioId],references:[id],onDelete:Restrict)
+  @@unique([scenarioId,key])
+}
+model SimulationOutput {
+  id String @id @default(uuid()) @db.Uuid
+  scenarioId String @db.Uuid
+  key String @db.VarChar(160)
+  value Json
+  status String @db.VarChar(40)
+  scenario SimulationScenario @relation(fields:[scenarioId],references:[id],onDelete:Restrict)
+  @@index([scenarioId,status])
+}
+model SimulationDependency {
+  id String @id @default(uuid()) @db.Uuid
+  scenarioId String @db.Uuid
+  graphNodeStableId String @db.VarChar(200)
+  role String @db.VarChar(80)
+  required Boolean @default(true)
+  scenario SimulationScenario @relation(fields:[scenarioId],references:[id],onDelete:Restrict)
+  @@unique([scenarioId,graphNodeStableId,role])
+}
+model SimulationSnapshot {
+  id String @id @default(uuid()) @db.Uuid
+  stableId String @unique @db.VarChar(200)
+  scenarioId String? @db.Uuid
+  codeVersion String @db.VarChar(160)
+  schemaVersion String @db.VarChar(160)
+  configurationVersion String @db.VarChar(160)
+  featureFlagState Json
+  dependencyGraphVersion String @db.VarChar(160)
+  architectureVersion String @db.VarChar(160)
+  scenarioVersion Int
+  environment String @db.VarChar(80)
+  dataFixtureVersion String @db.VarChar(160)
+  randomSeed String? @db.VarChar(160)
+  immutable Boolean @default(true)
+  createdAt DateTime @default(now())
+  scenario SimulationScenario? @relation(fields:[scenarioId],references:[id],onDelete:Restrict)
+  runs SimulationRun[]
+  @@index([scenarioId,createdAt])
+}
+model SimulationRun {
+  id String @id @default(uuid()) @db.Uuid
+  scenarioId String @db.Uuid
+  snapshotId String @db.Uuid
+  status SimulationRunStatus @default(RUNNING)
+  result SimulationResultStatus?
+  environment String @db.VarChar(80)
+  executionMode SimulationExecutionMode
+  correlationId String @db.VarChar(128)
+  lineageId String @db.VarChar(160)
+  startedAt DateTime @default(now())
+  endedAt DateTime?
+  randomSeed String? @db.VarChar(160)
+  limits Json
+  outputs Json?
+  resourceUsage Json?
+  abortReason String? @db.VarChar(1000)
+  baselineRunId String? @db.Uuid
+  createdAt DateTime @default(now())
+  scenario SimulationScenario @relation(fields:[scenarioId],references:[id],onDelete:Restrict)
+  snapshot SimulationSnapshot @relation(fields:[snapshotId],references:[id],onDelete:Restrict)
+  assertions SimulationAssertion[]
+  failures SimulationFailure[]
+  impacts SimulationImpact[]
+  evidence SimulationEvidence[]
+  certifications SimulationCertification[]
+  inputs SimulationRunInput[]
+  @@index([scenarioId,startedAt])
+  @@index([status,startedAt])
+}
+model SimulationRunInput {
+  id String @id @default(uuid()) @db.Uuid
+  runId String @db.Uuid
+  key String @db.VarChar(160)
+  value Json
+  syntheticOnly Boolean @default(true)
+  run SimulationRun @relation(fields:[runId],references:[id],onDelete:Restrict)
+  @@unique([runId,key])
+}
+model SimulationAssertion {
+  id String @id @default(uuid()) @db.Uuid
+  runId String @db.Uuid
+  assertionKey String @db.VarChar(160)
+  assertionType String @db.VarChar(80)
+  expected Json
+  actual Json?
+  result SimulationAssertionResult
+  severity SimulationRisk
+  evidence Json
+  createdAt DateTime @default(now())
+  run SimulationRun @relation(fields:[runId],references:[id],onDelete:Restrict)
+  @@index([runId,result])
+}
+model SimulationFailure {
+  id String @id @default(uuid()) @db.Uuid
+  scenarioId String @db.Uuid
+  runId String? @db.Uuid
+  target String @db.VarChar(200)
+  scope String @db.VarChar(1000)
+  expectedBehavior Json
+  abortConditions Json
+  recoveryExpectation Json
+  status String @db.VarChar(40)
+  metadata Json
+  scenario SimulationScenario @relation(fields:[scenarioId],references:[id],onDelete:Restrict)
+  run SimulationRun? @relation(fields:[runId],references:[id],onDelete:Restrict)
+  @@index([scenarioId,status])
+  @@index([target,status])
+}
+model SimulationImpact {
+  id String @id @default(uuid()) @db.Uuid
+  scenarioId String @db.Uuid
+  runId String? @db.Uuid
+  changeReference String @db.VarChar(300)
+  directlyAffected Json
+  indirectlyAffected Json
+  affectedDomains Json
+  affectedApis Json
+  affectedTables Json
+  affectedWorkflows Json
+  affectedJourneys Json
+  affectedProviders Json
+  affectedSlos Json
+  affectedGovernance Json
+  affectedReconciliation Json
+  affectedResilience Json
+  affectedDigitalTwin Json
+  blastRadius SimulationRisk
+  summary String @db.VarChar(4000)
+  scenario SimulationScenario @relation(fields:[scenarioId],references:[id],onDelete:Restrict)
+  run SimulationRun? @relation(fields:[runId],references:[id],onDelete:Restrict)
+  @@index([scenarioId,blastRadius])
+  @@index([changeReference])
+}
+model SimulationEvidence {
+  id String @id @default(uuid()) @db.Uuid
+  runId String @db.Uuid
+  evidenceType String @db.VarChar(100)
+  reference String @db.VarChar(1000)
+  integrityHash String @db.VarChar(128)
+  payload Json
+  immutable Boolean @default(true)
+  capturedBy String? @db.VarChar(160)
+  createdAt DateTime @default(now())
+  run SimulationRun @relation(fields:[runId],references:[id],onDelete:Restrict)
+  @@index([runId,createdAt])
+}
+model SimulationCertification {
+  id String @id @default(uuid()) @db.Uuid
+  scenarioId String @db.Uuid
+  runId String? @db.Uuid
+  status SimulationResultStatus
+  freshness SimulationCertificationFreshness @default(CURRENT)
+  dimensions Json
+  reviewer String? @db.VarChar(160)
+  certifiedAt DateTime @default(now())
+  expiresAt DateTime
+  policyVersion String @db.VarChar(80)
+  limitations Json
+  scenario SimulationScenario @relation(fields:[scenarioId],references:[id],onDelete:Restrict)
+  run SimulationRun? @relation(fields:[runId],references:[id],onDelete:Restrict)
+  @@index([scenarioId,status,freshness])
+  @@index([expiresAt])
+}
