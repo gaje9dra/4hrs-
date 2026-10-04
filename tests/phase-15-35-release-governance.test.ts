@@ -1,0 +1,1 @@
+import test from "node:test";import assert from "node:assert/strict";import {RELEASE_LIMITS} from "../lib/release-governance/service";test("release safety caps",()=>{assert.equal(RELEASE_LIMITS.maxStages,12);assert.equal(RELEASE_LIMITS.maxExposure,100);assert.equal(RELEASE_LIMITS.maxEvidence,1000)});test("exposure cap",()=>assert.ok(RELEASE_LIMITS.maxExposure<=100));
