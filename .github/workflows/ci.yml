@@ -74,6 +74,8 @@ jobs:
         run: npm run platform:certify
       - name: Validate production operations control plane
         run: npm run operations:validate
+      - name: Validate autonomous reliability controls
+        run: npm run reliability:autonomous:validate
 
       - name: Audit migration safety
         run: npm run db:audit-migrations

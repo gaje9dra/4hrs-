@@ -2922,3 +2922,303 @@ model AutomationCircuit {
   updatedAt          DateTime              @updatedAt
   @@index([state, updatedAt])
 }
+
+
+enum ReliabilityConfidenceLevel {
+  UNKNOWN
+  LOW
+  MEDIUM
+  HIGH
+  VERIFIED
+}
+
+enum ReliabilityAssessmentState {
+  CREATED
+  CORRELATING
+  ASSESSED
+  AWAITING_VALIDATION
+  ACTIONABLE
+  REMEDIATING
+  VERIFYING
+  RESOLVED
+  REGRESSED
+  ESCALATED
+  CLOSED
+}
+
+enum ReliabilityOutcomeStatus {
+  SUCCESS
+  PARTIAL_SUCCESS
+  FAILED
+  UNKNOWN
+  REGRESSION
+  REQUIRES_HUMAN_REVIEW
+}
+
+enum ReliabilityStrategyStatus {
+  DRAFT
+  REVIEW
+  APPROVED
+  ACTIVE
+  PAUSED
+  DISABLED
+  RETIRED
+}
+
+enum ReliabilityCircuitState {
+  CLOSED
+  OPEN
+  HALF_OPEN
+}
+
+model ReliabilitySignal {
+  id String @id @default(uuid()) @db.Uuid
+  fingerprint String @unique @db.VarChar(128)
+  kind String @db.VarChar(80)
+  service String @db.VarChar(120)
+  dependency String? @db.VarChar(120)
+  severity String @db.VarChar(32)
+  observedAt DateTime
+  environment String @db.VarChar(32)
+  value Json
+  evidence Json?
+  correlationId String? @db.VarChar(128)
+  createdAt DateTime @default(now())
+  observations ReliabilityObservation[]
+  @@index([service, observedAt])
+  @@index([dependency, observedAt])
+  @@index([severity, observedAt])
+}
+
+model ReliabilityObservation {
+  id String @id @default(uuid()) @db.Uuid
+  signalId String @db.Uuid
+  metricKey String @db.VarChar(120)
+  numericValue Decimal? @db.Decimal(20, 6)
+  status String @db.VarChar(32)
+  observedAt DateTime
+  baselineReference String?
+  evidence Json?
+  signal ReliabilitySignal @relation(fields: [signalId], references: [id], onDelete: Cascade)
+  @@index([signalId, observedAt])
+  @@index([metricKey, observedAt])
+}
+
+model ReliabilityCorrelation {
+  id String @id @default(uuid()) @db.Uuid
+  fingerprint String @unique @db.VarChar(128)
+  windowStart DateTime
+  windowEnd DateTime
+  correlationType String @db.VarChar(80)
+  signalIds String[]
+  explanation String @db.VarChar(2000)
+  evidence Json
+  correlationConfidence Float
+  createdAt DateTime @default(now())
+  @@index([windowStart, windowEnd])
+}
+
+model ReliabilityHypothesis {
+  id String @id @default(uuid()) @db.Uuid
+  correlationId String? @db.Uuid
+  statement String @db.VarChar(2000)
+  domain String @db.VarChar(80)
+  resources String[]
+  evidence Json
+  competingHypotheses Json?
+  confidence ReliabilityConfidenceLevel
+  validationMethod String @db.VarChar(1000)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  @@index([confidence, expiresAt])
+}
+
+model ReliabilityAssessment {
+  id String @id @default(uuid()) @db.Uuid
+  correlationId String? @db.Uuid
+  hypothesisId String? @db.Uuid
+  state ReliabilityAssessmentState @default(CREATED)
+  confidence ReliabilityConfidenceLevel
+  signals Json
+  evidence Json
+  contradictions Json?
+  remediationConsidered Json
+  selectionRationale String @db.VarChar(2000)
+  incidentId String? @db.Uuid
+  correlationFingerprint String @db.VarChar(128)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([state, updatedAt])
+  @@index([confidence, updatedAt])
+  @@index([incidentId])
+}
+
+model ReliabilityDecision {
+  id String @id @default(uuid()) @db.Uuid
+  assessmentId String @db.Uuid
+  strategyId String?
+  decision String @db.VarChar(64)
+  reason String @db.VarChar(2000)
+  risk String @db.VarChar(32)
+  requiresApproval Boolean
+  blockedConditions Json?
+  createdAt DateTime @default(now())
+  @@index([assessmentId, createdAt])
+}
+
+model ReliabilityStrategy {
+  id String @id @default(uuid()) @db.Uuid
+  stableId String @unique @db.VarChar(120)
+  version Int @default(1)
+  name String @db.VarChar(160)
+  status ReliabilityStrategyStatus @default(DRAFT)
+  symptom String @db.VarChar(1000)
+  evidenceRequirements Json
+  hypothesisRequirements Json
+  risk String @db.VarChar(32)
+  actions Json
+  preconditions Json
+  postconditions Json
+  timeoutSeconds Int
+  retryLimit Int
+  cooldownSeconds Int
+  maxSteps Int
+  maxMutations Int
+  maxChainDurationSeconds Int
+  blastRadius Json
+  rollback Json
+  verification Json
+  escalation Json
+  owner String @db.VarChar(160)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([status, risk])
+}
+
+model ReliabilityEvaluation {
+  id String @id @default(uuid()) @db.Uuid
+  assessmentId String @db.Uuid
+  strategyId String?
+  phase String @db.VarChar(40)
+  passed Boolean
+  checks Json
+  observedAt DateTime @default(now())
+  @@index([assessmentId, observedAt])
+}
+
+model ReliabilityBaseline {
+  id String @id @default(uuid()) @db.Uuid
+  key String @db.VarChar(160)
+  environment String @db.VarChar(32)
+  metricKey String @db.VarChar(120)
+  sampleCount Int
+  center Decimal @db.Decimal(20, 6)
+  spread Decimal @db.Decimal(20, 6)
+  method String @db.VarChar(120)
+  frozen Boolean @default(false)
+  freezeReason String?
+  windowStart DateTime
+  windowEnd DateTime
+  version Int @default(1)
+  evidence Json?
+  updatedAt DateTime @updatedAt
+  @@unique([key, environment, metricKey, version])
+  @@index([metricKey, environment, updatedAt])
+}
+
+model ReliabilityAnomaly {
+  id String @id @default(uuid()) @db.Uuid
+  baselineId String? @db.Uuid
+  metricKey String @db.VarChar(120)
+  environment String @db.VarChar(32)
+  observedValue Decimal @db.Decimal(20, 6)
+  expectedValue Decimal @db.Decimal(20, 6)
+  deviation Decimal @db.Decimal(20, 6)
+  method String @db.VarChar(120)
+  sustained Boolean
+  explanation String @db.VarChar(1000)
+  detectedAt DateTime @default(now())
+  status String @db.VarChar(32) @default("OPEN")
+  @@index([metricKey, environment, detectedAt])
+  @@index([status, detectedAt])
+}
+
+model ReliabilityOutcome {
+  id String @id @default(uuid()) @db.Uuid
+  assessmentId String @db.Uuid
+  strategyId String?
+  executionId String?
+  status ReliabilityOutcomeStatus
+  preconditions Json
+  actionEvidence Json
+  postconditions Json
+  regressionDetected Boolean @default(false)
+  observationWindowSeconds Int
+  verifiedAt DateTime?
+  explanation String @db.VarChar(2000)
+  createdAt DateTime @default(now())
+  @@index([assessmentId, createdAt])
+  @@index([status, createdAt])
+}
+
+model ReliabilityRegression {
+  id String @id @default(uuid()) @db.Uuid
+  assessmentId String @db.Uuid
+  executionId String?
+  metricKey String @db.VarChar(120)
+  beforeValue Decimal @db.Decimal(20, 6)
+  afterValue Decimal @db.Decimal(20, 6)
+  threshold Decimal @db.Decimal(20, 6)
+  explanation String @db.VarChar(2000)
+  circuitOpened Boolean @default(false)
+  createdAt DateTime @default(now())
+  @@index([assessmentId, createdAt])
+}
+
+model ReliabilityCausality {
+  id String @id @default(uuid()) @db.Uuid
+  assessmentId String @db.Uuid
+  eventType String @db.VarChar(80)
+  eventReference String @db.VarChar(160)
+  affectedSystem String @db.VarChar(120)
+  eventAt DateTime
+  timeDistanceSeconds Int
+  relationship String @db.VarChar(32)
+  confidence Float
+  evidence Json
+  createdAt DateTime @default(now())
+  @@index([assessmentId, eventAt])
+}
+
+model ReliabilitySuppression {
+  id String @id @default(uuid()) @db.Uuid
+  fingerprint String @unique @db.VarChar(128)
+  reason String @db.VarChar(1000)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  @@index([expiresAt])
+}
+
+model ReliabilityIncidentLink {
+  id String @id @default(uuid()) @db.Uuid
+  assessmentId String @db.Uuid
+  incidentId String @db.Uuid
+  relation String @db.VarChar(64)
+  evidence Json
+  createdAt DateTime @default(now())
+  @@unique([assessmentId, incidentId, relation])
+  @@index([incidentId, createdAt])
+}
+
+model ReliabilityCircuit {
+  id String @id @default(uuid()) @db.Uuid
+  strategyId String
+  state ReliabilityCircuitState @default(CLOSED)
+  consecutiveFailures Int @default(0)
+  totalFailures Int @default(0)
+  openedAt DateTime?
+  reason String?
+  updatedAt DateTime @updatedAt
+  @@unique([strategyId])
+  @@index([state, updatedAt])
+}
