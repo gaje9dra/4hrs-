@@ -6168,3 +6168,23 @@ model DeliveryGovernanceJobRun {
   error String? @db.VarChar(2000)
   @@index([jobKey,startedAt])
 }
+
+
+model DeliveryEmergencyOverride {
+  id String @id @default(uuid()) @db.Uuid
+  assessmentId String @db.Uuid
+  pipelineId String @db.Uuid
+  actorId String @db.VarChar(120)
+  reason String @db.VarChar(2000)
+  incidentReference String @db.VarChar(255)
+  confirmationToken String @db.VarChar(128)
+  expiresAt DateTime
+  status String @db.VarChar(32)
+  postReviewRequired Boolean @default(true)
+  postReviewDueAt DateTime
+  createdAt DateTime @default(now())
+  consumedAt DateTime?
+  @@index([assessmentId,status])
+  @@index([pipelineId,expiresAt])
+  @@index([expiresAt,status])
+}
