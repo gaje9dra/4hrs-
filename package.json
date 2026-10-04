@@ -37,7 +37,8 @@
     "improvement:validate": "tsx scripts/improvement-validate.ts",
     "architecture:validate": "tsx scripts/architecture-validate.ts",
     "platform-graph:validate": "tsx scripts/platform-graph-validate.ts",
-    "simulation:validate": "tsx scripts/simulation-validate.ts"
+    "simulation:validate": "tsx scripts/simulation-validate.ts",
+    "change-governance:validate": "tsx scripts/change-governance-validate.ts"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.1.14",

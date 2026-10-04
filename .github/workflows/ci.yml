@@ -89,6 +89,9 @@ jobs:
       - name: Validate system simulation safety
         run: npm run simulation:validate
 
+      - name: Validate change governance safety
+        run: npm run change-governance:validate
+
       - name: Audit migration safety
         run: npm run db:audit-migrations
 
