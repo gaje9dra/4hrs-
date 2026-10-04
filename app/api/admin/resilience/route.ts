@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdmin, requireHighRiskReason } from "@/lib/admin/authorization";
 import {
- createExperiment, reviewExperiment, approveExperiment, scheduleExperiment, readyExperiment,
+ createExperiment, reviewExperiment, reviseExperiment, approveExperiment, scheduleExperiment, readyExperiment,
  executeExperiment, abortExperiment, registerFault, registerTarget, createCertificate,
  setEmergencySuppression, getResilienceOverview
 } from "@/lib/resilience/experiments";
@@ -30,6 +30,7 @@ export async function POST(request:Request){
    })},{status:201});
   }
   if(action==="REVIEW"){await requireAdmin(request,"resilience.edit");return NextResponse.json({result:await reviewExperiment(str(body.id))});}
+  if(action==="EDIT"){await requireAdmin(request,"resilience.edit");return NextResponse.json({result:await reviseExperiment(str(body.id),{targetStableId:str(body.targetStableId)||undefined,faultStableId:str(body.faultStableId)||undefined,timeoutSeconds:body.timeoutSeconds===undefined?undefined:Number(body.timeoutSeconds),blastRadius:body.blastRadius as Record<string,unknown>|undefined,hypothesis:body.hypothesis as Record<string,unknown>|undefined,expectedBehavior:body.expectedBehavior as Record<string,unknown>|undefined,abortCriteria:body.abortCriteria as Record<string,unknown>|undefined})});}
   if(action==="APPROVE"){
    const ctx=await requireAdmin(request,"resilience.approve"); const reason=requireHighRiskReason(body.reason);
    return NextResponse.json({result:await approveExperiment(str(body.id),{approvedBy:ctx.adminUser.id,reason,expiresAt:new Date(str(body.expiresAt))})});
