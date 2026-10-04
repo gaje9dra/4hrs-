@@ -1,0 +1,21 @@
+import { NextResponse } from "next/server";
+import { requireAdmin, requireHighRiskReason } from "@/lib/admin/authorization";
+import { createEnvironment, createScenario, reviseScenario, executeScenario, certifyExecution, getOverview } from "@/lib/rehearsal/service";
+export const dynamic="force-dynamic"; export const revalidate=0;
+const body=async(r:Request)=>await r.json() as Record<string,unknown>;
+const s=(v:unknown)=>typeof v==="string"?v.trim():"";
+const arr=(v:unknown)=>Array.isArray(v)?v:[];
+const record=(v:unknown)=>v&&typeof v==="object"&&!Array.isArray(v)?v as Record<string,unknown>:{};
+export async function GET(request:Request){try{await requireAdmin(request,"twin.read");return NextResponse.json(await getOverview(),{headers:{"cache-control":"private,no-store"}});}catch(e){return NextResponse.json({error:e instanceof Error?e.message:"Rehearsal request failed safely."},{status:403});}}
+export async function POST(request:Request){
+ try{
+  const b=await body(request);const action=s(b.action);
+  if(action==="CREATE_ENVIRONMENT"){const ctx=await requireAdmin(request,"twin.environment.manage");return NextResponse.json({result:await createEnvironment({stableId:s(b.stableId),name:s(b.name),environment:s(b.environment),configurationVersion:s(b.configurationVersion)||"manual",isolationProof:record(b.isolationProof),dataPolicy:record(b.dataPolicy),providerPolicy:record(b.providerPolicy),notificationPolicy:record(b.notificationPolicy)})},{status:201});}
+  if(action==="CREATE_SCENARIO"){const ctx=await requireAdmin(request,"twin.scenario.create");return NextResponse.json({result:await createScenario({stableId:s(b.stableId),name:s(b.name),category:s(b.category),owner:s(b.owner)||ctx.adminUser.id,riskClass:s(b.riskClass)||"LOW",maxDurationSeconds:Number(b.maxDurationSeconds),maxResourceUnits:Number(b.maxResourceUnits),customerImpact:record(b.customerImpact),applicationVersion:s(b.applicationVersion)||process.env.APP_VERSION||"unknown",configurationVersion:s(b.configurationVersion)||"rehearsal",schemaVersion:s(b.schemaVersion)||"prisma",featureFlagVersion:s(b.featureFlagVersion)||"rehearsal",dataSeed:s(b.dataSeed)||"phase-15-29-ci",faultDefinitions:arr(b.faultDefinitions),steps:arr(b.steps),assertions:arr(b.assertions),expected:record(b.expected)})},{status:201});}
+  if(action==="EDIT_SCENARIO"){await requireAdmin(request,"twin.scenario.edit");return NextResponse.json({result:await reviseScenario(s(b.id),{stableId:s(b.stableId),name:s(b.name),category:s(b.category),owner:s(b.owner),riskClass:s(b.riskClass)||"LOW",maxDurationSeconds:Number(b.maxDurationSeconds),maxResourceUnits:Number(b.maxResourceUnits),customerImpact:record(b.customerImpact),applicationVersion:s(b.applicationVersion)||"unknown",configurationVersion:s(b.configurationVersion)||"rehearsal",schemaVersion:s(b.schemaVersion)||"prisma",featureFlagVersion:s(b.featureFlagVersion)||"rehearsal",dataSeed:s(b.dataSeed)||"phase-15-29-ci",faultDefinitions:arr(b.faultDefinitions),steps:arr(b.steps),assertions:arr(b.assertions),expected:record(b.expected)})});}
+  if(action==="EXECUTE"){const mode=s(b.mode)||"synthetic";const permission=mode==="staging"?"twin.execute.staging":"twin.execute.synthetic";const ctx=await requireAdmin(request,permission);return NextResponse.json({result:await executeScenario({scenarioId:s(b.scenarioId),environmentId:s(b.environmentId),requestedBy:ctx.adminUser.id,correlationId:s(b.correlationId)||undefined})});}
+  if(action==="CERTIFY"){const ctx=await requireAdmin(request,"twin.certify");return NextResponse.json({result:await certifyExecution(s(b.executionId),ctx.adminUser.id)});}
+  if(action==="ABORT"){await requireAdmin(request,"twin.abort");return NextResponse.json({result:{status:"BLOCKED",reason:requireHighRiskReason(b.reason),message:"No arbitrary process or infrastructure termination is exposed; rehearsal executions are bounded and isolated."}});}
+  return NextResponse.json({error:"Unknown rehearsal action."},{status:400});
+ }catch(e){return NextResponse.json({error:e instanceof Error?e.message:"Rehearsal operation failed safely."},{status:400});}
+}
