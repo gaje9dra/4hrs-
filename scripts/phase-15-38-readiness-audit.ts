@@ -1,7 +1,7 @@
 import fs from "node:fs";
 const files=["lib/delivery-intelligence/service.ts","app/api/admin/delivery/intelligence/route.ts","lib/admin/permissions.ts","prisma/schema.prisma",".github/workflows/ci.yml"];
 const corpus=files.map(p=>fs.readFileSync(p,"utf8")).join("\n");
-const checks=[
+const checks: Array<[string, RegExp]> = [
  ["approval lifecycle",/requestApproval[\s\S]*decideApproval[\s\S]*reEvaluateAssessment/],
  ["emergency review",/requestEmergencyReview/],
  ["material invalidation",/invalidateForMaterialChange/],
