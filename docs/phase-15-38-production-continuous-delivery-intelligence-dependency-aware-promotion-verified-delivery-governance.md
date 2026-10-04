@@ -96,3 +96,12 @@ The completion layer closes the governance lifecycle gaps identified by the fina
 - completion validation plus security, failure-injection and performance-oriented automated tests.
 
 The maintenance job is `npm run delivery-intelligence:maintenance`; CI enforces `delivery-intelligence:completion:validate` and the Phase 15.38 governance completion test suite. The job performs only typed database governance updates and does not execute infrastructure/provider commands.
+
+
+## Final readiness controls
+
+The final readiness layer adds a governed emergency-review workflow rather than an autonomous production override. Requests require elevated RBAC, reason, incident/change reference, explicit confirmation, bounded expiry and mandatory post-review metadata; artifact integrity, authentication, audit and financial/database safety remain enforced.
+
+Approval state transitions affecting promotion state use database transactions. Governance maintenance expires stale assessments, approvals, locks, certifications and emergency-review records in bounded batches. Governance events provide actor, transition, reason, policy, evidence and correlation metadata.
+
+Final CI includes an architectural readiness audit and dedicated E2E/failure-injection/security/performance-oriented decision tests. The audit rejects arbitrary execution and raw SQL markers, verifies RBAC and transaction controls, and confirms Qikink remains fulfillment-only.
