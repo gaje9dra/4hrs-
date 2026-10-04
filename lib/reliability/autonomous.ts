@@ -170,3 +170,15 @@ export async function evaluateOperationalReliability(input:{environment:string;c
  }
  return {findings:findings.length,sloCandidates:SLO_CANDIDATES.length,errorBudgetPolicy:ERROR_BUDGET_POLICY.treatment};
 }
+
+export async function getReliabilityOverview(){
+ const [assessments,signals,anomalies,strategies,circuits,regressions]=await Promise.all([
+  db.reliabilityAssessment.findMany({orderBy:{updatedAt:"desc"},take:20}),
+  db.reliabilitySignal.findMany({orderBy:{observedAt:"desc"},take:20}),
+  db.reliabilityAnomaly.findMany({orderBy:{detectedAt:"desc"},take:20}),
+  db.reliabilityStrategy.findMany({orderBy:{updatedAt:"desc"},take:20}),
+  db.reliabilityCircuit.findMany({orderBy:{updatedAt:"desc"},take:20}),
+  db.reliabilityRegression.findMany({orderBy:{createdAt:"desc"},take:20})
+ ]);
+ return {assessments,signals,anomalies,strategies,circuits,regressions};
+}
