@@ -28,7 +28,7 @@ export function deterministicSyntheticFactory(seed:string){
 }
 
 export function compareExpectedActual(expected:JsonRecord,actual:JsonRecord){
- const deviations:JsonRecord={};const keys=new Set([...Object.keys(expected),...Object.keys(actual)]);
+ const deviations:JsonRecord={};const keys=new Set(Object.keys(expected));
  for(const key of keys) if(JSON.stringify(expected[key])!==JSON.stringify(actual[key])) deviations[key]={expected:expected[key],actual:actual[key]};
  return {classification:Object.keys(deviations).length?"PARTIAL":"PASS",deviations};
 }
