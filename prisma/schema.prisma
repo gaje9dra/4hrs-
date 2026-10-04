@@ -5205,6 +5205,7 @@ model Release {
  changeRequestId String @db.Uuid
  changeRevision Int
  artifactId String @db.Uuid
+ artifact ReleaseArtifact @relation(fields:[artifactId],references:[id],onDelete:Restrict)
  environment String @db.VarChar(80)
  target Json
  ownerId String @db.VarChar(120)
