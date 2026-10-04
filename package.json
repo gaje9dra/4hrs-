@@ -29,7 +29,9 @@
     "operations:validate": "tsx scripts/operations-validate.ts",
     "operations:verify-deployment": "tsx scripts/operations-verify-deployment.ts",
     "automation:validate": "tsx scripts/automation-validate.ts",
-    "reliability:autonomous:validate": "tsx scripts/reliability-autonomous-validate.ts"
+    "reliability:autonomous:validate": "tsx scripts/reliability-autonomous-validate.ts",
+    "resilience:validate": "tsx scripts/resilience-validate.ts",
+    "resilience:catalog:seed": "tsx scripts/resilience-catalog-seed.ts"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.1.14",
