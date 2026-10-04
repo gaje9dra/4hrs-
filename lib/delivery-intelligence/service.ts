@@ -64,7 +64,9 @@ export function evaluatePromotion(input:PromotionInput){
 export async function collectGraphImpact(stableId:string,maxNodes=100){
  const node=await db.platformGraphNode.findUnique({where:{stableId},include:{outgoing:{where:{active:true},take:Math.min(maxNodes,50),include:{toNode:true}},incoming:{where:{active:true},take:Math.min(maxNodes,50),include:{fromNode:true}}}});
  if(!node)return {found:false,nodes:[],relationships:[]};
- const relationships=[...node.outgoing,...node.incoming].map((r:any)=>({stableId:r.stableId,relationType:r.relationType,sourceIdentifier:r.sourceIdentifier,confidence:r.confidence,freshness:r.freshness,from:r.fromNode?.stableId??node.stableId,to:r.toNode?.stableId??node.stableId}));
+ const outgoing=node.outgoing.map(r=>({stableId:r.stableId,relationType:r.relationType,sourceIdentifier:r.sourceIdentifier,confidence:r.confidence,freshness:r.freshness,from:node.stableId,to:r.toNode.stableId}));
+ const incoming=node.incoming.map(r=>({stableId:r.stableId,relationType:r.relationType,sourceIdentifier:r.sourceIdentifier,confidence:r.confidence,freshness:r.freshness,from:r.fromNode.stableId,to:node.stableId}));
+ const relationships=[...outgoing,...incoming];
  const nodes=Array.from(new Set([node.stableId,...relationships.flatMap(r=>[r.from,r.to])])).slice(0,maxNodes);
  return {found:true,nodes,relationships};
 }
