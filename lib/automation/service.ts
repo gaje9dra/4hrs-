@@ -60,13 +60,14 @@ export async function evaluateAutomation(policyId:string,input:EvaluationInput){
  const autonomous=autonomousAllowed(risk);
  const requiresApproval=riskRequiresApproval(risk)||!autonomous;
  const allowed=guards.allowed&&conditionsPass&&!requiresApproval;
+ const reason=!conditionsPass?"Conditions did not match.":guards.reason;
  const dryRun=Boolean(input.dryRun||policy.dryRun);
  if(dryRun){
-  await db.automationDryRun.create({data:{policyId,policyVersionId:version?.id??null,trigger:{fingerprint:input.triggerFingerprint,environment:input.environment},conditions:conditionsOf(policy.conditions) as unknown as Prisma.InputJsonValue,target:{resource:input.targetResource,scope:boundedScope({environment:input.environment,resourceId:input.targetResource})},proposedAction:{actions},risk,authorization:policy.authorization as Prisma.InputJsonValue,expectedImpact:"No production mutation is performed.",rollbackCapability:"Simulation only; no rollback is claimed.",blastRadius:boundedScope({environment:input.environment,resourceId:input.targetResource}),decisionReason:reason}}});
+  const targetScope=boundedScope({environment:input.environment,resourceId:input.targetResource});
+  await db.automationDryRun.create({data:{policyId,policyVersionId:version?.id??null,trigger:{fingerprint:input.triggerFingerprint,environment:input.environment},conditions:conditionsOf(policy.conditions),target:{resource:input.targetResource,scope:targetScope},proposedAction:{actions},risk,authorization:policy.authorization,expectedImpact:"No production mutation is performed.",rollbackCapability:"Simulation only; no rollback is claimed.",blastRadius:targetScope,decisionReason:reason}});
   await db.automationSimulation.create({data:{policyId,policyVersionId:version?.id??null,input:{triggerFingerprint:input.triggerFingerprint,values:input.values,environment:input.environment,targetResource:input.targetResource},output:{conditionsPass,guards,requiresApproval,actions},synthetic:true}});
  }
  const state:AutomationExecutionState=dryRun?"BLOCKED":allowed?"RUNNING":guards.allowed&&conditionsPass?"PENDING_APPROVAL":"BLOCKED";
- const reason=!conditionsPass?"Conditions did not match.":guards.reason;
  const safety=await db.automationSafetyEvaluation.create({data:{policyId,allowed,risk,reason,environment:input.environment,details:{conditionsPass,guards,requiresApproval,dryRun,policyVersion:policy.version}}});
  const execution=await db.automationExecution.create({data:{policyId,policyVersionId:version?.id??null,triggerId:input.triggerId??null,triggerFingerprint:input.triggerFingerprint,idempotencyKey:input.triggerFingerprint+"::"+policy.version,targetResource:input.targetResource,targetScope:boundedScope({environment:input.environment,resourceId:input.targetResource}),risk,state,environment:input.environment,correlationId:input.correlationId,reason,requestedBy:input.requestedBy??null,result:{conditionsPass,guards,requiresApproval,dryRun}}});
  await db.automationSafetyEvaluation.update({where:{id:safety.id},data:{executionId:execution.id}});
