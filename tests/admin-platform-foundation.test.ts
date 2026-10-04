@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { db } from "@/lib/db/client";
 import { hashPassword } from "@/lib/auth/password";
 import { createSessionToken, hashSessionToken, CUSTOMER_SESSION_TTL_SECONDS } from "@/lib/auth/session";
-import { requireAdmin, requireHighRiskReason } from "@/lib/admin/authorization";
+import { requireAdmin, requireHighRiskReason, type AdminAuthorizationContext } from "@/lib/admin/authorization";
 import { AdminError } from "@/lib/admin/errors";
 import { updateAdminUser } from "@/lib/admin/application";
 import { recordAdminAudit } from "@/lib/admin/audit";
@@ -76,3 +76,45 @@ test("privileged reasons reject malformed input and audit records exclude secret
     assert.deepEqual(row.metadata, { safe: "ok" });
   } finally { await cleanup(f); }
 });
+
+
+test("the permanent super administrator keeps full access and cannot be modified", async () => {
+  const actor = await fixture("SUPER_ADMIN");
+  const roleRow = await db.adminRole.findUnique({ where: { name: "SUPER_ADMIN" } });
+  assert.ok(roleRow);
+  const customer = await db.customer.create({
+    data: { email: "gaje9dra@gmail.com", status: "ACTIVE", credential: { create: { passwordHash: await hashPassword("Permanent-Super-Admin-Test!") } } },
+  });
+  const target = await db.adminUser.create({
+    data: { customerId: customer.id, status: "DISABLED", roles: { create: { roleId: roleRow.id } } },
+  });
+  const sessionToken = createSessionToken();
+  const session = await db.customerSession.create({
+    data: { customerId: customer.id, sessionTokenHash: hashSessionToken(sessionToken), expiresAt: new Date(Date.now()+CUSTOMER_SESSION_TTL_SECONDS*1000) },
+  });
+  try {
+    const context = await requireAdmin(new Request("https://4hrs.test/admin", { headers: { cookie: `customer_session=${sessionToken}` } }), "system.settings.manage");
+    assert.deepEqual([...context.roles], ["SUPER_ADMIN"]);
+    assert.ok(context.permissions.has("system.settings.manage"));
+    await assert.rejects(
+      () => updateAdminUser(actorContext(actor), { id: target.id, expectedVersion: target.version, status: "DISABLED", roles: ["ADMIN"], reason: "attempt to modify protected administrator" }),
+      (error) => error instanceof AdminError && error.code === "FORBIDDEN",
+    );
+  } finally {
+    await db.adminAuditLog.deleteMany({ where: { actorAdminId: actor.admin.id } });
+    await db.customerSession.delete({ where: { id: session.id } });
+    await db.adminUser.delete({ where: { id: target.id } });
+    await db.customerCredential.deleteMany({ where: { customerId: customer.id } });
+    await db.customer.delete({ where: { id: customer.id } });
+    await cleanup(actor);
+  }
+});
+
+function actorContext(f: Awaited<ReturnType<typeof fixture>>): AdminAuthorizationContext {
+  return {
+    customer: { id: f.customer.id, email: f.customer.email, status: f.customer.status },
+    adminUser: { id: f.admin.id, customerId: f.admin.customerId, status: f.admin.status, version: f.admin.version, roles: ["SUPER_ADMIN"] },
+    permissions: new Set(["admin.users.manage"]),
+    roles: new Set(["SUPER_ADMIN"]),
+  };
+}

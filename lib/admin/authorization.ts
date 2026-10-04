@@ -2,7 +2,8 @@ import { db } from "@/lib/db/client";
 import { requireCurrentCustomer } from "@/lib/auth/context";
 import { AuthenticationError } from "@/lib/auth/errors";
 import { AdminError } from "@/lib/admin/errors";
-import type { AdminPermission } from "@/lib/admin/permissions";
+import { ADMIN_PERMISSIONS, type AdminPermission } from "@/lib/admin/permissions";
+import { isPermanentSuperAdminEmail } from "@/lib/admin/protected";
 import { recordAdminAudit } from "@/lib/admin/audit";
 import { consumeAdminRateLimit } from "@/lib/admin/rate-limit";
 import { isTrustedStateChangingRequest } from "@/lib/security/request";
@@ -25,9 +26,12 @@ export async function requireAdmin(request?: Request, permission?: AdminPermissi
   }
   if (request && !isTrustedStateChangingRequest(request)) throw new AdminError("FORBIDDEN", "The request origin is not allowed.");
   const admin = await db.adminUser.findUnique({ where: { customerId: current.customer.id }, include: { roles: { include: { role: { include: { permissions: { include: { permission: true } } } } } } } });
-  if (!admin || admin.status !== "ACTIVE" || current.customer.status !== "ACTIVE") denied();
-  const roles = new Set(admin.roles.map((entry) => entry.role.name));
-  const permissions = new Set(admin.roles.flatMap((entry) => entry.role.permissions.map((rp) => rp.permission.key))) as Set<AdminPermission>;
+  const permanentSuperAdmin = isPermanentSuperAdminEmail(current.customer.email);
+  if (!admin || current.customer.status !== "ACTIVE" || (!permanentSuperAdmin && admin.status !== "ACTIVE")) denied();
+  const roles = permanentSuperAdmin ? new Set<string>(["SUPER_ADMIN"]) : new Set(admin.roles.map((entry) => entry.role.name));
+  const permissions = permanentSuperAdmin
+    ? new Set<AdminPermission>(ADMIN_PERMISSIONS)
+    : new Set(admin.roles.flatMap((entry) => entry.role.permissions.map((rp) => rp.permission.key))) as Set<AdminPermission>;
   if (request) consumeAdminRateLimit(admin.id + ":" + (request.headers.get("x-forwarded-for") ?? "unknown"), 120, 60_000);
   if (permission && !permissions.has(permission)) {
     const requestId = request?.headers.get("x-request-id");
@@ -40,7 +44,7 @@ export async function requireAdmin(request?: Request, permission?: AdminPermissi
   }
   return {
     customer: { id: current.customer.id, email: current.customer.email, status: current.customer.status },
-    adminUser: { id: admin.id, customerId: admin.customerId, status: admin.status, version: admin.version, roles: [...roles] },
+    adminUser: { id: admin.id, customerId: admin.customerId, status: permanentSuperAdmin ? "ACTIVE" : admin.status, version: admin.version, roles: [...roles] },
     permissions, roles,
   };
 }
