@@ -42,7 +42,7 @@ CREATE UNIQUE INDEX "DeliveryStage_pipelineId_ordinal_key" ON "DeliveryStage"("p
 CREATE INDEX "DeliveryStage_pipelineId_status_idx" ON "DeliveryStage"("pipelineId","status");
 ALTER TABLE "DeliveryStage" ADD CONSTRAINT "DeliveryStage_pipelineId_fkey" FOREIGN KEY ("pipelineId") REFERENCES "DeliveryPipeline"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
-CREATE TABLE "DeliveryRun" ("id" UUID NOT NULL,"pipelineId" UUID NOT NULL,"revision" INTEGER NOT NULL,"idempotencyKey" VARCHAR(200) NOT NULL,"status" VARCHAR(40) NOT NULL DEFAULT 'CREATED',"currentStage" VARCHAR(80),"actorId" VARCHAR(120) NOT NULL,"correlationId" VARCHAR(120) NOT NULL,"startedAt" TIMESTAMP(3),"completedAt" TIMESTAMP(3),"blockedReason" VARCHAR(1000),CONSTRAINT "DeliveryRun_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "DeliveryRun" ("id" UUID NOT NULL,"pipelineId" UUID NOT NULL,"revision" INTEGER NOT NULL,"idempotencyKey" VARCHAR(200) NOT NULL,"status" VARCHAR(40) NOT NULL DEFAULT 'CREATED',"currentStage" VARCHAR(80),"actorId" VARCHAR(120) NOT NULL,"correlationId" VARCHAR(120) NOT NULL,"startedAt" TIMESTAMP(3),"completedAt" TIMESTAMP(3),"createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"blockedReason" VARCHAR(1000),CONSTRAINT "DeliveryRun_pkey" PRIMARY KEY ("id"));
 CREATE UNIQUE INDEX "DeliveryRun_idempotencyKey_key" ON "DeliveryRun"("idempotencyKey");
 CREATE INDEX "DeliveryRun_pipelineId_status_idx" ON "DeliveryRun"("pipelineId","status");
 ALTER TABLE "DeliveryRun" ADD CONSTRAINT "DeliveryRun_pipelineId_fkey" FOREIGN KEY ("pipelineId") REFERENCES "DeliveryPipeline"("id") ON DELETE CASCADE ON UPDATE CASCADE;
