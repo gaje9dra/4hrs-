@@ -98,6 +98,9 @@ jobs:
       - name: Validate deployment control safety
         run: npm run deployment-control:validate
 
+      - name: Validate delivery orchestration safety
+        run: npm run delivery-orchestration:validate
+
       - name: Audit migration safety
         run: npm run db:audit-migrations
 
