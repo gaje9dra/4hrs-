@@ -40,3 +40,7 @@ The graph is additive. A reviewed deployment rollback can revert the Phase 15.32
 
 ## Known limitations
 Repository evidence cannot prove that every runtime dependency, provider call, SLO relationship, incident relationship or telemetry edge has been discovered. This phase therefore provides a governed control plane and deterministic intelligence primitives without fabricating live production architecture evidence.
+
+
+## CI verification
+The merge gate requires the repository CI workflow and Phase 15.32 validation to pass before integration.
