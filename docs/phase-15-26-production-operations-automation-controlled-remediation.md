@@ -45,6 +45,12 @@ None. The seeded synthetic rerun policy is enabled=false and dryRun=true. The ob
 | Record diagnostic | OBSERVE_ONLY | No | No | Not applicable | Single target | 60s | 0 | 60s | Yes | Escalate |
 | Rerun synthetic check | SAFE_AUTOMATION | No (disabled policy) | No when explicitly enabled | No automatic rollback claimed | Single workflow | 300s | 0 | 300s | Yes | Open circuit + escalate |
 
+## Final safety gates
+
+Before an automation execution may mutate state, server-side guards enforce active policy/version, environment allowlist, circuit state, cooldown, execution-rate limit, concurrency limit, and fail-closed checks for critical reconciliation discrepancies, critical cost anomalies, and active major/critical security incidents. Execution also requires a registered action whose risk matches the policy, bounded target scope, an execution lock, and (where applicable) an unexpired approval.
+
+Automation trigger ingestion suppresses duplicate fingerprints and causal re-entry within the correlation window. Evidence is redacted before persistence. Execution steps, failures, safety evaluations, simulations, approvals, cooldowns, locks, escalations, and circuit changes are persisted for auditability.
+
 ## Verification status
 
 This implementation was added incrementally on the Phase 15.26 branch. Final readiness is intentionally not claimed until repository CI (npm run lint, npm run typecheck, npm test, npm run build) and migration validation complete successfully.
@@ -59,3 +65,6 @@ This implementation was added incrementally on the Phase 15.26 branch. Final rea
 ## Hard stop
 
 Phase 15.27 is not implemented by this phase.
+
+
+Final verification note: CI certification must be tied to the exact reviewed commit; no prior successful run is reused for a changed commit.
