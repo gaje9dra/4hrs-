@@ -3468,3 +3468,237 @@ model ExperimentCertificate {
   createdAt DateTime @default(now())
   @@index([status, expiresAt])
 }
+
+
+model RehearsalEnvironment {
+  id String @id @default(uuid()) @db.Uuid
+  stableId String @unique @db.VarChar(160)
+  name String @db.VarChar(200)
+  environment String @db.VarChar(40)
+  status String @db.VarChar(32)
+  isolationProof Json
+  dataPolicy Json
+  providerPolicy Json
+  notificationPolicy Json
+  configurationVersion String @db.VarChar(160)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([environment,status])
+}
+model DigitalTwin {
+  id String @id @default(uuid()) @db.Uuid
+  stableId String @unique @db.VarChar(160)
+  environmentId String @db.Uuid
+  version Int @default(1)
+  applicationVersion String @db.VarChar(160)
+  schemaVersion String @db.VarChar(160)
+  configurationVersion String @db.VarChar(160)
+  featureFlagVersion String @db.VarChar(160)
+  seedVersion String @db.VarChar(160)
+  dataGenerationVersion String @db.VarChar(160)
+  state Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([environmentId,version])
+}
+model TwinComponent {
+  id String @id @default(uuid()) @db.Uuid
+  twinId String @db.Uuid
+  stableId String @db.VarChar(160)
+  domain String @db.VarChar(80)
+  componentType String @db.VarChar(80)
+  contract Json
+  enabled Boolean @default(true)
+  createdAt DateTime @default(now())
+  @@unique([twinId,stableId])
+}
+model TwinDependency {
+  id String @id @default(uuid()) @db.Uuid
+  twinId String @db.Uuid
+  stableId String @db.VarChar(160)
+  dependencyType String @db.VarChar(40)
+  contract Json
+  availability Json
+  testMode String @db.VarChar(40)
+  failureSimulation Json
+  createdAt DateTime @default(now())
+  @@unique([twinId,stableId])
+}
+model TwinState {
+  id String @id @default(uuid()) @db.Uuid
+  twinId String @db.Uuid
+  stateKey String @db.VarChar(160)
+  value Json
+  version Int @default(1)
+  updatedAt DateTime @updatedAt
+  @@unique([twinId,stateKey])
+}
+model TwinSnapshot {
+  id String @id @default(uuid()) @db.Uuid
+  twinId String @db.Uuid
+  snapshotKey String @db.VarChar(160)
+  sourceEnvironment String @db.VarChar(40)
+  creationTimestamp DateTime @default(now())
+  schemaVersion String @db.VarChar(160)
+  applicationVersion String @db.VarChar(160)
+  configurationVersion String @db.VarChar(160)
+  featureFlagVersion String @db.VarChar(160)
+  seedVersion String @db.VarChar(160)
+  dataGenerationVersion String @db.VarChar(160)
+  dataClassification String @db.VarChar(80)
+  state Json
+  createdAt DateTime @default(now())
+  @@unique([twinId,snapshotKey])
+}
+model TwinScenario {
+  id String @id @default(uuid()) @db.Uuid
+  stableId String @unique @db.VarChar(160)
+  name String @db.VarChar(200)
+  category String @db.VarChar(80)
+  lifecycleState String @db.VarChar(32)
+  owner String @db.VarChar(160)
+  riskClass String @db.VarChar(32)
+  maxDurationSeconds Int
+  maxResourceUnits Int
+  customerImpact Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([lifecycleState,updatedAt])
+}
+model TwinScenarioVersion {
+  id String @id @default(uuid()) @db.Uuid
+  scenarioId String @db.Uuid
+  version Int
+  applicationVersion String @db.VarChar(160)
+  configurationVersion String @db.VarChar(160)
+  schemaVersion String @db.VarChar(160)
+  featureFlagVersion String @db.VarChar(160)
+  dataSeed String @db.VarChar(160)
+  faultDefinitions Json
+  steps Json
+  assertions Json
+  expected Json
+  createdAt DateTime @default(now())
+  @@unique([scenarioId,version])
+}
+model TwinExecution {
+  id String @id @default(uuid()) @db.Uuid
+  scenarioId String @db.Uuid
+  scenarioVersion Int
+  environmentId String @db.Uuid
+  twinId String @db.Uuid
+  state String @db.VarChar(32)
+  outcome String @db.VarChar(32)
+  requestedBy String @db.VarChar(160)
+  correlationId String? @db.VarChar(128)
+  startedAt DateTime @default(now())
+  endedAt DateTime?
+  expected Json
+  actual Json?
+  recovery Json?
+  customerImpact Json
+  cleanup Json?
+  cost Json?
+  createdAt DateTime @default(now())
+  @@index([scenarioId,createdAt])
+  @@index([state,createdAt])
+}
+model TwinStep {
+  id String @id @default(uuid()) @db.Uuid
+  executionId String @db.Uuid
+  stepNumber Int
+  action String @db.VarChar(160)
+  state String @db.VarChar(32)
+  input Json
+  output Json?
+  errorCode String?
+  startedAt DateTime @default(now())
+  endedAt DateTime?
+  @@unique([executionId,stepNumber])
+}
+model TwinObservation {
+  id String @id @default(uuid()) @db.Uuid
+  executionId String @db.Uuid
+  metricKey String @db.VarChar(160)
+  observedValue Json
+  status String @db.VarChar(32)
+  evidence Json
+  observedAt DateTime @default(now())
+  @@index([executionId,observedAt])
+}
+model TwinFault {
+  id String @id @default(uuid()) @db.Uuid
+  scenarioVersionId String @db.Uuid
+  stableId String @db.VarChar(160)
+  faultType String @db.VarChar(80)
+  target String @db.VarChar(160)
+  parameters Json
+  simulationOnly Boolean @default(true)
+  enabled Boolean @default(true)
+  createdAt DateTime @default(now())
+  @@index([scenarioVersionId,stableId])
+}
+model TwinAssertion {
+  id String @id @default(uuid()) @db.Uuid
+  scenarioVersionId String @db.Uuid
+  assertionKey String @db.VarChar(160)
+  assertionType String @db.VarChar(80)
+  expected Json
+  actual Json?
+  status String @db.VarChar(32)
+  evidence Json
+  createdAt DateTime @default(now())
+  @@index([scenarioVersionId,assertionKey])
+}
+model TwinComparison {
+  id String @id @default(uuid()) @db.Uuid
+  executionId String @db.Uuid
+  dimension String @db.VarChar(120)
+  expected Json
+  actual Json
+  classification String @db.VarChar(40)
+  deviation Json
+  createdAt DateTime @default(now())
+  @@index([executionId,dimension])
+}
+model TwinDrift {
+  id String @id @default(uuid()) @db.Uuid
+  twinId String @db.Uuid
+  dimension String @db.VarChar(120)
+  productionValue Json
+  rehearsalValue Json
+  classification String @db.VarChar(40)
+  blocksCertification Boolean @default(false)
+  detectedAt DateTime @default(now())
+  @@index([twinId,classification,detectedAt])
+}
+model TwinCertification {
+  id String @id @default(uuid()) @db.Uuid
+  scenarioId String @db.Uuid
+  scenarioVersion Int
+  executionId String? @db.Uuid
+  status String @db.VarChar(40)
+  dimensions Json
+  testedScenarios Json
+  passedScenarios Json
+  failedScenarios Json
+  untestedScenarios Json
+  knownLimitations Json
+  residualRisks Json
+  certifiedAt DateTime @default(now())
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  @@index([scenarioId,status,expiresAt])
+}
+model TwinEvidence {
+  id String @id @default(uuid()) @db.Uuid
+  executionId String @db.Uuid
+  evidenceType String @db.VarChar(80)
+  reference String @db.VarChar(1000)
+  integrityHash String @db.VarChar(128)
+  payload Json
+  immutable Boolean @default(true)
+  capturedBy String? @db.VarChar(160)
+  createdAt DateTime @default(now())
+  @@index([executionId,createdAt])
+}

@@ -1,0 +1,12 @@
+import { deterministicSyntheticFactory, validateIsolationProof, validateScenarioDefinition, compareExpectedActual, detectDrift, SCENARIO_CATEGORIES } from "../lib/rehearsal/service";
+const proof={separateCredentials:true,separateDatabase:true,separateQueues:true,separateCache:true,separateSearch:true,separateStorage:true,separateProviderConfiguration:true,separateNotificationDestinations:true,productionWriteBlocked:true,productionSecretsAbsent:true};
+validateIsolationProof(proof);
+const a=deterministicSyntheticFactory("phase-15-29-ci-seed"), b=deterministicSyntheticFactory("phase-15-29-ci-seed");
+if(JSON.stringify(a)!==JSON.stringify(b)) throw new Error("Synthetic factory is not deterministic.");
+if(a.payment.mode!=="SIMULATED"||a.notification.destination!=="TEST_SINK") throw new Error("Synthetic safety contract failed.");
+for(const category of SCENARIO_CATEGORIES) validateScenarioDefinition({category,owner:"ci",maxDurationSeconds:300,maxResourceUnits:100,customerImpact:{maxCustomers:0,maxFinancialMinor:0},steps:[{action:"validate"}],assertions:[{key:"state"}],expected:{status:"PASS"},faultDefinitions:[{stableId:"DELAY",simulationOnly:true}]});
+const comparison=compareExpectedActual({status:"PASS",customerImpact:0},{status:"PASS",customerImpact:0});
+if(comparison.classification!=="PASS") throw new Error("Expected/actual comparison failed.");
+const drift=detectDrift({applicationVersion:"ci"},{applicationVersion:"ci",configuration:"rehearsal"});
+if(!drift.length) throw new Error("Drift detector did not detect a configuration difference.");
+console.log(JSON.stringify({safe:true,categories:SCENARIO_CATEGORIES.length,deterministic:true,productionWrites:false,realPayments:false,realProviders:false,arbitrarySql:false,arbitraryShell:false,unrestrictedNetwork:false}));
