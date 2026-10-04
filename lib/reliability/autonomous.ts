@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import { createHash } from "node:crypto";
 import { db } from "@/lib/db/client";
 import { executeRegisteredAction } from "@/lib/automation/actions";
 import { incidentFingerprint, type ReliabilityCategory } from "@/lib/reliability/incidents";
@@ -7,7 +8,7 @@ import { deterministicAnomaly, confidenceFromEvidence, safeConfidenceForMutation
 
 type Json=Prisma.InputJsonValue;
 const json=(v:unknown)=>JSON.parse(JSON.stringify(v)) as Json;
-const hash=(v:string)=>require("node:crypto").createHash("sha256").update(v).digest("hex").slice(0,32);
+const hash=(v:string)=>createHash("sha256").update(v).digest("hex").slice(0,32);
 
 function redacted(v:unknown):Json{
  const walk=(x:unknown,d=0):unknown=>{
