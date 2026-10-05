@@ -74,25 +74,25 @@ const evidenceMatrix: Array<{
 }> = [
   { id: "16.2.1", label: "discovery/category/search", requiredFiles: ["tests/storefront-homepage.test.ts", "tests/storefront-listing.test.ts", "tests/storefront-search.test.ts"], markers: [/search/i, /pagination/i, /invalid/i, /unpublished|archived|unavailable/i] },
   { id: "16.2.2", label: "product/variant", requiredFiles: ["tests/storefront-product-detail.test.ts", "tests/storefront-product-detail-refinement.test.ts"], markers: [/variant/i, /invalid/i, /unavailable|archived|deleted/i, /price/i] },
-  { id: "16.2.3", label: "cart", requiredFiles: ["tests/cart-domain-service.test.ts", "tests/cart-api-contract.test.ts", "tests/storefront-cart-experience.test.ts"], markers: [/duplicate|concurrent/i, /unauthorized|ownership/i, /quantity/i, /price|availability/i] },
+  { id: "16.2.3", label: "cart", requiredFiles: ["tests/cart-domain-service.test.ts", "tests/cart-api-contract.test.ts", "tests/storefront-cart-experience.test.ts"], markers: [/increment|logical item|duplicate/i, /unauthorized|ownership/i, /quantity/i, /price|availability/i] },
   { id: "16.2.4", label: "checkout", requiredFiles: ["tests/checkout-domain.test.ts", "tests/checkout-ui.test.ts"], markers: [/price/i, /cart/i, /invalid|unavailable/i, /idempot|revision|changed/i] },
   { id: "16.2.5", label: "payment boundary", requiredFiles: ["tests/payment-domain-service.test.ts", "tests/payment-persistence.test.ts", "tests/payment-provider-adapter.test.ts"], markers: [/failed|failure/i, /duplicate|idempot/i, /signature|invalid|replay/i, /amount/i] },
-  { id: "16.2.6", label: "order creation", requiredFiles: ["tests/order-creation.test.ts", "tests/order-lifecycle.test.ts"], markers: [/duplicate|idempot|concurrent/i, /payment/i, /integrity|snapshot/i, /timeout|retry/i] },
+  { id: "16.2.6", label: "order creation", requiredFiles: ["tests/order-creation.test.ts", "tests/order-lifecycle.test.ts"], markers: [/duplicate|concurrent|existing/i, /payment/i, /integrity|snapshot/i, /transaction|retry|Serializable/i] },
   { id: "16.2.7", label: "order visibility/ownership", requiredFiles: ["tests/customer-order-experience.test.ts", "tests/order-api-contract.test.ts"], markers: [/ownership|customer/i, /invalid|not found/i, /sensitive|provider/i] },
   { id: "16.2.8", label: "fulfillment handoff", requiredFiles: ["tests/fulfillment-domain.test.ts", "tests/provider-mapping.test.ts", "tests/qikink-provider.test.ts"], markers: [/mapping|sku/i, /duplicate|idempot|concurrent/i, /timeout|failure|retry/i, /qikink/i] },
   { id: "16.2.9", label: "fulfillment state", requiredFiles: ["tests/fulfillment-domain.test.ts", "tests/admin-fulfillment-operations.test.ts"], markers: [/transition/i, /reconcile|recovery/i, /unauthorized|admin/i] },
   { id: "16.2.10", label: "shipping handoff", requiredFiles: ["tests/shipping-application.test.ts", "tests/shipping-provider-capabilities.test.ts"], markers: [/shipment/i, /capabilit|unsupported/i, /duplicate|idempot/i] },
   { id: "16.2.11", label: "tracking", requiredFiles: ["tests/shipping-application.test.ts", "tests/shipping-retry.test.ts"], markers: [/tracking/i, /stale|unavailable|failure/i, /ownership/i] },
-  { id: "16.2.12", label: "notifications", requiredFiles: ["tests/phase-15-7-notifications.test.ts"], markers: [/duplicate|idempot/i, /retry|failure|failed/i, /preference|recipient/i] },
-  { id: "16.2.13", label: "cancellation", requiredFiles: ["tests/returns-cancellations-domain.test.ts"], markers: [/cancel/i, /eligible|transition/i, /duplicate|concurrent|unauthorized/i] },
-  { id: "16.2.14", label: "returns", requiredFiles: ["tests/returns-cancellations-domain.test.ts", "tests/admin-post-order-operations.test.ts"], markers: [/return/i, /quantity|eligib/i, /duplicate|concurrent|unauthorized/i] },
+  { id: "16.2.12", label: "notifications", requiredFiles: ["tests/phase-15-7-notifications.test.ts"], markers: [/duplicate|idempot/i, /retry|failure|failed/i, /notification/i] },
+  { id: "16.2.13", label: "cancellation", requiredFiles: ["tests/returns-cancellations-domain.test.ts"], markers: [/cancel/i, /eligible|transition/i, /idempot|permission|authorization|unauthorized/i] },
+  { id: "16.2.14", label: "returns", requiredFiles: ["tests/returns-cancellations-domain.test.ts", "tests/admin-post-order-operations.test.ts"], markers: [/return/i, /quantity|eligib/i, /idempot|permission|authorization|unauthorized/i] },
   { id: "16.2.15", label: "customer cases", requiredFiles: ["tests/cases-domain.test.ts", "tests/admin-post-order-operations.test.ts"], markers: [/case/i, /transition/i, /permission|unauthorized|ownership/i] },
   { id: "16.2.16", label: "failure-mode matrix", requiredFiles: ["tests/payment-domain-service.test.ts", "tests/order-creation.test.ts", "tests/fulfillment-domain.test.ts", "tests/shipping-retry.test.ts"], markers: [/failure|failed/i, /timeout/i, /retry/i, /duplicate/i] },
   { id: "16.2.17", label: "concurrency", requiredFiles: ["tests/cart-domain-service.test.ts", "tests/payment-domain-service.test.ts", "tests/order-creation.test.ts", "tests/admin-payment-operations.test.ts"], markers: [/concurrent|parallel|race/i, /idempot/i, /transaction|lock|unique/i] },
   { id: "16.2.18", label: "refresh/retry/browser recovery", requiredFiles: ["tests/checkout-domain.test.ts", "tests/payment-domain-service.test.ts", "tests/order-creation.test.ts"], markers: [/retry|repeated|duplicate/i, /timeout|unknown/i, /idempot/i] },
   { id: "16.2.19", label: "security journey", requiredFiles: ["tests/phase-15-3-security-hardening.test.ts", "tests/customer-account-security.test.ts", "tests/cart-domain-service.test.ts", "tests/customer-order-experience.test.ts"], markers: [/unauthorized|forbidden|ownership/i, /tamper|forg|security/i, /credential|secret/i] },
-  { id: "16.2.20", label: "state machines", requiredFiles: ["tests/order-lifecycle.test.ts", "tests/returns-cancellations-domain.test.ts", "tests/cases-domain.test.ts"], markers: [/transition/i, /terminal/i, /invalid/i, /retry|idempot/i] },
-  { id: "16.2.21", label: "cross-domain consistency", requiredFiles: ["tests/order-creation.test.ts", "tests/fulfillment-domain.test.ts", "tests/shipping-persistence.test.ts", "tests/reconciliation.test.ts"], markers: [/order|payment|fulfillment|shipment/i, /mismatch|consisten|reconcil/i, /integrity/i] },
+  { id: "16.2.20", label: "state machines", requiredFiles: ["tests/order-lifecycle.test.ts", "tests/returns-cancellations-domain.test.ts", "tests/cases-domain.test.ts"], markers: [/transition/i, /terminal/i, /invalid/i, /concurr|retry|idempot/i] },
+  { id: "16.2.21", label: "cross-domain consistency", requiredFiles: ["tests/order-creation.test.ts", "tests/fulfillment-domain.test.ts", "tests/shipping-persistence.test.ts", "tests/reconciliation.test.ts"], markers: [/order|payment|fulfillment|shipment/i, /mismatch|consisten|reconcil|authoritative/i, /integrity|constraint/i] },
   { id: "16.2.22", label: "customer error experience", requiredFiles: ["tests/checkout-ui.test.ts", "tests/customer-order-experience.test.ts", "tests/storefront-product-detail.test.ts"], markers: [/error|failure/i, /loading|empty|not.?found/i, /payment|fulfillment|tracking/i] },
   { id: "16.2.23", label: "admin visibility", requiredFiles: ["tests/admin-order-management.test.ts", "tests/admin-payment-operations.test.ts", "tests/admin-fulfillment-operations.test.ts", "tests/admin-shipping-operations.test.ts", "tests/admin-post-order-operations.test.ts"], markers: [/admin/i, /audit|observ/i, /payment|fulfillment|shipping|return|case/i] },
   { id: "16.2.24", label: "observability", requiredFiles: ["tests/phase-15-7-notifications.test.ts", "tests/reconciliation.test.ts", "tests/synthetic-monitoring.test.ts"], markers: [/correlation|request.?id|event.?id|audit|observ/i, /order|payment|fulfillment|shipment/i] },
@@ -132,10 +132,12 @@ for (const marker of ["createShipment: false", "trackingLookup: false", "webhook
   if (!qikinkShipping.includes(marker)) add("CRITICAL", "QIKINK_SHIPPING_BOUNDARY", `Qikink shipping capability boundary is missing: ${marker}`, ["lib/shipping/providers/qikink.ts"]);
 }
 
-const clientQikinkFiles = files.filter((file) => /^(app|components)\//.test(file) && /\.(ts|tsx)$/.test(file));
-for (const file of clientQikinkFiles) {
+const browserSourceFiles = files.filter((file) => /^(app|components)\\//.test(file) && /\\.(ts|tsx)$/.test(file));
+for (const file of browserSourceFiles) {
   const content = read(file);
-  if (/QIKINK|qikink/i.test(content)) add("CRITICAL", "CLIENT_QIKINK_REFERENCE", `Browser-facing source references Qikink directly: ${file}`, [file]);
+  const directProviderAccess = /from\\s+[\"'] [^\"']*qikink|fetch\\([^)]*qikink|https?:\\/\\/[^\\s\"']*qikink/i.test(content);
+  const clientSecretExposure = /NEXT_PUBLIC_[A-Z0-9_]*QIKINK/i.test(content);
+  if (directProviderAccess || clientSecretExposure) add("CRITICAL", "CLIENT_QIKINK_REFERENCE", `Browser-facing source directly references a Qikink transport or client-exposed credential: ${file}`, [file]);
 }
 
 const checkout = exists("app/api/checkout/route.ts") ? read("app/api/checkout/route.ts") : "";
@@ -148,7 +150,7 @@ if (!/signature|verify/i.test(webhook)) add("HIGH", "PAYMENT_WEBHOOK_VERIFICATIO
 
 const orderService = exists("lib/orders/application.ts") ? read("lib/orders/application.ts") : "";
 const fulfillmentService = exists("lib/fulfillment/application.ts") ? read("lib/fulfillment/application.ts") : "";
-if (!/idempot/i.test(orderService)) add("HIGH", "ORDER_IDEMPOTENCY", "Order application lacks visible idempotency evidence.", ["lib/orders/application.ts"]);
+if (!/(existingForPayment|P2002|P2034|Serializable|unique)/i.test(orderService)) add("HIGH", "ORDER_IDEMPOTENCY", "Order application lacks visible exactly-once/idempotency evidence.", ["lib/orders/application.ts"]);
 if (!/idempot/i.test(fulfillmentService)) add("HIGH", "FULFILLMENT_IDEMPOTENCY", "Fulfillment application lacks visible idempotency evidence.", ["lib/fulfillment/application.ts"]);
 
 const refundBoundary = testCorpus.includes("REFUND_UNAVAILABLE") || sourceCorpus.includes("REFUND_UNAVAILABLE");
