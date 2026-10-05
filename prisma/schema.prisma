@@ -6067,6 +6067,10 @@ model DeliveryRiskAssessment {
   deliveryRunId String? @db.Uuid
   riskLevel String @db.VarChar(32)
   scoreBasis Json
+  dimensions Json?
+  confidence String? @db.VarChar(32)
+  evidence Json?
+  algorithmVersion String? @db.VarChar(80)
   evaluatedAt DateTime @default(now())
   expiresAt DateTime
   policyVersion String @db.VarChar(80)
