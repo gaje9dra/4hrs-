@@ -223,3 +223,21 @@ CREATE TABLE IF NOT EXISTS "DeliveryRecommendationOutcome" (
 );
 CREATE INDEX IF NOT EXISTS "DeliveryRecommendationOutcome_profileId_createdAt_idx" ON "DeliveryRecommendationOutcome"("profileId","createdAt");
 CREATE INDEX IF NOT EXISTS "DeliveryRecommendationOutcome_pipelineId_createdAt_idx" ON "DeliveryRecommendationOutcome"("pipelineId","createdAt");
+
+CREATE TABLE IF NOT EXISTS "DeliveryDecisionMetric" (
+  "id" UUID NOT NULL,
+  "pipelineId" UUID,
+  "profileId" UUID,
+  "metricKey" VARCHAR(120) NOT NULL,
+  "value" DOUBLE PRECISION NOT NULL,
+  "labels" JSONB NOT NULL,
+  "observedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "correlationId" VARCHAR(160),
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "DeliveryDecisionMetric_pkey" PRIMARY KEY ("id"),
+  CONSTRAINT "DeliveryDecisionMetric_pipelineId_fkey" FOREIGN KEY ("pipelineId") REFERENCES "DeliveryPipeline"("id") ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT "DeliveryDecisionMetric_profileId_fkey" FOREIGN KEY ("profileId") REFERENCES "DeliveryDecisionProfile"("id") ON DELETE SET NULL ON UPDATE CASCADE
+);
+CREATE INDEX IF NOT EXISTS "DeliveryDecisionMetric_metricKey_observedAt_idx" ON "DeliveryDecisionMetric"("metricKey","observedAt");
+CREATE INDEX IF NOT EXISTS "DeliveryDecisionMetric_pipelineId_metricKey_observedAt_idx" ON "DeliveryDecisionMetric"("pipelineId","metricKey","observedAt");
+
