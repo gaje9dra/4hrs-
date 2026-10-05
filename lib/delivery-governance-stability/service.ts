@@ -216,3 +216,21 @@ export async function integratedEvidence(){
 }
 
 export async function graphImpact(stableId:string,depth=3){return graphImpactAnalysis(stableId,Math.min(Math.max(depth,0),5));}
+
+
+export async function persistConflicts(items:ReturnType<typeof detectConflicts>,correlationId:string){
+ const rows=[]; for(const item of items.slice(0,100)){rows.push(await db.governanceStabilityConflict.upsert({where:{stableId:item.stableId},create:{stableId:item.stableId,controlIds:json(item.controlIds),policyVersions:json(item.policyVersions),affectedWorkflow:null,conflictType:item.conflictType,severity:item.severity,impact:json(item.impact),evidence:json(item.evidence),resolutionState:"OPEN",provenance:json(item.provenance),correlationId},update:{impact:json(item.impact),evidence:json(item.evidence),updatedAt:new Date()}}));}return rows;
+}
+export async function persistDeadlocks(items:ReturnType<typeof detectDeadlocks>,correlationId:string){
+ const rows=[];for(const item of items.slice(0,50)){rows.push(await db.governanceStabilityDeadlockAssessment.upsert({where:{stableId:item.stableId},create:{stableId:item.stableId,nodes:json(item.nodes),cycle:json(item.cycle),severity:item.severity,blockedAction:item.blockedAction,evidence:json(item.evidence),provenance:json(item.provenance),correlationId},update:{evidence:json(item.evidence),provenance:json(item.provenance)}}));}return rows;
+}
+export async function persistOscillation(item:ReturnType<typeof detectOscillation>){return db.governanceOscillationAssessment.upsert({where:{stableId:item.stableId},create:{stableId:item.stableId,policyId:item.policyId,sequence:json(item.sequence),frequency:item.frequency,durationSeconds:item.durationSeconds,classification:item.classification,evidence:json(item.evidence)},update:{sequence:json(item.sequence),frequency:item.frequency,durationSeconds:item.durationSeconds,classification:item.classification,evidence:json(item.evidence)}});}
+export async function persistChurn(item:ReturnType<typeof assessChurn>){return db.governanceChurnAssessment.upsert({where:{stableId:item.stableId},create:{stableId:item.stableId,windowStart:item.windowStart,windowEnd:item.windowEnd,metrics:json(item.metrics),classification:item.classification,evidence:json(item.evidence)},update:{metrics:json(item.metrics),classification:item.classification,evidence:json(item.evidence)}});}
+export async function persistCascade(item:ReturnType<typeof analyzeCascade>){return db.governanceCascadeAssessment.upsert({where:{stableId:item.stableId},create:{stableId:item.stableId,chain:json(item.chain),causalClassification:item.causalClassification,confidence:item.confidence,evidence:json(item.evidence)},update:{chain:json(item.chain),causalClassification:item.causalClassification,confidence:item.confidence,evidence:json(item.evidence)}});}
+export async function persistResilience(input:{scenario:unknown;dependencies:Record<string,"AVAILABLE"|"DEGRADED"|"UNAVAILABLE"|"UNKNOWN">;criticalUnknown?:boolean}){
+ const result=resilienceMode(input);const stableId=`governance-resilience-${hash({scenario:input.scenario,dependencies:input.dependencies}).slice(0,32)}`;
+ return db.governanceResilienceAssessment.upsert({where:{stableId},create:{stableId,mode:result.mode,scenario:json(input.scenario),result:json(result),risk:json({mode:result.mode,critical:result.mode==="EMERGENCY_RESTRICTED"}),evidence:json({algorithmVersion:GOVERNANCE_STABILITY_ALGORITHM_VERSION})},update:{mode:result.mode,result:json(result),risk:json({mode:result.mode,critical:result.mode==="EMERGENCY_RESTRICTED"}),evidence:json({algorithmVersion:GOVERNANCE_STABILITY_ALGORITHM_VERSION})}});
+}
+export async function ensureInvariants(actor:string){
+ const rows=[];for(const item of DEFAULT_INVARIANTS){rows.push(await db.governanceControlInvariant.upsert({where:{stableId:item.stableId},create:{...item,provenance:json({actor,algorithmVersion:GOVERNANCE_STABILITY_ALGORITHM_VERSION})},update:{name:item.name,expression:item.expression,severity:item.severity,protectedDomain:item.protectedDomain,active:true,provenance:json({actor,algorithmVersion:GOVERNANCE_STABILITY_ALGORITHM_VERSION})}}));}return rows;
+}
