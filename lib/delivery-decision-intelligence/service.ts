@@ -72,7 +72,7 @@ function compare(current:DecisionContext,outcome:HistoricalOutcomeInput){
   return {similarity,matched,mismatched,dimensions};
 }
 
-function classifyRisk(evaluation:ReturnType<typeof evaluatePromotion>,context:DecisionContext,history:HistoricalOutcomeInput[]){
+function classifyRisk(evaluation:{riskLevel:string;blockers:string[];requiredValidations:string[];decision:string},context:DecisionContext,history:HistoricalOutcomeInput[]){
   const now=new Date().toISOString();
   const dims:Record<string,RiskDimension>={};
   const add=(key:string,classification:string,evidence:string[],confidence:string,source="Phase15.38 promotion evaluation")=>{
@@ -97,7 +97,7 @@ function classifyRisk(evaluation:ReturnType<typeof evaluatePromotion>,context:De
 }
 
 function highestRisk(dims:Record<string,RiskDimension>){
-  return Object.values(dims).reduce((best,x)=>rank[x.classification]??0>rank[best]??0?x.classification:best,"LOW");
+  return Object.values(dims).reduce((best,x)=>(rank[x.classification]??0)>(rank[best]??0)?x.classification:best,"LOW");
 }
 
 export function evaluateDecision(context:DecisionContext,signals:DecisionSignalInput[],history:HistoricalOutcomeInput[]=[]):DecisionEvaluation{
