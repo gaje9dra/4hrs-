@@ -4,13 +4,13 @@
 Phase 15.41 adds a governed intelligence layer above Phases 15.34–15.40. It evaluates whether existing delivery-governance policies are safe, effective, efficient, timely, stable and appropriately conservative, then produces evidence-backed proposals. It never directly changes production policy.
 
 ## Architecture map
-- 15.34 change governance: authoritative change-control path; intentionally untouched.
-- 15.35 progressive delivery: authoritative rollout/exposure engine; intentionally untouched.
-- 15.36 deployment/recovery: authoritative deployment and rollback engine; intentionally untouched.
-- 15.37 orchestration: authoritative multi-stage delivery coordination; intentionally untouched.
-- 15.38 delivery intelligence: authoritative promotion/readiness intelligence; consumed as evidence.
-- 15.39 decision intelligence: authoritative delivery recommendation/risk decisioning; consumed as evidence.
-- 15.40 learning: authoritative outcome/prediction/signal learning; consumed as historical evidence and learning feedback.
+- Phase 15.34 change governance: authoritative change-control path; intentionally untouched.
+- Phase 15.35 progressive delivery: authoritative rollout/exposure engine; intentionally untouched.
+- Phase 15.36 deployment/recovery: authoritative deployment and rollback engine; intentionally untouched.
+- Phase 15.37 orchestration: authoritative multi-stage delivery coordination; intentionally untouched.
+- Phase 15.38 delivery intelligence: authoritative promotion/readiness intelligence; consumed as evidence.
+- Phase 15.39 decision intelligence: authoritative delivery recommendation/risk decisioning; consumed as evidence.
+- Phase 15.40 learning: authoritative outcome/prediction/signal learning; consumed as historical evidence and learning feedback.
 - 15.41 governance intelligence: assessment, drift detection, policy comparison, proposal, shadow evaluation, controlled experiment definition, regression assessment and certification evidence.
 - Phase 15.32 knowledge graph remains authoritative for dependency intelligence; Phase 15.33 digital twin remains authoritative for policy simulation and impact rehearsal.
 - Phase 15.22 reconciliation remains authoritative for reconciliation.
