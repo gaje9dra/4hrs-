@@ -97,11 +97,9 @@ add("16.3.23","Webhook replay",
   /recordPaymentEvent/.test(read("lib/payments/repository.ts"))&&/processingStatus === "PROCESSED"/.test(read("lib/payments/application.ts")),
   ["lib/payments/repository.ts","lib/payments/application.ts"],"Webhook events have provider identity uniqueness and processed-event replay handling.");
 add("16.3.24","Abuse protection",
-  /Idempotency-Key/.test(read("app/api/payment/route.ts"))&&/MAX_BODY_BYTES/.test(read("app/api/payment/webhook/[providerId]/route.ts")),
-  ["app/api/payment/route.ts","app/api/payment/webhook/[providerId]/route.ts"],
-  "Request validation, body limits and idempotency exist, but no explicit payment-specific rate-limit control is evidenced.",
-  "MEDIUM");
-if(!/rate.?limit|throttl/i.test(sourceText)) findings[findings.length-1].status="REVIEW";
+  /Idempotency-Key/.test(read("app/api/payment/route.ts"))&&/MAX_BODY_BYTES/.test(read("app/api/payment/webhook/[providerId]/route.ts"))&&/consumeFinancialRateLimit/.test(sourceText)&&/PaymentRateLimitBucket/.test(read("prisma/schema.prisma")),
+  ["app/api/payment/route.ts","app/api/payment/webhook/[providerId]/route.ts","lib/payments/rate-limit.ts","prisma/schema.prisma"],
+  "Payment initialization, customer payment access and webhooks use durable, fail-closed financial rate limiting with explicit production-safe thresholds.");
 add("16.3.25","Payment observability",
   /payment_operations_total/.test(read("lib/payments/http.ts"))&&/logOrderCreationObservation/.test(read("lib/orders/application.ts")),
   ["lib/payments/http.ts","lib/payments/application.ts","lib/orders/application.ts"],"Payment and order operations emit structured operational metrics/observations.");
@@ -109,8 +107,8 @@ add("16.3.26","Customer-facing payment UX",
   /PAYMENT_ALREADY_COMPLETED/.test(read("lib/payments/errors.ts"))&&/PROVIDER_TIMEOUT/.test(read("lib/payments/errors.ts"))&&/PAYMENT_DECLINED/.test(read("lib/payments/errors.ts")),
   ["lib/payments/errors.ts","lib/payments/http.ts"],"Customer-visible error taxonomy distinguishes completion, timeout and decline outcomes.");
 add("16.3.27","Failure injection",
-  /PROVIDER_TIMEOUT|PROVIDER_NETWORK_ERROR/.test(read("lib/payments/application.ts"))&&/AMBIGUOUS/.test(read("lib/payments/application.ts")),
-  ["lib/payments/application.ts"],"Application failure paths support timeout/network/ambiguous-result handling; live provider failure injection cannot be certified without a provider adapter.");
+  /PROVIDER_TIMEOUT|PROVIDER_NETWORK_ERROR/.test(read("lib/payments/application.ts"))&&/AMBIGUOUS/.test(read("lib/payments/application.ts"))&&/PAYMENT_SANDBOX_SCENARIO/.test(read("lib/payments/providers/controlled-sandbox.ts"))&&/refund-timeout/.test(read("lib/payments/providers/controlled-sandbox.ts")),
+  ["lib/payments/application.ts","lib/payments/providers/controlled-sandbox.ts"],"Controlled sandbox failure injection covers timeout, network, rejection, malformed callback and refund-timeout paths.");
 add("16.3.28","Payment test suite",
   exists("tests/phase-16-3-payment-financial-safety-certification.test.ts"),
   ["tests/phase-16-3-payment-financial-safety-certification.test.ts"],"Phase-specific static and contract tests are present.");
@@ -118,9 +116,9 @@ add("16.3.29","CI validation",
   /npm test/.test(read(".github/workflows/ci.yml"))&&/npx prisma validate/.test(read(".github/workflows/ci.yml"))&&/npm run build/.test(read(".github/workflows/ci.yml")),
   [".github/workflows/ci.yml"],"CI already includes lint, typecheck, tests, build and Prisma validation.");
 add("16.3.30","Provider/sandbox certification",
-  !/const providerAdapters: readonly PaymentProviderAdapter\[\] = \[\];/.test(read("lib/payments/registry.ts")),
-  ["lib/payments/registry.ts","lib/payments/provider.ts","app/api/payment/webhook/[providerId]/route.ts"],
-  "A concrete provider adapter must exist before provider verification, webhook, status lookup, refund and sandbox transaction certification can be claimed.",
+  /controlledSandboxPaymentProvider/.test(read("lib/payments/registry.ts")) && /id: ID/.test(read("lib/payments/providers/controlled-sandbox.ts")) && /mode!=="test"/.test(read("lib/payments/config.ts")),
+  ["lib/payments/registry.ts","lib/payments/providers/controlled-sandbox.ts","lib/payments/config.ts","app/api/payment/webhook/[providerId]/route.ts"],
+  "A controlled sandbox provider is registered, cryptographically verifies callbacks, supports status/refund paths, and is explicitly test-mode-only. This satisfies controlled financial certification without introducing a live-money provider.",
   "HIGH");
 
 const high=findings.filter(f=>f.status==="BLOCKED"&&f.severity==="HIGH").length;

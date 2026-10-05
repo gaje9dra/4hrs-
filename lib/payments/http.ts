@@ -33,6 +33,7 @@ const STATUS: Record<PaymentErrorCode | "SESSION_INVALID", number> = {
   PROVIDER_UNKNOWN_ERROR: 503,
   WEBHOOK_VERIFICATION_FAILED: 400,
   PAYMENT_INTERNAL_ERROR: 503,
+  PAYMENT_RATE_LIMITED: 429,
 };
 
 export function paymentJson<T>(data: T, status = 200): Response {

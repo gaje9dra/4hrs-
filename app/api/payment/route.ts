@@ -9,6 +9,7 @@ import { PaymentError } from "@/lib/payments/errors";
 import { paymentErrorResponse, paymentJson, paymentMethodNotAllowed } from "@/lib/payments/http";
 import { logger, createOperationId } from "@/lib/observability/logger";
 import { incrementMetric } from "@/lib/observability/metrics";
+import { consumeFinancialRateLimit, FINANCIAL_RATE_LIMITS } from "@/lib/payments/rate-limit";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -58,6 +59,8 @@ export async function POST(request: Request) {
     assertSameOrigin(request);
     const customerContext = await resolveCurrentCustomer(request);
     if (!customerContext?.customer) throw new AuthenticationError("SESSION_INVALID", "Authentication is required.");
+    const rate = await consumeFinancialRateLimit(FINANCIAL_RATE_LIMITS.paymentInitialization, `customer:${customerContext.customer.id}`);
+    if (!rate.allowed) throw new PaymentError("PAYMENT_RATE_LIMITED", "Payment initialization rate limit exceeded; retry after the current safety window.");
     const input = await readCreateRequest(request);
     const checkout = await checkoutApplication.validate(request, input.checkout);
     if (!checkout.customer || checkout.customer.id !== customerContext.customer.id) throw new PaymentError("UNAUTHORIZED_CHECKOUT", "Checkout is not owned by the authenticated customer.");
@@ -74,6 +77,8 @@ export async function GET(request: Request) {
   try {
     const customerContext = await resolveCurrentCustomer(request);
     if (!customerContext?.customer) throw new AuthenticationError("SESSION_INVALID", "Authentication is required.");
+    const rate = await consumeFinancialRateLimit(FINANCIAL_RATE_LIMITS.paymentVerification, `customer:${customerContext.customer.id}`);
+    if (!rate.allowed) throw new PaymentError("PAYMENT_RATE_LIMITED", "Payment access rate limit exceeded; retry after the current safety window.");
     const paymentId = new URL(request.url).searchParams.get("paymentId")?.trim() ?? "";
     if (!paymentId) throw new PaymentError("INVALID_PAYMENT_REQUEST", "Payment ID is required.");
     const payment = await paymentApplication.getPayment(paymentId, customerContext.customer.id);

@@ -26,6 +26,7 @@ export function publicPaymentProviderConfiguration(config:PaymentProviderConfigu
  return {id:config.id,mode:config.mode,publicKey:config.publicKey};
 }
 export function assertPrivatePaymentConfiguration(config:PaymentProviderConfiguration){
+ if(config.id==="controlled-sandbox"&&config.mode!=="test")throw new Error("Controlled sandbox payment provider may only run in test mode.");
  for(const value of [config.secretReference,config.webhookSecretReference])
   if(value&&/^NEXT_PUBLIC_/i.test(value))throw new Error("Private payment configuration cannot use a NEXT_PUBLIC_ environment reference.");
 }

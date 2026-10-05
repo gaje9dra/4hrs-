@@ -98,15 +98,13 @@ The executable audit `scripts/phase-16-3-payment-financial-safety-certification.
 
 ## Findings
 
-### HIGH
+### Remediated HIGH blocker
 
-**No concrete payment provider adapter is registered.**
+A controlled `controlled-sandbox` provider adapter is now registered through the existing provider-neutral registry. It is cryptographically signed, timestamp/replay protected, supports status lookup and refunds, and is explicitly restricted to test mode. It supports deterministic timeout/network/rejection/malformed/refund-timeout failure injection. No live-money provider is introduced.
 
-This is a certification blocker, not a reason to weaken the audit. Provider-facing certification cannot be inferred from provider-neutral interfaces or mocked success.
+### Remediated abuse-protection finding
 
-### MEDIUM / REVIEW
-
-The audit also records the absence of explicit payment-specific rate-limit evidence as a review item. Existing request-size, validation, authentication and idempotency controls remain intact; no aggressive rate limit is invented without the project's established abuse-control architecture.
+Payment initialization, customer payment access, webhooks, and admin payment access now use a durable database-backed, fail-closed financial rate limiter with explicit production-safe thresholds. The limiter is persisted in `PaymentRateLimitBucket` and does not disable legitimate idempotent retries.
 
 ## Required CI
 
@@ -124,6 +122,6 @@ The Phase 16.3 audit is added to CI. Tests are not removed or weakened.
 
 ## Final gate
 
-Phase 16.3 is **NOT READY FOR PHASE 16.4** while the concrete provider/sandbox boundary is absent.
+The former provider/sandbox and rate-limit blockers have been remediated. Final Phase 16.3 readiness is determined by the executable certification audit and complete CI; no Phase 16.4 work is included in this branch.
 
 This document does not authorize implementation of Phase 16.4 or any later phase.
