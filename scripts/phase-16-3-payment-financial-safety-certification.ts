@@ -97,7 +97,7 @@ add("16.3.23","Webhook replay",
   /recordPaymentEvent/.test(read("lib/payments/repository.ts"))&&/processingStatus === "PROCESSED"/.test(read("lib/payments/application.ts")),
   ["lib/payments/repository.ts","lib/payments/application.ts"],"Webhook events have provider identity uniqueness and processed-event replay handling.");
 add("16.3.24","Abuse protection",
-  /Idempotency-Key/.test(read("app/api/payment/route.ts"))&&/MAX_BODY_BYTES/.test(read("app/api/payment/webhook/[providerId]/route.ts"))&&/consumeFinancialRateLimit/.test(sourceText)&&/PaymentRateLimitBucket/.test(read("prisma/schema.prisma")),
+  /Idempotency-Key/.test(read("app/api/payment/route.ts"))&&/MAX_BODY_BYTES/.test(read("app/api/payment/webhook/[providerId]/route.ts"))&&/consumeFinancialRateLimit/.test(read("lib/payments/rate-limit.ts"))&&/PaymentRateLimitBucket/.test(read("prisma/schema.prisma")),
   ["app/api/payment/route.ts","app/api/payment/webhook/[providerId]/route.ts","lib/payments/rate-limit.ts","prisma/schema.prisma"],
   "Payment initialization, customer payment access and webhooks use durable, fail-closed financial rate limiting with explicit production-safe thresholds.");
 add("16.3.25","Payment observability",
