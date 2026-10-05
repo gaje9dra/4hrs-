@@ -50,7 +50,7 @@ export function assessPolicy(input:{policyId:string;policyVersion:string;metrics
  const stability=1-Math.min(1,(m.rollbackRate??0)+(m.failedDeploymentRate??0));
  const cost=1-Math.min(1,m.costImpact??0);
  const safetyScore=safety===0?1:Math.max(0,1-Math.min(1,safety/10));
- const dimensions={safety:safetyScore,detection,precision,efficiency,timeliness,stability,cost,customerImpact:1-Math.min(1,m.customerImpactCorrelation??0)};
+ const dimensions={safety:safetyScore,detection,recall:detection,precision,efficiency,timeliness,stability,cost,customerImpact:1-Math.min(1,m.customerImpactCorrelation??0)};
  const driftReasons:string[]=[];
  if(input.architectureVersion&&input.baselineVersion&&input.architectureVersion!==input.baselineVersion)driftReasons.push("ARCHITECTURE_VERSION_CHANGED");
  if((m.falsePositiveRate??0)>=0.35)driftReasons.push("EXCESSIVE_FALSE_POSITIVES");
@@ -67,7 +67,7 @@ export function validateSignal(input:{state:string;freshnessSeconds:number;maxAg
  if(!input.sourceAvailable)reasons.push("SOURCE_UNAVAILABLE");
  if(input.corrupted)reasons.push("CORRUPTED");
  if(!CONFIDENCE_LEVELS.includes(input.confidence as typeof CONFIDENCE_LEVELS[number])||input.confidence==="UNKNOWN")reasons.push("LOW_CONFIDENCE");
- const status=input.state==="RETIRED"||input.state==="DEPRECATED"?input.state:reasons.length?reasons.includes("STALE")||reasons.includes("LOW_CONFIDENCE")?"LOW_VALUE":"UNTRUSTED":"ACTIVE";
+ const status:typeof SIGNAL_STATES[number]=input.state==="RETIRED"||input.state==="DEPRECATED"?input.state:reasons.length?reasons.includes("STALE")||reasons.includes("LOW_CONFIDENCE")?"LOW_VALUE":"UNTRUSTED":"ACTIVE";
  return {status,usable:status==="ACTIVE"||status==="DEGRADED",excluded:status!=="ACTIVE"&&status!=="DEGRADED",exclusionReasons:reasons};
 }
 export function classifyOptimization(input:{proposedPolicy:unknown;affectedSystems:string[];paymentChange?:boolean;securityChange?:boolean;privacyChange?:boolean;databaseIntegrityChange?:boolean;fulfillmentChange?:boolean;shippingChange?:boolean;rollbackCapability?:boolean}){
@@ -150,7 +150,7 @@ export async function invalidateCertifications(input:{triggerType:string;trigger
 }
 export async function listProposals(limit=50){return db.governanceOptimizationProposal.findMany({take:bounded(limit),orderBy:{updatedAt:"desc"}});}
 export async function listAssessments(limit=50){return db.governancePolicyAssessment.findMany({take:bounded(limit),orderBy:{createdAt:"desc"}});}
-export async function listCertifications(limit=50){return db.governanceOptimizationCertification.findMany({take:bounded(limit),orderBy:{createdAt:"desc"}});}
+export async function listCertifications(limit=50){return db.governanceOptimizationCertification.findMany({take:bounded(limit),orderBy:{certifiedAt:"desc"}});}
 
 export async function compareProposalPolicies(proposalId:string){
  const p=await db.governanceOptimizationProposal.findUnique({where:{id:proposalId},select:{currentPolicy:true,proposedPolicy:true,policyId:true,policyVersion:true}});
