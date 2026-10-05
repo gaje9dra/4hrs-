@@ -33,6 +33,7 @@ export type VerifyPaymentRequest = RetrievePaymentStatusRequest;
 export type NormalizedPaymentEvent = {
   providerId:string; providerEventReference:string; providerPaymentReference:string|null;
   internalPaymentReference:string|null; normalizedEventType:string; status:PaymentStatus; occurredAt:string;
+  amount:PaymentAmount; currency:string;
   metadata?:Readonly<Record<string,string>>;
 };
 export type PaymentProviderWebhook = { verified:true; event:NormalizedPaymentEvent };
