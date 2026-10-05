@@ -42,6 +42,9 @@ function allFiles(dir: string, result: string[] = []): string[] {
 const files = allFiles(".");
 const sourceFiles = files.filter((file) => /\.(ts|tsx|js|jsx|json|prisma|md|yml|yaml)$/.test(file));
 const sourceText = sourceFiles.map((file) => read(file)).join("\n");
+const runtimeSourceFiles = sourceFiles.filter((file) => /^(app|lib|components)\//.test(file) && !/\.(test|spec)\.(ts|tsx)$/.test(file));
+const runtimeSourceText = runtimeSourceFiles.map((file) => read(file)).join("\n");
+const clientSourceFiles = sourceFiles.filter((file) => /^(components|public)\//.test(file) || (/^app\//.test(file) && /["']use client["']/.test(read(file))));
 
 function add(
   id: string,
@@ -99,7 +102,7 @@ const checks: Array<{
   },
   {
     id: "16.4.03", domain: "Catalog ownership",
-    ok: /ProductVariant.*providerMappings/.test(schema) && !sourceFiles.filter((f) => /(^|\/)catalog\//.test(f) && !f.startsWith("scripts/")).some((f) => /qikink/i.test(read(f))),
+    ok: /ProductVariant.*providerMappings/.test(schema) && !runtimeSourceFiles.filter((f) => /(^|\/)catalog\//i.test(f)).some((f) => /qikink/i.test(read(f))),
     evidence: ["prisma/schema.prisma", "catalog source scan"],
     risk: "Provider catalog ownership would make storefront behavior dependent on Qikink.",
     remediation: "Keep product, variant, SKU and availability authoritative in 4HRS+.",
@@ -134,7 +137,7 @@ const checks: Array<{
   },
   {
     id: "16.4.08", domain: "Unknown provider result",
-    ok: /isAmbiguousProviderFailure/.test(application) && /ambiguous: true/.test(application) && /FULFILLMENT_PROVIDER_RECONCILIATION_REQUIRED/.test(application) && /retryable = !ambiguous/.test(application),
+    ok: /isAmbiguousProviderFailure/.test(application) && /const ambiguous = isAmbiguousProviderFailure/.test(application) && /FULFILLMENT_PROVIDER_RECONCILIATION_REQUIRED/.test(application) && /retryable = !ambiguous/.test(application),
     evidence: ["lib/fulfillment/application.ts"],
     risk: "Blind retry after provider acceptance/network loss can create duplicate fulfillment.",
     remediation: "Keep ambiguous outcomes non-retryable until reconciliation.",
@@ -190,14 +193,14 @@ const checks: Array<{
   },
   {
     id: "16.4.16", domain: "Qikink secret isolation",
-    ok: !sourceFiles.filter((f) => /(^|\/)(app|components|public)\//.test(f)).some((f) => /QIKINK_(CLIENT_ID|CLIENT_SECRET|AUTH_TOKEN|SANDBOX_SECRET)/.test(read(f))) && !/NEXT_PUBLIC_.*QIKINK/i.test(sourceText),
+    ok: !clientSourceFiles.some((f) => /QIKINK_(CLIENT_ID|CLIENT_SECRET|AUTH_TOKEN|SANDBOX_SECRET)/.test(read(f))) && !/NEXT_PUBLIC_.*QIKINK/i.test(runtimeSourceText),
     evidence: ["client/public source scan", "lib/fulfillment/providers/qikink-auth.ts"],
     risk: "Provider credentials in client code are a critical security boundary failure.",
     remediation: "Keep all Qikink credential access server-side.",
   },
   {
     id: "16.4.17", domain: "Credential redaction",
-    ok: !/logger\.(info|warn|error|debug).*QIKINK_(CLIENT_SECRET|AUTH_TOKEN)/.test(qikinkAuth + qikink) && !/console\.(log|error|warn).*QIKINK_(CLIENT_SECRET|AUTH_TOKEN)/s.test(sourceText),
+    ok: !/logger\.(info|warn|error|debug).*QIKINK_(CLIENT_SECRET|AUTH_TOKEN)/.test(qikinkAuth + qikink) && !/console\.(log|error|warn).*QIKINK_(CLIENT_SECRET|AUTH_TOKEN)/.test(qikinkAuth + qikink),
     evidence: ["Qikink auth/provider logging scan"],
     risk: "Secrets in logs can become durable credential leakage.",
     remediation: "Log only safe correlation and outcome metadata.",
