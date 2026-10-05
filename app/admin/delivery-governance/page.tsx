@@ -1,9 +1,9 @@
-import { requireAdminPage } from "@/lib/admin/authorization";
+import { requireAdmin } from "@/lib/admin/authorization";
 import * as svc from "@/lib/delivery-governance-intelligence/service";
 
 export const dynamic="force-dynamic";
 export default async function DeliveryGovernancePage(){
- await requireAdminPage("governance.intelligence.read");
+ await requireAdmin(undefined,"governance.intelligence.read");
  const [proposals,assessments,certifications]=await Promise.all([
   svc.listProposals(50),
   svc.listAssessments(50),
