@@ -1,0 +1,26 @@
+import fs from 'node:fs';
+import path from 'node:path';
+const root=process.cwd();
+const exists=(p:string)=>fs.existsSync(path.join(root,p));
+const read=(p:string)=>fs.readFileSync(path.join(root,p),'utf8');
+const walk=(d:string):string[]=>{const out:string[]=[]; if(!exists(d)) return out; for(const e of fs.readdirSync(path.join(root,d),{withFileTypes:true})){const r=path.join(d,e.name).replaceAll('\\\\','/'); if(e.isDirectory()) out.push(...walk(r)); else out.push(r);} return out;};
+const files=walk('.');
+const findings:{severity:string;finding:string}[]=[];
+const add=(severity:string,finding:string)=>findings.push({severity,finding});
+const pkg=JSON.parse(read('package.json'));
+const expected:Record<string,string>={'next':'16.3.5','react':'19.3.0','react-dom':'19.3.0','typescript':'6.0.3','eslint':'9.39.5','tailwindcss':'4.3.3','@types/react':'19.3.0','@types/react-dom':'19.3.0','@types/node':'26.6.1','prisma':'6.19.3'};
+const actual:Record<string,unknown>={'next':pkg.dependencies?.next,'react':pkg.dependencies?.react,'react-dom':pkg.dependencies?.['react-dom'],'typescript':pkg.devDependencies?.typescript,'eslint':pkg.devDependencies?.eslint,'tailwindcss':pkg.dependencies?.tailwindcss,'@types/react':pkg.devDependencies?.['@types/react'],'@types/react-dom':pkg.devDependencies?.['@types/react-dom'],'@types/node':pkg.devDependencies?.['@types/node'],'prisma':pkg.devDependencies?.prisma};
+for(const k of Object.keys(expected)) if(String(actual[k])!==expected[k]) add('MEDIUM','Locked stack discrepancy: '+k+' expected '+expected[k]+' but repository declares '+String(actual[k]));
+for(const f of ['package.json','package-lock.json','prisma/schema.prisma','prisma/migrations/migration_lock.toml','.github/workflows/ci.yml','next.config.ts','tsconfig.json','netlify.toml','.env.example']) if(!exists(f)) add('HIGH','Required artifact missing: '+f);
+const env=read('.env.example');
+for(const line of env.split(/\r?\n/)){const m=line.match(/^([A-Z0-9_]+)=/); if(m&&m[1].startsWith('NEXT_PUBLIC_')&&/(SECRET|TOKEN|PASSWORD|DATABASE|PRIVATE|KEY)/i.test(m[1])) add('HIGH','Secret-like NEXT_PUBLIC variable: '+m[1]);}
+const q=files.filter(f=>/qikink/i.test(f)&&/\.(ts|tsx|mts|mjs|js)$/.test(f));
+const qc=q.map(read).join('\n').toLowerCase();
+for(const x of ['sync.*qikink','qikink.*catalog','qikink catalog','fabricat.*tracking']) if(new RegExp(x,'i').test(qc)) add('HIGH','Manual Qikink architecture review required for pattern: '+x);
+const mig=fs.readdirSync(path.join(root,'prisma/migrations'),{withFileTypes:true}).filter(x=>x.isDirectory()).map(x=>x.name);
+for(const d of mig) if(!exists('prisma/migrations/'+d+'/migration.sql')) add('HIGH','Migration directory lacks migration.sql: '+d);
+const ci=read('.github/workflows/ci.yml');
+for(const c of ['npm run lint','npm run typecheck','npm test','npm run build','npx prisma validate','npx prisma generate','npm run db:audit-migrations','npm audit --omit=dev --audit-level=high']) if(!ci.includes(c)) add('HIGH','Mandatory CI command missing: '+c);
+const counts={CRITICAL:findings.filter(x=>x.severity==='CRITICAL').length,HIGH:findings.filter(x=>x.severity==='HIGH').length,MEDIUM:findings.filter(x=>x.severity==='MEDIUM').length};
+console.log(JSON.stringify({status:counts.CRITICAL?'BLOCKED':counts.HIGH?'NOT_READY':'AUDIT_BASELINE',counts,inventory:{files:files.length,tsx:files.filter(f=>f.endsWith('.tsx')).length,ts:files.filter(f=>f.endsWith('.ts')).length,tests:files.filter(f=>f.startsWith('tests/')).length,api:files.filter(f=>f.startsWith('app/api/')).length,admin:files.filter(f=>f.startsWith('app/admin/')).length,migrations:mig.length},findings},null,2));
+if(counts.CRITICAL) process.exit(1);
