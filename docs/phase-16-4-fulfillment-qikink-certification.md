@@ -137,5 +137,3 @@ The executable audit determines the final status. A PASS requires all safety-cri
 ## CI remediation
 
 The certification harness uses runtime-only evidence scans and preserves provider-neutral fulfillment boundaries; CI blocker fixes are part of this phase's final validation.
-
-Final certification branch synchronization marker.
