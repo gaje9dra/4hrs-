@@ -5784,6 +5784,15 @@ model DeliveryPipeline {
   riskAssessments DeliveryRiskAssessment[]
   policies DeliveryPolicy[]
   certifications DeliveryCertification[]
+  decisionProfiles DeliveryDecisionProfile[]
+  decisionSignals DeliverySignal[]
+  historicalDeliveryOutcomes HistoricalDeliveryOutcome[]
+  similarityAssessments DeliverySimilarityAssessment[]
+  decisionRecommendations DeliveryRecommendation[]
+  decisionExperiments DeliveryDecisionExperiment[]
+  decisionPolicies DecisionIntelligencePolicy[]
+  decisionTransitions DeliveryDecisionTransition[]
+  recommendationOutcomes DeliveryRecommendationOutcome[]
   @@index([changeRequestId,status])
   @@index([releaseId,status])
   @@index([deploymentId,status])
@@ -6187,4 +6196,217 @@ model DeliveryEmergencyOverride {
   @@index([assessmentId,status])
   @@index([pipelineId,expiresAt])
   @@index([expiresAt,status])
+}
+
+model DeliveryDecisionProfile {
+  id String @id @default(uuid()) @db.Uuid
+  pipelineId String @db.Uuid
+  changeRequestId String? @db.Uuid
+  releaseId String? @db.Uuid
+  deploymentId String? @db.Uuid
+  deliveryRunId String? @db.Uuid
+  environment String @db.VarChar(80)
+  target String @db.VarChar(255)
+  artifactVersion String? @db.VarChar(160)
+  dependencySnapshotId String? @db.VarChar(120)
+  graphSnapshotId String? @db.VarChar(120)
+  healthSnapshotId String? @db.VarChar(120)
+  featureFlagSnapshotId String? @db.VarChar(120)
+  policyVersion String @db.VarChar(80)
+  algorithmVersion String @db.VarChar(80)
+  status String @db.VarChar(40) @default("CREATED")
+  context Json
+  missingContext Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  pipeline DeliveryPipeline @relation(fields:[pipelineId],references:[id],onDelete:Cascade)
+  signals DeliverySignal[]
+  similarityAssessments DeliverySimilarityAssessment[]
+  recommendations DeliveryRecommendation[]
+  transitions DeliveryDecisionTransition[]
+  outcomes DeliveryRecommendationOutcome[]
+  @@index([pipelineId,createdAt])
+  @@index([status,createdAt])
+}
+
+model DeliverySignal {
+  id String @id @default(uuid()) @db.Uuid
+  profileId String @db.Uuid
+  pipelineId String @db.Uuid
+  signalType String @db.VarChar(100)
+  value Json
+  source String @db.VarChar(160)
+  sourceVersion String @db.VarChar(80)
+  observedAt DateTime
+  freshnessSeconds Int?
+  quality String @db.VarChar(32)
+  confidence String @db.VarChar(32)
+  scope Json
+  provenance Json
+  createdAt DateTime @default(now())
+  profile DeliveryDecisionProfile @relation(fields:[profileId],references:[id],onDelete:Cascade)
+  pipeline DeliveryPipeline @relation(fields:[pipelineId],references:[id],onDelete:Cascade)
+  @@index([profileId,signalType])
+  @@index([pipelineId,observedAt])
+}
+
+model HistoricalDeliveryOutcome {
+  id String @id @default(uuid()) @db.Uuid
+  pipelineId String? @db.Uuid
+  releaseId String? @db.Uuid
+  deploymentId String? @db.Uuid
+  environment String @db.VarChar(80)
+  strategy String @db.VarChar(80)
+  changeType String @db.VarChar(120)
+  service String? @db.VarChar(160)
+  dependencyFingerprint String? @db.VarChar(128)
+  migrationPresent Boolean @default(false)
+  traffic Json
+  customerSegment Json
+  risk Json
+  outcome String @db.VarChar(80)
+  incidents Json
+  customerImpact Json
+  rollback Json
+  recovery Json
+  performance Json
+  cost Json
+  confidence String @db.VarChar(32)
+  evidence Json
+  occurredAt DateTime
+  createdAt DateTime @default(now())
+  pipeline DeliveryPipeline? @relation(fields:[pipelineId],references:[id],onDelete:SetNull)
+  @@index([environment,occurredAt])
+  @@index([changeType,environment])
+  @@index([strategy,occurredAt])
+}
+
+model DeliverySimilarityAssessment {
+  id String @id @default(uuid()) @db.Uuid
+  profileId String @db.Uuid
+  pipelineId String @db.Uuid
+  similarityDimensions Json
+  matchedDimensions Json
+  mismatchedDimensions Json
+  similarityConfidence String @db.VarChar(32)
+  evidence Json
+  limitations Json
+  comparedOutcomeIds Json
+  createdAt DateTime @default(now())
+  profile DeliveryDecisionProfile @relation(fields:[profileId],references:[id],onDelete:Cascade)
+  pipeline DeliveryPipeline @relation(fields:[pipelineId],references:[id],onDelete:Cascade)
+  @@index([profileId,createdAt])
+}
+
+model DeliveryRecommendation {
+  id String @id @default(uuid()) @db.Uuid
+  profileId String @db.Uuid
+  pipelineId String @db.Uuid
+  recommendation String @db.VarChar(64)
+  rationale Json
+  evidence Json
+  conflictingSignals Json
+  risk Json
+  affectedScope Json
+  confidence String @db.VarChar(32)
+  policyVersion String @db.VarChar(80)
+  algorithmVersion String @db.VarChar(80)
+  limitations Json
+  nextRequiredAction String @db.VarChar(1000)
+  status String @db.VarChar(40) @default("GENERATED")
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  profile DeliveryDecisionProfile @relation(fields:[profileId],references:[id],onDelete:Cascade)
+  pipeline DeliveryPipeline @relation(fields:[pipelineId],references:[id],onDelete:Cascade)
+  @@index([profileId,createdAt])
+  @@index([pipelineId,recommendation])
+  @@index([expiresAt,status])
+}
+
+model DeliveryDecisionExperiment {
+  id String @id @default(uuid()) @db.Uuid
+  pipelineId String? @db.Uuid
+  experimentKey String @db.VarChar(120)
+  hypothesis String @db.VarChar(2000)
+  baseline Json
+  treatment Json
+  scope Json
+  cohort Json
+  metrics Json
+  successCriteria Json
+  stopConditions Json
+  safetyConditions Json
+  durationSeconds Int
+  status String @db.VarChar(32) @default("DRAFT")
+  policyVersion String @db.VarChar(80)
+  createdBy String @db.VarChar(120)
+  createdAt DateTime @default(now())
+  pipeline DeliveryPipeline? @relation(fields:[pipelineId],references:[id],onDelete:SetNull)
+  @@index([experimentKey,status])
+}
+
+model DecisionIntelligencePolicy {
+  id String @id @default(uuid()) @db.Uuid
+  pipelineId String? @db.Uuid
+  policyKey String @db.VarChar(120)
+  version String @db.VarChar(80)
+  scope Json
+  status String @db.VarChar(32)
+  riskRules Json
+  signalRequirements Json
+  approvalRequirements Json
+  simulationRequirements Json
+  rehearsalRequirements Json
+  prohibitedActions Json
+  effectiveAt DateTime?
+  expiresAt DateTime?
+  createdBy String @db.VarChar(120)
+  createdAt DateTime @default(now())
+  pipeline DeliveryPipeline? @relation(fields:[pipelineId],references:[id],onDelete:SetNull)
+  @@unique([policyKey,version])
+  @@index([policyKey,status])
+}
+
+model DeliveryDecisionTransition {
+  id String @id @default(uuid()) @db.Uuid
+  profileId String @db.Uuid
+  pipelineId String @db.Uuid
+  previousState String @db.VarChar(40)
+  newState String @db.VarChar(40)
+  actorType String @db.VarChar(32)
+  actorId String @db.VarChar(120)
+  reason String @db.VarChar(2000)
+  evidence Json
+  createdAt DateTime @default(now())
+  profile DeliveryDecisionProfile @relation(fields:[profileId],references:[id],onDelete:Cascade)
+  pipeline DeliveryPipeline @relation(fields:[pipelineId],references:[id],onDelete:Cascade)
+  @@index([profileId,createdAt])
+  @@index([pipelineId,createdAt])
+}
+
+model DeliveryRecommendationOutcome {
+  id String @id @default(uuid()) @db.Uuid
+  profileId String @db.Uuid
+  pipelineId String @db.Uuid
+  recommendationId String? @db.Uuid
+  actualOutcome String @db.VarChar(80)
+  incidentOutcome Json
+  customerImpact Json
+  performance Json
+  reliability Json
+  rollback Json
+  recovery Json
+  cost Json
+  capacity Json
+  recommendationAccuracy String @db.VarChar(32)
+  riskAccuracy String @db.VarChar(32)
+  confidenceCalibration String @db.VarChar(32)
+  falsePositive Boolean
+  falseNegative Boolean
+  evidence Json
+  createdAt DateTime @default(now())
+  profile DeliveryDecisionProfile @relation(fields:[profileId],references:[id],onDelete:Cascade)
+  pipeline DeliveryPipeline @relation(fields:[pipelineId],references:[id],onDelete:Cascade)
+  @@index([profileId,createdAt])
+  @@index([pipelineId,createdAt])
 }
