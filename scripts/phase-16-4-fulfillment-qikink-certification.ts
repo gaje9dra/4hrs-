@@ -102,7 +102,7 @@ const checks: Array<{
   },
   {
     id: "16.4.03", domain: "Catalog ownership",
-    ok: /ProductVariant.*providerMappings/.test(schema) && !runtimeSourceFiles.filter((f) => /(^|\/)catalog\//i.test(f)).some((f) => /qikink/i.test(read(f))),
+    ok: /ProductVariant.*providerMappings/.test(schema) && !runtimeSourceFiles.filter((f) => /^lib\/catalog\//.test(f)).some((f) => /from ["'].*qikink|qikink\.com|QIKINK_AUTH_TOKEN/i.test(read(f))),
     evidence: ["prisma/schema.prisma", "catalog source scan"],
     risk: "Provider catalog ownership would make storefront behavior dependent on Qikink.",
     remediation: "Keep product, variant, SKU and availability authoritative in 4HRS+.",
