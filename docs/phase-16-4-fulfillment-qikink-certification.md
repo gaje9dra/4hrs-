@@ -132,3 +132,8 @@ If Qikink later provides a verified status, webhook, or shipping contract, it mu
 The executable audit determines the final status. A PASS requires all safety-critical checks and the complete CI suite to pass. An unresolved critical/high safety defect prevents readiness.
 
 **Hard stop: do not implement Phase 16.5 in this phase.**
+
+
+## CI remediation
+
+The certification harness uses runtime-only evidence scans and preserves provider-neutral fulfillment boundaries; CI blocker fixes are part of this phase's final validation.
