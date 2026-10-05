@@ -7008,7 +7008,6 @@ model GovernanceOptimizationCertification {
   invalidationTrigger String? @db.VarChar(255)
   proposal GovernanceOptimizationProposal @relation(fields:[proposalId],references:[id],onDelete:Restrict)
   @@index([status,expiresAt])
-  @@index([proposalId,createdAt])
 }
 model GovernanceOptimizationTransition {
   id String @id @default(uuid()) @db.Uuid
