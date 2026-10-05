@@ -67,7 +67,7 @@ export function validateSignal(input:{state:string;freshnessSeconds:number;maxAg
  if(!input.sourceAvailable)reasons.push("SOURCE_UNAVAILABLE");
  if(input.corrupted)reasons.push("CORRUPTED");
  if(!CONFIDENCE_LEVELS.includes(input.confidence as typeof CONFIDENCE_LEVELS[number])||input.confidence==="UNKNOWN")reasons.push("LOW_CONFIDENCE");
- let status:typeof SIGNAL_STATES[number]="ACTIVE"; if(input.state==="RETIRED"||input.state==="DEPRECATED")status=input.state; else if(reasons.length)status=reasons.includes("STALE")||reasons.includes("LOW_CONFIDENCE")?"LOW_VALUE":"UNTRUSTED";
+ let status:typeof SIGNAL_STATES[number]="ACTIVE"; if(input.state==="RETIRED"||input.state==="DEPRECATED")status=input.state; else if(input.state==="DEGRADED")status="DEGRADED"; else if(reasons.length)status=reasons.includes("STALE")||reasons.includes("LOW_CONFIDENCE")?"LOW_VALUE":"UNTRUSTED";
  return {status,usable:status==="ACTIVE"||status==="DEGRADED",excluded:status!=="ACTIVE"&&status!=="DEGRADED",exclusionReasons:reasons};
 }
 export function classifyOptimization(input:{proposedPolicy:unknown;affectedSystems:string[];paymentChange?:boolean;securityChange?:boolean;privacyChange?:boolean;databaseIntegrityChange?:boolean;fulfillmentChange?:boolean;shippingChange?:boolean;rollbackCapability?:boolean}){
