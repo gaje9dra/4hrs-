@@ -14,7 +14,7 @@ const stable=(v:unknown):unknown=>{
 const hash=(v:unknown)=>createHash("sha256").update(JSON.stringify(stable(v))).digest("hex");
 const bounded=(n:number,min=1,max=100)=>Math.min(Math.max(Number.isFinite(n)?Math.floor(n):min,min,max);
 
-const transitions:Record<LearningState,LearningState[]>={
+const transitions:Record<LearningState,LearningState[]> = {
  DRAFT:["EVIDENCE_COLLECTING","REJECTED","DEFERRED"],EVIDENCE_COLLECTING:["ANALYZING","FAILED","DEFERRED"],
  ANALYZING:["VALIDATION_REQUIRED","SIMULATION_REQUIRED","GOVERNANCE_REVIEW","FAILED"],VALIDATION_REQUIRED:["SIMULATION_REQUIRED","GOVERNANCE_REVIEW","REJECTED"],
  SIMULATION_REQUIRED:["GOVERNANCE_REVIEW","FAILED","DEFERRED"],GOVERNANCE_REVIEW:["APPROVAL_REQUIRED","REJECTED","DEFERRED"],
