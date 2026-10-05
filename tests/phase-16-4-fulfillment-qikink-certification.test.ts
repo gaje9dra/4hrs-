@@ -1,7 +1,11 @@
+import { readFileSync } from "node:fs";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { assertFulfillmentTransition, assertOrderFulfillmentEligibility } from "@/lib/fulfillment/domain";
 import { createQikinkFulfillmentProvider, providerOrderNumber } from "@/lib/fulfillment/providers/qikink";
+
+const root = process.cwd();
+const read = (path: string) => readFileSync(`${root}/${path}`, "utf8");
 
 function request() {
   return {
@@ -145,4 +149,39 @@ test("Qikink status lookup is explicitly unsupported rather than fabricated", as
     orderReference: "order-1",
   }), /verified status endpoint/);
   if (oldToken === undefined) delete process.env.QIKINK_AUTH_TOKEN; else process.env.QIKINK_AUTH_TOKEN = oldToken;
+});
+
+test("fulfillment certification source evidence protects mapping, idempotency, retries and concurrency", () => {
+  const schema = read("prisma/schema.prisma");
+  const application = read("lib/fulfillment/application.ts");
+  const repository = read("lib/fulfillment/repository.ts");
+  const domain = read("lib/fulfillment/domain.ts");
+
+  assert.match(schema, /model FulfillmentProviderMapping/);
+  assert.match(schema, /@@unique\(\[variantId, providerId\]\)/);
+  assert.match(schema, /@@unique\(\[providerId, providerSku\]\)/);
+  assert.match(schema, /idempotencyKey\s+String[^\n]*@unique/);
+  assert.match(schema, /orderId\s+String[^\n]*@unique/);
+  assert.match(application, /Serializable/);
+  assert.match(application, /getByIdempotencyKey/);
+  assert.match(application, /getByOrderId/);
+  assert.match(application, /attempt < 3/);
+  assert.match(application, /FULFILLMENT_PROVIDER_RECONCILIATION_REQUIRED/);
+  assert.match(repository, /expectedStatus/);
+  assert.match(domain, /status !== "CONFIRMED"/);
+  assert.match(domain, /paymentStatus !== "SUCCEEDED"/);
+});
+
+test("fulfillment certification source evidence protects secret and shipping boundaries", () => {
+  const qikink = read("lib/fulfillment/providers/qikink.ts");
+  const auth = read("lib/fulfillment/providers/qikink-auth.ts");
+  const shipping = read("lib/shipping/providers/qikink.ts");
+  const appRoutes = read("app/api/admin/fulfillment/route.ts") + read("app/api/admin/fulfillments/route.ts");
+
+  assert.equal(/NEXT_PUBLIC_.*QIKINK/i.test(qikink + auth), false);
+  assert.match(auth, /process\.env\.QIKINK_CLIENT_SECRET/);
+  assert.match(shipping, /createShipment: false/);
+  assert.match(shipping, /trackingLookup: false/);
+  assert.match(shipping, /webhooks: false/);
+  if (appRoutes.trim()) assert.match(appRoutes, /requireAdmin/);
 });
