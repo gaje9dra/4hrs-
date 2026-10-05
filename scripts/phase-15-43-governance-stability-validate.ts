@@ -33,7 +33,7 @@ const gates=[
 ["RBAC/API",["requireAdmin","governance.stability.read","Idempotency-Key"]],
 ["bounded analysis",["slice(0,100)","slice(0,250)","slice(0,2000)"]],
 ["audit",["recordAdminAudit","correlationId"]],
-["versioning",["15.43-governance-stability-deterministic-v1","15.41-governance-deterministic-v1"]]
+["versioning",["15.43-governance-stability-deterministic-v1","GOVERNANCE_ALGORITHM_VERSION","GOVERNANCE_ADAPTATION_ALGORITHM_VERSION"]]
 ];
 for(const [name,needles] of gates)for(const n of needles)if(!corpus.toLowerCase().includes(n.toLowerCase()))throw new Error("Phase 15.43 gate missing: "+name+" / "+n);
 const implementationCorpus=required.slice(0,6).map(f=>fs.readFileSync(f,"utf8")).join("\n");
