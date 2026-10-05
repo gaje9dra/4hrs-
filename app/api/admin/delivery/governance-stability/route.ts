@@ -4,6 +4,7 @@ import { requireAdmin } from "@/lib/admin/authorization";
 import { recordAdminAudit } from "@/lib/admin/audit";
 import type { AdminPermission } from "@/lib/admin/permissions";
 import * as svc from "@/lib/delivery-governance-stability/service";
+import { GOVERNANCE_ADAPTATION_ALGORITHM_VERSION } from "@/lib/delivery-governance-adaptation/service";
 
 export const dynamic="force-dynamic";
 const permissions:Record<string,AdminPermission>={
@@ -20,7 +21,7 @@ export async function GET(req:Request){
   if(action==="CONFLICTS")return NextResponse.json(await svc.listConflicts(limit));
   if(action==="SNAPSHOT")return NextResponse.json(await svc.listSnapshots(limit));
   if(action==="CERTIFY")return NextResponse.json(await svc.listCertifications(limit));
-  if(action==="SUMMARY")return NextResponse.json({phase:"15.43",algorithmVersion:svc.GOVERNANCE_STABILITY_ALGORITHM_VERSION,adaptationAlgorithmVersion:svc.GOVERNANCE_ADAPTATION_ALGORITHM_VERSION,classes:svc.STABILITY_CLASSIFICATIONS,modes:svc.DEGRADED_GOVERNANCE_MODES,compatibility:svc.COMPATIBILITY,evidence:await svc.integratedEvidence(),assessments:await svc.listStability(limit)});
+  if(action==="SUMMARY")return NextResponse.json({phase:"15.43",algorithmVersion:svc.GOVERNANCE_STABILITY_ALGORITHM_VERSION,adaptationAlgorithmVersion:GOVERNANCE_ADAPTATION_ALGORITHM_VERSION,classes:svc.STABILITY_CLASSIFICATIONS,modes:svc.DEGRADED_GOVERNANCE_MODES,compatibility:svc.COMPATIBILITY,evidence:await svc.integratedEvidence(),assessments:await svc.listStability(limit)});
   return NextResponse.json({phase:"15.43",algorithmVersion:svc.GOVERNANCE_STABILITY_ALGORITHM_VERSION,actor:auth.adminUser.id});
  }catch(e){return NextResponse.json({error:e instanceof Error?e.message:"Governance stability query failed safely"},{status:400});}
 }
