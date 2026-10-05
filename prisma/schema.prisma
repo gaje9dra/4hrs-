@@ -687,6 +687,17 @@ model FulfillmentItem {
   @@index([providerItemReference])
 }
 
+model PaymentRateLimitBucket {
+  id          String   @id @default(uuid())
+  bucketKey   String   @unique
+  windowStart DateTime
+  requestCount Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([windowStart])
+}
+
 model Payment {
   id                 String        @id @default(uuid()) @db.Uuid
   customerId         String        @db.Uuid
