@@ -1,13 +1,13 @@
 import { requireAdminPage } from "@/lib/admin/authorization";
-import { db } from "@/lib/db/client";
+import * as svc from "@/lib/delivery-governance-intelligence/service";
 
 export const dynamic="force-dynamic";
 export default async function DeliveryGovernancePage(){
  await requireAdminPage("governance.intelligence.read");
  const [proposals,assessments,certifications]=await Promise.all([
-  db.governanceOptimizationProposal.findMany({take:50,orderBy:{updatedAt:"desc"}}),
-  db.governancePolicyAssessment.findMany({take:50,orderBy:{createdAt:"desc"}}),
-  db.governanceOptimizationCertification.findMany({take:50,orderBy:{createdAt:"desc"}})
+  svc.listProposals(50),
+  svc.listAssessments(50),
+  svc.listCertifications(50)
  ]);
  const counts=proposals.reduce<Record<string,number>>((a,p)=>{a[p.lifecycleState]=(a[p.lifecycleState]??0)+1;return a;},{});
  return <main className="space-y-6 p-6"><header><p className="text-sm text-muted-foreground">Phase 15.41</p><h1 className="text-2xl font-semibold">Delivery Governance Intelligence</h1><p className="mt-1 text-sm text-muted-foreground">Policy effectiveness, drift, optimization evidence and controlled evolution. Existing delivery governance remains authoritative.</p></header>
