@@ -137,6 +137,9 @@ jobs:
       - name: Run Phase 16.4 fulfillment Qikink certification audit
         run: npm run production-certification:phase-16-4
 
+      - name: Run Phase 16.5 shipping and post-order certification audit
+        run: npm run production-certification:phase-16-5
+
       - name: Audit migration safety
         run: npm run db:audit-migrations
 
