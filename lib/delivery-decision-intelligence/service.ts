@@ -143,6 +143,15 @@ export function evaluateDecision(context:DecisionContext,signals:DecisionSignalI
   return {recommendation,risk,riskDimensions:dims,confidence,primaryReasons:primary,supportingSignals:supporting,conflictingSignals:conflicting,historicalEvidence:comparable.slice(0,20),dependencyEvidence:context.promotionInput?.dependencies??[],customerImpactEvidence:context.customerJourneys??[],limitations,nextRequiredAction:next,missingContext:missing,algorithmVersion:ALGORITHM_VERSION};
 }
 
+async function recordDecisionMetrics(input:{pipelineId?:string;profileId?:string;recommendation?:string;risk?:string;confidence?:string;latencyMs?:number;correlationId?:string}){
+  const labels={recommendation:input.recommendation??"UNKNOWN",risk:input.risk??"UNKNOWN",confidence:input.confidence??"UNKNOWN"};
+  const rows=[
+    ["decision.count",1],["recommendation.count",1],
+    ...(input.latencyMs===undefined?[]:[["decision.latency_ms",input.latencyMs]]),
+  ];
+  await db.deliveryDecisionMetric.createMany({data:rows.map(([metricKey,value])=>({pipelineId:input.pipelineId,profileId:input.profileId,metricKey:String(metricKey),value:Number(value),labels:json(labels),correlationId:input.correlationId}))});
+}
+
 export async function createDecision(input:{context:DecisionContext;signals:DecisionSignalInput[];history?:HistoricalOutcomeInput[];actorId:string}){
   const evaluation=evaluateDecision(input.context,input.signals,input.history??[]);
   const profile=await db.deliveryDecisionProfile.create({data:{
@@ -164,6 +173,7 @@ export async function createDecision(input:{context:DecisionContext;signals:Deci
   const governedState:DecisionState=evaluation.recommendation==="BLOCK"?"BLOCKED":evaluation.recommendation==="HOLD"?"HOLD":"GOVERNANCE_REVIEW";
   await db.deliveryDecisionProfile.update({where:{id:profile.id},data:{status:governedState}});
   await db.deliveryDecisionTransition.create({data:{profileId:profile.id,pipelineId:input.context.pipelineId,previousState:"RECOMMENDATION_GENERATED",newState:governedState,actorType:"SYSTEM",actorId:input.actorId,reason:"Recommendation entered governed review state.",evidence:json({recommendationId:rec.id})}});
+  await recordDecisionMetrics({pipelineId:input.context.pipelineId,profileId:profile.id,recommendation:evaluation.recommendation,risk:evaluation.risk,confidence:evaluation.confidence,correlationId:input.context.deliveryRunId});
   const finalProfile=await db.deliveryDecisionProfile.findUnique({where:{id:profile.id}});
   return {profile:finalProfile,recommendation:rec,evaluation};
 }
@@ -188,6 +198,7 @@ export async function transitionDecision(profileId:string,newState:DecisionState
 export async function recordOutcome(input:{profileId:string;recommendationId?:string;actorId:string;actualOutcome:string;incidentOutcome?:unknown;customerImpact?:unknown;performance?:unknown;reliability?:unknown;rollback?:unknown;recovery?:unknown;cost?:unknown;capacity?:unknown;recommendationAccuracy:string;riskAccuracy:string;confidenceCalibration:string;falsePositive:boolean;falseNegative:boolean;evidence?:unknown}){
  const p=await db.deliveryDecisionProfile.findUnique({where:{id:input.profileId}});if(!p)throw new Error("Decision profile was not found.");
  const out=await db.deliveryRecommendationOutcome.create({data:{profileId:p.id,pipelineId:p.pipelineId,recommendationId:input.recommendationId,actualOutcome:input.actualOutcome,incidentOutcome:json(input.incidentOutcome??{}),customerImpact:json(input.customerImpact??{}),performance:json(input.performance??{}),reliability:json(input.reliability??{}),rollback:json(input.rollback??{}),recovery:json(input.recovery??{}),cost:json(input.cost??{}),capacity:json(input.capacity??{}),recommendationAccuracy:input.recommendationAccuracy,riskAccuracy:input.riskAccuracy,confidenceCalibration:input.confidenceCalibration,falsePositive:input.falsePositive,falseNegative:input.falseNegative,evidence:json(input.evidence??{})}});
+ await recordDecisionMetrics({pipelineId:p.pipelineId,profileId:p.id,recommendation:"OUTCOME_CAPTURED",confidence:input.confidenceCalibration});
  await transitionDecision(p.id,"OUTCOME_CAPTURED",input.actorId,"Outcome evidence captured.",{outcomeId:out.id});
  await transitionDecision(p.id,"LEARNING_RECORDED",input.actorId,"Outcome evidence recorded for future learning; production policy is unchanged.",{outcomeId:out.id});
  return out;
