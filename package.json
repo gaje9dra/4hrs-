@@ -50,7 +50,8 @@
     "delivery-learning:validate": "tsx scripts/phase-15-40-learning-validate.ts",
     "governance-intelligence:validate": "tsx scripts/phase-15-41-governance-intelligence-validate.ts",
     "governance-adaptation:validate": "tsx scripts/phase-15-42-governance-adaptation-validate.ts",
-    "governance-stability:validate": "tsx scripts/phase-15-43-governance-stability-validate.ts"
+    "governance-stability:validate": "tsx scripts/phase-15-43-governance-stability-validate.ts",
+    "production-certification:phase-16-1": "tsx scripts/phase-16-1-production-certification-audit.ts"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.1.14",

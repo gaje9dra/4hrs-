@@ -59,6 +59,8 @@ jobs:
 
       - name: Validate Prisma schema
         run: npx prisma validate
+      - name: Generate Prisma client
+        run: npx prisma generate
 
       - name: Validate runtime configuration
         run: npm run release:validate
@@ -122,6 +124,9 @@ jobs:
 
       - name: Validate Phase 15.43 governance stability safety
         run: npm run governance-stability:validate
+
+      - name: Run Phase 16.1 production certification audit
+        run: npm run production-certification:phase-16-1
 
       - name: Audit migration safety
         run: npm run db:audit-migrations
