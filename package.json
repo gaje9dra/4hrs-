@@ -48,7 +48,8 @@
     "delivery-intelligence:readiness:audit": "tsx scripts/phase-15-38-readiness-audit.ts",
     "delivery-decision-intelligence:validate": "tsx scripts/phase-15-39-decision-intelligence-validate.ts",
     "delivery-learning:validate": "tsx scripts/phase-15-40-learning-validate.ts",
-    "governance-intelligence:validate": "tsx scripts/phase-15-41-governance-intelligence-validate.ts"
+    "governance-intelligence:validate": "tsx scripts/phase-15-41-governance-intelligence-validate.ts",
+    "governance-adaptation:validate": "tsx scripts/phase-15-42-governance-adaptation-validate.ts"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.1.14",
