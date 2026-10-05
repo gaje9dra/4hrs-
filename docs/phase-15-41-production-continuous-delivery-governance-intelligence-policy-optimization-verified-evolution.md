@@ -74,7 +74,7 @@ Permissions use the existing RBAC system:
 - governance.experiment.approve
 - governance.experiment.abort
 
-Mutations require authentication, authorization, typed server-side validation, idempotency and audit telemetry. Queries are bounded and paginated.
+Mutations require authentication, authorization, least privilege, typed server-side validation, idempotency and audit telemetry. Queries are bounded and paginated.
 
 ## Security and privacy
 The layer is server-side and provider-neutral. It does not expose provider credentials, call Qikink, alter catalog/provider contracts, or bypass payment/fulfillment/shipping controls. Evidence integrity uses deterministic hashes, immutable records and version pinning for policy/signal/simulation semantics. Customer impact is represented with minimized/aggregate references rather than unnecessary PII.
