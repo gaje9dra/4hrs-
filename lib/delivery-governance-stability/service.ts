@@ -4,7 +4,7 @@ import { db } from "@/lib/db/client";
 import { graphHealth, graphOverview, impactAnalysis as graphImpactAnalysis } from "@/lib/platform-graph/service";
 import { reconciliationSummary } from "@/lib/reconciliation/service";
 import { GOVERNANCE_ADAPTATION_ALGORITHM_VERSION } from "@/lib/delivery-governance-adaptation/service";
-import { GOVERNANCE_ALGORITHM_VERSION, RISK_CLASSES, CONFIDENCE_LEVELS } from "@/lib/delivery-governance-intelligence/service";
+import { GOVERNANCE_ALGORITHM_VERSION } from "@/lib/delivery-governance-intelligence/service";
 
 export const GOVERNANCE_STABILITY_ALGORITHM_VERSION="15.43-governance-stability-deterministic-v1";
 export const STABILITY_CLASSIFICATIONS=["STABLE","STABLE_WITH_WARNINGS","DEGRADED","UNSTABLE","CRITICAL","UNKNOWN"] as const;
@@ -26,7 +26,6 @@ const safe=(v:unknown,d=0):unknown=>{
 const stable=(v:unknown):unknown=>Array.isArray(v)?v.map(stable):v&&typeof v==="object"?Object.fromEntries(Object.entries(v as Json).sort(([a],[b])=>a.localeCompare(b)).map(([k,x])=>[k,stable(x)])):v;
 const hash=(v:unknown)=>createHash("sha256").update(JSON.stringify(stable(v))).digest("hex");
 const json=(v:unknown)=>safe(v) as Prisma.InputJsonValue;
-const bounded=(n:number,min=0,max=1000)=>Math.min(Math.max(Number.isFinite(n)?Math.floor(n):min,min),max);
 
 export type Control={
  id:string;
