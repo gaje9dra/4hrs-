@@ -7042,3 +7042,168 @@ model GovernanceShadowEvaluation {
   @@index([proposalId,createdAt])
   @@index([policyId,policyVersion])
 }
+
+
+model GovernanceStabilityAssessment {
+  id String @id @default(uuid()) @db.Uuid
+  stableId String @unique @db.VarChar(240)
+  policyVersion String @db.VarChar(80)
+  environment String @db.VarChar(40)
+  classification String @db.VarChar(40)
+  dimensions Json
+  risk Json
+  evidence Json
+  provenance Json
+  correlationId String @db.VarChar(160)
+  actor String @db.VarChar(160)
+  algorithmVersion String @db.VarChar(80)
+  createdAt DateTime @default(now())
+  @@index([classification,createdAt])
+  @@index([policyVersion,createdAt])
+}
+
+model GovernanceStabilitySignal {
+  id String @id @default(uuid()) @db.Uuid
+  assessmentId String? @db.Uuid
+  signalType String @db.VarChar(80)
+  state String @db.VarChar(40)
+  value Json
+  confidence String @db.VarChar(32)
+  provenance Json
+  observedAt DateTime
+  createdAt DateTime @default(now())
+  @@index([assessmentId,createdAt])
+  @@index([signalType,observedAt])
+}
+
+model GovernanceStabilityConflict {
+  id String @id @default(uuid()) @db.Uuid
+  stableId String @unique @db.VarChar(240)
+  controlIds Json
+  policyVersions Json
+  affectedWorkflow String? @db.VarChar(240)
+  conflictType String @db.VarChar(48)
+  severity String @db.VarChar(32)
+  impact Json
+  evidence Json
+  resolutionState String @db.VarChar(40) @default("OPEN")
+  provenance Json
+  correlationId String @db.VarChar(160)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([severity,resolutionState])
+  @@index([createdAt])
+}
+
+model GovernanceStabilityDeadlockAssessment {
+  id String @id @default(uuid()) @db.Uuid
+  stableId String @unique @db.VarChar(240)
+  nodes Json
+  cycle Json
+  severity String @db.VarChar(32)
+  blockedAction String? @db.VarChar(240)
+  evidence Json
+  provenance Json
+  correlationId String @db.VarChar(160)
+  createdAt DateTime @default(now())
+  @@index([severity,createdAt])
+}
+
+model GovernanceOscillationAssessment {
+  id String @id @default(uuid()) @db.Uuid
+  stableId String @unique @db.VarChar(240)
+  policyId String @db.VarChar(160)
+  sequence Json
+  frequency Float
+  durationSeconds Int
+  classification String @db.VarChar(48)
+  evidence Json
+  createdAt DateTime @default(now())
+  @@index([policyId,createdAt])
+  @@index([classification,createdAt])
+}
+
+model GovernanceChurnAssessment {
+  id String @id @default(uuid()) @db.Uuid
+  stableId String @unique @db.VarChar(240)
+  windowStart DateTime
+  windowEnd DateTime
+  metrics Json
+  classification String @db.VarChar(48)
+  evidence Json
+  createdAt DateTime @default(now())
+  @@index([windowStart,windowEnd])
+}
+
+model GovernanceCascadeAssessment {
+  id String @id @default(uuid()) @db.Uuid
+  stableId String @unique @db.VarChar(240)
+  chain Json
+  causalClassification String @db.VarChar(40)
+  confidence String @db.VarChar(32)
+  evidence Json
+  createdAt DateTime @default(now())
+  @@index([causalClassification,createdAt])
+}
+
+model GovernanceResilienceAssessment {
+  id String @id @default(uuid()) @db.Uuid
+  stableId String @unique @db.VarChar(240)
+  mode String @db.VarChar(40)
+  scenario Json
+  result Json
+  risk Json
+  evidence Json
+  createdAt DateTime @default(now())
+  @@index([mode,createdAt])
+}
+
+model GovernanceControlInvariant {
+  id String @id @default(uuid()) @db.Uuid
+  stableId String @unique @db.VarChar(240)
+  name String @db.VarChar(240)
+  expression String @db.VarChar(2000)
+  severity String @db.VarChar(32)
+  protectedDomain String @db.VarChar(80)
+  active Boolean @default(true)
+  provenance Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([active,protectedDomain])
+}
+
+model GovernanceStabilitySnapshot {
+  id String @id @default(uuid()) @db.Uuid
+  stableId String @unique @db.VarChar(240)
+  environment String @db.VarChar(40)
+  policyVersions Json
+  activeControls Json
+  relationships Json
+  dependencies Json
+  certifications Json
+  freezes Json
+  exceptions Json
+  configurationReferences Json
+  integrityHash String @db.VarChar(128)
+  immutable Boolean @default(true)
+  provenance Json
+  createdAt DateTime @default(now())
+  @@index([environment,createdAt])
+}
+
+model GovernanceStabilityCertification {
+  id String @id @default(uuid()) @db.Uuid
+  stableId String @unique @db.VarChar(240)
+  assessmentId String @db.Uuid
+  classification String @db.VarChar(40)
+  scope Json
+  evidence Json
+  expiresAt DateTime
+  status String @db.VarChar(40)
+  certifiedBy String @db.VarChar(160)
+  integrityHash String @db.VarChar(128)
+  immutable Boolean @default(true)
+  createdAt DateTime @default(now())
+  @@index([status,expiresAt])
+  @@index([assessmentId,createdAt])
+}
