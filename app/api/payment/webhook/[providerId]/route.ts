@@ -2,6 +2,8 @@ import { createPaymentApplication } from "@/lib/payments/application";
 import { paymentErrorResponse, paymentJson, paymentMethodNotAllowed } from "@/lib/payments/http";
 import { createPaymentProviderResolver } from "@/lib/payments/resolver";
 import { getPaymentProviderRegistry } from "@/lib/payments/registry";
+import { consumeFinancialRateLimit, FINANCIAL_RATE_LIMITS } from "@/lib/payments/rate-limit";
+import { PaymentError } from "@/lib/payments/errors";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -21,6 +23,10 @@ export async function POST(
     if (!/^[a-z0-9][a-z0-9._-]{0,63}$/.test(providerId)) {
       return paymentErrorResponse(new Error("Invalid provider."));
     }
+
+    const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip")?.trim() || "unknown";
+    const rate = await consumeFinancialRateLimit(FINANCIAL_RATE_LIMITS.paymentWebhook, `provider:${providerId}:source:${forwarded}`);
+    if (!rate.allowed) throw new PaymentError("PAYMENT_RATE_LIMITED", "Payment webhook rate limit exceeded.");
 
     const body = await request.text();
     if (new TextEncoder().encode(body).byteLength > MAX_WEBHOOK_BYTES) {
