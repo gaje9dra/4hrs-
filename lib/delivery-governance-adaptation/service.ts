@@ -8,6 +8,7 @@ import {
   createProposal,
   transitionProposal,
 } from "@/lib/delivery-governance-intelligence/service";
+import type { GovernanceState } from "@/lib/delivery-governance-intelligence/service";
 
 export const GOVERNANCE_ADAPTATION_ALGORITHM_VERSION = "15.42-governance-adaptation-deterministic-v1";
 export const ADAPTATION_STATES = [
@@ -131,9 +132,17 @@ export async function validateAdaptation(input:{proposalId:string;actor:string;s
   return {record,result};
 }
 
+const PERSISTED_STATE:Record<AdaptationState,GovernanceState>={
+  DRAFT:"DRAFT",SAFETY_ASSESSMENT:"SIGNAL_VALIDATION",SIMULATION_REQUIRED:"SIMULATION_REQUIRED",
+  VALIDATION_REQUIRED:"VALIDATION_REQUIRED",GOVERNANCE_REVIEW:"GOVERNANCE_REVIEW",
+  APPROVAL_REQUIRED:"APPROVAL_REQUIRED",APPROVED:"APPROVED",STAGED:"STAGED",
+  CONTROLLED_VALIDATION:"CONTROLLED_VALIDATION",VERIFIED:"VERIFIED",CERTIFIED:"CERTIFIED",
+  REJECTED:"REJECTED",DEFERRED:"DEFERRED",BLOCKED:"BLOCKED",FAILED:"FAILED",EXPIRED:"EXPIRED",
+  SUPERSEDED:"SUPERSEDED",ROLLED_BACK:"ROLLED_BACK",INVALIDATED:"INVALIDATED"
+};
 export async function transitionAdaptation(input:{proposalId:string;toState:AdaptationState;actor:string;reason:string;evidence:unknown;idempotencyKey:string}){
   if(!ADAPTATION_STATES.includes(input.toState))throw new Error("Unknown adaptation state.");
-  return transitionProposal({proposalId:input.proposalId,toState:input.toState as Parameters<typeof transitionProposal>[0]["toState"],actor:input.actor,reason:input.reason,evidence:input.evidence,idempotencyKey:input.idempotencyKey});
+  return transitionProposal({proposalId:input.proposalId,toState:PERSISTED_STATE[input.toState],actor:input.actor,reason:input.reason,evidence:{adaptationState:input.toState,evidence:input.evidence},idempotencyKey:input.idempotencyKey});
 }
 
 export function buildSafetyEnvelope(input:Partial<SafetyEnvelope>):SafetyEnvelope{
