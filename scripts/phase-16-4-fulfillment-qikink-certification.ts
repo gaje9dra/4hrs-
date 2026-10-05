@@ -246,7 +246,7 @@ const checks: Array<{
   },
   {
     id: "16.4.24", domain: "Database integrity",
-    ok: /Fulfillment.*orderId.*@unique/.test(schema) && /providerFulfillmentReference.*@unique/.test(schema) && /orderItemId.*@unique/.test(schema) && /FulfillmentProviderMapping/.test(schema),
+    ok: /model Fulfillment \\{[\\s\\S]*?orderId\\s+String[^\\n]*@unique/.test(schema) && /providerFulfillmentReference\\s+String\\?[^\\n]*@unique/.test(schema) && /orderItemId\\s+String[^\\n]*@unique/.test(schema) && /model FulfillmentProviderMapping/.test(schema),
     evidence: ["prisma/schema.prisma"],
     risk: "Missing uniqueness constraints can permit duplicate fulfillment effects.",
     remediation: "Keep provider/order/item uniqueness enforced at the database layer.",
