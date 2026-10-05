@@ -162,7 +162,8 @@ async function recordDecisionMetrics(input:{pipelineId?:string;profileId?:string
 }
 
 export async function createDecision(input:{context:DecisionContext;signals:DecisionSignalInput[];history?:HistoricalOutcomeInput[];actorId:string}){
-  validateDecisionContext(input.context);\n  const evaluation=evaluateDecision(input.context,input.signals,input.history??[]);
+  validateDecisionContext(input.context);
+  const evaluation=evaluateDecision(input.context,input.signals,input.history??[]);
   const profile=await db.deliveryDecisionProfile.create({data:{
     pipelineId:input.context.pipelineId,changeRequestId:input.context.changeRequestId,releaseId:input.context.releaseId,deploymentId:input.context.deploymentId,
     deliveryRunId:input.context.deliveryRunId,environment:input.context.environment,target:input.context.target,artifactVersion:input.context.artifactVersion,
