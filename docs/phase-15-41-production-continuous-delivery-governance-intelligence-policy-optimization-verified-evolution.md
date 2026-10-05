@@ -12,7 +12,7 @@ Phase 15.41 adds a governed intelligence layer above Phases 15.34–15.40. It ev
 - 15.39 decision intelligence: authoritative delivery recommendation/risk decisioning; consumed as evidence.
 - 15.40 learning: authoritative outcome/prediction/signal learning; consumed as historical evidence and learning feedback.
 - 15.41 governance intelligence: assessment, drift detection, policy comparison, proposal, shadow evaluation, controlled experiment definition, regression assessment and certification evidence.
-- Phase 15.32 knowledge graph and 15.33 digital twin remain the source of truth for their domains.
+- Phase 15.32 knowledge graph remains authoritative for dependency intelligence; Phase 15.33 digital twin remains authoritative for policy simulation and impact rehearsal.
 - Phase 15.22 reconciliation remains authoritative for reconciliation.
 
 Dependency direction is one-way: existing delivery engines -> evidence -> 15.41 assessment/proposal -> existing governance path. 15.41 has no deployment or policy-activation executor.
