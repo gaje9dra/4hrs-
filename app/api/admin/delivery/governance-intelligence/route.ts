@@ -7,7 +7,7 @@ import type { AdminPermission } from "@/lib/admin/permissions";
 export const dynamic="force-dynamic";
 const permissions:Record<string,AdminPermission>={
  SUMMARY:"governance.intelligence.read",ASSESS:"governance.intelligence.assess",PROPOSAL:"governance.optimization.create",TRANSITION:"governance.optimization.review",
- POLICY_VERSION:"governance.policy.compare",SHADOW:"governance.intelligence.assess",EXPERIMENT:"governance.experiment.approve",CERTIFY:"governance.policy.certify",INVALIDATE:"governance.policy.rollback"
+ POLICY_VERSION:"governance.policy.compare",SHADOW:"governance.intelligence.assess",SIGNAL:"governance.intelligence.assess",ARCHITECTURE:"governance.intelligence.assess",SIMULATION:"governance.intelligence.assess",COMPARE:"governance.policy.compare",REGRESSION:"governance.intelligence.assess",EXPERIMENT:"governance.experiment.approve",CERTIFY:"governance.policy.certify",INVALIDATE:"governance.policy.rollback"
 };
 const text=(v:unknown)=>typeof v==="string"?v.trim():"";
 const idempotency=(req:Request)=>{const k=text(req.headers.get("Idempotency-Key"));if(!k||k.length>255)throw new Error("Idempotency-Key is required.");return k;};
@@ -25,6 +25,11 @@ export async function POST(req:Request){
   else if(action==="PROPOSAL")result=await svc.createProposal({...body.input as Omit<Parameters<typeof svc.createProposal>[0],"actor">,actor:auth.adminUser.id});
   else if(action==="TRANSITION")result=await svc.transitionProposal({...body.input as Omit<Parameters<typeof svc.transitionProposal>[0],"actor"|"idempotencyKey">,actor:auth.adminUser.id,idempotencyKey:key});
   else if(action==="POLICY_VERSION")result=await svc.createPolicyVersion({...body.input as Omit<Parameters<typeof svc.createPolicyVersion>[0],"actor">,actor:auth.adminUser.id});
+  else if(action==="SIGNAL")result=await svc.createSignal(body.input as Parameters<typeof svc.createSignal>[0]);
+  else if(action==="ARCHITECTURE")result=await svc.collectArchitectureEvidence(body.input as Parameters<typeof svc.collectArchitectureEvidence>[0]);
+  else if(action==="SIMULATION")result=await svc.recordPolicySimulation(body.input as Parameters<typeof svc.recordPolicySimulation>[0]);
+  else if(action==="COMPARE")result=await svc.compareProposalPolicies(text((body.input as Record<string,unknown>)?.proposalId));
+  else if(action==="REGRESSION")result=await svc.regressionCheck({...body.input as Omit<Parameters<typeof svc.regressionCheck>[0],"actor">,actor:auth.adminUser.id});
   else if(action==="SHADOW")result=await svc.createShadowEvaluation({...body.input as Omit<Parameters<typeof svc.createShadowEvaluation>[0],"actor">,actor:auth.adminUser.id});
   else if(action==="EXPERIMENT")result=await svc.createExperiment({...body.input as Omit<Parameters<typeof svc.createExperiment>[0],"actor">,actor:auth.adminUser.id});
   else if(action==="CERTIFY")result=await svc.certify({...body.input as Omit<Parameters<typeof svc.certify>[0],"actor">,actor:auth.adminUser.id});
