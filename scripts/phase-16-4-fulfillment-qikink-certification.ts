@@ -232,7 +232,7 @@ const checks: Array<{
   },
   {
     id: "16.4.22", domain: "Admin/RBAC boundary",
-    ok: /requireAdmin/.test(sourceText) && /fulfillment/i.test(sourceText),
+    ok: sourceFiles.some((f) => /(^|\/)app\/(api\/admin|admin)\/.*fulfillment/i.test(f) && /requireAdmin/.test(read(f))),
     evidence: ["admin route/source scan"],
     risk: "Unprotected operational actions could trigger provider effects.",
     remediation: "Keep privileged fulfillment operations behind existing RBAC.",
