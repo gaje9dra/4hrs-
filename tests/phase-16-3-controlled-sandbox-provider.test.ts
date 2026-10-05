@@ -58,8 +58,10 @@ test("controlled sandbox provider exercises failure-injection contracts", async 
     }),
   );
   process.env.PAYMENT_SANDBOX_SCENARIO = "refund-timeout";
+  const refundPayment = controlledSandboxPaymentProvider.refundPayment;
+  assert.ok(refundPayment);
   await assert.rejects(
-    controlledSandboxPaymentProvider.refundPayment?.({
+    refundPayment({
       providerPaymentReference: "sandbox-p",
       paymentReference: "p",
       amount: { value: "100.00", currency: "INR" },
