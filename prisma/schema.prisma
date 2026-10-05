@@ -5793,6 +5793,7 @@ model DeliveryPipeline {
   decisionPolicies DecisionIntelligencePolicy[]
   decisionTransitions DeliveryDecisionTransition[]
   recommendationOutcomes DeliveryRecommendationOutcome[]
+  decisionMetrics DeliveryDecisionMetric[]
   @@index([changeRequestId,status])
   @@index([releaseId,status])
   @@index([deploymentId,status])
@@ -6413,4 +6414,20 @@ model DeliveryRecommendationOutcome {
   pipeline DeliveryPipeline @relation(fields:[pipelineId],references:[id],onDelete:Cascade)
   @@index([profileId,createdAt])
   @@index([pipelineId,createdAt])
+}
+
+model DeliveryDecisionMetric {
+  id String @id @default(uuid()) @db.Uuid
+  pipelineId String? @db.Uuid
+  profileId String? @db.Uuid
+  metricKey String @db.VarChar(120)
+  value Float
+  labels Json
+  observedAt DateTime @default(now())
+  correlationId String? @db.VarChar(160)
+  createdAt DateTime @default(now())
+  pipeline DeliveryPipeline? @relation(fields:[pipelineId],references:[id],onDelete:SetNull)
+  profile DeliveryDecisionProfile? @relation(fields:[profileId],references:[id],onDelete:SetNull)
+  @@index([metricKey,observedAt])
+  @@index([pipelineId,metricKey,observedAt])
 }
