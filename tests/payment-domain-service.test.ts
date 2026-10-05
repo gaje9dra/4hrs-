@@ -210,7 +210,7 @@ test("normalized duplicate events do not transition a Payment twice", async () =
     internalPaymentReference: "payment-ref-1",
     normalizedEventType: "PAYMENT_SUCCEEDED",
     status: "SUCCEEDED" as const,
-    occurredAt: "2026-10-01T00:00:00.000Z",
+    occurredAt: "2026-10-01T00:00:00.000Z", amount: { value: "100.00", currency: "INR" }, currency: "INR",
   };
   const first = await app.processNormalizedPaymentEvent(event);
   assert.equal(first.processed, true);
