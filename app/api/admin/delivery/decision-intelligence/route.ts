@@ -31,7 +31,7 @@ export async function POST(req:Request){
   if(action==="OUTCOME")return NextResponse.json({result:await svc.recordOutcome({...body.input as Parameters<typeof svc.recordOutcome>[0],actorId:auth.adminUser.id})},{status:201});
   if(action==="POLICY")return NextResponse.json({result:await svc.createPolicy({...body.input as Omit<Parameters<typeof svc.createPolicy>[0],"createdBy">,createdBy:auth.adminUser.id})},{status:201});
   if(action==="EXPERIMENT")return NextResponse.json({result:await svc.createExperiment({...body.input as Omit<Parameters<typeof svc.createExperiment>[0],"createdBy">,createdBy:auth.adminUser.id})},{status:201});
-  if(action==="MAINTENANCE")return NextResponse.json({result:await svc.expireStaleRecommendations(auth.adminUser.id)});
+  if(action==="MAINTENANCE")return NextResponse.json({result:await svc.expireStaleRecommendations()});
   return NextResponse.json({error:"Unknown decision-intelligence action"},{status:400});
  }catch(e){return NextResponse.json({error:e instanceof Error?e.message:"Decision-intelligence operation failed safely"},{status:400});}
 }
