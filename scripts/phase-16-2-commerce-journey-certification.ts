@@ -132,10 +132,10 @@ for (const marker of ["createShipment: false", "trackingLookup: false", "webhook
   if (!qikinkShipping.includes(marker)) add("CRITICAL", "QIKINK_SHIPPING_BOUNDARY", `Qikink shipping capability boundary is missing: ${marker}`, ["lib/shipping/providers/qikink.ts"]);
 }
 
-const browserSourceFiles = files.filter((file) => /^(app|components)\\//.test(file) && /\\.(ts|tsx)$/.test(file));
+const browserSourceFiles = files.filter((file) => /^(app|components)\//.test(file) && /\.(ts|tsx)$/.test(file));
 for (const file of browserSourceFiles) {
   const content = read(file);
-  const directProviderAccess = /from\\s+[\"'] [^\"']*qikink|fetch\\([^)]*qikink|https?:\\/\\/[^\\s\"']*qikink/i.test(content);
+  const directProviderAccess = /from\s+[\"'][^\"']*qikink|fetch\([^)]*qikink|https?:\/\/[^\s\"']*qikink/i.test(content);
   const clientSecretExposure = /NEXT_PUBLIC_[A-Z0-9_]*QIKINK/i.test(content);
   if (directProviderAccess || clientSecretExposure) add("CRITICAL", "CLIENT_QIKINK_REFERENCE", `Browser-facing source directly references a Qikink transport or client-exposed credential: ${file}`, [file]);
 }
