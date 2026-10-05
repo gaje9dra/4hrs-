@@ -1,6 +1,9 @@
 import { createHash } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db/client";
+import { impactAnalysis as graphImpactAnalysis } from "@/lib/platform-graph/service";
+import { impactAnalysis as simulationImpactAnalysis } from "@/lib/simulation/service";
+import { reconciliationSummary } from "@/lib/reconciliation/service";
 
 export const GOVERNANCE_ALGORITHM_VERSION = "15.41-governance-deterministic-v1";
 export const GOVERNANCE_STATES = ["DRAFT","EVIDENCE_COLLECTING","SIGNAL_VALIDATION","POLICY_ASSESSMENT","IMPACT_ANALYSIS","SIMULATION_REQUIRED","SIMULATING","VALIDATION_REQUIRED","GOVERNANCE_REVIEW","APPROVAL_REQUIRED","APPROVED","STAGED","CONTROLLED_VALIDATION","VERIFIED","CERTIFIED","REJECTED","DEFERRED","BLOCKED","FAILED","EXPIRED","SUPERSEDED","ROLLED_BACK","ABANDONED","INVALIDATED"] as const;
@@ -92,6 +95,20 @@ export function confidenceFromEvidence(input:{sampleSize:number;evidenceQuality:
  const avg=values.reduce((a,b)=>a+b,0)/values.length;
  return input.sampleSize>=50&&avg>=.9?"VERIFIED":input.sampleSize>=20&&avg>=.75?"HIGH":input.sampleSize>=8&&avg>=.55?"MEDIUM":input.sampleSize>0?"LOW":"UNKNOWN";
 }
+export async function collectArchitectureEvidence(input:{graphStableId?:string;simulationStableId?:string;reconciliation?:boolean}){
+ const evidence:{graph?:unknown;simulation?:unknown;reconciliation?:unknown;limitations:string[]}={limitations:[]};
+ if(input.graphStableId){try{evidence.graph=await graphImpactAnalysis(input.graphStableId,3);}catch{evidence.limitations.push("Knowledge-graph impact evidence unavailable.");}}
+ if(input.simulationStableId){try{evidence.simulation=await simulationImpactAnalysis(input.simulationStableId,3);}catch{evidence.limitations.push("Digital-twin/simulation impact evidence unavailable.");}}
+ if(input.reconciliation){try{evidence.reconciliation=await reconciliationSummary();}catch{evidence.limitations.push("Reconciliation evidence unavailable.");}}
+ return evidence;
+}
+export async function recordPolicySimulation(input:{proposalId:string;currentPolicy:unknown;proposedPolicy:unknown;assumptions:unknown;inputs:unknown;outputs:unknown;evidence:unknown;confidence:string;resultStatus:string;simulationReference?:string}){
+ return db.governancePolicySimulation.create({data:{proposalId:input.proposalId,currentPolicy:json(input.currentPolicy),proposedPolicy:json(input.proposedPolicy),assumptions:json(input.assumptions),inputs:json(input.inputs),outputs:json(input.outputs),evidence:json(input.evidence),confidence:input.confidence,resultStatus:input.resultStatus,hypothetical:true,simulationReference:input.simulationReference}});
+}
+export async function createSignal(input:{profileId:string;signalType:string;source:string;sourceVersion:string;observedAt:string;freshnessSeconds:number;maxAgeSeconds:number;confidence:string;provenanceValid:boolean;versionCompatible:boolean;sourceAvailable:boolean;corrupted?:boolean;value:unknown}){
+ const quality=validateSignal({state:"ACTIVE",freshnessSeconds:input.freshnessSeconds,maxAgeSeconds:input.maxAgeSeconds,confidence:input.confidence,provenanceValid:input.provenanceValid,versionCompatible:input.versionCompatible,sourceAvailable:input.sourceAvailable,corrupted:input.corrupted});
+ return db.governancePolicySignal.create({data:{profileId:input.profileId,signalType:input.signalType.slice(0,120),source:input.source.slice(0,160),sourceVersion:input.sourceVersion.slice(0,80),observedAt:new Date(input.observedAt),freshnessSeconds:Math.max(0,Math.floor(input.freshnessSeconds)),quality:quality.status,confidence:input.confidence,provenance:json({provenanceValid:input.provenanceValid,versionCompatible:input.versionCompatible}),value:json(input.value),excluded:quality.excluded,exclusionReason:json(quality.exclusionReasons)}});
+}
 export async function createAssessment(input:{policyId:string;policyVersion:string;correlationId:string;metrics:PolicyMetricInput;evidence:unknown[];architectureVersion?:string;baselineVersion?:string;actor:string}){
  const evaluation=assessPolicy(input);
  return db.governancePolicyAssessment.create({data:{stableId:"assessment:"+input.policyId+":"+input.policyVersion+":"+hash(input.metrics).slice(0,24),policyId:input.policyId,policyVersion:input.policyVersion,status:"ASSESSED",metrics:json(input.metrics),dimensions:json(evaluation.dimensions),driftDetected:evaluation.driftDetected,driftReasons:json(evaluation.driftReasons),evidence:json(input.evidence.slice(0,100)),confidence:evaluation.confidence,architectureVersion:input.architectureVersion,baselineVersion:input.baselineVersion,correlationId:input.correlationId,algorithmVersion:GOVERNANCE_ALGORITHM_VERSION,createdBy:input.actor}});
@@ -104,6 +121,7 @@ export async function createProposal(input:{policyId:string;policyVersion:string
 export async function transitionProposal(input:{proposalId:string;toState:GovernanceState;actor:string;reason:string;evidence:unknown;idempotencyKey:string}){
  const p=await db.governanceOptimizationProposal.findUnique({where:{id:input.proposalId}});
  if(!p)throw new Error("Governance proposal not found.");
+ const existing=await db.governanceOptimizationTransition.findUnique({where:{idempotencyKey:input.idempotencyKey}}); if(existing)return p;
  if(!GOVERNANCE_STATES.includes(input.toState)||!(transitions[p.lifecycleState as GovernanceState]??[]).includes(input.toState))throw new Error("Illegal governance transition.");
  return db.$transaction(async tx=>{const updated=await tx.governanceOptimizationProposal.update({where:{id:p.id},data:{lifecycleState:input.toState}});await tx.governanceOptimizationTransition.create({data:{proposalId:p.id,fromState:p.lifecycleState,toState:input.toState,actor:input.actor,reason:input.reason.slice(0,2000),evidence:json(input.evidence),idempotencyKey:input.idempotencyKey}});return updated;});
 }
@@ -133,3 +151,14 @@ export async function invalidateCertifications(input:{triggerType:string;trigger
 export async function listProposals(limit=50){return db.governanceOptimizationProposal.findMany({take:bounded(limit),orderBy:{updatedAt:"desc"}});}
 export async function listAssessments(limit=50){return db.governancePolicyAssessment.findMany({take:bounded(limit),orderBy:{createdAt:"desc"}});}
 export async function listCertifications(limit=50){return db.governanceOptimizationCertification.findMany({take:bounded(limit),orderBy:{createdAt:"desc"}});}
+
+export async function compareProposalPolicies(proposalId:string){
+ const p=await db.governanceOptimizationProposal.findUnique({where:{id:proposalId},select:{currentPolicy:true,proposedPolicy:true,policyId:true,policyVersion:true}});
+ if(!p)throw new Error("Governance proposal not found.");
+ return {proposalId,policyId:p.policyId,policyVersion:p.policyVersion,differences:comparePolicies(p.currentPolicy as Record<string,unknown>,p.proposedPolicy as Record<string,unknown>),algorithmVersion:GOVERNANCE_ALGORITHM_VERSION};
+}
+export async function regressionCheck(input:{baseline:Record<string,number>;candidate:Record<string,number>;thresholds:Record<string,number>;proposalId:string;actor:string}){
+ const result=evaluateRegression(input);
+ await db.governancePolicyValidation.create({data:{proposalId:input.proposalId,validationType:"POLICY_REGRESSION",status:result.regressed?"FAILED":"PASSED",evidence:json(result),checks:json(input.thresholds),actor:input.actor,correlationId:hash(input).slice(0,32)}});
+ return result;
+}
