@@ -130,6 +130,9 @@ jobs:
 
       - name: Run Phase 16.2 commerce journey certification audit
         run: npm run production-certification:phase-16-2
+      - name: Run Phase 16.3 payment financial safety certification audit
+        run: npm run production-certification:phase-16-3
+
 
       - name: Audit migration safety
         run: npm run db:audit-migrations
