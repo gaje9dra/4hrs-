@@ -5749,7 +5749,6 @@ model DeliveryPipeline {
   decisionOutcomeEvaluations DecisionOutcomeEvaluation[]
   learningPatterns LearningPattern[]
   optimizationProposals OptimizationProposal[]
-  learningPolicies LearningPolicy[]
   learningExperiments LearningExperiment[]
   learningCertifications LearningCertification[]
 
@@ -5804,6 +5803,7 @@ model DeliveryPipeline {
   decisionTransitions DeliveryDecisionTransition[]
   recommendationOutcomes DeliveryRecommendationOutcome[]
   decisionMetrics DeliveryDecisionMetric[]
+  signalQualityEvaluations SignalQualityEvaluation[]
   @@index([changeRequestId,status])
   @@index([releaseId,status])
   @@index([deploymentId,status])
@@ -6479,6 +6479,7 @@ model DeliveryLearningOutcome {
   idempotencyKey String @unique @db.VarChar(255)
   pipeline DeliveryPipeline @relation(fields:[pipelineId],references:[id],onDelete:Restrict)
   observations LearningObservation[]
+  learningTransitions LearningTransition[]
   predictionEvaluations PredictionEvaluation[]
   decisionEvaluations DecisionOutcomeEvaluation[]
   @@index([pipelineId,createdAt])
