@@ -6726,3 +6726,319 @@ model SignalQualityEvaluation {
   @@index([status,evaluatedAt])
 }
 
+
+
+model GovernanceIntelligenceProfile {
+  id String @id @default(uuid()) @db.Uuid
+  stableId String @unique @db.VarChar(200)
+  policyId String @db.VarChar(160)
+  policyVersion String @db.VarChar(80)
+  scope Json
+  sourceReferences Json
+  architectureVersion String? @db.VarChar(160)
+  status String @db.VarChar(40)
+  correlationId String @db.VarChar(160)
+  provenance Json
+  algorithmVersion String @db.VarChar(80)
+  createdBy String @db.VarChar(160)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([policyId,policyVersion])
+  @@index([status,updatedAt])
+}
+model GovernancePolicyAssessment {
+  id String @id @default(uuid()) @db.Uuid
+  stableId String @unique @db.VarChar(240)
+  policyId String @db.VarChar(160)
+  policyVersion String @db.VarChar(80)
+  status String @db.VarChar(40)
+  metrics Json
+  dimensions Json
+  driftDetected Boolean @default(false)
+  driftReasons Json
+  evidence Json
+  confidence String @db.VarChar(32)
+  architectureVersion String? @db.VarChar(160)
+  baselineVersion String? @db.VarChar(160)
+  correlationId String @db.VarChar(160)
+  algorithmVersion String @db.VarChar(80)
+  createdBy String @db.VarChar(160)
+  createdAt DateTime @default(now())
+  @@index([policyId,createdAt])
+  @@index([driftDetected,createdAt])
+  @@index([confidence,createdAt])
+}
+model GovernancePolicySignal {
+  id String @id @default(uuid()) @db.Uuid
+  profileId String @db.Uuid
+  signalType String @db.VarChar(120)
+  source String @db.VarChar(160)
+  sourceVersion String @db.VarChar(80)
+  observedAt DateTime
+  freshnessSeconds Int
+  quality String @db.VarChar(32)
+  confidence String @db.VarChar(32)
+  provenance Json
+  value Json
+  excluded Boolean @default(false)
+  exclusionReason Json
+  createdAt DateTime @default(now())
+  @@index([profileId,signalType])
+  @@index([quality,observedAt])
+}
+model GovernancePolicyOutcome {
+  id String @id @default(uuid()) @db.Uuid
+  profileId String @db.Uuid
+  releaseReference String? @db.VarChar(200)
+  deploymentReference String? @db.VarChar(200)
+  expected Json
+  actual Json
+  outcomeStatus String @db.VarChar(40)
+  safety Json
+  efficiency Json
+  customerImpact Json
+  operationalImpact Json
+  costImpact Json
+  evidence Json
+  occurredAt DateTime
+  createdAt DateTime @default(now())
+  @@index([profileId,occurredAt])
+  @@index([outcomeStatus,occurredAt])
+}
+model GovernancePolicyPerformance {
+  id String @id @default(uuid()) @db.Uuid
+  policyId String @db.VarChar(160)
+  policyVersion String @db.VarChar(80)
+  windowStart DateTime
+  windowEnd DateTime
+  metrics Json
+  dimensions Json
+  sampleSize Int
+  confidence String @db.VarChar(32)
+  provenance Json
+  algorithmVersion String @db.VarChar(80)
+  createdAt DateTime @default(now())
+  @@index([policyId,windowEnd])
+  @@index([policyVersion,windowEnd])
+}
+model GovernanceOptimizationProposal {
+  id String @id @default(uuid()) @db.Uuid
+  stableId String @unique @db.VarChar(240)
+  policyId String @db.VarChar(160)
+  policyVersion String @db.VarChar(80)
+  problem String @db.VarChar(4000)
+  currentPolicy Json
+  proposedPolicy Json
+  rationale String @db.VarChar(4000)
+  evidence Json
+  expectedBenefit Json
+  expectedRisk Json
+  affectedSystems Json
+  affectedPolicies Json
+  affectedCustomers Json
+  affectedEnvironments Json
+  costImpact Json
+  operationalImpact Json
+  rollbackStrategy Json
+  validationCriteria Json
+  riskClass String @db.VarChar(32)
+  simulationRequired Boolean @default(false)
+  approvalRequired Boolean @default(false)
+  rollbackCapability Boolean @default(false)
+  confidence String @db.VarChar(32)
+  lifecycleState String @db.VarChar(48) @default("DRAFT")
+  algorithmVersion String @db.VarChar(80)
+  createdBy String @db.VarChar(160)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  impacts GovernanceOptimizationImpact[]
+  transitions GovernanceOptimizationTransition[]
+  experiments GovernanceOptimizationExperiment[]
+  shadowEvaluations GovernanceShadowEvaluation[]
+  certifications GovernanceOptimizationCertification[]
+  @@index([lifecycleState,updatedAt])
+  @@index([riskClass,updatedAt])
+  @@index([policyId,policyVersion])
+}
+model GovernanceOptimizationImpact {
+  id String @id @default(uuid()) @db.Uuid
+  proposalId String @db.Uuid
+  dimension String @db.VarChar(100)
+  expected Json
+  actual Json?
+  classification String @db.VarChar(40)
+  evidence Json
+  createdAt DateTime @default(now())
+  proposal GovernanceOptimizationProposal @relation(fields:[proposalId],references:[id],onDelete:Restrict)
+  @@index([proposalId,dimension])
+}
+model GovernanceOptimizationExperiment {
+  id String @id @default(uuid()) @db.Uuid
+  proposalId String @db.Uuid
+  policyId String @db.VarChar(160)
+  hypothesis String @db.VarChar(4000)
+  baseline Json
+  proposedPolicy Json
+  targetPopulation Json
+  environment String @db.VarChar(40)
+  durationSeconds Int
+  successMetrics Json
+  safetyMetrics Json
+  abortConditions Json
+  customerImpactLimits Json
+  securityLimits Json
+  privacyLimits Json
+  costLimits Json
+  status String @db.VarChar(40) @default("DRAFT")
+  approved Boolean @default(false)
+  actor String @db.VarChar(160)
+  createdBy String @db.VarChar(160)
+  createdAt DateTime @default(now())
+  proposal GovernanceOptimizationProposal @relation(fields:[proposalId],references:[id],onDelete:Restrict)
+  @@index([proposalId,status])
+}
+model GovernancePolicySimulation {
+  id String @id @default(uuid()) @db.Uuid
+  proposalId String @db.Uuid
+  currentPolicy Json
+  proposedPolicy Json
+  assumptions Json
+  inputs Json
+  outputs Json
+  evidence Json
+  confidence String @db.VarChar(32)
+  resultStatus String @db.VarChar(40)
+  hypothetical Boolean @default(true)
+  simulationReference String? @db.VarChar(255)
+  createdAt DateTime @default(now())
+  @@index([proposalId,createdAt])
+  @@index([resultStatus,createdAt])
+}
+model GovernancePolicyValidation {
+  id String @id @default(uuid()) @db.Uuid
+  proposalId String @db.Uuid
+  validationType String @db.VarChar(80)
+  status String @db.VarChar(40)
+  evidence Json
+  checks Json
+  actor String @db.VarChar(160)
+  correlationId String @db.VarChar(160)
+  createdAt DateTime @default(now())
+  @@index([proposalId,createdAt])
+}
+model GovernancePolicyDecision {
+  id String @id @default(uuid()) @db.Uuid
+  proposalId String @db.Uuid
+  decisionType String @db.VarChar(64)
+  actor String @db.VarChar(160)
+  reason String @db.VarChar(2000)
+  evidence Json
+  policyVersion String @db.VarChar(80)
+  createdAt DateTime @default(now())
+  @@index([proposalId,createdAt])
+}
+model GovernancePolicyVersion {
+  id String @id @default(uuid()) @db.Uuid
+  stableId String @unique @db.VarChar(240)
+  policyId String @db.VarChar(160)
+  version String @db.VarChar(80)
+  parentVersion String? @db.VarChar(80)
+  description String @db.VarChar(2000)
+  effectiveAt DateTime
+  expiresAt DateTime?
+  logic Json
+  rationale String @db.VarChar(4000)
+  evidence Json
+  simulationEvidence Json?
+  approvalEvidence Json?
+  certification Json?
+  rollbackVersion String? @db.VarChar(80)
+  owner String @db.VarChar(160)
+  reviewers Json
+  immutable Boolean @default(true)
+  createdBy String @db.VarChar(160)
+  createdAt DateTime @default(now())
+  @@unique([policyId,version])
+  @@index([policyId,effectiveAt])
+}
+model GovernancePolicyChangeSet {
+  id String @id @default(uuid()) @db.Uuid
+  proposalId String @db.Uuid
+  gatesAdded Json
+  gatesRemoved Json
+  thresholdsChanged Json
+  validationsChanged Json
+  approvalsChanged Json
+  simulationsChanged Json
+  rolloutChanged Json
+  environmentRestrictionsChanged Json
+  dependencyRulesChanged Json
+  beforeHash String @db.VarChar(128)
+  afterHash String @db.VarChar(128)
+  createdAt DateTime @default(now())
+  @@index([proposalId,createdAt])
+}
+model GovernanceOptimizationEvidence {
+  id String @id @default(uuid()) @db.Uuid
+  proposalId String @db.Uuid
+  evidenceType String @db.VarChar(100)
+  reference String @db.VarChar(1000)
+  integrityHash String @db.VarChar(128)
+  payload Json
+  immutable Boolean @default(true)
+  capturedBy String @db.VarChar(160)
+  createdAt DateTime @default(now())
+  @@index([proposalId,createdAt])
+}
+model GovernanceOptimizationCertification {
+  id String @id @default(uuid()) @db.Uuid
+  proposalId String @db.Uuid
+  policyVersion String @db.VarChar(80)
+  validationEvidence Json
+  approvalEvidence Json
+  simulationEvidence Json
+  knownLimitations Json
+  effectiveScope Json
+  expiresAt DateTime
+  status String @db.VarChar(40)
+  certifiedBy String @db.VarChar(160)
+  certifiedAt DateTime @default(now())
+  immutable Boolean @default(true)
+  integrityHash String @db.VarChar(128)
+  invalidationReason String? @db.VarChar(1000)
+  invalidationTrigger String? @db.VarChar(255)
+  proposal GovernanceOptimizationProposal @relation(fields:[proposalId],references:[id],onDelete:Restrict)
+  @@index([status,expiresAt])
+}
+model GovernanceOptimizationTransition {
+  id String @id @default(uuid()) @db.Uuid
+  proposalId String @db.Uuid
+  fromState String @db.VarChar(48)
+  toState String @db.VarChar(48)
+  actor String @db.VarChar(160)
+  reason String @db.VarChar(2000)
+  evidence Json
+  idempotencyKey String @unique @db.VarChar(255)
+  createdAt DateTime @default(now())
+  proposal GovernanceOptimizationProposal @relation(fields:[proposalId],references:[id],onDelete:Restrict)
+  @@index([proposalId,createdAt])
+}
+model GovernanceShadowEvaluation {
+  id String @id @default(uuid()) @db.Uuid
+  proposalId String @db.Uuid
+  policyId String @db.VarChar(160)
+  policyVersion String @db.VarChar(80)
+  currentResult Json
+  proposedResult Json
+  differences Json
+  affectedReleases Json
+  classification String @db.VarChar(32)
+  observationalOnly Boolean @default(true)
+  correlationId String @db.VarChar(160)
+  algorithmVersion String @db.VarChar(80)
+  createdBy String @db.VarChar(160)
+  createdAt DateTime @default(now())
+  proposal GovernanceOptimizationProposal @relation(fields:[proposalId],references:[id],onDelete:Restrict)
+  @@index([proposalId,createdAt])
+  @@index([policyId,policyVersion])
+}
