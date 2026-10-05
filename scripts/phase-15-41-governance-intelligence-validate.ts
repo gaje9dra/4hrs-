@@ -12,7 +12,7 @@ const files=[
 const corpus=files.map(f=>fs.readFileSync(f,"utf8")).join("\n");
 const gates:Array<[string,string[]]>=[
  ["architecture reuse",["Phase 15.39","Phase 15.40","observationalOnly","existing"]],
- ["policy assessment",["assessPolicy","safety","precision","recall","efficiency","timeliness","stability","cost"]],
+ ["policy assessment",["assessPolicy","safety","precision","recall","efficiency","timeliness","stability","cost","recall"]],
  ["signal governance",["validateSignal","STALE","UNTRUSTED","provenance"]],
  ["policy drift",["driftDetected","driftReasons","ARCHITECTURE_VERSION_CHANGED"]],
  ["optimization safety",["classifyOptimization","PROHIBITED","rollbackCapability"]],
