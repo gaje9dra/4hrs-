@@ -6230,6 +6230,7 @@ model DeliveryDecisionProfile {
   recommendations DeliveryRecommendation[]
   transitions DeliveryDecisionTransition[]
   outcomes DeliveryRecommendationOutcome[]
+  metrics DeliveryDecisionMetric[]
   @@index([pipelineId,createdAt])
   @@index([status,createdAt])
 }
