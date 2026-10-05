@@ -108,6 +108,9 @@ jobs:
       - name: Final Phase 15.38 architectural readiness audit
         run: npm run delivery-intelligence:readiness:audit
 
+      - name: Validate Phase 15.39 decision intelligence safety
+        run: npm run delivery-decision-intelligence:validate
+
       - name: Audit migration safety
         run: npm run db:audit-migrations
 

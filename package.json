@@ -45,7 +45,8 @@
     "delivery-intelligence:validate": "tsx scripts/delivery-intelligence-validate.ts",
     "delivery-intelligence:completion:validate": "tsx scripts/delivery-intelligence-completion-validate.ts",
     "delivery-intelligence:maintenance": "tsx scripts/delivery-intelligence-maintenance.ts",
-    "delivery-intelligence:readiness:audit": "tsx scripts/phase-15-38-readiness-audit.ts"
+    "delivery-intelligence:readiness:audit": "tsx scripts/phase-15-38-readiness-audit.ts",
+    "delivery-decision-intelligence:validate": "tsx scripts/phase-15-39-decision-intelligence-validate.ts"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.1.14",
