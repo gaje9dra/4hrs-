@@ -197,7 +197,7 @@ const checks: Array<{
   },
   {
     id: "16.4.17", domain: "Credential redaction",
-    ok: !/logger\.(info|warn|error|debug).*QIKINK_(CLIENT_SECRET|AUTH_TOKEN)/s.test(qikinkAuth + qikink) && !/console\.(log|error|warn).*QIKINK_(CLIENT_SECRET|AUTH_TOKEN)/s.test(sourceText),
+    ok: !/logger\.(info|warn|error|debug).*QIKINK_(CLIENT_SECRET|AUTH_TOKEN)/.test(qikinkAuth + qikink) && !/console\.(log|error|warn).*QIKINK_(CLIENT_SECRET|AUTH_TOKEN)/s.test(sourceText),
     evidence: ["Qikink auth/provider logging scan"],
     risk: "Secrets in logs can become durable credential leakage.",
     remediation: "Log only safe correlation and outcome metadata.",
@@ -246,7 +246,7 @@ const checks: Array<{
   },
   {
     id: "16.4.24", domain: "Database integrity",
-    ok: /model Fulfillment \\{[\\s\\S]*?orderId\\s+String[^\\n]*@unique/.test(schema) && /providerFulfillmentReference\\s+String\\?[^\\n]*@unique/.test(schema) && /orderItemId\\s+String[^\\n]*@unique/.test(schema) && /model FulfillmentProviderMapping/.test(schema),
+    ok: /model Fulfillment \{[\s\S]*?orderId\s+String[^\n]*@unique/.test(schema) && /providerFulfillmentReference\s+String\?[^\n]*@unique/.test(schema) && /orderItemId\s+String[^\n]*@unique/.test(schema) && /model FulfillmentProviderMapping/.test(schema),
     evidence: ["prisma/schema.prisma"],
     risk: "Missing uniqueness constraints can permit duplicate fulfillment effects.",
     remediation: "Keep provider/order/item uniqueness enforced at the database layer.",
