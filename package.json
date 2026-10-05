@@ -52,7 +52,8 @@
     "governance-adaptation:validate": "tsx scripts/phase-15-42-governance-adaptation-validate.ts",
     "governance-stability:validate": "tsx scripts/phase-15-43-governance-stability-validate.ts",
     "production-certification:phase-16-1": "tsx scripts/phase-16-1-production-certification-audit.ts",
-    "production-certification:phase-16-2": "tsx scripts/phase-16-2-commerce-journey-certification.ts"
+    "production-certification:phase-16-2": "tsx scripts/phase-16-2-commerce-journey-certification.ts",
+    "production-certification:phase-16-3": "tsx scripts/phase-16-3-payment-financial-safety-certification.ts"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.1.14",

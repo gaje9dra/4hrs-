@@ -389,53 +389,95 @@ export function createPaymentApplication(
     if (!event.providerId.trim() || !event.providerEventReference.trim()) {
       throw new PaymentError("INVALID_PAYMENT_REQUEST", "Payment event identity is invalid.");
     }
+    let occurredAt: Date;
+    try {
+      occurredAt = new Date(event.occurredAt);
+      if (Number.isNaN(occurredAt.getTime())) throw new Error("invalid timestamp");
+      validatePaymentAmount(event.amount);
+    } catch (error) {
+      throw new PaymentError("INVALID_PAYMENT_REQUEST", "Payment event financial data is invalid.", { cause: error });
+    }
+    if (event.currency !== event.amount.currency) {
+      throw new PaymentError("INVALID_CURRENCY", "Payment event currency is inconsistent.");
+    }
 
     const existing = await repository.recordPaymentEvent({
       providerId: event.providerId,
       providerEventId: event.providerEventReference,
       eventType: event.normalizedEventType,
       normalizedEventType: event.normalizedEventType,
-      occurredAt: new Date(event.occurredAt),
+      occurredAt,
       metadata: event.metadata ? { ...event.metadata } : undefined,
     });
 
-    const payment = event.internalPaymentReference
-      ? await repository.getPaymentByInternalReference(event.internalPaymentReference)
-      : event.providerPaymentReference
-        ? await repository.getPaymentByProviderReference(event.providerId, event.providerPaymentReference)
-        : null;
-
-    if (!payment) {
-      await repository.markPaymentEventFailed(existing.record.id, "Payment reference could not be resolved.");
-      throw new PaymentError("PAYMENT_NOT_FOUND", "Payment could not be resolved for this event.");
-    }
-
     if (!existing.created && existing.record.processingStatus === "PROCESSED") {
-      return { duplicate: true, processed: true, payment: toPaymentDto(payment) };
-    }
-
-    try {
-      assertPaymentTransition(payment.status, event.status);
-    } catch (error) {
-      await repository.markPaymentEventFailed(existing.record.id, "Payment event requested an invalid state transition.");
-      throw new PaymentError("INVALID_STATE_TRANSITION", "Payment event requested an invalid state transition.", { cause: error });
+      const replayPayment = event.internalPaymentReference
+        ? await repository.getPaymentByInternalReference(event.internalPaymentReference)
+        : event.providerPaymentReference
+          ? await repository.getPaymentByProviderReference(event.providerId, event.providerPaymentReference)
+          : null;
+      return { duplicate: true, processed: true, payment: replayPayment ? toPaymentDto(replayPayment) : null };
     }
 
     try {
       const result = await repository.withTransaction(async (tx) => {
+        const payment = event.internalPaymentReference
+          ? await tx.getPaymentByInternalReference(event.internalPaymentReference)
+          : event.providerPaymentReference
+            ? await tx.getPaymentByProviderReference(event.providerId, event.providerPaymentReference)
+            : null;
+
+        if (!payment) {
+          throw new PaymentError("PAYMENT_NOT_FOUND", "Payment could not be resolved for this event.");
+        }
+        if (payment.amount.toFixed(2) !== new Prisma.Decimal(event.amount.value).toFixed(2)) {
+          throw new PaymentError("INVALID_AMOUNT", "Payment event amount does not match the authoritative payment amount.");
+        }
+        if (payment.currency !== event.currency) {
+          throw new PaymentError("INVALID_CURRENCY", "Payment event currency does not match the authoritative payment currency.");
+        }
+
+        const latestEvent = await tx.findPaymentEventByProviderEventId(event.providerId, event.providerEventReference);
+        if (latestEvent?.processingStatus === "PROCESSED") {
+          return { duplicate: true, payment };
+        }
+
+        try {
+          assertPaymentTransition(payment.status, event.status);
+        } catch (error) {
+          throw new PaymentError("INVALID_STATE_TRANSITION", "Payment event requested an invalid state transition.", { cause: error });
+        }
+
         const updated = await tx.updatePaymentStatus(
           payment.id,
           asPrismaStatus(payment.status),
           asPrismaStatus(event.status),
-          event.status === "SUCCEEDED" ? new Date(event.occurredAt) : undefined,
+          event.status === "SUCCEEDED" ? occurredAt : undefined,
         );
         await tx.markPaymentEventProcessed(existing.record.id);
-        return updated;
+        return { duplicate: !existing.created, payment: updated };
       });
-      return { duplicate: !existing.created, processed: true, payment: toPaymentDto(result) };
+      return { duplicate: result.duplicate, processed: true, payment: toPaymentDto(result.payment) };
     } catch (error) {
-      await repository.markPaymentEventFailed(existing.record.id, "Payment event could not be applied.");
-      throw new PaymentError("INVALID_STATE_TRANSITION", "Payment event could not be applied.", { cause: error });
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034") {
+        const settled = await repository.findPaymentEventByProviderEventId(event.providerId, event.providerEventReference);
+        if (settled?.processingStatus === "PROCESSED") {
+          const payment = event.internalPaymentReference
+            ? await repository.getPaymentByInternalReference(event.internalPaymentReference)
+            : event.providerPaymentReference
+              ? await repository.getPaymentByProviderReference(event.providerId, event.providerPaymentReference)
+              : null;
+          return { duplicate: true, processed: true, payment: payment ? toPaymentDto(payment) : null };
+        }
+        throw new PaymentError("INVALID_STATE_TRANSITION", "Payment event conflicted with a concurrent financial update; retry safely.", { cause: error });
+      }
+      if (error instanceof PaymentError) {
+        if (error.code !== "PAYMENT_NOT_FOUND" && error.code !== "INVALID_AMOUNT" && error.code !== "INVALID_CURRENCY" && error.code !== "INVALID_STATE_TRANSITION") {
+          await repository.markPaymentEventFailed(existing.record.id, error.code);
+        }
+        throw error;
+      }
+      throw new PaymentError("INVALID_STATE_TRANSITION", "Payment event could not be applied safely.", { cause: error });
     }
   }
 

@@ -57,7 +57,7 @@ function adapter(overrides: Partial<PaymentProviderAdapter> = {}): PaymentProvid
           internalPaymentReference: "payment-ref-1",
           normalizedEventType: "PAYMENT_PROCESSING",
           status: "PROCESSING",
-          occurredAt: "2026-10-01T00:00:00.000Z",
+          occurredAt: "2026-10-01T00:00:00.000Z", amount: { value: "100.00", currency: "INR" }, currency: "INR",
         },
       };
     },

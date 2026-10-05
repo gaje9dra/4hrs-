@@ -85,7 +85,7 @@ test("provider adapter contract stays provider-neutral", () => {
         internalPaymentReference: "payment-1",
         normalizedEventType: "PAYMENT_SUCCEEDED",
         status: "SUCCEEDED",
-        occurredAt: "2026-10-01T00:00:00.000Z",
+        occurredAt: "2026-10-01T00:00:00.000Z", amount: { value: "100.00", currency: "INR" }, currency: "INR",
         },
       };
     },
