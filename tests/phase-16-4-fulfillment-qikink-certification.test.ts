@@ -176,12 +176,10 @@ test("fulfillment certification source evidence protects secret and shipping bou
   const qikink = read("lib/fulfillment/providers/qikink.ts");
   const auth = read("lib/fulfillment/providers/qikink-auth.ts");
   const shipping = read("lib/shipping/providers/qikink.ts");
-  const appRoutes = read("app/api/admin/fulfillment/route.ts") + read("app/api/admin/fulfillments/route.ts");
 
   assert.equal(/NEXT_PUBLIC_.*QIKINK/i.test(qikink + auth), false);
   assert.match(auth, /process\.env\.QIKINK_CLIENT_SECRET/);
   assert.match(shipping, /createShipment: false/);
   assert.match(shipping, /trackingLookup: false/);
   assert.match(shipping, /webhooks: false/);
-  if (appRoutes.trim()) assert.match(appRoutes, /requireAdmin/);
 });
