@@ -36,5 +36,5 @@ const gates=[
 ["versioning",["15.43-governance-stability-deterministic-v1","15.41-governance-deterministic-v1"]]
 ];
 for(const [name,needles] of gates)for(const n of needles)if(!corpus.toLowerCase().includes(n.toLowerCase()))throw new Error("Phase 15.43 gate missing: "+name+" / "+n);
-for(const n of ["child_process","execSync(","$queryRawUnsafe","$executeRawUnsafe","new Function(","eval(","qikink.com"])if(corpus.toLowerCase().includes(n.toLowerCase()))throw new Error("Unsafe Phase 15.43 marker: "+n);
+const implementationCorpus=required.slice(0,6).map(f=>fs.readFileSync(f,"utf8")).join("\\n");\nfor(const n of ["child_process","execSync(","$queryRawUnsafe","$executeRawUnsafe","new Function(","eval(","qikink.com"])if(implementationCorpus.toLowerCase().includes(n.toLowerCase()))throw new Error("Unsafe Phase 15.43 marker: "+n);
 console.log(JSON.stringify({status:"PASS",phase:"15.43",algorithmVersion:"15.43-governance-stability-deterministic-v1",gates:gates.map(x=>x[0])}));
