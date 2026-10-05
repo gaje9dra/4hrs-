@@ -32,7 +32,8 @@ test("Phase 16.3 financial boundaries require provider-event amount/currency and
   assert.match(schema, /@@unique\(\[customerId, operation, key\]\)/);
 });
 
-test("Phase 16.3 never treats an empty provider registry as a certified provider integration", () => {
+test("Phase 16.3 registry contains the controlled sandbox certification adapter", () => {
   const registry = readFileSync("lib/payments/registry.ts", "utf8");
-  assert.match(registry, /providerAdapters: readonly PaymentProviderAdapter\[\] = \[\]/);
+  assert.match(registry, /controlledSandboxPaymentProvider/);
+  assert.match(registry, /providerAdapters: readonly PaymentProviderAdapter\[\] = \[controlledSandboxPaymentProvider\]/);
 });
