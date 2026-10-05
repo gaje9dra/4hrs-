@@ -120,6 +120,9 @@ jobs:
       - name: Validate Phase 15.42 governance adaptation safety
         run: npm run governance-adaptation:validate
 
+      - name: Validate Phase 15.43 governance stability safety
+        run: npm run governance-stability:validate
+
       - name: Audit migration safety
         run: npm run db:audit-migrations
 
