@@ -14,9 +14,19 @@ for(const k of Object.keys(expected)) if(String(actual[k])!==expected[k]) add('M
 for(const f of ['package.json','package-lock.json','prisma/schema.prisma','prisma/migrations/migration_lock.toml','.github/workflows/ci.yml','next.config.ts','tsconfig.json','netlify.toml','.env.example']) if(!exists(f)) add('HIGH','Required artifact missing: '+f);
 const env=read('.env.example');
 for(const line of env.split(/\r?\n/)){const m=line.match(/^([A-Z0-9_]+)=/); if(m&&m[1].startsWith('NEXT_PUBLIC_')&&/(SECRET|TOKEN|PASSWORD|DATABASE|PRIVATE|KEY)/i.test(m[1])) add('HIGH','Secret-like NEXT_PUBLIC variable: '+m[1]);}
-const q=files.filter(f=>/qikink/i.test(f)&&/\.(ts|tsx|mts|mjs|js)$/.test(f));
-const qc=q.map(read).join('\n').toLowerCase();
-for(const x of ['sync.*qikink','qikink.*catalog','qikink catalog','fabricat.*tracking']) if(new RegExp(x,'i').test(qc)) add('HIGH','Manual Qikink architecture review required for pattern: '+x);
+const qikinkAdapter='lib/fulfillment/providers/qikink.ts';
+const qikinkShipping='lib/shipping/providers/qikink.ts';
+if(!exists(qikinkAdapter)) add('HIGH','Qikink fulfillment adapter is missing.');
+else {
+  const qc=read(qikinkAdapter);
+  if(/NEXT_PUBLIC_[A-Z0-9_]*QIKINK/i.test(qc)) add('HIGH','Qikink credential/configuration appears client-exposed.');
+  if(!qc.includes('FulfillmentProviderAdapter')) add('HIGH','Qikink implementation is not behind the fulfillment provider adapter contract.');
+}
+if(!exists(qikinkShipping)) add('HIGH','Qikink shipping capability boundary is missing.');
+else {
+  const qs=read(qikinkShipping);
+  for(const marker of ['createShipment: false','trackingLookup: false','webhooks: false']) if(!qs.includes(marker)) add('HIGH','Qikink shipping capability must explicitly remain unsupported: '+marker);
+}
 const mig=fs.readdirSync(path.join(root,'prisma/migrations'),{withFileTypes:true}).filter(x=>x.isDirectory()).map(x=>x.name);
 for(const d of mig) if(!exists('prisma/migrations/'+d+'/migration.sql')) add('HIGH','Migration directory lacks migration.sql: '+d);
 const ci=read('.github/workflows/ci.yml');
