@@ -26,7 +26,7 @@ test("Phase 16.2 certification audit executes and exposes its evidence matrix", 
 test("Phase 16.2 certification preserves the provider and financial boundaries", () => {
   const qikink = readFileSync("lib/fulfillment/providers/qikink.ts", "utf8");
   const shipping = readFileSync("lib/shipping/providers/qikink.ts", "utf8");
-  const checkout = readFileSync("app/api/checkout/route.ts", "utf8");
+  const checkout = readFileSync("lib/checkout/service.ts", "utf8");
   const webhook = readFileSync("app/api/payment/webhook/[providerId]/route.ts", "utf8");
 
   assert.match(qikink, /FulfillmentProviderAdapter/);
