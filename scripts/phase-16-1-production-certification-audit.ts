@@ -3,7 +3,7 @@ import path from 'node:path';
 const root=process.cwd();
 const exists=(p:string)=>fs.existsSync(path.join(root,p));
 const read=(p:string)=>fs.readFileSync(path.join(root,p),'utf8');
-const walk=(d:string):string[]=>{const out:string[]=[]; const abs=path.join(root,d); for(const e of fs.readdirSync(abs,{withFileTypes:true})){const r=path.join(d,e.name).replace(/^\\.\\//,'').replaceAll('\\\\','/'); if(e.isDirectory()) out.push(...walk(r)); else out.push(r);} return out;};
+const walk=(d:string):string[]=>{const out:string[]=[]; const abs=path.join(root,d); for(const e of fs.readdirSync(abs,{withFileTypes:true})){const r=path.join(d,e.name).replaceAll('\\\\','/'); if(e.isDirectory()) out.push(...walk(r)); else out.push(r);} return out;};
 const files=walk('');
 const findings:{severity:string;finding:string}[]=[];
 const add=(severity:string,finding:string)=>findings.push({severity,finding});
