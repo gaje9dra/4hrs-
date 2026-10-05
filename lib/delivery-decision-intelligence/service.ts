@@ -71,9 +71,9 @@ export type DecisionEvaluation = {
 };
 
 function compare(current:DecisionContext,outcome:HistoricalOutcomeInput){
-  const dimensions:Record<string,number>={environment:current.environment, strategy:current.promotionInput?.signals?.featureFlags?.status??"UNKNOWN", changeType:current.databaseChange?"DATABASE":current.paymentChange?"PAYMENT":"GENERAL"};
+  const dimensions:Record<string,string|undefined>={environment:current.environment, strategy:current.promotionInput?.signals?.featureFlags?.status??"UNKNOWN", changeType:current.databaseChange?"DATABASE":current.paymentChange?"PAYMENT":"GENERAL"};
   const matched:string[]=[]; const mismatched:string[]=[];
-  const checks:[string,string,string|undefined][]=[
+  const checks:[string,string|undefined,string|undefined][]=[
     ["environment",current.environment,outcome.environment],["strategy",current.promotionInput?.signals?.featureFlags?.status,outcome.strategy],
     ["changeType",current.databaseChange?"DATABASE":current.paymentChange?"PAYMENT":"GENERAL",outcome.changeType],
     ["service",current.affectedServices?.[0],outcome.service],
@@ -113,7 +113,7 @@ function highestRisk(dims:Record<string,RiskDimension>){
 
 export function evaluateDecision(context:DecisionContext,signals:DecisionSignalInput[],history:HistoricalOutcomeInput[]=[]):DecisionEvaluation{
   const missing=[...(context.missingContext??[])];
-  const required=[["dependencySnapshotId",context.dependencySnapshotId],["graphSnapshotId",context.graphSnapshotId],["healthSnapshotId",context.healthSnapshotId]];
+  const required:[string,string|undefined][]=[["dependencySnapshotId",context.dependencySnapshotId],["graphSnapshotId",context.graphSnapshotId],["healthSnapshotId",context.healthSnapshotId]];
   for(const [name,value] of required)if(!value)missing.push(name);
   for(const s of signals)if(s.quality!=="VALID")missing.push("signal:"+s.signalType+":"+s.quality);
   const promotion=context.promotionInput;
@@ -191,7 +191,7 @@ export async function createDecision(input:{context:DecisionContext;signals:Deci
 const transitions:Record<DecisionState,DecisionState[]>={
  CREATED:["CONTEXT_COLLECTING","FAILED"],CONTEXT_COLLECTING:["SIGNALS_COLLECTING","FAILED"],SIGNALS_COLLECTING:["HISTORICAL_ANALYSIS","FAILED"],
  HISTORICAL_ANALYSIS:["DEPENDENCY_ANALYSIS","FAILED"],DEPENDENCY_ANALYSIS:["RISK_ANALYSIS","FAILED"],RISK_ANALYSIS:["RECOMMENDATION_GENERATED","FAILED"],
- RECOMMENDATION_GENERATED:["GOVERNANCE_REVIEW","HOLD","BLOCK","FAILED"],GOVERNANCE_REVIEW:["DECISION_ACCEPTED","HOLD","BLOCKED","REJECTED"],
+ RECOMMENDATION_GENERATED:["GOVERNANCE_REVIEW","HOLD","BLOCKED","FAILED"],GOVERNANCE_REVIEW:["DECISION_ACCEPTED","HOLD","BLOCKED","REJECTED"],
  DECISION_ACCEPTED:["VALIDATION","HOLD","BLOCKED"],VALIDATION:["OUTCOME_CAPTURED","FAILED"],OUTCOME_CAPTURED:["LEARNING_RECORDED"],LEARNING_RECORDED:[],
  HOLD:["CONTEXT_COLLECTING","INVALIDATED","EXPIRED"],BLOCKED:["CONTEXT_COLLECTING","INVALIDATED","EXPIRED"],INVALIDATED:[],EXPIRED:[],FAILED:["CONTEXT_COLLECTING"],SUPERSEDED:[],REJECTED:["CONTEXT_COLLECTING"],
 };
