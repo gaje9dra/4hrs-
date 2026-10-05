@@ -27,7 +27,7 @@ const gates=[
 ["snapshots",["buildSnapshot","immutable","integrityHash"]],
 ["policy gates",["policyStabilityGates","SAFETY_ENVELOPE_BREACH","AUDIT_PATH_UNAVAILABLE"]],
 ["drift",["detectDrift","documentedVsConfigured","certifiedVsObserved"]],
-["digital twin/simulation",["lib/simulation/service.ts","graphImpactAnalysis"]],
+["digital twin/simulation",["MAX_DURATION_SECONDS","graphImpactAnalysis","affectedDigitalTwin"]],
 ["reconciliation",["reconciliationSummary","15.22"]],
 ["adaptation",["GOVERNANCE_ADAPTATION_ALGORITHM_VERSION","15.42"]],
 ["RBAC/API",["requireAdmin","governance.stability.read","Idempotency-Key"]],
