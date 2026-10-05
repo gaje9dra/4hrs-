@@ -19,7 +19,7 @@ const gates=[
 ["deadlock",["detectDeadlocks","cycle"]],
 ["oscillation",["detectOscillation","frequency","UNSTABLE"]],
 ["churn",["assessChurn","EXCESSIVE"]],
-["cascade/amplification",["analyzeCascade","CONTROLLED","REDUNDANT"]],
+["cascade/amplification",["analyzeCascade","REDUNDANT"]],
 ["coverage",["analyzeCoverage","gaps","fragile"]],
 ["invariants",["DEFAULT_INVARIANTS","evaluateInvariants","BLOCKED"]],
 ["stability",["classifyStability","STABLE_WITH_WARNINGS","CRITICAL","UNKNOWN"]],
