@@ -18,7 +18,7 @@ const checks:Array<[string,string[]]>=[
  ["policy lifecycle",["DecisionIntelligencePolicy","SUPERSEDED","RETIRED"]],
  ["outcome feedback",["DeliveryRecommendationOutcome","falseNegative"]],
  ["lifecycle transitions",["DeliveryDecisionTransition","previousState","newState"]],
- ["provider-neutral API",["delivery/decision-intelligence"]],
+ ["provider-neutral API",["NextResponse","requireAdmin"]],
  ["risk persistence",["DeliveryRiskAssessment","dimensions","algorithmVersion"]],
  ["decision metrics",["DeliveryDecisionMetric","decision.count","decision.latency_ms"]],
 ];
