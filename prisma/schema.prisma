@@ -6851,6 +6851,7 @@ model GovernanceOptimizationProposal {
   createdBy String @db.VarChar(160)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  impacts GovernanceOptimizationImpact[]
   transitions GovernanceOptimizationTransition[]
   experiments GovernanceOptimizationExperiment[]
   shadowEvaluations GovernanceShadowEvaluation[]
