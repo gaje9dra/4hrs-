@@ -54,6 +54,15 @@ const deterministicHash=(v:unknown)=>createHash("sha256").update(JSON.stringify(
 const normalize=(v:unknown)=>typeof v==="string"?v.trim().toUpperCase():"UNKNOWN";
 
 export type RiskDimension = { classification:string; evidence:string[]; confidence:string; source:string; evaluatedAt:string; policyVersion:string };
+export function validateDecisionContext(context:DecisionContext){
+  if(!context.pipelineId||!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(context.pipelineId))throw new Error("pipelineId must be a UUID.");
+  if(!context.environment.trim()||!context.target.trim())throw new Error("environment and target are required.");
+  if(!context.policyVersion.trim()||!context.expiresAt.trim())throw new Error("policyVersion and expiresAt are required.");
+  const expiry=new Date(context.expiresAt);if(Number.isNaN(expiry.getTime()))throw new Error("expiresAt must be an ISO timestamp.");
+  for(const s of context.missingContext??[])if(!s.trim())throw new Error("missingContext entries must be non-empty.");
+  return context;
+}
+
 export type DecisionEvaluation = {
  recommendation:RecommendationType; risk:string; riskDimensions:Record<string,RiskDimension>; confidence:string;
  primaryReasons:string[]; supportingSignals:string[]; conflictingSignals:string[]; historicalEvidence:unknown[];
@@ -153,7 +162,7 @@ async function recordDecisionMetrics(input:{pipelineId?:string;profileId?:string
 }
 
 export async function createDecision(input:{context:DecisionContext;signals:DecisionSignalInput[];history?:HistoricalOutcomeInput[];actorId:string}){
-  const evaluation=evaluateDecision(input.context,input.signals,input.history??[]);
+  validateDecisionContext(input.context);\n  const evaluation=evaluateDecision(input.context,input.signals,input.history??[]);
   const profile=await db.deliveryDecisionProfile.create({data:{
     pipelineId:input.context.pipelineId,changeRequestId:input.context.changeRequestId,releaseId:input.context.releaseId,deploymentId:input.context.deploymentId,
     deliveryRunId:input.context.deliveryRunId,environment:input.context.environment,target:input.context.target,artifactVersion:input.context.artifactVersion,
