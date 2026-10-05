@@ -114,6 +114,9 @@ jobs:
       - name: Validate Phase 15.40 governed learning safety
         run: npm run delivery-learning:validate
 
+      - name: Validate Phase 15.41 governance intelligence safety
+        run: npm run governance-intelligence:validate
+
       - name: Audit migration safety
         run: npm run db:audit-migrations
 
