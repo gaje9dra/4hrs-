@@ -83,8 +83,8 @@ function compare(current:DecisionContext,outcome:HistoricalOutcomeInput){
   return {similarity,matched,mismatched,dimensions};
 }
 
-function classifyRisk(evaluation:{riskLevel:string;blockers:string[];requiredValidations:string[];decision:string},context:DecisionContext,history:HistoricalOutcomeInput[]){
-  const now=new Date().toISOString();
+function classifyRisk(evaluation:{riskLevel:string;blockers:string[];requiredValidations:string[];decision:string},context:DecisionContext,history:HistoricalOutcomeInput[],evaluatedAt:string){
+  const now=evaluatedAt;
   const dims:Record<string,RiskDimension>={};
   const add=(key:string,classification:string,evidence:string[],confidence:string,source="Phase15.38 promotion evaluation")=>{
     dims[key]={classification,evidence,confidence,source,evaluatedAt:now,policyVersion:context.policyVersion};
@@ -118,7 +118,7 @@ export function evaluateDecision(context:DecisionContext,signals:DecisionSignalI
   for(const s of signals)if(s.quality!=="VALID")missing.push("signal:"+s.signalType+":"+s.quality);
   const promotion=context.promotionInput;
   const promotionResult=promotion?evaluatePromotion(promotion):null;
-  const dims=classifyRisk(promotionResult??{riskLevel:"UNKNOWN",blockers:[],requiredValidations:[],decision:"HOLD"},context,history);
+  const evaluatedAt=context.promotionInput?.evaluatedAt ?? context.expiresAt; const dims=classifyRisk(promotionResult??{riskLevel:"UNKNOWN",blockers:[],requiredValidations:[],decision:"HOLD"},context,history,evaluatedAt);
   const primary:string[]=[]; const supporting:string[]=[]; const conflicting:string[]=[]; const limitations:string[]=[];
   if(promotionResult){
     primary.push(...promotionResult.blockers.map(x=>"Existing promotion gate: "+x));
