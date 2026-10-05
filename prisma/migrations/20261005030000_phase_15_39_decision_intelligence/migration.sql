@@ -1,3 +1,9 @@
+ALTER TABLE "DeliveryRiskAssessment"
+  ADD COLUMN IF NOT EXISTS "dimensions" JSONB,
+  ADD COLUMN IF NOT EXISTS "confidence" VARCHAR(32),
+  ADD COLUMN IF NOT EXISTS "evidence" JSONB,
+  ADD COLUMN IF NOT EXISTS "algorithmVersion" VARCHAR(80);
+
 -- Phase 15.39: production continuous-delivery decision intelligence.
 -- Additive, provider-neutral, and independent from deployment/release execution.
 
