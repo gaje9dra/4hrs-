@@ -197,7 +197,7 @@ const checks: Array<{
   },
   {
     id: "16.4.17", domain: "Credential redaction",
-    ok: !/logger\.(info|warn|error|debug).*QIKINK_(CLIENT_SECRET|AUTH_TOKEN)/.test(qikinkAuth + qikink) && !/console\.(log|error|warn).*QIKINK_(CLIENT_SECRET|AUTH_TOKEN)/s.test(sourceText),
+    ok: !/logger\.(info|warn|error|debug).*QIKINK_(CLIENT_SECRET|AUTH_TOKEN)/.test(qikinkAuth + qikink) && !/console\.(log|error|warn)[\\s\\S]*QIKINK_(CLIENT_SECRET|AUTH_TOKEN)/.test(sourceText),
     evidence: ["Qikink auth/provider logging scan"],
     risk: "Secrets in logs can become durable credential leakage.",
     remediation: "Log only safe correlation and outcome metadata.",
