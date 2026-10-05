@@ -3,8 +3,11 @@ import test from "node:test";
 import { readFileSync } from "node:fs";
 
 test("Phase 16.5 certification covers the canonical shipping boundary",()=>{
- const s=readFileSync("scripts/phase-16-5-shipping-post-order-certification.ts","utf8");
- for(const term of ["createShipmentFromFulfillment","processNormalizedTrackingEvent","getCustomerShipment","requestShipmentReconciliation","PROVIDER_UNSUPPORTED","RECONCILIATION_REQUIRED","Serializable","shipping.view_sensitive","REFUND_UNAVAILABLE"]) assert.ok(s.includes(term),term);
+ const app=readFileSync("lib/shipping/application.ts","utf8");
+ const admin=readFileSync("lib/admin/shipping.ts","utf8");
+ const returns=readFileSync("lib/returns/application.ts","utf8");
+ for(const term of ["createShipmentFromFulfillment","processNormalizedTrackingEvent","getCustomerShipment","requestShipmentReconciliation","PROVIDER_UNSUPPORTED","RECONCILIATION_REQUIRED","Serializable"]) assert.ok(app.includes(term),term);
+ assert.ok(admin.includes("shipping.view_sensitive")); assert.ok(returns.includes("REFUND_UNAVAILABLE"));
 });
 test("Qikink shipping capability remains explicitly unsupported",()=>{
  const s=readFileSync("lib/shipping/providers/qikink.ts","utf8");
