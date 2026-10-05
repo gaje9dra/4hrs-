@@ -5743,6 +5743,16 @@ model DeploymentFreeze {
 
 
 model DeliveryPipeline {
+  learningOutcomes DeliveryLearningOutcome[]
+  learningObservations LearningObservation[]
+  predictionEvaluations PredictionEvaluation[]
+  decisionOutcomeEvaluations DecisionOutcomeEvaluation[]
+  learningPatterns LearningPattern[]
+  optimizationProposals OptimizationProposal[]
+  learningPolicies LearningPolicy[]
+  learningExperiments LearningExperiment[]
+  learningCertifications LearningCertification[]
+
   id String @id @default(uuid()) @db.Uuid
   stableId String @unique @db.VarChar(200)
   version Int @default(1)
@@ -6432,3 +6442,286 @@ model DeliveryDecisionMetric {
   @@index([metricKey,observedAt])
   @@index([pipelineId,metricKey,observedAt])
 }
+
+
+model DeliveryLearningOutcome {
+  id String @id @default(uuid()) @db.Uuid
+  pipelineId String @db.Uuid
+  releaseId String? @db.Uuid
+  deploymentId String? @db.Uuid
+  changeRequestId String? @db.Uuid
+  deliveryDecisionId String? @db.Uuid
+  environment String @db.VarChar(80)
+  target String @db.VarChar(255)
+  artifactVersion String? @db.VarChar(160)
+  policyVersion String? @db.VarChar(80)
+  algorithmVersion String? @db.VarChar(80)
+  expectedOutcome Json
+  actualOutcome Json
+  outcomeStatus String @db.VarChar(40)
+  customerImpact Json
+  operationalImpact Json
+  reliabilityImpact Json
+  performanceImpact Json
+  securityImpact Json
+  privacyImpact Json
+  costImpact Json
+  capacityImpact Json
+  rollbackOccurred Boolean @default(false)
+  recoveryOccurred Boolean @default(false)
+  incidentOccurred Boolean @default(false)
+  certificationStatus String @db.VarChar(40)
+  evidenceReference Json
+  startedAt DateTime?
+  completedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  idempotencyKey String @unique @db.VarChar(255)
+  pipeline DeliveryPipeline @relation(fields:[pipelineId],references:[id],onDelete:Restrict)
+  observations LearningObservation[]
+  predictionEvaluations PredictionEvaluation[]
+  decisionEvaluations DecisionOutcomeEvaluation[]
+  @@index([pipelineId,createdAt])
+  @@index([outcomeStatus,createdAt])
+  @@index([environment,createdAt])
+}
+
+model LearningObservation {
+  id String @id @default(uuid()) @db.Uuid
+  pipelineId String @db.Uuid
+  outcomeId String? @db.Uuid
+  signal String @db.VarChar(120)
+  value Json
+  source String @db.VarChar(160)
+  sourceVersion String @db.VarChar(80)
+  observedAt DateTime
+  freshness String @db.VarChar(32)
+  quality String @db.VarChar(32)
+  confidence String @db.VarChar(32)
+  scope Json
+  provenance Json
+  integrityHash String @db.VarChar(128)
+  createdAt DateTime @default(now())
+  pipeline DeliveryPipeline @relation(fields:[pipelineId],references:[id],onDelete:Restrict)
+  outcome DeliveryLearningOutcome? @relation(fields:[outcomeId],references:[id],onDelete:SetNull)
+  @@index([pipelineId,observedAt])
+  @@index([signal,observedAt])
+  @@index([quality,observedAt])
+}
+
+model PredictionEvaluation {
+  id String @id @default(uuid()) @db.Uuid
+  pipelineId String @db.Uuid
+  outcomeId String @db.Uuid
+  predictionType String @db.VarChar(100)
+  predictionValue Json
+  actualValue Json
+  error Json
+  errorClass String @db.VarChar(40)
+  confidence String @db.VarChar(32)
+  calibrationStatus String @db.VarChar(40)
+  predictionVersion String @db.VarChar(80)
+  evaluatedAt DateTime @default(now())
+  evidence Json
+  falsePositive Boolean @default(false)
+  falseNegative Boolean @default(false)
+  pipeline DeliveryPipeline @relation(fields:[pipelineId],references:[id],onDelete:Restrict)
+  outcome DeliveryLearningOutcome @relation(fields:[outcomeId],references:[id],onDelete:Restrict)
+  @@index([pipelineId,evaluatedAt])
+  @@index([predictionType,evaluatedAt])
+}
+
+model DecisionOutcomeEvaluation {
+  id String @id @default(uuid()) @db.Uuid
+  pipelineId String @db.Uuid
+  outcomeId String @db.Uuid
+  deliveryDecisionId String? @db.Uuid
+  recommendation String @db.VarChar(80)
+  expectedOutcome Json
+  actualOutcome Json
+  decisionQuality String @db.VarChar(40)
+  confidence String @db.VarChar(32)
+  falsePositive Boolean @default(false)
+  falseNegative Boolean @default(false)
+  evidence Json
+  evaluatedAt DateTime @default(now())
+  pipeline DeliveryPipeline @relation(fields:[pipelineId],references:[id],onDelete:Restrict)
+  outcome DeliveryLearningOutcome @relation(fields:[outcomeId],references:[id],onDelete:Restrict)
+  @@index([pipelineId,evaluatedAt])
+  @@index([decisionQuality,evaluatedAt])
+}
+
+model LearningPattern {
+  id String @id @default(uuid()) @db.Uuid
+  pipelineId String? @db.Uuid
+  patternType String @db.VarChar(80)
+  scope Json
+  conditions Json
+  evidenceCount Int
+  successRate Json
+  failureRate Json
+  confidence String @db.VarChar(32)
+  validityWindow Json
+  algorithmVersion String @db.VarChar(80)
+  validationStatus String @db.VarChar(40)
+  governanceStatus String @db.VarChar(40)
+  associationType String @db.VarChar(32)
+  supportingEvidence Json
+  counterEvidence Json
+  provenance Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  pipeline DeliveryPipeline? @relation(fields:[pipelineId],references:[id],onDelete:SetNull)
+  @@index([patternType,updatedAt])
+  @@index([confidence,updatedAt])
+}
+
+model OptimizationProposal {
+  id String @id @default(uuid()) @db.Uuid
+  pipelineId String? @db.Uuid
+  problem String @db.VarChar(4000)
+  evidence Json
+  currentBehavior Json
+  proposedBehavior Json
+  expectedBenefit Json
+  risk Json
+  affectedSystems Json
+  affectedPolicies Json
+  affectedCustomers Json
+  cost Json
+  validationStrategy Json
+  rollbackStrategy Json
+  simulationRequired Boolean @default(false)
+  approvalRequired Boolean @default(false)
+  safetyClass String @db.VarChar(32)
+  lifecycleState String @db.VarChar(40) @default("DRAFT")
+  policyVersion String? @db.VarChar(80)
+  algorithmVersion String @db.VarChar(80)
+  reversible Boolean @default(true)
+  evidenceConfidence String @db.VarChar(32)
+  createdBy String @db.VarChar(160)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  pipeline DeliveryPipeline? @relation(fields:[pipelineId],references:[id],onDelete:SetNull)
+  transitions LearningTransition[]
+  experiments LearningExperiment[]
+  certifications LearningCertification[]
+  @@index([lifecycleState,updatedAt])
+  @@index([safetyClass,updatedAt])
+}
+
+model LearningPolicy {
+  id String @id @default(uuid()) @db.Uuid
+  policyKey String @db.VarChar(120)
+  policyVersion String @db.VarChar(80)
+  scope Json
+  allowedSignals Json
+  prohibitedSignals Json
+  minimumEvidence Json
+  confidenceRequirements Json
+  validationRequirements Json
+  approvalRequirements Json
+  privacyConstraints Json
+  safetyConstraints Json
+  effectiveAt DateTime?
+  expiresAt DateTime?
+  status String @db.VarChar(32)
+  createdBy String @db.VarChar(160)
+  createdAt DateTime @default(now())
+  @@unique([policyKey,policyVersion])
+  @@index([policyKey,status])
+}
+
+model LearningExperiment {
+  id String @id @default(uuid()) @db.Uuid
+  pipelineId String? @db.Uuid
+  proposalId String? @db.Uuid
+  experimentKey String @db.VarChar(160)
+  mode String @db.VarChar(32)
+  hypothesis String @db.VarChar(4000)
+  baseline Json
+  treatment Json
+  scope Json
+  cohort Json
+  exposure Json
+  metrics Json
+  successCriteria Json
+  stopConditions Json
+  safetyConditions Json
+  results Json?
+  lifecycleState String @db.VarChar(40) @default("DRAFT")
+  approved Boolean @default(false)
+  expiresAt DateTime
+  createdBy String @db.VarChar(160)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  pipeline DeliveryPipeline? @relation(fields:[pipelineId],references:[id],onDelete:SetNull)
+  proposal OptimizationProposal? @relation(fields:[proposalId],references:[id],onDelete:SetNull)
+  @@unique([experimentKey])
+  @@index([lifecycleState,expiresAt])
+}
+
+model LearningCertification {
+  id String @id @default(uuid()) @db.Uuid
+  pipelineId String? @db.Uuid
+  proposalId String? @db.Uuid
+  status String @db.VarChar(40)
+  implementationStatus String @db.VarChar(40)
+  testStatus String @db.VarChar(40)
+  securityStatus String @db.VarChar(40)
+  privacyStatus String @db.VarChar(40)
+  dataIntegrityStatus String @db.VarChar(40)
+  operationalStatus String @db.VarChar(40)
+  governanceStatus String @db.VarChar(40)
+  documentationStatus String @db.VarChar(40)
+  evidence Json
+  knownLimitations Json
+  unresolvedRisks Json
+  rollbackReadiness Json
+  policyVersion String @db.VarChar(80)
+  algorithmVersion String @db.VarChar(80)
+  immutable Boolean @default(true)
+  certifiedAt DateTime @default(now())
+  pipeline DeliveryPipeline? @relation(fields:[pipelineId],references:[id],onDelete:SetNull)
+  proposal OptimizationProposal? @relation(fields:[proposalId],references:[id],onDelete:SetNull)
+  @@index([status,certifiedAt])
+}
+
+model LearningTransition {
+  id String @id @default(uuid()) @db.Uuid
+  proposalId String? @db.Uuid
+  outcomeId String? @db.Uuid
+  fromState String @db.VarChar(40)
+  toState String @db.VarChar(40)
+  actor String @db.VarChar(160)
+  reason String @db.VarChar(2000)
+  evidence Json
+  createdAt DateTime @default(now())
+  proposal OptimizationProposal? @relation(fields:[proposalId],references:[id],onDelete:Restrict)
+  outcome DeliveryLearningOutcome? @relation(fields:[outcomeId],references:[id],onDelete:Restrict)
+  @@index([proposalId,createdAt])
+  @@index([outcomeId,createdAt])
+}
+
+model SignalQualityEvaluation {
+  id String @id @default(uuid()) @db.Uuid
+  pipelineId String @db.Uuid
+  signal String @db.VarChar(120)
+  freshnessScore Json
+  completenessScore Json
+  consistencyScore Json
+  stabilityScore Json
+  historicalUsefulness Json
+  predictiveUsefulness Json
+  noise Json
+  sourceReliability Json
+  provenance Json
+  version String @db.VarChar(80)
+  status String @db.VarChar(32)
+  evidence Json
+  evaluatedAt DateTime @default(now())
+  pipeline DeliveryPipeline @relation(fields:[pipelineId],references:[id],onDelete:Restrict)
+  @@index([signal,evaluatedAt])
+  @@index([status,evaluatedAt])
+}
+
