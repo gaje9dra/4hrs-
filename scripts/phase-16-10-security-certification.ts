@@ -175,7 +175,7 @@ async function main() {
   if (customerMissing.length) fail("SEC-029","HIGH","Customer Isolation","Customer-sensitive routes lack a visible canonical identity/application boundary.",customerMissing.map(r=>r.path).join(", "),"Enforce customer identity and ownership at the service boundary.");
   else pass("SEC-029","Customer Isolation","Customer-sensitive APIs expose the established canonical identity/application boundary.",customer.length + " handlers inspected.");
 
-  const mass = runtimeRecords.filter(r=>/\.create\(\{\s*data:\s*(body|payload|input|json)|\.update\(\{\s*data:\s*(body|payload|input|json)/s.test(r.text));
+  const mass = runtimeRecords.filter(r=>/\.create\(\{\s*data:\s*(body|payload|input|json)|\.update\(\{\s*data:\s*(body|payload|input|json)/.test(r.text));
   if (mass.length) fail("SEC-030","HIGH","Mass Assignment","A runtime database write appears to pass an entire request object into data.",mass.map(r=>r.path).join(", "),"Map request fields through explicit allowlists.");
   else pass("SEC-030","Mass Assignment","No direct request-object-to-Prisma data mapping pattern was detected.","Runtime scan.");
 
