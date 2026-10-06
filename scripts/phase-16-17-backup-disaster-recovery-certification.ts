@@ -77,7 +77,8 @@ async function main(): Promise<void> {
   ]);
   requireText("CI recovery drill", files.ci, [
     "recovery-drill:",
-    "npm run recovery:drill",
+    "production-certification:phase-16-17",
+    "RUN_PHASE_16_17_RECOVERY_DRILL",
   ]);
 
   if (/prisma migrate reset|prisma db push/i.test(files.recoveryDrill + files.runbook)) {
