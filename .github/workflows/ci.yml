@@ -378,5 +378,16 @@ jobs:
         run: npx prisma validate
       - name: Apply migrations
         run: npx prisma migrate deploy
-      - name: Run non-production backup restore drill
-        run: npm run recovery:drill
+      - name: Run Phase 16.17 backup and disaster recovery certification
+        env:
+          RUN_PHASE_16_17_RECOVERY_DRILL: "true"
+        run: npm run production-certification:phase-16-17
+
+      - name: Upload Phase 16.17 recovery evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase-16-17-backup-disaster-recovery-evidence
+          path: |
+            artifacts/phase-16-17-backup-disaster-recovery-certification-evidence.json
+            artifacts/phase-16-17-recovery-drill-evidence.json
+          if-no-files-found: error
