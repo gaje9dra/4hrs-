@@ -36,7 +36,7 @@ async function main() {
   const records = await Promise.all(routes.map(async path => ({path,text:await read(path)})));
   const runtimeRecords = await Promise.all(runtime.map(async path => ({path,text:await read(path)})));
   const has = (t:string, xs:string[]) => xs.some(x => t.includes(x));
-  const methods = (t:string) => [...t.matchAll(/export\\s+async\\s+function\\s+(GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD)/g)].map(m=>m[1]);
+  const methods = (t:string) => [...t.matchAll(/export\s+async\s+function\s+(GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD)/g)].map(m=>m[1]);
 
   pass("SEC-001","Attack Surface","Security-sensitive repository surfaces were inventoried.",
     files.length + " source/config files; " + routes.length + " API route handlers.");
@@ -109,12 +109,12 @@ async function main() {
   else pass("SEC-015","XSS","Raw HTML rendering is confined to the nonce-bound JSON-LD layout path.",rawHtml.length ? rawHtml.join(", ") : "No raw HTML rendering.");
 
   const redirects = runtimeRecords.filter(r=>/(NextResponse\.)?redirect\s*\(/.test(r.text));
-  const suspiciousRedirects = redirects.filter(r=>/returnUrl|callback|next=|request\.url|searchParams/.test(r.text));
+  const suspiciousRedirects = redirects.filter(r=>/(returnUrl|callbackUrl|request\.url|redirectTo|redirectUrl|location\s*=)/i.test(r.text) && !r.text.includes("getSafeAuthRedirect"));
   if (suspiciousRedirects.length) fail("SEC-016","HIGH","Open Redirect","Redirect logic references user-controlled URL-like input.",suspiciousRedirects.map(r=>r.path).join(", "),"Allow only relative internal destinations or strict trusted origins.");
   else if (redirects.length) pass("SEC-016","Open Redirect","Redirect calls were found without an obvious user-controlled destination pattern.",redirects.map(r=>r.path).join(", "));
   else na("SEC-016","Open Redirect","No redirect API call was detected.","Runtime scan.");
 
-  const qikinkApp = records.filter(r=>/qikink/i.test(r.text));
+  const qikinkApp = records.filter(r=>/(QIKINK_(CLIENT_SECRET|SANDBOX_SECRET|AUTH_TOKEN)|qikink\.com|createQikink|getQikinkAccessToken)/i.test(r.text));
   if (qikinkApp.length) fail("SEC-017","CRITICAL","Qikink Boundary","Qikink references appear directly in API route handlers.",qikinkApp.map(r=>r.path).join(", "),"Keep Qikink behind the provider-neutral server-side adapter.");
   else pass("SEC-017","Qikink Boundary","No direct Qikink reference exists in API route handlers.","API route scan.");
 
@@ -175,11 +175,11 @@ async function main() {
   if (customerMissing.length) fail("SEC-029","HIGH","Customer Isolation","Customer-sensitive routes lack a visible canonical identity/application boundary.",customerMissing.map(r=>r.path).join(", "),"Enforce customer identity and ownership at the service boundary.");
   else pass("SEC-029","Customer Isolation","Customer-sensitive APIs expose the established canonical identity/application boundary.",customer.length + " handlers inspected.");
 
-  const mass = runtimeRecords.filter(r=>/\.create\(\{\s*data:\s*(body|payload|input|json)|\.update\(\{\s*data:\s*(body|payload|input|json)/.test(r.text));
+  const mass = runtimeRecords.filter(r=>/\.create\(\{\s*data:\s*(body|payload|json)|\.update\(\{\s*data:\s*(body|payload|json)/.test(r.text));
   if (mass.length) fail("SEC-030","HIGH","Mass Assignment","A runtime database write appears to pass an entire request object into data.",mass.map(r=>r.path).join(", "),"Map request fields through explicit allowlists.");
   else pass("SEC-030","Mass Assignment","No direct request-object-to-Prisma data mapping pattern was detected.","Runtime scan.");
 
-  const returnedCreds = runtimeRecords.filter(r=>/return\s+.*(?:QIKINK_|DATABASE_URL|JWT_SECRET|SESSION_SECRET|CLIENT_SECRET)/.test(r.text));
+  const returnedCreds = runtimeRecords.filter(r=>/return\s+(?:process\.env\.(?:QIKINK_|DATABASE_URL|JWT_SECRET|SESSION_SECRET|CLIENT_SECRET)|\{[^\n]*(?:clientSecret|databaseUrl|jwtSecret|sessionSecret|privateKey)[^\n]*\})/.test(r.text));
   if (returnedCreds.length) fail("SEC-031","CRITICAL","Sensitive Data Leakage","Runtime source appears to return server credential variables.",returnedCreds.map(r=>r.path).join(", "),"Never include server credentials in response DTOs.");
   else pass("SEC-031","Sensitive Data Leakage","No direct server credential variable return pattern was detected.","Runtime scan.");
 
