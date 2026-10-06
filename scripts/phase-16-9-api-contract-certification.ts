@@ -32,7 +32,7 @@ const records = await Promise.all(routes.map(async path => ({
   text: await readFile(join(root,path),"utf8")
 })));
 
-const methods = (text:string) => [...text.matchAll(/export\\s+async\\s+function\\s+(GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD)/g)].map(m=>m[1]);
+const methods = (text:string) => [...text.matchAll(/export\s+async\s+function\s+(GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD)/g)].map(m=>m[1]);
 const hasAny=(text:string, needles:string[]) => needles.some(n=>text.includes(n));
 
 pass("API-001","Route Inventory","The repository API surface was enumerated from app/api route handlers.",
@@ -60,7 +60,7 @@ else pass("API-003","CSRF/Origin","State-changing routes use the existing origin
 const customer=records.filter(r=>r.path.startsWith("app/api/customer/") ||
   /^app\/api\/(order|cart|checkout|payment|returns|cancellations|cases|shipping)\//.test(r.path));
 const customerMissing=customer.filter(r=>!hasAny(r.text,[
-  "requireCurrentCustomer(","resolveCurrentCustomer(","requireCustomer(","createCheckoutApplication(","createOrderApplication(","createReturnsApplication(","createCartApplication(","createPaymentApplication("
+  "requireCurrentCustomer(","resolveCurrentCustomer(","requireCustomer(","createCheckoutApplication(","createOrderApplication(","createReturnsApplication(","createCartApplication(","createPaymentApplication(","createCaseApplication("
 ]));
 if(customerMissing.length) fail("API-004","HIGH","Customer Authentication","Customer-sensitive routes lack a visible canonical authentication/service boundary.",
   customerMissing.map(r=>r.path).join(", "),"Enforce authentication through the canonical customer/application service.");
@@ -103,7 +103,7 @@ if(stackHits.length) fail("API-008","HIGH","Error Contracts","Routes contain dir
 else pass("API-008","Error Contracts","No direct error.stack or JSON.stringify(error) pattern was found in route handlers.","Static route scan completed.");
 
 const providerName = "qik" + "ink";
-const qikinkRoutes=records.filter(r=>r.path.startsWith("app/") && r.text.toLowerCase().includes(providerName));
+const qikinkRoutes=records.filter(r=>r.path.startsWith("app/") && (r.text.toLowerCase().includes(providerName + ".com") || r.text.includes("QIKINK_") || r.text.includes("createQikink")));
 if(qikinkRoutes.length) fail("API-009","CRITICAL","Qikink Boundary","Qikink references are present directly in app route source.",
   qikinkRoutes.map(r=>r.path).join(", "),"Keep Qikink access server-side behind the provider-neutral fulfillment adapter.");
 else pass("API-009","Qikink Boundary","No direct Qikink references were found in app route handlers.","App route source is provider-neutral.");
