@@ -26,7 +26,7 @@ function pass(id: string, title: string, evidence: string) { add(id, "INFORMATIO
 async function main() {
   const files = await walk(".");
   const pkg = JSON.parse(await read("package.json")) as { scripts?: Record<string, string>; dependencies?: Record<string, string>; devDependencies?: Record<string, string> };
-  const [logger, redaction, metrics, request, errors, security, proxy, instrumentation, health, readiness, operations, reliabilityService, reliabilityChecks, reliabilityIncidents, reliabilityModel, ci] =
+  const [logger, redaction, metrics, request, errors, security, proxy, instrumentation, health, readiness, databaseHealth, operations, reliabilityService, reliabilityChecks, reliabilityIncidents, reliabilityModel, ci] =
     await Promise.all([
       read("lib/observability/logger.ts"),
       read("lib/observability/redaction.ts"),
@@ -38,6 +38,7 @@ async function main() {
       read("instrumentation.ts"),
       read("app/api/health/route.ts"),
       read("app/api/health/readiness/route.ts"),
+      read("lib/observability/health.ts"),
       read("lib/operations/service.ts"),
       read("lib/reliability/service.ts"),
       read("lib/reliability/checks.ts"),
@@ -70,10 +71,10 @@ async function main() {
   if (/http_requests_total/.test(metrics) && /http_request_errors_total/.test(metrics) && /http_request_duration_ms/.test(metrics) && /db_query_duration_ms/.test(metrics)) pass("OBS-008", "Golden-signal metric vocabulary", "Traffic, errors, latency and database timing are represented in the existing metric contract.");
   else add("OBS-008", "HIGH", "FAIL", "Golden-signal metric vocabulary", "Core golden-signal metric vocabulary is incomplete.");
 
-  if (/checkDatabaseHealth/.test(health) && /SELECT 1/.test(health) && /timeoutMs/.test(health)) pass("OBS-009", "Database health", "Database liveness/readiness uses a bounded SELECT 1 probe and exposes only safe status/latency.");
+  if (/checkDatabaseHealth/.test(databaseHealth) && /SELECT 1/.test(databaseHealth) && /timeoutMs/.test(databaseHealth)) pass("OBS-009", "Database health", "Database liveness/readiness uses a bounded SELECT 1 probe and exposes only safe status/latency.");
   else add("OBS-009", "HIGH", "FAIL", "Database health", "Database health telemetry is incomplete.");
 
-  if (/status: ready/.test(readiness) && /status: 503/.test(readiness) && /checkDatabaseHealth/.test(readiness)) pass("OBS-010", "Readiness boundary", "A database-backed readiness endpoint now distinguishes process health from dependency readiness.");
+  if (/status: ready/.test(readiness) && /\? 200 : 503/.test(readiness) && /checkDatabaseHealth/.test(readiness)) pass("OBS-010", "Readiness boundary", "A database-backed readiness endpoint now distinguishes process health from dependency readiness.");
   else add("OBS-010", "HIGH", "FAIL", "Readiness boundary", "Readiness semantics are incomplete.");
 
   if (/recordReliabilityFindings/.test(reliabilityService) && /shouldEmitAlert/.test(reliabilityService) && /reliability\.alert/.test(reliabilityService) && /reliability_alerts_total/.test(reliabilityService)) pass("OBS-011", "Actionable incident alerts", "Existing reliability incidents persist, deduplicate alerts, emit operational alert telemetry and expose incident state through the admin operations surface.");
