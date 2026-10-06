@@ -5,6 +5,7 @@ export type TelemetryActorType = "customer" | "admin" | "system" | "anonymous";
 export type LogContext = Readonly<{ requestId?: string | null; correlationId?: string | null; operationId?: string | null; actorType?: TelemetryActorType; actorId?: string | null; resourceType?: string | null; resourceId?: string | null; provider?: string | null; durationMs?: number | null; outcome?: "success" | "failure" | "timeout" | "rejected"; errorCode?: string | null }>;
 
 function write(severity: LogSeverity, event: string, context: LogContext = {}, data?: unknown): void {
+  if (severity === "debug" && process.env.NODE_ENV === "production") return;
   try {
     const record = {
       timestamp: new Date().toISOString(),
