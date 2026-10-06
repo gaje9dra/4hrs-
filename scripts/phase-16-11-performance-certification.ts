@@ -1,7 +1,7 @@
-import assert from "node:assert/strict";
 import { readdir, readFile, stat, writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 
+type RuntimeSample = { errors?: number; p95Ms?: number | null; };
 type Finding = { id: string; severity: "CRITICAL"|"HIGH"|"MEDIUM"|"LOW"|"INFORMATIONAL"; title: string; status: "PASS"|"FAIL"|"NOT_APPLICABLE"|"UNAVAILABLE"; evidence: string; };
 
 const root = process.cwd();
@@ -51,7 +51,6 @@ async function benchmarkEndpoint(baseUrl: string, endpoint: string, requests: nu
     }
   }
   await Promise.all(Array.from({ length: Math.min(concurrency, requests) }, () => worker()));
-  const totalSeconds = (durations.reduce((a,b)=>a+b,0) / Math.max(1,durations.length)) * durations.length / 1000;
   return {
     requests,
     concurrency,
@@ -68,8 +67,8 @@ async function benchmarkEndpoint(baseUrl: string, endpoint: string, requests: nu
 const files = await walk(".");
 const routes = files.filter(p => p.startsWith("app/") && /(?:^|\/)route\.ts$/.test(p));
 const pages = files.filter(p => p.startsWith("app/") && /(?:^|\/)(page|loading|error|not-found)\.tsx?$/.test(p));
-const clientComponents = files.filter(p => /\.(tsx|ts|jsx|js)$/.test(p)).filter(async () => false);
-const clientCount = (await Promise.all(files.filter(p => /\.(tsx|ts)$/.test(p)).map(async p => (await text(p)).startsWith('"use client"') || (await text(p)).startsWith("'use client'") ? 1 : 0))).reduce((a,b)=>a+b,0);
+let clientCount = 0;
+for (const file of files.filter(p => /\.(tsx|ts)$/.test(p))) { const source = await text(file); if (source.startsWith('"use client"') || source.startsWith("'use client'")) clientCount++; }
 
 const schema = await text("prisma/schema.prisma");
 const modelCount = (schema.match(/^model\s+/gm) ?? []).length;
@@ -131,7 +130,7 @@ let existingRuntimeEvidence: Record<string, unknown> | null = null;
 try { existingRuntimeEvidence = JSON.parse(await readFile(benchmarkArtifact, "utf8")) as Record<string, unknown>; } catch {}
 if (existingRuntimeEvidence) {
   runtimeEvidence.runtimeBenchmark = existingRuntimeEvidence;
-  const samples = Array.isArray(existingRuntimeEvidence.scenarios) ? existingRuntimeEvidence.scenarios as Array<Record<string, any>> : [];
+  const samples = Array.isArray(existingRuntimeEvidence.scenarios) ? existingRuntimeEvidence.scenarios as RuntimeSample[] : [];
   const failed = samples.filter(x => Number(x.errors ?? 0) > 0 || Number(x.p95Ms ?? 999999) > 5000);
   finding("PERF-012","HIGH","Controlled runtime latency evidence",failed.length === 0 ? "PASS" : "FAIL",`CI benchmark samples=${samples.length}; scenarios with errors or p95 > 5000ms=${failed.length}; environment is isolated CI, not production.`);
 } else if (!baseUrl) {
@@ -151,7 +150,7 @@ if (existingRuntimeEvidence) {
     }
   }
   runtimeEvidence.runtime = results;
-  const all = Object.values(results).flatMap(v=>Object.values(v as Record<string,any>)) as any[];
+  const all: RuntimeSample[] = Object.values(results).flatMap(v=>Object.values(v as Record<string, RuntimeSample>));
   const failed = all.filter(x=>x.errorRate > 0 || (x.p95Ms ?? 999999) > 5000);
   finding("PERF-012","HIGH","Controlled runtime latency evidence",failed.length === 0 ? "PASS" : "FAIL",`local CI runtime scenarios=${all.length}; scenarios with errors or p95 > 5000ms=${failed.length}. This is a controlled CI environment, not production field data.`);
 }
