@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";\nimport { execFileSync } from "node:child_process";
 import { join } from "node:path";
 
 type Finding = Readonly<{
