@@ -64,6 +64,7 @@ async function benchmarkEndpoint(baseUrl: string, endpoint: string, requests: nu
   };
 }
 
+async function main() {
 const files = await walk(".");
 const routes = files.filter(p => p.startsWith("app/") && /(?:^|\/)route\.ts$/.test(p));
 const pages = files.filter(p => p.startsWith("app/") && /(?:^|\/)(page|loading|error|not-found)\.tsx?$/.test(p));
@@ -175,3 +176,7 @@ const hard = report.findings.filter(x=>x.status==="FAIL" && (x.severity==="CRITI
 const unavailable = report.findings.filter(x=>x.status==="UNAVAILABLE" && x.severity==="HIGH");
 console.log(JSON.stringify(report.certification));
 if (hard.length || unavailable.length) process.exit(1);
+
+}
+
+main().catch((error) => { console.error(error); process.exit(1); });
