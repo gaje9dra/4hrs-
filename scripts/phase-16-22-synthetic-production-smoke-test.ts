@@ -19,9 +19,14 @@ type Result = {
 };
 
 const baseUrl = (process.env.PHASE_16_22_BASE_URL ?? "http://127.0.0.1:3000").replace(/\/$/, "");
+const target = new URL(baseUrl);
+if (!["localhost", "127.0.0.1"].includes(target.hostname) || process.env.PHASE_16_22_ALLOW_LOCAL_SYNTHETIC !== "true") {
+  throw new Error("Phase 16.22 mutation-capable smoke fixture execution is restricted to an explicitly allowlisted local CI target.");
+}
 const runId = process.env.PHASE_16_22_RUN_ID ?? `phase-16-22-${Date.now()}-${randomUUID().slice(0,8)}`;
 const results: Result[] = [];
 const syntheticCreated: string[] = [];
+const syntheticCategoryCreated: string[] = [];
 
 function add(result: Result) { results.push(result); }
 function safeBody(body: string) {
@@ -51,12 +56,23 @@ async function http(id: string, domain: string, path: string, expected: string, 
 }
 
 async function prepareSyntheticCatalog() {
+  let categoryId: string | null = null;
   const existing = await db.product.findFirst({
     where: { status: "ACTIVE", variants: { some: { status: "ACTIVE" } } },
     select: { id: true, slug: true, variants: { where: { status: "ACTIVE" }, take: 1, select: { id: true } } },
     orderBy: { updatedAt: "desc" },
   });
-  if (existing?.variants[0]) return { productId: existing.id, slug: existing.slug, variantId: existing.variants[0].id, created: false };
+  if (existing?.variants[0]) {
+    const linked = await db.productCategory.findFirst({ where: { productId: existing.id, category: { status: "ACTIVE" } }, select: { categoryId: true } });
+    if (linked) categoryId = linked.categoryId;
+    if (!categoryId) {
+      const category = await db.category.create({ data: { name: "4HRS+ Synthetic Smoke Category", slug: `phase-16-22-smoke-category-${randomUUID().replaceAll("-", "")}`, status: "ACTIVE" } });
+      await db.productCategory.create({ data: { productId: existing.id, categoryId: category.id } });
+      syntheticCategoryCreated.push(category.id);
+      categoryId = category.id;
+    }
+    return { productId: existing.id, slug: existing.slug, variantId: existing.variants[0].id, categoryId, created: false };
+  }
 
   const suffix = randomUUID().replaceAll("-", "");
   const product = await db.product.create({
@@ -207,11 +223,6 @@ async function main() {
   await mkdir("artifacts", { recursive: true });
   await writeFile("artifacts/phase-16-22-synthetic-production-smoke-test.json", JSON.stringify(report, null, 2) + "\n");
 
-  if (syntheticCreated.length) {
-    await db.productVariant.deleteMany({ where: { productId: { in: syntheticCreated } } });
-    await db.product.deleteMany({ where: { id: { in: syntheticCreated } } });
-  }
-
   console.log(JSON.stringify(report, null, 2));
   if (criticalFailures.length || highFailures.length) process.exitCode = 1;
 }
@@ -219,4 +230,13 @@ async function main() {
 main().catch(async error => {
   console.error(error instanceof Error ? error.stack : error);
   process.exitCode = 1;
+}).finally(async () => {
+  if (syntheticCreated.length) {
+    await db.productCategory.deleteMany({ where: { productId: { in: syntheticCreated } } }).catch(() => undefined);
+    await db.productVariant.deleteMany({ where: { productId: { in: syntheticCreated } } }).catch(() => undefined);
+    await db.product.deleteMany({ where: { id: { in: syntheticCreated } } }).catch(() => undefined);
+  }
+  if (syntheticCategoryCreated.length) {
+    await db.category.deleteMany({ where: { id: { in: syntheticCategoryCreated } } }).catch(() => undefined);
+  }
 });
