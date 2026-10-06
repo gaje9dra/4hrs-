@@ -25,15 +25,15 @@ function contentSecurityPolicy(nonce: string): string {
 
 export function proxy(request: NextRequest) {
   const nonce = Buffer.from(globalThis.crypto.randomUUID()).toString("base64");
-  const csp = contentSecurityPolicy(nonce);
+  const csp = process.env.NODE_ENV === "production" ? contentSecurityPolicy(nonce) : null;
   const requestId = resolveRequestId(request.headers.get(REQUEST_ID_HEADER));
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-nonce", nonce);
   requestHeaders.set(REQUEST_ID_HEADER, requestId);
-  requestHeaders.set("Content-Security-Policy", csp);
+  if (csp) requestHeaders.set("Content-Security-Policy", csp);
 
   const response = NextResponse.next({ request: { headers: requestHeaders } });
-  response.headers.set("Content-Security-Policy", csp);
+  if (csp) response.headers.set("Content-Security-Policy", csp);
   response.headers.set(REQUEST_ID_HEADER, requestId);
   return response;
 }
