@@ -151,7 +151,7 @@ if (existingRuntimeEvidence) {
   }
   runtimeEvidence.runtime = results;
   const all: RuntimeSample[] = Object.values(results).flatMap(v=>Object.values(v as Record<string, RuntimeSample>));
-  const failed = all.filter(x=>x.errorRate > 0 || (x.p95Ms ?? 999999) > 5000);
+  const failed = all.filter(x=>(x.errorRate ?? 1) > 0 || (x.p95Ms ?? 999999) > 5000);
   finding("PERF-012","HIGH","Controlled runtime latency evidence",failed.length === 0 ? "PASS" : "FAIL",`local CI runtime scenarios=${all.length}; scenarios with errors or p95 > 5000ms=${failed.length}. This is a controlled CI environment, not production field data.`);
 }
 
