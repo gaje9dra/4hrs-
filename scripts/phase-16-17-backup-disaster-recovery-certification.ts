@@ -59,7 +59,7 @@ async function main(): Promise<void> {
     "recordAdminAudit",
   ]);
   requireText("recovery documentation", files.phase15, [
-    "managed database provider",
+    "managed PostgreSQL provider",
     "No fixed RPO/RTO guarantee",
     "Qikink remains fulfillment-only",
     "Provider systems are reconciliation sources",
