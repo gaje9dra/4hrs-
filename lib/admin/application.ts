@@ -6,7 +6,6 @@ import { auditAdminAction } from "@/lib/admin/audit";
 import { requireHighRiskReason, type AdminAuthorizationContext } from "@/lib/admin/authorization";
 import { isAdminRoleName, type AdminRoleName } from "@/lib/admin/permissions";
 import type { AdminAuditDto, AdminUserDto } from "@/lib/admin/contracts";
-import { isPermanentSuperAdminEmail } from "@/lib/admin/protected";
 
 function parseRoles(value: unknown): AdminRoleName[] {
   if (!Array.isArray(value) || value.length > 4 || value.some((role) => !isAdminRoleName(role))) throw new AdminError("INVALID_REQUEST", "Roles are invalid.");
@@ -37,9 +36,7 @@ export async function createAdminUser(context: AdminAuthorizationContext, input:
   const reason = requireHighRiskReason(input.reason);
   const email = input.email.trim().toLowerCase();
   if (!email || email.length > 320 || !/^\S+@\S+\.\S+$/.test(email)) throw new AdminError("INVALID_REQUEST", "Administrator email is invalid.");
-  const permanentSuperAdmin = isPermanentSuperAdminEmail(email);
-  if (permanentSuperAdmin && !isSuper(context)) throw new AdminError("FORBIDDEN", "Only a super administrator can provision the permanent super administrator account.");
-  const roles = permanentSuperAdmin ? ["SUPER_ADMIN"] as AdminRoleName[] : input.roles === undefined ? ["VIEWER"] as AdminRoleName[] : parseRoles(input.roles);
+  const roles = input.roles === undefined ? ["VIEWER"] as AdminRoleName[] : parseRoles(input.roles);
   if (roles.length === 0) throw new AdminError("INVALID_REQUEST", "At least one role is required.");
   if (roles.includes("SUPER_ADMIN") && !isSuper(context)) throw new AdminError("FORBIDDEN", "Only a super administrator can grant super-administrator access.");
   if (roles.length > 0 && input.reason !== undefined && typeof input.reason !== "string") throw new AdminError("INVALID_REQUEST", "Reason is invalid.");
@@ -67,7 +64,6 @@ export async function updateAdminUser(context: AdminAuthorizationContext, input:
   return db.$transaction(async tx => {
     const current = await tx.adminUser.findUnique({ where: { id: input.id }, include: { customer: { select: { email: true } }, roles: { include: { role: true } } } });
     if (!current) throw new AdminError("NOT_FOUND", "Administrator was not found.");
-    if (isPermanentSuperAdminEmail(current.customer.email)) throw new AdminError("FORBIDDEN", "The permanent super administrator account cannot be modified.");
     const currentRoles = new Set(current.roles.map((x) => x.role.name));
     if (currentRoles.has("SUPER_ADMIN") && !isSuper(context)) throw new AdminError("FORBIDDEN", "Super-administrator accounts require super-administrator authorization.");
     if (roles && currentRoles.has("SUPER_ADMIN") && !roles.includes("SUPER_ADMIN")) {

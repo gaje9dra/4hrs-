@@ -1,0 +1,9 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import fs from "node:fs";
+const read=(p:string)=>fs.readFileSync(p,"utf8");
+test("database-backed admin RBAC is canonical",()=>{const a=read("lib/admin/authorization.ts"),p=read("lib/admin/permissions.ts");assert.match(a,/requireCurrentCustomer/);assert.match(a,/admin\.roles/);assert.match(a,/role\.permissions/);assert.doesNotMatch(a,/isPermanentSuperAdminEmail/);assert.match(p,/HIGH_RISK_ADMIN_PERMISSIONS/);});
+test("no hardcoded privileged identity remains",()=>{for(const f of ["lib/admin/authorization.ts","lib/admin/application.ts","scripts/provision-admin.ts","lib/admin/protected.ts"])assert.doesNotMatch(read(f),/gaje9dra@gmail\.com|PERMANENT_SUPER_ADMIN_EMAIL/);});
+test("privileged commerce services enforce permissions and audit",()=>{for(const f of ["lib/admin/payments.ts","lib/admin/fulfillment.ts","lib/admin/shipping.ts","lib/admin/orders.ts"]){assert.match(read(f),/requirePermission/);assert.match(read(f),/auditAdminAction/);}assert.match(read("lib/admin/payments.ts"),/idempotencyKey/);});
+test("admin role mutation prevents escalation and races",()=>{const s=read("lib/admin/application.ts");assert.match(s,/roles\?\.includes\("SUPER_ADMIN"\) && !isSuper/);assert.match(s,/expectedVersion/);assert.match(s,/Serializable/);assert.match(s,/Administrators cannot modify their own authorization or status/);});
+test("audit metadata is bounded and secret-safe",()=>{const s=read("lib/admin/audit.ts");assert.match(s,/MAX_METADATA_BYTES/);assert.match(s,/password\|hash\|secret\|token/);assert.match(s,/slice\(0, 50\)/);});
