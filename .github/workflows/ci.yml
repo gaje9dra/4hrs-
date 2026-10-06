@@ -169,17 +169,19 @@ jobs:
       - name: Run Phase 16.13 SEO certification
         run: npm run production-certification:phase-16-13
 
-      - name: Run Phase 16.14 observability certification
-        run: npm run production-certification:phase-16-14
-
       - name: Run Phase 16.14 safe incident drill
         run: npm run observability:incident-drill
+
+      - name: Run Phase 16.14 observability certification
+        run: npm run production-certification:phase-16-14
 
       - name: Upload Phase 16.14 observability certification evidence
         uses: actions/upload-artifact@v4
         with:
           name: phase-16-14-observability-certification-evidence
-          path: artifacts/phase-16-14-observability-certification-evidence.json
+          path: |
+            artifacts/phase-16-14-observability-certification-evidence.json
+            artifacts/phase-16-14-incident-drill-evidence.json
           if-no-files-found: error
 
       - name: Upload Phase 16.13 SEO certification evidence
