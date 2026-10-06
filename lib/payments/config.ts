@@ -8,16 +8,32 @@ export type PaymentProviderConfigurationSource={
  providerId?:string; enabled?:string; mode?:string; publicKey?:string;
  secretReference?:string; webhookSecretReference?:string; timeoutMs?:string;
 };
-function bool(v:string|undefined,fallback:boolean){return v===undefined?fallback:/^(1|true)$/i.test(v)}
-function mode(v:string|undefined):"test"|"live"{return v==="live"?"live":"test"}
-function timeout(v:string|undefined){const n=v===undefined?10000:Number(v);return Number.isSafeInteger(n)&&n>=1000&&n<=120000?n:10000}
+function bool(v:string|undefined,fallback:boolean){
+ if(v===undefined)return fallback;
+ if(/^(1|true)$/i.test(v))return true;
+ if(/^(0|false)$/i.test(v))return false;
+ throw new Error("Payment provider enabled flag must be true or false.");
+}
+function mode(v:string|undefined):"test"|"live"{
+ if(v===undefined||v==="test")return "test";
+ if(v==="live")return "live";
+ throw new Error("Payment provider mode must be test or live.");
+}
+function timeout(v:string|undefined){
+ if(v===undefined)return 10000;
+ const n=Number(v);
+ if(!Number.isSafeInteger(n)||n<1000||n>120000)throw new Error("Payment provider timeout must be an integer from 1000 to 120000 ms.");
+ return n;
+}
 export function loadPaymentProviderConfiguration(source:PaymentProviderConfigurationSource={
  providerId:process.env.PAYMENT_PROVIDER_ID,enabled:process.env.PAYMENT_PROVIDER_ENABLED,mode:process.env.PAYMENT_PROVIDER_MODE,
  publicKey:process.env.PAYMENT_PROVIDER_PUBLIC_KEY,secretReference:process.env.PAYMENT_PROVIDER_SECRET_REFERENCE,
  webhookSecretReference:process.env.PAYMENT_PROVIDER_WEBHOOK_SECRET_REFERENCE,timeoutMs:process.env.PAYMENT_PROVIDER_TIMEOUT_MS,
 }):PaymentProviderConfiguration|null{
- const id=source.providerId?.trim().toLowerCase()??"";
- if(!id||!PROVIDER_ID_PATTERN.test(id))return null;
+ const rawId=source.providerId?.trim()??"";
+ if(!rawId)return null;
+ const id=rawId.toLowerCase();
+ if(!PROVIDER_ID_PATTERN.test(id))throw new Error("Payment provider id is invalid.");
  return {id,enabled:bool(source.enabled,false),mode:mode(source.mode),publicKey:source.publicKey?.trim()||null,
   secretReference:source.secretReference?.trim()||null,webhookSecretReference:source.webhookSecretReference?.trim()||null,
   timeoutMs:timeout(source.timeoutMs),capabilities:{}};

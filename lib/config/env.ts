@@ -1,3 +1,6 @@
+import { loadPaymentProviderConfiguration, assertPrivatePaymentConfiguration } from "@/lib/payments/config";
+import { loadFulfillmentProviderConfiguration, assertPrivateFulfillmentConfiguration } from "@/lib/fulfillment/config";
+
 export type EnvironmentName = "development" | "test" | "preview" | "production";
 
 export type ServerEnvironment = Readonly<{
@@ -48,6 +51,34 @@ function productionSiteUrl(value = process.env.NEXT_PUBLIC_SITE_URL): string | n
   }
 }
 
+function validateProviderConfiguration(nodeEnv: EnvironmentName): void {
+  const fulfillment = loadFulfillmentProviderConfiguration();
+  if (fulfillment) {
+    assertPrivateFulfillmentConfiguration(fulfillment);
+
+    if (nodeEnv === "production" && fulfillment.enabled && fulfillment.mode !== "live") {
+      throw new Error("FULFILLMENT_PROVIDER_MODE must be live when fulfillment is enabled in production.");
+    }
+
+    if (nodeEnv === "production" && fulfillment.enabled && fulfillment.id !== "qikink") {
+      throw new Error(`Unsupported production fulfillment provider: ${fulfillment.id}.`);
+    }
+  }
+
+  const payment = loadPaymentProviderConfiguration();
+  if (payment) {
+    assertPrivatePaymentConfiguration(payment);
+
+    if (nodeEnv === "production" && payment.enabled && payment.mode !== "live") {
+      throw new Error("PAYMENT_PROVIDER_MODE must be live when payments are enabled in production.");
+    }
+
+    if (nodeEnv === "production" && payment.enabled && payment.id === "controlled-sandbox") {
+      throw new Error("The controlled-sandbox payment provider cannot be enabled in production.");
+    }
+  }
+}
+
 export function readServerEnvironment(): ServerEnvironment {
   const nodeEnv = environmentName(process.env.NODE_ENV);
   const databaseUrl = requireDatabaseUrl();
@@ -68,6 +99,7 @@ export function readServerEnvironment(): ServerEnvironment {
 
 export function validateServerEnvironment(): ServerEnvironment {
   const env = readServerEnvironment();
+  validateProviderConfiguration(env.nodeEnv);
 
   const providerReference = nonEmpty("FULFILLMENT_PROVIDER_SECRET_REFERENCE", process.env.FULFILLMENT_PROVIDER_SECRET_REFERENCE);
   const fulfillmentEnabled = /^(1|true)$/i.test(process.env.FULFILLMENT_PROVIDER_ENABLED ?? "");
