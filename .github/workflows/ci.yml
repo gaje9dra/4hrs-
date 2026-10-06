@@ -332,6 +332,7 @@ jobs:
         env:
           PHASE_16_22_BASE_URL: http://127.0.0.1:3000
           PHASE_16_22_RUN_ID: phase-16-22-${{ github.run_id }}-${{ github.run_attempt }}
+          PHASE_16_22_ALLOW_LOCAL_SYNTHETIC: "true"
           SYNTHETIC_EXECUTION_MODE: CI
           SYNTHETIC_MONITORING_ENABLED: "true"
           SYNTHETIC_ALLOWED_BASE_URL: http://127.0.0.1:3000
