@@ -394,6 +394,9 @@ jobs:
 
       - name: Run Phase 16.18 resilience and failure-injection certification
         run: npm run production-certification:phase-16-18
+      - name: Run Phase 16.19 release and deployment certification
+        run: npm run production-certification:phase-16-19
+
 
       - name: Upload Phase 16.18 resilience evidence
         uses: actions/upload-artifact@v4
