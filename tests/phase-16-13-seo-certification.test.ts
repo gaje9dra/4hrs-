@@ -22,8 +22,8 @@ test("Phase 16.13 keeps the existing SEO architecture authoritative", async () =
 });
 
 test("Phase 16.13 protects private routes from indexing", async () => {
-  const [nextConfig, admin, account] = await Promise.all([
-    readFile("next.config.ts", "utf8"), readFile("app/admin/layout.tsx", "utf8"), readFile("app/(storefront)/account/page.tsx", "utf8"),
+  const [nextConfig, admin, account, accountLayout] = await Promise.all([
+    readFile("next.config.ts", "utf8"), readFile("app/admin/layout.tsx", "utf8"), readFile("app/(storefront)/account/page.tsx", "utf8"), readFile("app/(storefront)/account/layout.tsx", "utf8"),
   ]);
   assert.match(nextConfig, /X-Robots-Tag/);
   assert.match(admin, /index:\s*false/);
