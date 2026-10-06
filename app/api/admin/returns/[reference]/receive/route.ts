@@ -1,4 +1,4 @@
 import { requireAdmin } from "@/lib/admin/authorization";
 import { assertAdminSameOrigin } from "@/lib/admin/http";
 import { createReturnsApplication } from "@/lib/returns/application"; import { returnsError,returnsJson } from "@/lib/returns/http";
-export async function POST(request:Request,{params}:{params:Promise<{reference:string}>}){try{const context=await requireAdmin(request,"return.inspect");assertAdminSameOrigin(request);const p=await params;return returnsJson({returnRequest:await createReturnsApplication().markReturnReceived({reference:p.reference,request,adminContext:context})});}catch(e){return returnsError(e);}}
+export async function POST(request:Request,{params}:{params:Promise<{reference:string}>}){try{const context=await requireAdmin(request,"return.inspect");assertAdminSameOrigin(request);const p=await params;return returnsJson({returnRequest:await createReturnsApplication().markReturnReceived({reference:p.reference,request})});}catch(e){return returnsError(e);}}
