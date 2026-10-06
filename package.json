@@ -62,7 +62,8 @@
     "production-certification:phase-16-9": "tsx scripts/phase-16-9-api-contract-certification.ts",
     "production-certification:phase-16-10": "tsx scripts/phase-16-10-security-certification.ts",
     "production-certification:phase-16-11": "tsx scripts/phase-16-11-performance-certification.ts",
-    "performance:benchmark:phase-16-11": "tsx scripts/phase-16-11-runtime-benchmark.ts"
+    "performance:benchmark:phase-16-11": "tsx scripts/phase-16-11-runtime-benchmark.ts",
+    "production-certification:phase-16-12": "tsx scripts/phase-16-12-frontend-accessibility-certification.ts"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.1.14",

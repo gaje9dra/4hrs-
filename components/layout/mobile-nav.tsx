@@ -105,6 +105,8 @@ export function MobileNav({ items }: MobileNavProps) {
             id="mobile-navigation-panel"
             ref={panelRef}
             className="absolute inset-y-0 right-0 flex w-full max-w-md flex-col border-l-4 border-border bg-background shadow-hard-md lg:shadow-hard-lg"
+            role="dialog"
+            aria-modal="true"
             aria-label="Mobile navigation panel"
           >
             <div className="flex min-h-16 items-center justify-between border-b-4 border-border px-4 py-3">

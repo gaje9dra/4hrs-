@@ -10,7 +10,7 @@ export default async function DeploymentPage() {
   const blocked = rows.filter((row) => ["BLOCKED","PAUSED","ROLLBACK_PENDING","FORWARD_RECOVERY_REQUIRED"].includes(row.status)).length;
 
   return (
-    <main className="min-h-screen bg-[#f2f0e6] p-6 text-black">
+    <div className="min-h-screen bg-[#f2f0e6] p-6 text-black">
       <section className="mx-auto max-w-7xl space-y-6">
         <header className="border-4 border-black bg-white p-6">
           <p className="text-xs font-black uppercase">4HRS+ / Deployment intelligence</p>
@@ -49,6 +49,6 @@ export default async function DeploymentPage() {
         </section>
         <p className="text-xs">Authorized roles: {auth.adminUser.roles.length}. High-risk deployment controls remain permission-gated and auditable.</p>
       </section>
-    </main>
+    </div>
   );
 }

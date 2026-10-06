@@ -209,7 +209,7 @@ export function CheckoutPage({ customer }: { customer: CustomerDto }) {
       </header>
 
       <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
-        <main className="grid gap-6" aria-live="polite">
+        <div className="grid gap-6" aria-live="polite">
           <Card><p className="text-xs font-900 uppercase tracking-[.2em] text-primary-blue">Customer</p><h2 className="mt-2 text-2xl">{customer.displayName || customer.email}</h2><p className="mt-1 text-sm">{customer.email}</p></Card>
 
           <section aria-labelledby="address-heading" className="grid gap-4">
@@ -222,7 +222,7 @@ export function CheckoutPage({ customer }: { customer: CustomerDto }) {
           {stateMessage ? <section aria-labelledby="cart-state"><Alert variant="error" title={state === "price_changed" ? "Price changed" : state === "cart_changed" ? "Cart changed" : "Availability changed"}>{stateMessage}</Alert><div className="mt-4"><Button href="/cart" variant="yellow">Review Cart</Button></div></section> : null}
 
           <Card><p className="text-xs font-900 uppercase tracking-[.2em] text-primary-blue">Next step</p><h2 className="mt-2 text-2xl">Payment unavailable</h2><p className="mt-3 text-sm leading-6">Payment processing is not implemented yet. No payment credentials are collected and no payment action is simulated.</p></Card>
-        </main>
+        </div>
 
         <aside className="border-4 border-border bg-primary-yellow p-5 shadow-hard-md lg:sticky lg:top-6" aria-labelledby="checkout-summary">
           <div className="flex items-center justify-between gap-4"><h2 id="checkout-summary" className="text-2xl">Order summary</h2><span className="text-xs font-900 uppercase">{checkout.cart.items.length} items</span></div>
