@@ -8,7 +8,7 @@ export default async function DeliveryIntelligencePage(){
  const rows=await listAssessments();
  const blocked=rows.filter(r=>["BLOCK","PROHIBIT","HOLD"].includes(r.decision)).length;
  const expired=rows.filter(r=>r.expiresAt<=new Date()).length;
- return <main className="min-h-screen bg-[#f2f0e6] p-6 text-black"><section className="mx-auto max-w-7xl space-y-6">
+ return <div className="min-h-screen bg-[#f2f0e6] p-6 text-black"><section className="mx-auto max-w-7xl space-y-6">
   <header className="border-4 border-black bg-white p-6"><p className="text-xs font-black uppercase">4HRS+ / Delivery intelligence</p><h1 className="mt-2 text-4xl font-black uppercase">Dependency-aware promotion governance</h1><p className="mt-2 max-w-4xl text-sm">Deterministic promotion decisions backed by dependency health, evidence freshness, safety gates, approvals and certification.</p></header>
   <section className="grid gap-4 md:grid-cols-4">
    <div className="border-2 border-black bg-white p-4"><b className="text-xs uppercase">Assessments</b><p className="text-3xl font-black">{rows.length}</p></div>
@@ -21,5 +21,5 @@ export default async function DeliveryIntelligencePage(){
     <tbody>{rows.map(r=><tr key={r.id} className="border-b-2 border-black"><td className="p-3 font-black">{r.targetEnvironment}</td><td className="p-3">{r.decision}</td><td className="p-3">{r.riskLevel}</td><td className="p-3">{r.confidence}</td><td className="p-3">{r.gates.filter(g=>g.status==="PASS").length}/{r.gates.length}</td><td className="p-3">{r.expiresAt.toISOString()}</td></tr>)}</tbody></table></div>
   </section>
   <p className="text-xs">Authorized roles: {auth.adminUser.roles.length}. Decisions remain policy/evidence governed; this surface does not execute arbitrary infrastructure commands or provider operations.</p>
- </section></main>;
+ </section></div>;
 }
