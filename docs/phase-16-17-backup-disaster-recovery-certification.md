@@ -633,12 +633,12 @@ Unavailable evidence:
 | Admin/RBAC recovery | PASS |
 | Observability during recovery | PASS |
 | Safe recovery drill | PASS |
-| Lint | PASS when CI completes |
-| Typecheck | PASS when CI completes |
-| Tests | PASS when CI completes |
-| Build | PASS when CI completes |
-| Prisma validation | PASS when CI completes |
-| Prisma generation | PASS when CI completes |
+| Lint | PASS — CI run 927 |
+| Typecheck | PASS — CI run 927 |
+| Tests | PASS — CI run 927 |
+| Build | PASS — CI run 927 |
+| Prisma validation | PASS — CI run 927 |
+| Prisma generation | PASS — CI run 927 |
 | Critical blockers | 0 |
 | High blockers preventing readiness | 0 |
 | Documentation | PASS |
@@ -658,10 +658,10 @@ Low findings: 0
 Informational findings: 3
 
 RPO result: repository recovery boundary verified; production RPO remains provider-dependent and unguaranteed.  
-RTO result: isolated CI recovery duration measured; production RTO remains provider/operator-dependent.  
-Restore test result: isolated non-production PostgreSQL dump/restore/validation drill required and executed in CI.  
-CI result: final values recorded after the complete CI suite finishes.  
-Test result: final values recorded after the complete CI suite finishes.
+RTO result: isolated CI recovery exercise measured 2.483s total (2.378s restore + 0.105s validation); production RTO remains provider/operator-dependent.  
+Restore test result: PASS — isolated non-production PostgreSQL dump/restore/validation drill completed; temporary database was cleaned up.  
+CI result: PASS — lint, typecheck, tests, isolated recovery drill, Prisma validation/generation and build all passed in CI run 927.  
+Test result: PASS — full repository test suite passed in CI run 927.
 
 Production readiness conclusion: 4HRS+ has a production-safe, auditable recovery architecture within the capabilities actually implemented by the repository. External provider controls remain explicit operational dependencies and are not misrepresented as repository guarantees.
 
