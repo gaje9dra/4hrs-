@@ -55,7 +55,7 @@ const testRun = spawnSync(
 
 const output = `${testRun.stdout ?? ""}\n${testRun.stderr ?? ""}`;
 const metric = (name: string) => {
-  const match = output.match(new RegExp(`# ${name}\\s+(\\d+)`));
+  const match = output.match(new RegExp(`(?:#|ℹ)\\s+${name}\\s+(\\d+)`));
   return match ? Number(match[1]) : null;
 };
 const testCount = metric("tests");
