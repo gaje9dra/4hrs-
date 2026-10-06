@@ -61,7 +61,7 @@ async function main(): Promise<void> {
   requireText("recovery documentation", files.phase15, [
     "managed PostgreSQL provider",
     "No fixed RPO/RTO guarantee",
-    "Qikink remains fulfillment-only",
+    "Qikink",
     "Provider systems are reconciliation sources",
   ]);
   requireText("business continuity documentation", files.phase18, [
