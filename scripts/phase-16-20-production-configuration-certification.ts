@@ -6,7 +6,8 @@ import { readFile } from "node:fs/promises";
 type EnvSnapshot = Record<string, string | undefined>;
 function snapshot(names: string[]): EnvSnapshot { return Object.fromEntries(names.map((name) => [name, process.env[name]])); }
 function restore(values: EnvSnapshot): void { for (const [name, value] of Object.entries(values)) { if (value === undefined) delete process.env[name]; else process.env[name] = value; } }
-function expectFailure(label: string, fn: () => unknown): void { try { fn(); } catch { return; } throw new Error(`Expected configuration validation failure: ${label}`); }\nfunction setEnv(name: string, value: string): void { Reflect.set(process.env, name, value); }
+function expectFailure(label: string, fn: () => unknown): void { try { fn(); } catch { return; } throw new Error(`Expected configuration validation failure: ${label}`); }
+function setEnv(name: string, value: string): void { Reflect.set(process.env, name, value); }
 
 async function main(): Promise<void> {
   const document = await readFile("docs/phase-16-20-production-configuration-certification.md", "utf8");
