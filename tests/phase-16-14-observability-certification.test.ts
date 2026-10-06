@@ -25,7 +25,7 @@ test("Phase 16.14 preserves the single structured telemetry architecture", async
     readFile("instrumentation.ts", "utf8"),
     readFile("lib/operations/service.ts", "utf8"),
   ]);
-  assert.match(logger, /JSON\\.stringify\\(record\\)/);
+  assert.match(logger, /JSON\.stringify\(record\)/);
   assert.match(logger, /NODE_ENV === "production"/);
   assert.match(redaction, /SENSITIVE_KEY/);
   assert.match(metrics, /ALLOWED_LABELS/);
