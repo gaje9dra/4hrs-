@@ -97,7 +97,10 @@ async function prepareSyntheticCatalog() {
     include: { variants: true },
   });
   syntheticCreated.push(product.id);
-  return { productId: product.id, slug: product.slug, variantId: product.variants[0].id, created: true };
+  const category = await db.category.create({ data: { name: "4HRS+ Synthetic Smoke Category", slug: `phase-16-22-smoke-category-${suffix}`, status: "ACTIVE" } });
+  syntheticCategoryCreated.push(category.id);
+  await db.productCategory.create({ data: { productId: product.id, categoryId: category.id } });
+  return { productId: product.id, slug: product.slug, variantId: product.variants[0].id, categoryId: category.id, categorySlug: category.slug, created: true };
 }
 
 async function runCriticalBoundaryTests() {
