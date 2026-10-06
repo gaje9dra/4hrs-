@@ -34,7 +34,7 @@ const RULES = [
 ] as const;
 
 async function scanRule(rule: typeof RULES[number]): Promise<Finding[]> {
-  const rows = await db.$queryRawUnsafe<Array<{id:string}>>(rule.sql);
+  const rows = await db.$queryRaw<Array<{id:string}>>(Prisma.sql([rule.sql]));
   return rows.map((row) => ({
     type:rule.type, domain:rule.domain, severity:rule.severity, authoritativeDomain:rule.authority,
     affectedEntityType:rule.key, affectedEntityId:row.id,

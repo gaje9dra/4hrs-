@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db/client";
 import { checkDatabaseHealth } from "@/lib/observability/health";
 import { listReliabilityIncidents } from "@/lib/reliability/operations";
@@ -26,7 +27,7 @@ export async function getServiceHealthSnapshot(){
 }
 export async function getOperationsDashboard(){
  const health=await getServiceHealthSnapshot();
- const migration=await db.$queryRawUnsafe<Array<{migration_name:string;finished_at:Date|null;rolled_back_at:Date|null}>>("SELECT migration_name, finished_at, rolled_back_at FROM \"_prisma_migrations\" ORDER BY started_at DESC LIMIT 100");
+ const migration=await db.$queryRaw<Array<{migration_name:string;finished_at:Date|null;rolled_back_at:Date|null}>>(Prisma.sql`SELECT migration_name, finished_at, rolled_back_at FROM "_prisma_migrations" ORDER BY started_at DESC LIMIT 100`);
  const failedMigrations=migration.filter(row=>!row.finished_at||row.rolled_back_at!==null);
  const recentOperatorActions=await db.adminAuditLog.findMany({orderBy:{createdAt:"desc"},take:25,select:{id:true,action:true,resourceType:true,resourceId:true,success:true,reason:true,correlationId:true,createdAt:true}});
  return {...health,deployment:{currentRelease:process.env.APP_VERSION??process.env.COMMIT_REF??null,deploymentId:process.env.NETLIFY_DEPLOY_ID??null,rollbackAvailable:Boolean(process.env.NETLIFY_DEPLOY_ID),migrationStatus:failedMigrations.length?"FAILING":"HEALTHY"},backgroundJobs:{status:"UNKNOWN" as OperationalHealthState,reason:"No centralized execution telemetry exists for every scheduled/background job."},runbooks:RUNBOOKS.map(([id,title,trigger,safety])=>({id,title,trigger,safety})),recentOperatorActions,migrationEvidence:{checked:migration.length,failed:failedMigrations.length}};
