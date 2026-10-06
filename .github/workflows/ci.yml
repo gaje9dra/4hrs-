@@ -161,7 +161,7 @@ jobs:
         run: npm run production-certification:phase-16-9
 
       - name: Run Phase 16.10 security certification
-        run: npm run security:certify:phase-16-10
+        run: npm run production-certification:phase-16-10
 
       - name: Validate restored-state invariants
         run: npm run recovery:validate
