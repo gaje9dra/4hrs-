@@ -321,10 +321,23 @@ The drill is classified as simulated evidence.
 
 ## 43. Final readiness decision
 
-The certification gate is:
+The certification gate has been reached.
 
 **READY FOR PHASE 16.15**
 
-only after the Phase 16.14 certification script, safe incident drill, lint, typecheck, tests, build, Prisma validation/generation and repository CI all pass with no CRITICAL/HIGH certification findings.
+Final CI run: `37439470220` (run #907).
 
-Phase 16.15 is not implemented or started by this phase.
+Observed final gate evidence:
+- CRITICAL findings: 0
+- HIGH findings: 0
+- MEDIUM findings: 0
+- LOW findings: 0
+- Safe incident drill: PASS (simulated, test database)
+- Lint: PASS
+- Typecheck: PASS
+- Full test suite and Phase 16.14 certification: PASS
+- Prisma validation/generation: PASS
+- Build: PASS
+- Machine-readable certification and drill evidence: uploaded by CI
+
+No production incident, historical metric, external alert delivery, or external tracing result is claimed. Phase 16.15 is not implemented or started by this phase.
