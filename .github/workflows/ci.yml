@@ -170,7 +170,9 @@ jobs:
         run: npm run production-certification:phase-16-13
 
       - name: Run Phase 16.14 safe incident drill
-        run: npm run observability:incident-drill
+        run: |
+          npm run observability:incident-drill
+          echo "PHASE_16_14_INCIDENT_DRILL=pass" >> "$GITHUB_ENV"
 
       - name: Run Phase 16.14 observability certification
         run: npm run production-certification:phase-16-14
