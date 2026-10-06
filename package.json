@@ -74,7 +74,8 @@
     "production-certification:phase-16-19": "tsx scripts/phase-16-19-release-deployment-certification.ts",
     "production-certification:phase-16-20": "tsx scripts/phase-16-20-production-configuration-certification.ts",
     "production-certification:phase-16-21": "tsx scripts/phase-16-21-dependency-supply-chain-certification.ts",
-    "production-certification:phase-16-22": "tsx scripts/phase-16-22-synthetic-production-smoke-test.ts"
+    "production-certification:phase-16-22": "tsx scripts/phase-16-22-synthetic-production-smoke-test.ts",
+    "production-certification:phase-16-24": "tsx scripts/phase-16-24-blocker-classification.ts"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.1.14",
