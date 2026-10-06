@@ -115,10 +115,29 @@ async function main(): Promise<void> {
     },
   ];
 
+  mkdirSync(join(root, "artifacts"), { recursive: true });
   const recoveryDrillEvidencePath = join(root, "artifacts/phase-16-17-recovery-drill-evidence.json");
-  const restoreDrillPassed = existsSync(recoveryDrillEvidencePath)
+  let restoreDrillPassed = existsSync(recoveryDrillEvidencePath)
     ? JSON.parse(readFileSync(recoveryDrillEvidencePath, "utf8")).status === "PASS"
     : false;
+
+  if (process.env.RUN_PHASE_16_17_RECOVERY_DRILL === "true") {
+    const npm = process.platform === "win32" ? "npm.cmd" : "npm";
+    const drillOutput = execFileSync(npm, ["run", "recovery:drill"], { encoding: "utf8", env: process.env });
+    process.stdout.write(drillOutput);
+    const recoverySeconds = drillOutput.match(/"measuredRecoverySeconds":\s*([0-9.]+)/)?.[1];
+    const restoreSeconds = drillOutput.match(/"measuredRestoreSeconds":\s*([0-9.]+)/)?.[1];
+    const validationSeconds = drillOutput.match(/"measuredValidationSeconds":\s*([0-9.]+)/)?.[1];
+    writeFileSync(recoveryDrillEvidencePath, JSON.stringify({
+      status: "PASS",
+      source: "npm run recovery:drill",
+      verifiedAt: new Date().toISOString(),
+      measuredRecoverySeconds: recoverySeconds ? Number(recoverySeconds) : null,
+      measuredRestoreSeconds: restoreSeconds ? Number(restoreSeconds) : null,
+      measuredValidationSeconds: validationSeconds ? Number(validationSeconds) : null,
+    }, null, 2) + "\n");
+    restoreDrillPassed = true;
+  }
 
   const critical = findings.filter((x) => x.severity === "CRITICAL").length;
   const high = findings.filter((x) => x.severity === "HIGH").length;
