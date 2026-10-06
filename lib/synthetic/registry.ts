@@ -27,7 +27,12 @@ async function activeProductSlug(): Promise<string | null> {
 }
 
 
-async function activeCategorySlug(): Promise<string | null> {\n  const row = await db.category.findFirst({ where: { status: "ACTIVE", products: { some: { product: { status: "ACTIVE" } } } }, select: { slug: true }, orderBy: { updatedAt: "desc" } });\n  return row?.slug ?? null;\n}\n\nconst publicWorkflow = (input: Omit<WorkflowDefinition,"steps"> & { steps: WorkflowDefinition["steps"] }): WorkflowDefinition => input;
+async function activeCategorySlug(): Promise<string | null> {
+  const row = await db.category.findFirst({ where: { status: "ACTIVE", products: { some: { product: { status: "ACTIVE" } } } }, select: { slug: true }, orderBy: { updatedAt: "desc" } });
+  return row?.slug ?? null;
+}
+
+const publicWorkflow = (input: Omit<WorkflowDefinition,"steps"> & { steps: WorkflowDefinition["steps"] }): WorkflowDefinition => input;
 
 export const WORKFLOWS: WorkflowDefinition[] = [
   publicWorkflow({id:"STOREFRONT_AVAILABILITY",name:"Storefront availability",domains:["STOREfront"],entryPoint:"GET /",prerequisites:[],expectedOutcome:"Storefront responds successfully.",criticalInvariants:["HTTP success","no server error"],dependencies:["Next.js"],syntheticEligible:true,productionSafe:true,failureSeverity:"P0",timeoutMs:5000,retryPolicy:"READ_ONLY",owner:"storefront",escalationTarget:"reliability",steps:[{key:"homepage",name:"Probe homepage",productionSafe:true,execute:ctx=>probe(ctx,"/")}]}),
