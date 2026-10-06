@@ -49,7 +49,7 @@ export async function listAdminCustomers(q:AdminCustomerQuery){
  if(q.orderCountMax) add(Prisma.sql`COALESCE(os."orderCount",0) <= ${q.orderCountMax}`);
  if(q.valueMin) add(Prisma.sql`COALESCE(os."grossPurchaseValue",0) >= ${q.valueMin}::numeric`);
  if(q.valueMax) add(Prisma.sql`COALESCE(os."grossPurchaseValue",0) <= ${q.valueMax}::numeric`);
- const whereSql=where.length?Prisma.sql` WHERE ${Prisma.join(where,Prisma.sql` AND `)}`:Prisma.empty;
+ const whereSql=where.length===0?Prisma.empty:where.slice(1).reduce<Prisma.Sql>((sql,fragment)=>Prisma.sql`${sql} AND ${fragment}`,Prisma.sql` WHERE ${where[0]}`);
  const offset=(q.page-1)*q.pageSize;
  const orderSql=Prisma.raw(orderBy(q.sort,q.direction));
  const sql=Prisma.sql`WITH os AS (
