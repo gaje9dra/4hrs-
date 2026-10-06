@@ -157,6 +157,9 @@ jobs:
       - name: Run Phase 16.8 database and migration certification audit
         run: npm run production-certification:phase-16-8
 
+      - name: Run Phase 16.9 API and contract certification audit
+        run: npm run production-certification:phase-16-9
+
       - name: Validate restored-state invariants
         run: npm run recovery:validate
       - name: Run synthetic rehearsal test suite
