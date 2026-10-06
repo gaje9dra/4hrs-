@@ -5,6 +5,7 @@ type Severity = "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "INFORMATIONAL";
 type Status = "PASS" | "FAIL" | "NOT_APPLICABLE";
 type Finding = { id:string; severity:Severity; area:string; status:Status; description:string; evidence:string; remediation:string };
 
+async function main() {
 const root = process.cwd();
 const findings: Finding[] = [];
 const add = (f:Finding) => findings.push(f);
@@ -135,3 +136,9 @@ const medium=findings.filter(f=>f.status==="FAIL" && f.severity==="MEDIUM").leng
 const low=findings.filter(f=>f.status==="FAIL" && f.severity==="LOW").length;
 console.log(JSON.stringify({phase:"16.9",routeCount:records.length,critical,high,medium,low,findings},null,2));
 if(critical+high>0) process.exit(1);
+}
+
+main().catch((error) => {
+  console.error(error instanceof Error ? error.message : "Phase 16.9 certification failed.");
+  process.exit(1);
+});
