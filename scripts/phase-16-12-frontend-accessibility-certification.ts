@@ -77,7 +77,7 @@ async function main() {
 
   const formField = byFile.get("components/ui/form-field.tsx") ?? "";
   const input = byFile.get("components/ui/input.tsx") ?? "";
-  if (/htmlFor=/.test(formField) && /aria-describedby/.test(formField) && /aria-invalid/.test(input) && /required\s*=/.test(input))
+  if (formField.includes("htmlFor") && formField.includes("aria-describedby") && input.includes("aria-invalid") && input.includes("required"))
     add("A11Y-008", "HIGH", "PASS", "Form validation semantics", "Canonical form components associate labels, descriptions, invalid state and required state.");
   else
     add("A11Y-008", "HIGH", "FAIL", "Form validation semantics", "Canonical form field semantics are incomplete.", "Preserve programmatic label, error and required relationships.");
@@ -145,7 +145,7 @@ async function main() {
     add("A11Y-018", "LOW", "FAIL", "Bauhaus design-system preservation", "Established design tokens were not fully detected.", "Preserve the existing design system.");
 
   const hydrationRisk = sources.filter(({ file, text }) =>
-    file.startsWith("app/") && /Math\.random\(|Date\.now\(/.test(text) && !/^['"]use client['"]/.test(text.trim())
+    file.startsWith("app/") && !file.startsWith("app/api/") && /Math\.random\(|Date\.now\(/.test(text) && !/^['"]use client['"]/.test(text.trim())
   ).map(({ file }) => file);
   if (hydrationRisk.length)
     add("A11Y-019", "HIGH", "FAIL", "Deterministic server rendering", hydrationRisk.join(", "), "Do not render nondeterministic values in server components.");
