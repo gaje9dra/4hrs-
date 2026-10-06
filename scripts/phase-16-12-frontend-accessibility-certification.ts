@@ -70,7 +70,7 @@ async function main() {
   const mobileNav = byFile.get("components/layout/mobile-nav.tsx") ?? "";
   if (/aria-expanded=\{open\}/.test(mobileNav) && /aria-controls="mobile-navigation-panel"/.test(mobileNav) &&
       /role="dialog"/.test(mobileNav) && /aria-modal="true"/.test(mobileNav) && /Escape/.test(mobileNav) &&
-      /document\\.body\\.style\\.overflow\\s*=\\s*['\"]hidden['\"]/.test(mobileNav) && /trigger\\?\\.focus\\(\\)/.test(mobileNav))
+      /document\.body\.style\.overflow\s*=\s*['"]hidden['"]/.test(mobileNav) && /trigger\?\.focus\(\)/.test(mobileNav))
     add("A11Y-007", "HIGH", "PASS", "Mobile navigation keyboard/focus behavior", "Named trigger, dialog semantics, Escape handling, scroll locking, focus containment and restoration are present.");
   else
     add("A11Y-007", "HIGH", "FAIL", "Mobile navigation keyboard/focus behavior", "Mobile drawer focus/keyboard controls are incomplete.", "Preserve keyboard-operable drawer focus management.");
