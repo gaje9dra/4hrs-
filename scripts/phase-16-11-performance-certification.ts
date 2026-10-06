@@ -1,7 +1,7 @@
 import { readdir, readFile, stat, writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 
-type RuntimeSample = { errors?: number; p95Ms?: number | null; };
+type RuntimeSample = { errors?: number; errorRate?: number; p95Ms?: number | null; };
 type Finding = { id: string; severity: "CRITICAL"|"HIGH"|"MEDIUM"|"LOW"|"INFORMATIONAL"; title: string; status: "PASS"|"FAIL"|"NOT_APPLICABLE"|"UNAVAILABLE"; evidence: string; };
 
 const root = process.cwd();
