@@ -140,6 +140,9 @@ jobs:
       - name: Run Phase 16.5 shipping and post-order certification audit
         run: npm run production-certification:phase-16-5
 
+      - name: Run Phase 16.6 customer account and privacy certification audit
+        run: npm run production-certification:phase-16-6
+
       - name: Audit migration safety
         run: npm run db:audit-migrations
 
