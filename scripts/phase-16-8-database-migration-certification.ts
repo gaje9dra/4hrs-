@@ -105,7 +105,7 @@ if(!prisma){
       ["Shipment without Order",Prisma.sql`SELECT count(*)::int AS count FROM "Shipment" s LEFT JOIN "Order" o ON o.id=s."orderId" WHERE o.id IS NULL`],
       ["CustomerAddress without Customer",Prisma.sql`SELECT count(*)::int AS count FROM "CustomerAddress" a LEFT JOIN "Customer" c ON c.id=a."customerId" WHERE c.id IS NULL`],
       ["ProviderMapping without ProductVariant",Prisma.sql`SELECT count(*)::int AS count FROM "FulfillmentProviderMapping" m LEFT JOIN "ProductVariant" v ON v.id=m."variantId" WHERE v.id IS NULL`],
-      ["AdminAuditLog without AdminUser",Prisma.sql`SELECT count(*)::int AS count FROM "AdminAuditLog" a LEFT JOIN "AdminUser" u ON u.id=a."adminUserId" WHERE u.id IS NULL`],
+      ["AdminAuditLog without AdminUser",Prisma.sql`SELECT count(*)::int AS count FROM "AdminAuditLog" a LEFT JOIN "AdminUser" u ON u.id=a."actorAdminId" WHERE u.id IS NULL`],
     ] as const;
     const orphanResults=[] as string[];
     for(const [label,sql] of orphanQueries){const rows=await prisma.$queryRaw<Array<{count:number}>>(sql);if(Number(rows[0]?.count??0)!==0) orphanResults.push(`${label}: ${rows[0]?.count}`);}
