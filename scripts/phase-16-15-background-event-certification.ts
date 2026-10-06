@@ -9,6 +9,8 @@ type Finding = {
 
 const root = process.cwd();
 const findings: Finding[] = [];
+
+async function main(): Promise<void> {
 async function read(rel: string) { return readFile(path.join(root, rel), "utf8"); }
 function add(id: string, severity: Severity, component: string, failureMode: string, impact: string, evidence: string, remediation: string, remainingRisk: string) {
   findings.push({ id, severity, component, failureMode, impact, evidence, remediation, remainingRisk });
@@ -116,3 +118,9 @@ await mkdir(path.join(root, "artifacts"), { recursive: true });
 await writeFile(path.join(root, "artifacts/phase-16-15-background-event-certification-evidence.json"), JSON.stringify(report, null, 2) + "\n");
 console.log(JSON.stringify({ phase: report.phase, status: report.status, findings: report.summary, inventoryCount: asyncInventory.length }));
 if (readiness !== "READY_FOR_PHASE_16_16") process.exitCode = 1;
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});
