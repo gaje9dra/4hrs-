@@ -42,3 +42,11 @@ test("Phase 16.8 audit uses safe Prisma SQL APIs",()=>{
   assert.match(script,/prisma\.\$queryRaw/);
   assert.match(script,/prisma\.\$transaction|transaction/i);
 });
+
+test("critical application SQL paths do not use unsafe Prisma raw APIs",()=>{
+  for(const file of ["lib/admin/customer-query.ts","lib/operations/service.ts","lib/reconciliation/service.ts"]) {
+    const source=read(file);
+    assert.equal(source.includes("$queryRawUnsafe("),false);
+    assert.equal(source.includes("$executeRawUnsafe("),false);
+  }
+});
