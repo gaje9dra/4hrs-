@@ -154,6 +154,8 @@ jobs:
 
       - name: Run migrations and tests
         run: npm test
+      - name: Run Phase 16.8 database and migration certification audit
+        run: npm run production-certification:phase-16-8
 
       - name: Validate restored-state invariants
         run: npm run recovery:validate
