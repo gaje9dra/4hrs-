@@ -4,7 +4,7 @@ import { db } from "@/lib/db/client";
 import { logger } from "@/lib/observability/logger";
 import { incrementMetric } from "@/lib/observability/metrics";
 import { getNotificationTemplate, renderNotificationTemplate } from "./templates";
-import { NOTIFICATION_BATCH_SIZE, NOTIFICATION_MAX_ATTEMPTS } from "./config";
+import { NOTIFICATION_BATCH_SIZE, NOTIFICATION_MAX_ATTEMPTS, NOTIFICATION_PROCESSING_LEASE_SECONDS } from "./config";
 import { resolveNotificationProvider, sendWithTimeout, type ProviderMessage } from "./provider";
 import { isRetryableFailure, retryDelaySeconds } from "./retry";
 import { evaluateNotificationEligibility } from "@/lib/communications/preferences";
@@ -21,9 +21,21 @@ export async function enqueueNotificationEvent(client: DbClient, input: Notifica
   const existing = await client.notificationEvent.findUnique({ where: { idempotencyKey: input.idempotencyKey }, select: { id: true, deliveries: { select: { id: true }, take: 1 } } });
   if (existing) return { eventId: existing.id, deliveryId: existing.deliveries[0]?.id ?? null, created: false };
 
-  const event = await client.notificationEvent.create({
-    data: { customerId: input.customerId, communicationCategory: input.communicationCategory ?? "REQUIRED_TRANSACTIONAL", orderId: input.orderId ?? null, returnRequestId: input.returnRequestId ?? null, type: input.type, payload: input.payload === null ? undefined : input.payload, idempotencyKey: input.idempotencyKey.slice(0,255), correlationId: input.correlationId?.slice(0,128) ?? null },
-  });
+  let event;
+  try {
+    event = await client.notificationEvent.create({
+      data: { customerId: input.customerId, communicationCategory: input.communicationCategory ?? "REQUIRED_TRANSACTIONAL", orderId: input.orderId ?? null, returnRequestId: input.returnRequestId ?? null, type: input.type, payload: input.payload === null ? undefined : input.payload, idempotencyKey: input.idempotencyKey.slice(0,255), correlationId: input.correlationId?.slice(0,128) ?? null },
+    });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      const raced = await client.notificationEvent.findUnique({
+        where: { idempotencyKey: input.idempotencyKey.slice(0, 255) },
+        select: { id: true, deliveries: { select: { id: true }, take: 1 } },
+      });
+      if (raced) return { eventId: raced.id, deliveryId: raced.deliveries[0]?.id ?? null, created: false };
+    }
+    throw error;
+  }
 
   const customer = await client.customer.findUnique({ where: { id: input.customerId }, select: { email: true, status: true, anonymizedAt: true, locale: true } });
   if (!customer || customer.anonymizedAt || customer.status !== "ACTIVE") return { eventId: event.id, deliveryId: null, created: true };
@@ -52,13 +64,30 @@ export async function enqueueNotificationEvent(client: DbClient, input: Notifica
 
 async function claimDelivery() {
   const now = new Date();
+  const processingLeaseCutoff = new Date(now.getTime() - NOTIFICATION_PROCESSING_LEASE_SECONDS * 1000);
   const candidate = await db.notificationDelivery.findFirst({
-    where: { OR: [{ status: "PENDING" }, { status: "RETRY_SCHEDULED", nextAttemptAt: { lte: now } }] },
+    where: {
+      OR: [
+        { status: "PENDING" },
+        { status: "RETRY_SCHEDULED", nextAttemptAt: { lte: now } },
+        { status: "PROCESSING", lastAttemptAt: { lt: processingLeaseCutoff } },
+      ],
+    },
     orderBy: [{ createdAt: "asc" }, { id: "asc" }],
     select: { id: true },
   });
   if (!candidate) return null;
-  const claimed = await db.notificationDelivery.updateMany({ where: { id: candidate.id, OR: [{ status: "PENDING" }, { status: "RETRY_SCHEDULED", nextAttemptAt: { lte: now } }] }, data: { status: "PROCESSING", attempts: { increment: 1 }, lastAttemptAt: now } });
+  const claimed = await db.notificationDelivery.updateMany({
+    where: {
+      id: candidate.id,
+      OR: [
+        { status: "PENDING" },
+        { status: "RETRY_SCHEDULED", nextAttemptAt: { lte: now } },
+        { status: "PROCESSING", lastAttemptAt: { lt: processingLeaseCutoff } },
+      ],
+    },
+    data: { status: "PROCESSING", attempts: { increment: 1 }, lastAttemptAt: now },
+  });
   if (claimed.count !== 1) return null;
   return db.notificationDelivery.findUnique({ where: { id: candidate.id }, include: { notificationEvent: true } });
 }
