@@ -30,6 +30,6 @@ test("Phase 16.18 preserves the existing guarded resilience framework", () => {
   assert.match(experiments, /SAFE_TERMINATION/);
   assert.match(experiments, /arbitrarySql/);
   assert.match(experiments, /arbitraryShell/);
-  assert.match(validator, /DATABASE_RESILIENCE/);
+  assert.match(validator, /EXPERIMENT_CATEGORIES/);
   assert.match(validator, /DEPENDENCY_DEGRADATION/);
 });
