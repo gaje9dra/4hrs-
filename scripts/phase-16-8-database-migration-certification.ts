@@ -3,7 +3,8 @@ import { join } from "node:path";
 import { Prisma, PrismaClient } from "@prisma/client";
 
 type Finding = { id:string; severity:"CRITICAL"|"HIGH"|"MEDIUM"|"LOW"|"INFORMATIONAL"; area:string; description:string; evidence:string; remediation:string; status:"PASS"|"FAIL"|"BLOCKED"|"NOT_APPLICABLE" };
-async function main() {\nconst findings: Finding[] = [];
+async function main() {
+const findings: Finding[] = [];
 const root = process.cwd();
 const schemaPath = join(root,"prisma","schema.prisma");
 const migrationsRoot = join(root,"prisma","migrations");
@@ -121,4 +122,10 @@ if(!prisma){
 const blockers=findings.filter(f=>f.status==="FAIL"&&(f.severity==="CRITICAL"||f.severity==="HIGH"||f.severity==="MEDIUM"));
 const result={phase:"16.8",status:blockers.length?"NOT_READY":"READY",summary:{models:models.length,enums:enums.length,migrations:entries.length,findings:findings.length,blockers:blockers.length},findings};
 console.log(JSON.stringify(result,null,2));
-if(blockers.length)process.exit(1);
+if(blockers.length) process.exit(1);
+}
+
+main().catch((error) => {
+  console.error(error instanceof Error ? error.message : "Phase 16.8 certification failed.");
+  process.exit(1);
+});
