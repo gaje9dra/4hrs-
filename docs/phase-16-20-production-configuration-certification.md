@@ -180,7 +180,7 @@ Detected drift includes package metadata ranges versus resolved versions: TypeSc
 5. Resolved TypeScript/@types-node versions differ from the phase's locked target versions; changing the lockfile without a reproducible install would be unsafe.
 
 ## 42. CI results
-The required Phase 16.20 CI gate is `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`, `npx prisma validate`, `npx prisma generate`, plus all existing repository certification/audit checks. The Phase 16.20 validator also exercises malformed and unsafe configuration cases without contacting production providers.
+The required Phase 16.20 CI gate is `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`, `npx prisma validate`, `npx prisma generate`, plus all existing repository certification/audit checks. GitHub Actions CI run **#947** for commit `89dc79da12ec4cde15690d0e5c0cd9339c044f97` passed **Test, Lint, Typecheck, Build and Recovery Drill**. The Phase 16.20 validator exercised malformed and unsafe configuration cases without contacting production providers.
 
 ## 43. Final certification decision
 **NOT READY FOR PHASE 16.21**
