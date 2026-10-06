@@ -207,7 +207,7 @@ async function main() {
   requireTokens("admin concurrency", files["lib/admin/application.ts"], ["Serializable","expectedVersion","auditAdminAction"], "HIGH");
   requireTokens("reliability", files["lib/reliability/model.ts"], ["DATABASE","PAYMENT_PROVIDER","QIKINK","SHIPPING_PROVIDER","NOTIFICATION_PROVIDER","timeoutMs"], "HIGH");
   requireTokens("resilience harness", files["lib/resilience/experiments.ts"], ["PROHIBITED","allowlisted","blastRadius","SAFE_TERMINATION","arbitraryDestination","arbitrarySql","arbitraryShell"], "CRITICAL");
-  requireTokens("resilience catalog", files["scripts/resilience-validate.ts"], ["PROHIBITED","DEPENDENCY_DEGRADATION","DATABASE_RESILIENCE"], "HIGH");
+  requireTokens("resilience catalog", files["scripts/resilience-validate.ts"], ["PROHIBITED","DEPENDENCY_DEGRADATION","EXPERIMENT_CATEGORIES"], "HIGH");
 
   await runQikinkFaultInjection();
   await runPolicyInjection();
