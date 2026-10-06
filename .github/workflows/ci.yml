@@ -265,7 +265,6 @@ jobs:
       - name: Run Phase 16.11 controlled runtime benchmark
         env:
           PERF_BASE_URL: http://127.0.0.1:3000
-          NEXT_SERVER_PID: ${{ '{{' }} steps.performance-server.outputs.pid ${{ '}}' }}
         run: |
           export NEXT_SERVER_PID=$(cat /tmp/next-performance.pid)
           npm run performance:benchmark:phase-16-11
