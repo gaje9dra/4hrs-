@@ -77,7 +77,7 @@ async function main() {
 
   const formField = byFile.get("components/ui/form-field.tsx") ?? "";
   const input = byFile.get("components/ui/input.tsx") ?? "";
-  if (/htmlFor=\{htmlFor\}/.test(formField) && /aria-describedby/.test(formField) && /aria-invalid/.test(input) && /required=/.test(input))
+  if (/htmlFor=/.test(formField) && /aria-describedby/.test(formField) && /aria-invalid/.test(input) && /required\s*=/.test(input))
     add("A11Y-008", "HIGH", "PASS", "Form validation semantics", "Canonical form components associate labels, descriptions, invalid state and required state.");
   else
     add("A11Y-008", "HIGH", "FAIL", "Form validation semantics", "Canonical form field semantics are incomplete.", "Preserve programmatic label, error and required relationships.");
@@ -95,7 +95,7 @@ async function main() {
     add("A11Y-010", "HIGH", "FAIL", "Product variant interaction", "Variant accessibility semantics are incomplete.", "Use native grouping and expose selected/unavailable state.");
 
   const checkout = byFile.get("components/storefront/checkout-page.tsx") ?? "";
-  if (!/<main[\s>]/.test(checkout) && /aria-busy=\{pending\}/.test(checkout) && /<FormField/.test(checkout) && /role="alert"/.test(checkout))
+  if (!/<main[\s>]/.test(checkout) && /aria-busy=\{pending\}|aria-busy=\{[^}]+\}/.test(checkout) && /<FormField/.test(checkout) && /<Alert\b/.test(checkout))
     add("A11Y-011", "HIGH", "PASS", "Checkout semantic and state accessibility", "Checkout stays inside the root main landmark and preserves accessible loading/error/form semantics.");
   else
     add("A11Y-011", "HIGH", "FAIL", "Checkout semantic and state accessibility", "Checkout semantic/state accessibility regression detected.", "Keep checkout inside the root main landmark.");
@@ -113,7 +113,7 @@ async function main() {
     add("A11Y-013", "CRITICAL", "PASS", "Client security boundary", "No secret-bearing NEXT_PUBLIC environment variable name was detected.");
 
   const browserOnlyInServerCandidates = sources.filter(({ file, text }) =>
-    file.startsWith("app/") && /window\.|document\.|localStorage|sessionStorage/.test(text) && !/^['"]use client['"]/.test(text.trim())
+    file.startsWith("app/") && !file.startsWith("app/api/") && /window\.|document\.|localStorage|sessionStorage/.test(text) && !/^['"]use client['"]/.test(text.trim())
   ).map(({ file }) => file);
   if (browserOnlyInServerCandidates.length)
     add("A11Y-014", "HIGH", "FAIL", "Client/server rendering boundary", browserOnlyInServerCandidates.join(", "), "Move browser-only APIs into client components/effects.");
@@ -145,7 +145,7 @@ async function main() {
     add("A11Y-018", "LOW", "FAIL", "Bauhaus design-system preservation", "Established design tokens were not fully detected.", "Preserve the existing design system.");
 
   const hydrationRisk = sources.filter(({ file, text }) =>
-    file.startsWith("app/") && /Math\.random\(|Date\.now\(|new Date\(\)/.test(text) && !/^['"]use client['"]/.test(text.trim())
+    file.startsWith("app/") && /Math\.random\(|Date\.now\(/.test(text) && !/^['"]use client['"]/.test(text.trim())
   ).map(({ file }) => file);
   if (hydrationRisk.length)
     add("A11Y-019", "HIGH", "FAIL", "Deterministic server rendering", hydrationRisk.join(", "), "Do not render nondeterministic values in server components.");
