@@ -136,6 +136,12 @@ async function main() {
     ["observability-provider failure","telemetry failures are best-effort; no external provider is configured","UNAVAILABLE","observability"],
   ];
 
+  let incidentDrillPassed = false;
+  try {
+    const drill = JSON.parse(await read("artifacts/phase-16-14-incident-drill-evidence.json")) as { result?: string };
+    incidentDrillPassed = drill.result === "PASS";
+  } catch {}
+
   const report = {
     phase: "16.14",
     generatedAt: new Date().toISOString(),
@@ -157,12 +163,13 @@ async function main() {
       "Provider sandbox failures for PayU/Qikink/shipping are not executed against production credentials; the CI incident drill validates the internal alert/deduplication pipeline only.",
       "Background-job telemetry is explicitly UNKNOWN where centralized execution telemetry does not exist.",
     ],
+    incidentDrill: { required: true, passed: incidentDrillPassed, evidenceClass: "simulated" },
     certification: {
       criticalFailures: findings.filter(f => f.status === "FAIL" && f.severity === "CRITICAL").length,
       highFailures: findings.filter(f => f.status === "FAIL" && f.severity === "HIGH").length,
       mediumFailures: findings.filter(f => f.status === "FAIL" && f.severity === "MEDIUM").length,
       lowFailures: findings.filter(f => f.status === "FAIL" && f.severity === "LOW").length,
-      readiness: "PENDING_INCIDENT_DRILL",
+      readiness: findings.filter(f => f.status === "FAIL" && (f.severity === "CRITICAL" || f.severity === "HIGH")).length === 0 && incidentDrillPassed ? "READY_FOR_PHASE_16_15" : "PENDING_INCIDENT_DRILL",
     },
   };
 
