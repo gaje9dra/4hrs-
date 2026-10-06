@@ -55,7 +55,8 @@
     "production-certification:phase-16-2": "tsx scripts/phase-16-2-commerce-journey-certification.ts",
     "production-certification:phase-16-3": "tsx scripts/phase-16-3-payment-financial-safety-certification.ts",
     "production-certification:phase-16-4": "tsx scripts/phase-16-4-fulfillment-qikink-certification.ts",
-    "production-certification:phase-16-5": "tsx scripts/phase-16-5-shipping-post-order-certification.ts"
+    "production-certification:phase-16-5": "tsx scripts/phase-16-5-shipping-post-order-certification.ts",
+    "production-certification:phase-16-6": "tsx scripts/phase-16-6-customer-account-privacy-certification.ts"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.1.14",
