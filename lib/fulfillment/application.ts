@@ -211,7 +211,10 @@ export function createFulfillmentApplication(
         });
         return created;
       } catch (error) {
-        if (isSerializationConflict(error) && attempt < 2) continue;
+        if (isSerializationConflict(error)) {
+          if (attempt < 2) continue;
+          throw new FulfillmentDomainError("FULFILLMENT_CONCURRENCY_CONFLICT", "Fulfillment creation conflicted with a concurrent operation.", { cause: error });
+        }
         if (isUniqueConflict(error)) {
           const racedKey = await repository.getByIdempotencyKey(input.idempotencyKey);
           if (racedKey) {
@@ -224,6 +227,8 @@ export function createFulfillmentApplication(
           if (racedOrder) {
             throw new FulfillmentDomainError("FULFILLMENT_ALREADY_EXISTS", "The Order already has a Fulfillment.");
           }
+          if (attempt < 2) continue;
+          throw new FulfillmentDomainError("FULFILLMENT_CONCURRENCY_CONFLICT", "Fulfillment creation conflicted with a concurrent operation.", { cause: error });
         }
         const domainError = error instanceof FulfillmentDomainError
           ? error
