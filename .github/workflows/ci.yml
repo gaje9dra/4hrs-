@@ -163,6 +163,16 @@ jobs:
       - name: Run Phase 16.10 security certification
         run: npm run production-certification:phase-16-10
 
+      - name: Run Phase 16.23 full test matrix certification
+        run: npm run production-certification:phase-16-23
+
+      - name: Upload Phase 16.23 full test matrix evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase-16-23-full-test-matrix-evidence
+          path: artifacts/phase-16-23-full-test-matrix.json
+          if-no-files-found: error
+
       - name: Run Phase 16.12 frontend accessibility certification
         run: npm run production-certification:phase-16-12
 
