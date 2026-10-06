@@ -78,35 +78,23 @@ test("privileged reasons reject malformed input and audit records exclude secret
 });
 
 
-test("the permanent super administrator keeps full access and cannot be modified", async () => {
-  const actor = await fixture("SUPER_ADMIN");
-  const roleRow = await db.adminRole.findUnique({ where: { name: "SUPER_ADMIN" } });
-  assert.ok(roleRow);
+test("the former permanent-super-admin email cannot bypass database RBAC", async () => {
   const customer = await db.customer.create({
-    data: { email: "gaje9dra@gmail.com", status: "ACTIVE", credential: { create: { passwordHash: await hashPassword("Permanent-Super-Admin-Test!") } } },
-  });
-  const target = await db.adminUser.create({
-    data: { customerId: customer.id, status: "DISABLED", roles: { create: { roleId: roleRow.id } } },
+    data: { email: "gaje9dra@gmail.com", status: "ACTIVE", credential: { create: { passwordHash: await hashPassword("Former-Permanent-Admin-Test!") } } },
   });
   const sessionToken = createSessionToken();
   const session = await db.customerSession.create({
     data: { customerId: customer.id, sessionTokenHash: hashSessionToken(sessionToken), expiresAt: new Date(Date.now()+CUSTOMER_SESSION_TTL_SECONDS*1000) },
   });
   try {
-    const context = await requireAdmin(new Request("https://4hrs.test/admin", { headers: { cookie: `customer_session=${sessionToken}` } }), "system.settings.manage");
-    assert.deepEqual([...context.roles], ["SUPER_ADMIN"]);
-    assert.ok(context.permissions.has("system.settings.manage"));
     await assert.rejects(
-      () => updateAdminUser(actorContext(actor), { id: target.id, expectedVersion: target.version, status: "DISABLED", roles: ["ADMIN"], reason: "attempt to modify protected administrator" }),
-      (error) => error instanceof AdminError && error.code === "FORBIDDEN",
+      () => requireAdmin(new Request("https://4hrs.test/admin", { headers: { cookie: `customer_session=${sessionToken}` } }), "system.settings.manage"),
+      (error) => error instanceof AdminError && error.code === "ADMIN_REQUIRED",
     );
   } finally {
-    await db.adminAuditLog.deleteMany({ where: { actorAdminId: actor.admin.id } });
     await db.customerSession.delete({ where: { id: session.id } });
-    await db.adminUser.delete({ where: { id: target.id } });
     await db.customerCredential.deleteMany({ where: { customerId: customer.id } });
     await db.customer.delete({ where: { id: customer.id } });
-    await cleanup(actor);
   }
 });
 
