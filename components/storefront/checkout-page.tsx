@@ -209,7 +209,7 @@ export function CheckoutPage({ customer }: { customer: CustomerDto }) {
       </header>
 
       <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
-        <main className="grid gap-6" aria-live="polite">
+        <div className="grid gap-6" aria-live="polite">
           <Card><p className="text-xs font-900 uppercase tracking-[.2em] text-primary-blue">Customer</p><h2 className="mt-2 text-2xl">{customer.displayName || customer.email}</h2><p className="mt-1 text-sm">{customer.email}</p></Card>
 
           <section aria-labelledby="address-heading" className="grid gap-4">
