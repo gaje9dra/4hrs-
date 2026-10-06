@@ -12,6 +12,7 @@ async function run(endpoint:string, requests:number, concurrency:number):Promise
  return {requests,concurrency,errors,errorRate:Number((errors/requests).toFixed(4)),p50Ms:percentile(d,50),p95Ms:percentile(d,95),p99Ms:percentile(d,99),throughputRps:Number((requests/Math.max(elapsed,0.001)).toFixed(2))};
 }
 
+async function main() {
 if(!process.env.PERF_BASE_URL) throw new Error("PERF_BASE_URL is required");
 const endpoints=["/api/health","/api/ready","/api/readiness","/"];
 const scenarios=[["normal",20,2],["elevated",60,5],["spike",40,10]] as const;
@@ -32,3 +33,7 @@ await writeFile("artifacts/phase-16-11-runtime-benchmark.json",JSON.stringify(re
 const bad=samples.filter(x=>x.errors>0 || (x.p95Ms??999999)>5000);
 console.log(JSON.stringify({samples:samples.length,bad:bad.length,soakRequests:sustainedRequests,serverRssKb}));
 if(bad.length)process.exit(1);
+
+}
+
+main().catch((error) => { console.error(error); process.exit(1); });
