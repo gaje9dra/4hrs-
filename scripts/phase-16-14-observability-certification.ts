@@ -26,7 +26,7 @@ function pass(id: string, title: string, evidence: string) { add(id, "INFORMATIO
 async function main() {
   const files = await walk(".");
   const pkg = JSON.parse(await read("package.json")) as { scripts?: Record<string, string>; dependencies?: Record<string, string>; devDependencies?: Record<string, string> };
-  const [logger, redaction, metrics, request, errors, security, proxy, instrumentation, health, readiness, databaseHealth, operations, reliabilityService, reliabilityChecks, reliabilityIncidents, reliabilityModel, ci] =
+  const [logger, redaction, metrics, request, errors, security, proxy, instrumentation, health, readiness, databaseHealth, operations, reliabilityService, reliabilityChecks, reliabilityIncidents, reliabilityOperations, reliabilityModel, ci] =
     await Promise.all([
       read("lib/observability/logger.ts"),
       read("lib/observability/redaction.ts"),
@@ -43,6 +43,7 @@ async function main() {
       read("lib/reliability/service.ts"),
       read("lib/reliability/checks.ts"),
       read("lib/reliability/incidents.ts"),
+      read("lib/reliability/operations.ts"),
       read("lib/reliability/model.ts"),
       read(".github/workflows/ci.yml"),
     ]);
@@ -92,7 +93,7 @@ async function main() {
   if (/PAYMENT_PROVIDER/.test(reliabilityModel) && /QIKINK/.test(reliabilityModel) && /SHIPPING_PROVIDER/.test(reliabilityModel) && /ANALYTICS_PIPELINE/.test(reliabilityModel)) pass("OBS-015", "Dependency policies", "Existing dependency policies define timeout/retry behavior without introducing a second provider architecture.");
   else add("OBS-015", "HIGH", "FAIL", "Dependency policies", "Dependency observability policy inventory is incomplete.");
 
-  if (/deploymentId/.test(reliabilityIncidents) && /APP_VERSION|COMMIT_REF/.test(operations) && /NETLIFY_DEPLOY_ID/.test(operations)) pass("OBS-016", "Deployment/release correlation", "Incident records and operations visibility retain deployment/release references where the deployment environment provides them.");
+  if (/deploymentId/.test(reliabilityOperations) && /APP_VERSION|COMMIT_REF/.test(operations) && /NETLIFY_DEPLOY_ID/.test(operations)) pass("OBS-016", "Deployment/release correlation", "Incident records and operations visibility retain deployment/release references where the deployment environment provides them.");
   else add("OBS-016", "MEDIUM", "FAIL", "Deployment/release correlation", "Deployment correlation could not be verified.");
 
   if (/auditAdminAction/.test(await read("app/api/admin/operations/route.ts")) && /adminAuditLog/.test(operations)) pass("OBS-017", "Incident timeline and audit separation", "Operator actions use the existing audit system; operational telemetry remains separate from audit records.");
