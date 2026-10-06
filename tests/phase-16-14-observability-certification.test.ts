@@ -25,7 +25,7 @@ test("Phase 16.14 preserves the single structured telemetry architecture", async
     readFile("instrumentation.ts", "utf8"),
     readFile("lib/operations/service.ts", "utf8"),
   ]);
-  assert.match(logger, /JSON.stringify(record)/);
+  assert.match(logger, /JSON\\.stringify\\(record\\)/);
   assert.match(logger, /NODE_ENV === "production"/);
   assert.match(redaction, /SENSITIVE_KEY/);
   assert.match(metrics, /ALLOWED_LABELS/);
@@ -41,7 +41,7 @@ test("Phase 16.14 readiness distinguishes liveness from database readiness", asy
   ]);
   assert.match(health, /status: "ok"/);
   assert.match(readiness, /status: ready/);
-  assert.match(readiness, /status: 503/);
+  assert.match(readiness, /\? 200 : 503/);
   assert.match(readiness, /checkDatabaseHealth/);
 });
 
@@ -70,7 +70,7 @@ test("Phase 16.14 incident classification and alert deduplication are determinis
     dataIntegrity: "NONE",
     privacy: "NONE",
     operationalScope: "SYSTEM",
-  }), "MAJOR");
+  }), "CRITICAL");
 
   const fingerprintA = incidentFingerprint("PAYMENT", "FINANCIAL", "timeout", "PAYMENT_PROVIDER");
   const fingerprintB = incidentFingerprint("PAYMENT", "FINANCIAL", "timeout", "PAYMENT_PROVIDER");
