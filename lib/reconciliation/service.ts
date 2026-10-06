@@ -71,7 +71,7 @@ async function persistFinding(finding:Finding, correlationId?:string) {
     }});
     await tx.reconciliationAction.create({data:{
       reconciliationId:id, actionType:"DETECT", idempotencyKey:`detect:${id}`,
-      beforeState:null, afterState:{status:row.status,version:row.version},
+      beforeState:Prisma.JsonNull, afterState:{status:row.status,version:row.version},
       reason:"Deterministic reconciliation rule detected a discrepancy.", success:true,
       correlationId:correlationId?.slice(0,128),
     }});
