@@ -37,7 +37,8 @@ test("critical persistence models expose database idempotency constraints",()=>{
 
 test("Phase 16.8 audit uses safe Prisma SQL APIs",()=>{
   const script=read("scripts/phase-16-8-database-migration-certification.ts");
-  assert.equal(script.includes("$queryRawUnsafe("),false);\n  assert.equal(script.includes("$executeRawUnsafe("),false);
+  assert.equal(script.includes("$queryRawUnsafe("),false);
+  assert.equal(script.includes("$executeRawUnsafe("),false);
   assert.match(script,/prisma\.\$queryRaw/);
   assert.match(script,/prisma\.\$transaction|transaction/i);
 });
