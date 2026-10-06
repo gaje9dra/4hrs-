@@ -166,7 +166,7 @@ Required gates:
 - Phase 16.22 smoke certification
 - recovery/resilience gates
 
-Final run number, commit SHA, smoke counts, and exact PASS/FAIL/BLOCKED/NOT EXECUTABLE totals are inserted after CI completes.
+Final certification evidence: CI **#960** completed successfully for the Phase 16.22 branch. Lint, typecheck, full test job, recovery drill, build, runtime benchmark, and Phase 16.22 smoke certification all passed. The smoke artifact recorded **23 executed / 23 passed / 0 failed / 0 blocked / 0 not executable / 0 CRITICAL failures / 0 HIGH failures**. The critical business-boundary suite executed 25 existing repository test files and passed. The production-like server was the exact CI build running against isolated PostgreSQL 16.
 
 ## 42. Environment Limitations
 The environment is production-like but isolated. Netlify account-level execution is not claimed. Real-money payment, live Qikink fulfillment, real shipment creation, real customer notifications, and destructive production mutations are deliberately not executed because their safety cannot be proven from the CI environment.
@@ -174,7 +174,7 @@ The environment is production-like but isolated. Netlify account-level execution
 These are explicit coverage limitations, not fabricated passes.
 
 ## 43. Final Certification Decision
-**PENDING CI VALIDATION**
+**READY FOR PHASE 16.23**
 
 The final line will be replaced with exactly one:
 - READY FOR PHASE 16.23
