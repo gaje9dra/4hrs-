@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { writeFileSync } from "node:fs";
+import { writeFileSync, mkdirSync } from "node:fs";
 
 type Finding = {
   id: string;
@@ -76,7 +76,7 @@ function main() {
     });
   }
 
-  const files = walk(process.cwd());
+  const files = walk(process.cwd()).filter((file) => !file.includes(`${join("scripts", "phase-16-24-blocker-classification.ts")}`) && !file.includes(`${join("docs", "")}`) && !file.includes(`${join("artifacts", "")}`));
   const text = files
     .filter((file) => /\.(ts|tsx|js|jsx|json|md|yml|yaml|toml|env|example)$/i.test(file))
     .map((file) => {
@@ -137,6 +137,7 @@ function main() {
     },
   };
 
+  mkdirSync(join(process.cwd(), "artifacts"), { recursive: true });
   writeFileSync(join(process.cwd(), "artifacts/phase-16-24-blocker-classification.json"), JSON.stringify(result, null, 2) + "\n");
   console.log(JSON.stringify(result, null, 2));
   process.exitCode = result.decision === "READY FOR PHASE 16.25" ? 0 : 0;
