@@ -149,11 +149,23 @@ const browserSupport = {
 const criticalFailures = results.filter((r) => r.status === "FAIL" && r.severity === "CRITICAL").length;
 const highFailures = results.filter((r) => r.status === "FAIL" && r.severity === "HIGH").length;
 const criticalGaps = results.filter((r) => r.status === "NOT EXECUTABLE" && (r.severity === "CRITICAL" || r.severity === "HIGH"));
-const decision = testRun.status !== 0 || criticalFailures > 0 || highFailures > 0
+const decision = testRun.status !== 0 || criticalFailures > 0 || highFailures > 0 || criticalGaps.length > 0 || browserSupport.status === "NOT EXECUTABLE"
   ? "NOT READY FOR PHASE 16.24"
-  : criticalGaps.length > 0
-    ? "NOT READY FOR PHASE 16.24"
-    : "READY FOR PHASE 16.24";
+  : "READY FOR PHASE 16.24";
+const matrixSummary = {
+  categories: results.length,
+  scenarios: results.reduce((sum, result) => sum + result.scenarios, 0) + 1,
+  passed: results.filter((result) => result.status === "PASS").length,
+  failed: results.filter((result) => result.status === "FAIL").length,
+  blocked: results.filter((result) => result.status === "BLOCKED").length,
+  notExecutable: results.filter((result) => result.status === "NOT EXECUTABLE").length + (browserSupport.status === "NOT EXECUTABLE" ? 1 : 0),
+  notApplicable: results.filter((result) => result.status === "NOT APPLICABLE").length,
+  criticalFailures: results.filter((result) => result.status === "FAIL" && result.severity === "CRITICAL").length,
+  highFailures: results.filter((result) => result.status === "FAIL" && result.severity === "HIGH").length,
+  mediumFailures: results.filter((result) => result.status === "FAIL" && result.severity === "MEDIUM").length,
+  lowFailures: results.filter((result) => result.status === "FAIL" && result.severity === "LOW").length,
+  informationalGaps: 1,
+};
 
 const report = {
   phase:"16.23",
@@ -179,6 +191,7 @@ const report = {
     testFilesList:testFiles,
   },
   matrix:results,
+  matrixSummary,
   browserCompatibility:browserSupport,
   safety:{
     realMoney:false,
@@ -205,7 +218,7 @@ const report = {
 await mkdir("artifacts", { recursive:true });
 await writeFile("artifacts/phase-16-23-full-test-matrix.json", JSON.stringify(report,null,2)+"\n");
 console.log(JSON.stringify(report,null,2));
-if (decision !== "READY FOR PHASE 16.24") process.exitCode = 1;
+if (testRun.status !== 0 || criticalFailures > 0 || highFailures > 0 || criticalGaps.length > 0) process.exitCode = 1;
 }
 
 main().catch((error) => {
