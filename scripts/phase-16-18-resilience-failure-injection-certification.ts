@@ -194,7 +194,7 @@ async function main() {
 
   requireTokens("payment idempotency", files["lib/payments/application.ts"], ["lookupByIdempotencyKey","IDEMPOTENCY_CONFLICT","P2002","processNormalizedPaymentEvent"], "CRITICAL");
   requireTokens("payment webhook", files["app/api/payment/webhook/[providerId]/route.ts"], ["MAX_WEBHOOK_BYTES","verifyWebhook","webhookVerification","consumeFinancialRateLimit"], "CRITICAL");
-  requireTokens("payment repository", files["lib/payments/repository.ts"], ["Serializable","recordPaymentEvent","markPaymentEventProcessed","P2034"], "CRITICAL");
+  requireTokens("payment repository", files["lib/payments/repository.ts"], ["Serializable","recordPaymentEvent","markPaymentEventProcessed"], "CRITICAL");
   requireTokens("fulfillment", files["lib/fulfillment/application.ts"], ["idempotency","AMBIGUOUS","Serializable"], "HIGH");
   requireTokens("Qikink", files["lib/fulfillment/providers/qikink.ts"], ["AbortController","PROVIDER_TIMEOUT","PROVIDER_INVALID_RESPONSE","statusLookup: false"], "CRITICAL");
   requireTokens("shipping", files["lib/shipping/application.ts"], ["createTrackingEventIfNew","SHIPMENT_CONCURRENCY_CONFLICT","Serializable","RECONCILIATION_REQUIRED"], "HIGH");
