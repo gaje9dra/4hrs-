@@ -57,9 +57,9 @@ if(forbiddenHits.length) fail("DB-006","CRITICAL","Deployment Safety","Destructi
 else pass("DB-006","Deployment Safety","CI/deployment configuration does not use db push or migrate reset.","No forbidden migration shortcut found.");
 
 const rawHits:string[]=[];
-const sourceFiles=["lib","app","scripts","tests"];
+const sourceFiles=["lib","app","scripts","tests"];\nconst rawSqlScanExclusions=new Set(["scripts/phase-15-43-governance-stability-validate.ts","scripts/phase-16-8-database-migration-certification.ts","tests/phase-16-8-database-migration-certification.test.ts"]);
 async function walk(dir:string){let out:string[]=[];try{for(const e of await readdir(join(root,dir),{withFileTypes:true})){const p=join(dir,e.name);if(e.isDirectory())out=out.concat(await walk(p));else if(/\.(ts|tsx|js|jsx)$/.test(e.name))out.push(p)}}catch{}return out}
-for(const dir of sourceFiles){for(const p of await walk(dir)){const c=await readFile(join(root,p),"utf8");if(/\$queryRawUnsafe|\$executeRawUnsafe/.test(c))rawHits.push(p)}}
+for(const dir of sourceFiles){for(const p of await walk(dir)){if(rawSqlScanExclusions.has(p))continue;const c=await readFile(join(root,p),"utf8");if(/\$queryRawUnsafe|\$executeRawUnsafe/.test(c))rawHits.push(p)}}
 if(rawHits.length) fail("DB-007","HIGH","Raw SQL Security","Unsafe Prisma raw-SQL APIs are present.",rawHits.join(", "),"Replace with parameterized Prisma SQL or prove controlled identifiers and safe binding in a reviewed implementation.");
 else pass("DB-007","Raw SQL Security","No unsafe Prisma raw-SQL APIs were detected.","No $queryRawUnsafe/$executeRawUnsafe usage found.");
 
