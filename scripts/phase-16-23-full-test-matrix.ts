@@ -16,6 +16,8 @@ type MatrixResult = {
 
 const root = process.cwd();
 
+async function main() {
+
 async function walk(dir: string): Promise<string[]> {
   const entries = await readdir(dir, { withFileTypes: true });
   const files: string[] = [];
@@ -204,3 +206,9 @@ await mkdir("artifacts", { recursive:true });
 await writeFile("artifacts/phase-16-23-full-test-matrix.json", JSON.stringify(report,null,2)+"\n");
 console.log(JSON.stringify(report,null,2));
 if (decision !== "READY FOR PHASE 16.24") process.exitCode = 1;
+}
+
+main().catch((error) => {
+  console.error(error instanceof Error ? error.stack : error);
+  process.exitCode = 1;
+});
