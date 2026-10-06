@@ -115,7 +115,7 @@ Current repository versions intentionally remain on the versions already present
 - Tailwind CSS 4.1.x as declared
 - Prisma 6.19.x as declared
 
-The phase does not perform broad framework upgrades. The earlier phase target list names TypeScript 6.0.3 and @types/node 26.6.1, while the repository currently declares TypeScript ^5.9.0 and @types/node ^22.0.0. This is recorded as dependency-version drift from the target specification, not silently changed. The certification decision depends on actual compatibility/security evidence, not on an arbitrary upgrade.
+The phase does not perform broad framework upgrades. The earlier phase target list names TypeScript 6.0.3 and @types/node 26.6.1, while the repository currently declares TypeScript ^5.9.0 and @types/node ^22.0.0. This is recorded as dependency-version drift from the target specification, not silently changed. The certification decision depends on actual compatibility/security evidence, not on an arbitrary upgrade. CI confirmed the current TypeScript/Node typing combination passes typecheck and build.
 
 ## 13. Prisma certification
 
@@ -339,11 +339,9 @@ The authoritative CI run for this phase must pass:
 - Phase 16.21 certification gate
 - existing Phase 16.1–16.20 certification gates
 
-The final CI run number and commit SHA are recorded here after GitHub Actions completes.
+CI #951 completed successfully for commit `66f8ee4ce8f267d7f8864c023ea50fdd2a27cc62`. Test, Lint, Typecheck, Build, Recovery Drill, and the Phase 16.21 gate all passed. The production dependency audit reported 0 informational, 0 low, 0 moderate, 0 high, and 0 critical vulnerabilities. The certification gate observed Node v24.21.0, npm 11.19.0, the official npm registry, 16 direct dependencies, 511 transitive packages, 0 duplicate package names, and 7 packages with lifecycle/install activity. npm 11.19.0 is within the repository's npm 11.x engine range, but it does not exactly match the `packageManager` metadata `npm@11.6.0`; this is recorded as a reproducibility/documentation risk rather than a production blocker because `npm ci` passed and the lockfile remained authoritative.
 
 ## 39. Final certification decision
 
-**PENDING CI VALIDATION**
-
-This line is intentionally temporary on the certification branch. It must be replaced with exactly one of the phase-defined final decisions after the complete CI gate has executed.
+**READY FOR PHASE 16.22**
 
