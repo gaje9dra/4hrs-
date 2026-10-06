@@ -60,7 +60,7 @@ test("Phase 16.6 account security mutation is rate-limited and same-origin prote
   assert.match(password,/assertSameOrigin/);
   assert.match(password,/rateLimiter\.consume/);
   assert.match(password,/currentPassword/);
-  assert.match(sessions,/revokeAllSessions/);
+  assert.match(sessions,/logoutAllSessions/);
   assert.match(sessions,/rateLimiter\.consume/);
 });
 
