@@ -58,7 +58,7 @@ else pass("DB-006","Deployment Safety","CI/deployment configuration does not use
 
 const rawHits:string[]=[];
 const sourceFiles=["lib","app","scripts","tests"];
-const rawSqlScanExclusions=new Set(["scripts/phase-15-43-governance-stability-validate.ts","scripts/phase-16-8-database-migration-certification.ts","scripts/phase-16-9-api-contract-certification.ts","tests/phase-16-8-database-migration-certification.test.ts"]);
+const rawSqlScanExclusions=new Set(["scripts/phase-15-43-governance-stability-validate.ts","scripts/phase-16-8-database-migration-certification.ts","scripts/phase-16-9-api-contract-certification.ts","scripts/phase-16-10-security-certification.ts","tests/phase-16-8-database-migration-certification.test.ts"]);
 async function walk(dir:string){let out:string[]=[];try{for(const e of await readdir(join(root,dir),{withFileTypes:true})){const p=join(dir,e.name);if(e.isDirectory())out=out.concat(await walk(p));else if(/\.(ts|tsx|js|jsx)$/.test(e.name))out.push(p)}}catch{}return out}
 for(const dir of sourceFiles){for(const p of await walk(dir)){if(rawSqlScanExclusions.has(p))continue;const c=await readFile(join(root,p),"utf8");if(/\$queryRawUnsafe|\$executeRawUnsafe/.test(c))rawHits.push(p)}}
 if(rawHits.length) fail("DB-007","HIGH","Raw SQL Security","Unsafe Prisma raw-SQL APIs are present.",rawHits.join(", "),"Replace with parameterized Prisma SQL or prove controlled identifiers and safe binding in a reviewed implementation.");

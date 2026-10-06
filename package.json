@@ -59,7 +59,8 @@
     "production-certification:phase-16-6": "tsx scripts/phase-16-6-customer-account-privacy-certification.ts",
     "production-certification:phase-16-7": "tsx scripts/phase-16-7-admin-rbac-certification.ts",
     "production-certification:phase-16-8": "tsx scripts/phase-16-8-database-migration-certification.ts",
-    "production-certification:phase-16-9": "tsx scripts/phase-16-9-api-contract-certification.ts"
+    "production-certification:phase-16-9": "tsx scripts/phase-16-9-api-contract-certification.ts",
+    "production-certification:phase-16-10": "tsx scripts/phase-16-10-security-certification.ts"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.1.14",

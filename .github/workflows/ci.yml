@@ -160,6 +160,9 @@ jobs:
       - name: Run Phase 16.9 API and contract certification audit
         run: npm run production-certification:phase-16-9
 
+      - name: Run Phase 16.10 security certification
+        run: npm run production-certification:phase-16-10
+
       - name: Validate restored-state invariants
         run: npm run recovery:validate
       - name: Run synthetic rehearsal test suite
