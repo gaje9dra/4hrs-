@@ -196,6 +196,16 @@ jobs:
           path: artifacts/phase-16-15-background-event-certification-evidence.json
           if-no-files-found: error
 
+      - name: Run Phase 16.16 reconciliation certification
+        run: npm run production-certification:phase-16-16
+
+      - name: Upload Phase 16.16 reconciliation certification evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase-16-16-reconciliation-certification-evidence
+          path: artifacts/phase-16-16-reconciliation-certification-evidence.json
+          if-no-files-found: error
+
       - name: Upload Phase 16.13 SEO certification evidence
         uses: actions/upload-artifact@v4
         with:

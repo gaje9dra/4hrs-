@@ -19,19 +19,29 @@ type Finding = {
 };
 
 const RULES = [
-  { key:"ORD-ITEM-ORPHAN", domain:"ORDER" as const, type:"ORPHAN_RECORD" as const, severity:"CRITICAL" as const, authority:"ORDER", sql:'SELECT oi.id FROM "OrderItem" oi LEFT JOIN "Order" o ON o.id=oi."orderId" WHERE o.id IS NULL LIMIT 100' },
-  { key:"FUL-ORPHAN", domain:"FULFILLMENT" as const, type:"ORPHAN_RECORD" as const, severity:"CRITICAL" as const, authority:"FULFILLMENT", sql:'SELECT f.id FROM "Fulfillment" f LEFT JOIN "Order" o ON o.id=f."orderId" WHERE o.id IS NULL LIMIT 100' },
-  { key:"SHIP-ORPHAN-FULFILLMENT", domain:"SHIPPING" as const, type:"ORPHAN_RECORD" as const, severity:"HIGH" as const, authority:"SHIPPING", sql:'SELECT s.id FROM "Shipment" s LEFT JOIN "Fulfillment" f ON f.id=s."fulfillmentId" WHERE f.id IS NULL LIMIT 100' },
-  { key:"SHIP-ORPHAN-ORDER", domain:"SHIPPING" as const, type:"INVALID_REFERENCE" as const, severity:"HIGH" as const, authority:"ORDER", sql:'SELECT s.id FROM "Shipment" s LEFT JOIN "Order" o ON o.id=s."orderId" WHERE o.id IS NULL LIMIT 100' },
-  { key:"TRACK-ORPHAN", domain:"SHIPPING" as const, type:"ORPHAN_RECORD" as const, severity:"HIGH" as const, authority:"SHIPPING", sql:'SELECT t.id FROM "TrackingEvent" t LEFT JOIN "Shipment" s ON s.id=t."shipmentId" WHERE s.id IS NULL LIMIT 100' },
-  { key:"FUL-ITEM-ORPHAN", domain:"FULFILLMENT" as const, type:"ORPHAN_RECORD" as const, severity:"HIGH" as const, authority:"ORDER", sql:'SELECT fi.id FROM "FulfillmentItem" fi LEFT JOIN "OrderItem" oi ON oi.id=fi."orderItemId" WHERE oi.id IS NULL LIMIT 100' },
-  { key:"PAYMENT-ORDER-MISSING", domain:"PAYMENT" as const, type:"MISSING_DEPENDENCY" as const, severity:"CRITICAL" as const, authority:"PAYMENT", sql:'SELECT p.id FROM "Payment" p LEFT JOIN "Order" o ON o."paymentId"=p.id WHERE p.status IN (\'SUCCEEDED\',\'PARTIALLY_REFUNDED\',\'REFUNDED\') AND o.id IS NULL LIMIT 100' },
-  { key:"ORDER-CUSTOMER-MISSING", domain:"CUSTOMER" as const, type:"OWNERSHIP_MISMATCH" as const, severity:"CRITICAL" as const, authority:"CUSTOMER", sql:'SELECT o.id FROM "Order" o LEFT JOIN "Customer" c ON c.id=o."customerId" WHERE c.id IS NULL LIMIT 100' },
-  { key:"PROVIDER-MAPPING-ORPHAN", domain:"PROVIDERS" as const, type:"PROVIDER_MISMATCH" as const, severity:"HIGH" as const, authority:"CATALOG", sql:'SELECT m.id FROM "FulfillmentProviderMapping" m LEFT JOIN "ProductVariant" v ON v.id=m."variantId" WHERE v.id IS NULL LIMIT 100' },
-  { key:"ANALYTICS-CUSTOMER-MISSING", domain:"ANALYTICS" as const, type:"OWNERSHIP_MISMATCH" as const, severity:"LOW" as const, authority:"CUSTOMER", sql:'SELECT a.id FROM "AnalyticsEvent" a LEFT JOIN "Customer" c ON c.id=a."customerId" WHERE a."customerId" IS NOT NULL AND c.id IS NULL LIMIT 100' },
-  { key:"NOTIFICATION-CUSTOMER-MISSING", domain:"NOTIFICATIONS" as const, type:"INVALID_REFERENCE" as const, severity:"HIGH" as const, authority:"CUSTOMER", sql:'SELECT n.id FROM "NotificationDelivery" n LEFT JOIN "Customer" c ON c.id=n."customerId" WHERE c.id IS NULL LIMIT 100' },
-  { key:"NOTIFICATION-EVENT-MISSING", domain:"NOTIFICATIONS" as const, type:"MISSING_DEPENDENCY" as const, severity:"HIGH" as const, authority:"NOTIFICATIONS", sql:'SELECT n.id FROM "NotificationDelivery" n LEFT JOIN "NotificationEvent" e ON e.id=n."notificationEventId" WHERE e.id IS NULL LIMIT 100' },
+  { key:"ORD-ITEM-ORPHAN", domain:"ORDER" as const, type:"ORPHAN_RECORD" as const, severity:"CRITICAL" as const, authority:"ORDER", sql:`SELECT oi.id FROM "OrderItem" oi LEFT JOIN "Order" o ON o.id=oi."orderId" WHERE o.id IS NULL LIMIT 100` },
+  { key:"ORDER-NO-ITEMS", domain:"ORDER" as const, type:"MISSING_DEPENDENCY" as const, severity:"HIGH" as const, authority:"ORDER", sql:`SELECT o.id FROM "Order" o WHERE NOT EXISTS (SELECT 1 FROM "OrderItem" oi WHERE oi."orderId"=o.id) LIMIT 100` },
+  { key:"ORDER-PAYMENT-UNSETTLED", domain:"ORDER" as const, type:"STATE_MISMATCH" as const, severity:"CRITICAL" as const, authority:"PAYMENT", sql:`SELECT o.id FROM "Order" o JOIN "Payment" p ON p.id=o."paymentId" WHERE o.status='CONFIRMED' AND p.status NOT IN ('SUCCEEDED','PARTIALLY_REFUNDED','REFUNDED') LIMIT 100` },
+  { key:"ORDER-PAYMENT-AMOUNT-MISMATCH", domain:"PAYMENT" as const, type:"FINANCIAL_MISMATCH" as const, severity:"CRITICAL" as const, authority:"PAYMENT", sql:`SELECT o.id FROM "Order" o JOIN "Payment" p ON p.id=o."paymentId" WHERE p.amount<>o.total OR p.currency<>o.currency LIMIT 100` },
+  { key:"PAYMENT-ORDER-MISSING", domain:"PAYMENT" as const, type:"MISSING_DEPENDENCY" as const, severity:"CRITICAL" as const, authority:"PAYMENT", sql:`SELECT p.id FROM "Payment" p LEFT JOIN "Order" o ON o."paymentId"=p.id WHERE p.status IN ('SUCCEEDED','PARTIALLY_REFUNDED','REFUNDED') AND o.id IS NULL LIMIT 100` },
+  { key:"PAYMENT-REFUND-OVER", domain:"PAYMENT" as const, type:"FINANCIAL_MISMATCH" as const, severity:"CRITICAL" as const, authority:"PAYMENT", sql:`SELECT p.id FROM "Payment" p JOIN (SELECT "paymentId",COALESCE(SUM(amount),0) AS refunded FROM "PaymentRefund" WHERE status='SUCCEEDED' GROUP BY "paymentId") r ON r."paymentId"=p.id WHERE r.refunded>p.amount LIMIT 100` },
+  { key:"PAYMENT-CUSTOMER-MISMATCH", domain:"PAYMENT" as const, type:"OWNERSHIP_MISMATCH" as const, severity:"CRITICAL" as const, authority:"CUSTOMER", sql:`SELECT o.id FROM "Order" o JOIN "Payment" p ON p.id=o."paymentId" WHERE o."customerId"<>p."customerId" LIMIT 100` },
+  { key:"FUL-ORPHAN", domain:"FULFILLMENT" as const, type:"ORPHAN_RECORD" as const, severity:"CRITICAL" as const, authority:"FULFILLMENT", sql:`SELECT f.id FROM "Fulfillment" f LEFT JOIN "Order" o ON o.id=f."orderId" WHERE o.id IS NULL LIMIT 100` },
+  { key:"FUL-ORDER-PAYMENT-MISMATCH", domain:"FULFILLMENT" as const, type:"STATE_MISMATCH" as const, severity:"HIGH" as const, authority:"ORDER", sql:`SELECT f.id FROM "Fulfillment" f JOIN "Order" o ON o.id=f."orderId" JOIN "Payment" p ON p.id=o."paymentId" WHERE f.status IN ('SUBMITTED','COMPLETED') AND p.status IN ('CREATED','REQUIRES_ACTION','PROCESSING','FAILED','CANCELLED','EXPIRED') LIMIT 100` },
+  { key:"FUL-ITEM-ORPHAN", domain:"FULFILLMENT" as const, type:"ORPHAN_RECORD" as const, severity:"HIGH" as const, authority:"ORDER", sql:`SELECT fi.id FROM "FulfillmentItem" fi LEFT JOIN "OrderItem" oi ON oi.id=fi."orderItemId" WHERE oi.id IS NULL LIMIT 100` },
+  { key:"PROVIDER-MAPPING-ORPHAN", domain:"PROVIDERS" as const, type:"PROVIDER_MISMATCH" as const, severity:"HIGH" as const, authority:"CATALOG", sql:`SELECT m.id FROM "FulfillmentProviderMapping" m LEFT JOIN "ProductVariant" v ON v.id=m."variantId" WHERE v.id IS NULL LIMIT 100` },
+  { key:"SHIP-ORPHAN-FULFILLMENT", domain:"SHIPPING" as const, type:"ORPHAN_RECORD" as const, severity:"HIGH" as const, authority:"SHIPPING", sql:`SELECT s.id FROM "Shipment" s LEFT JOIN "Fulfillment" f ON f.id=s."fulfillmentId" WHERE f.id IS NULL LIMIT 100` },
+  { key:"SHIP-ORPHAN-ORDER", domain:"SHIPPING" as const, type:"INVALID_REFERENCE" as const, severity:"HIGH" as const, authority:"ORDER", sql:`SELECT s.id FROM "Shipment" s LEFT JOIN "Order" o ON o.id=s."orderId" WHERE o.id IS NULL LIMIT 100` },
+  { key:"TRACK-ORPHAN", domain:"SHIPPING" as const, type:"ORPHAN_RECORD" as const, severity:"HIGH" as const, authority:"SHIPPING", sql:`SELECT t.id FROM "TrackingEvent" t LEFT JOIN "Shipment" s ON s.id=t."shipmentId" WHERE s.id IS NULL LIMIT 100` },
+  { key:"CANCEL-FULFILLMENT-COMPLETE", domain:"CANCELLATIONS" as const, type:"INVALID_TRANSITION" as const, severity:"HIGH" as const, authority:"ORDER", sql:`SELECT c.id FROM "CancellationRequest" c JOIN "Fulfillment" f ON f."orderId"=c."orderId" WHERE c.status='COMPLETED' AND f.status='COMPLETED' LIMIT 100` },
+  { key:"RETURN-ORDER-MISSING", domain:"RETURNS" as const, type:"MISSING_DEPENDENCY" as const, severity:"HIGH" as const, authority:"ORDER", sql:`SELECT r.id FROM "ReturnRequest" r LEFT JOIN "Order" o ON o.id=r."orderId" WHERE o.id IS NULL LIMIT 100` },
+  { key:"ORDER-CUSTOMER-MISSING", domain:"CUSTOMER" as const, type:"OWNERSHIP_MISMATCH" as const, severity:"CRITICAL" as const, authority:"CUSTOMER", sql:`SELECT o.id FROM "Order" o LEFT JOIN "Customer" c ON c.id=o."customerId" WHERE c.id IS NULL LIMIT 100` },
+  { key:"ANALYTICS-CUSTOMER-MISSING", domain:"ANALYTICS" as const, type:"OWNERSHIP_MISMATCH" as const, severity:"LOW" as const, authority:"CUSTOMER", sql:`SELECT a.id FROM "AnalyticsEvent" a LEFT JOIN "Customer" c ON c.id=a."customerId" WHERE a."customerId" IS NOT NULL AND c.id IS NULL LIMIT 100` },
+  { key:"NOTIFICATION-CUSTOMER-MISSING", domain:"NOTIFICATIONS" as const, type:"INVALID_REFERENCE" as const, severity:"HIGH" as const, authority:"CUSTOMER", sql:`SELECT n.id FROM "NotificationDelivery" n LEFT JOIN "Customer" c ON c.id=n."customerId" WHERE c.id IS NULL LIMIT 100` },
+  { key:"NOTIFICATION-EVENT-MISSING", domain:"NOTIFICATIONS" as const, type:"MISSING_DEPENDENCY" as const, severity:"HIGH" as const, authority:"NOTIFICATIONS", sql:`SELECT n.id FROM "NotificationDelivery" n LEFT JOIN "NotificationEvent" e ON e.id=n."notificationEventId" WHERE e.id IS NULL LIMIT 100` },
 ] as const;
+
+export const RECONCILIATION_RULES = RULES.map(({key,domain,type,severity,authority})=>({key,domain,type,severity,authority}));
 
 async function scanRule(rule: typeof RULES[number]): Promise<Finding[]> {
   const rows = await db.$queryRaw<Array<{id:string}>>(Prisma.sql([rule.sql]));
@@ -44,17 +54,29 @@ async function scanRule(rule: typeof RULES[number]): Promise<Finding[]> {
 }
 
 async function persistFinding(finding:Finding, correlationId?:string) {
-  const existing=await db.reconciliationCase.findFirst({
-    where:{type:finding.type,domain:finding.domain,affectedEntityType:finding.affectedEntityType,affectedEntityId:finding.affectedEntityId,status:{notIn:["RESOLVED","IGNORED","NOT_REPRODUCIBLE"]}},
-    select:{id:true,version:true,retryCount:true,severity:true,status:true,affectedEntityType:true,domain:true,type:true,description:true},
+  const lockKey=`${finding.type}:${finding.domain}:${finding.affectedEntityType}:${finding.affectedEntityId}`;
+  return db.$transaction(async(tx)=>{
+    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${lockKey}))`;
+    const existing=await tx.reconciliationCase.findFirst({
+      where:{type:finding.type,domain:finding.domain,affectedEntityType:finding.affectedEntityType,affectedEntityId:finding.affectedEntityId,status:{notIn:["RESOLVED","IGNORED","NOT_REPRODUCIBLE"]}},
+      select:{id:true,version:true,retryCount:true,severity:true,status:true,affectedEntityType:true,domain:true,type:true,description:true},
+    });
+    if(existing) return existing;
+    const id=randomUUID();
+    const row=await tx.reconciliationCase.create({data:{
+      id, type:finding.type, domain:finding.domain, severity:finding.severity, status:canAutoRepair(finding.type,finding.domain)?"AUTO_RESOLVABLE":"AWAITING_REVIEW",
+      detectedBy:"reconciliation-engine", source:"integrity-scan", correlationId:correlationId?.slice(0,128),
+      authoritativeDomain:finding.authoritativeDomain, affectedEntityType:finding.affectedEntityType, affectedEntityId:finding.affectedEntityId,
+      description:finding.description, evidence:finding.evidence as Prisma.InputJsonValue,
+    }});
+    await tx.reconciliationAction.create({data:{
+      reconciliationId:id, actionType:"DETECT", idempotencyKey:`detect:${id}`,
+      beforeState:Prisma.JsonNull, afterState:{status:row.status,version:row.version},
+      reason:"Deterministic reconciliation rule detected a discrepancy.", success:true,
+      correlationId:correlationId?.slice(0,128),
+    }});
+    return row;
   });
-  if(existing) return existing;
-  return db.reconciliationCase.create({data:{
-    id:randomUUID(), type:finding.type, domain:finding.domain, severity:finding.severity, status:canAutoRepair(finding.type,finding.domain)?"AUTO_RESOLVABLE":"AWAITING_REVIEW",
-    detectedBy:"reconciliation-engine", source:"integrity-scan", correlationId:correlationId?.slice(0,128),
-    authoritativeDomain:finding.authoritativeDomain, affectedEntityType:finding.affectedEntityType, affectedEntityId:finding.affectedEntityId,
-    description:finding.description, evidence:finding.evidence as Prisma.InputJsonValue,
-  }});
 }
 
 export async function runReconciliation(options:{domains?:ReconciliationDomain[]; maxCases?:number; correlationId?:string}={}) {
@@ -127,5 +149,11 @@ export async function retrySafeReconciliation(context:AdminAuthorizationContext,
 }
 
 export async function reconciliationHealthCheck() {
-  return { domains:AUTHORITATIVE_DOMAINS, rules:RULES.map(({key,domain,type,severity,authority})=>({key,domain,type,severity,authority})), safeRepairTypes:["STALE_PROJECTION","MISSING_EVENT","DUPLICATE_EVENT"], automaticMutationBoundary:"No financial, customer ownership, provider shipment identity, order total, payment amount or irreversible order state is automatically mutated." };
+  return {
+    domains:AUTHORITATIVE_DOMAINS,
+    rules:RECONCILIATION_RULES,
+    safeRepairTypes:["STALE_PROJECTION","MISSING_EVENT","DUPLICATE_EVENT"],
+    automaticMutationBoundary:"No financial, customer ownership, provider shipment identity, order total, payment amount or irreversible order state is automatically mutated.",
+    externalProviderState:"Qikink/shipping provider reconciliation is limited to state actually available through existing provider contracts; unknown provider state remains unknown.",
+  };
 }
