@@ -231,6 +231,8 @@ jobs:
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/fourhrs_build?schema=public
       DIRECT_URL: postgresql://postgres:postgres@localhost:5432/fourhrs_build?schema=public
+      NEXT_PUBLIC_SITE_URL: https://example.test
+      APP_VERSION: ci-performance
 
     steps:
       - name: Checkout
@@ -249,6 +251,41 @@ jobs:
 
       - name: Build application
         run: npm run build
+
+      - name: Start production server for controlled performance certification
+        run: |
+          npm start > /tmp/next-performance.log 2>&1 &
+          echo $! > /tmp/next-performance.pid
+          for i in {1..60}; do
+            if curl --fail --silent http://127.0.0.1:3000/api/health > /dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          curl --fail --silent http://127.0.0.1:3000/api/health > /dev/null
+
+      - name: Run Phase 16.11 controlled runtime benchmark
+        env:
+          PERF_BASE_URL: http://127.0.0.1:3000
+        run: |
+          export NEXT_SERVER_PID=$(cat /tmp/next-performance.pid)
+          npm run performance:benchmark:phase-16-11
+
+      - name: Run Phase 16.11 performance certification
+        run: npm run production-certification:phase-16-11
+
+      - name: Upload Phase 16.11 performance evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase-16-11-performance-evidence
+          path: artifacts/phase-16-11-*.json
+          if-no-files-found: error
+
+      - name: Stop performance certification server
+        if: always()
+        run: |
+          if [ -f /tmp/next-performance.pid ]; then kill $(cat /tmp/next-performance.pid) || true; fi
+          cat /tmp/next-performance.log || true
 
   recovery-drill:
     name: Recovery Drill
