@@ -45,8 +45,11 @@ function scenario(s: Scenario) { scenarios.push(s); }
 async function runQikinkFaultInjection() {
   const baseRequest = {
     fulfillmentId: "phase-16-18-test-fulfillment",
+    orderReference: "4HRS-TEST-0001",
+    orderNumber: "4HRS-TEST-0001",
+    currency: "INR",
     orderTotal: "999.00",
-    items: [{ sku: "TEST-SKU", unitPrice: "999.00", quantity: 1 }],
+    items: [{ orderItemId: "phase-16-18-order-item", sku: "TEST-SKU", variantId: null, unitPrice: "999.00", quantity: 1 }],
     shippingAddress: {
       recipientName: "Test Customer", addressLine1: "Test Address", addressLine2: null,
       city: "Jaipur", stateOrProvince: "Rajasthan", postalCode: "302001",
