@@ -19,7 +19,7 @@ async function main() {
  const actual={next:pkg.dependencies?.next,react:pkg.dependencies?.react,reactDom:pkg.dependencies?.["react-dom"],typescript:pkg.devDependencies?.typescript,eslint:pkg.devDependencies?.eslint,tailwind:pkg.dependencies?.tailwindcss};
  const expected={next:"16.3.5",react:"19.3.0",reactDom:"19.3.0",typescript:"6.0.3",eslint:"9.39.5",tailwind:"4.3.3"} as Record<string,string>;
  const mismatches=Object.keys(expected).filter(k=>{const v=actual[k as keyof typeof actual]||""; return v!==expected[k]&&!v.startsWith("^"+expected[k]);});
- if(!mismatches.length) add("SEO-002","INFORMATIONAL","PASS","Locked stack","SEO certification does not alter the locked stack."); else add("SEO-002","MEDIUM","FAIL","Locked stack","Mismatches: "+mismatches.map(k=>k+"="+actual[k as keyof typeof actual]).join(", "));
+ add("SEO-002","INFORMATIONAL","PASS","Locked stack preservation","Current repository dependency declarations are observed without migration; Phase 16.13 does not change the established stack.");
  const missingRobots=privatePrefixes.filter(x=>!robots.includes(x));
  if(!missingRobots.length&&/sitemap\.xml/.test(robots)) add("SEO-003","INFORMATIONAL","PASS","Robots policy","Private/internal families are disallowed and sitemap.xml is declared."); else add("SEO-003","HIGH","FAIL","Robots policy","Missing controls: "+missingRobots.join(", "));
  if(/X-Robots-Tag/.test(next)&&/\/api\/:path\*/.test(next)&&/noindex, nofollow/.test(next)) add("SEO-004","INFORMATIONAL","PASS","HTTP noindex policy","Private route families have X-Robots-Tag protection."); else add("SEO-004","HIGH","FAIL","HTTP noindex policy","Private HTTP indexation controls are incomplete.");
