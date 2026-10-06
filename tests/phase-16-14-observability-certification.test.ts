@@ -29,7 +29,7 @@ test("Phase 16.14 preserves the single structured telemetry architecture", async
   assert.match(logger, /NODE_ENV === "production"/);
   assert.match(redaction, /SENSITIVE_KEY/);
   assert.match(metrics, /ALLOWED_LABELS/);
-  assert.match(proxy, /x-request-id/);
+  assert.match(proxy, /REQUEST_ID_HEADER/);
   assert.match(instrumentation, /onRequestError/);
   assert.match(operations, /criticalIncidents/);
 });
