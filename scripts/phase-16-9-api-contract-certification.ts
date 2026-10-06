@@ -49,7 +49,7 @@ if (adminMissing.length) {
 
 const stateChanging = routeRecords.filter(r=>r.methods.some(m=>["POST","PUT","PATCH","DELETE"].includes(m)));
 const originMissing = stateChanging.filter(r =>
-  !/payment\\/webhook/.test(r.path) &&
+  !/payment\/webhook/.test(r.path) &&
   !publicPrefixes.includes(r.path) &&
   !/assertSameOrigin|assertAdminSameOrigin|isTrustedStateChangingRequest/.test(r.c)
 );
