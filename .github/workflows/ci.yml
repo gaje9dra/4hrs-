@@ -328,6 +328,27 @@ jobs:
           export NEXT_SERVER_PID=$(cat /tmp/next-performance.pid)
           npm run performance:benchmark:phase-16-11
 
+      - name: Run Phase 16.22 synthetic production smoke certification
+        env:
+          PHASE_16_22_BASE_URL: http://127.0.0.1:3000
+          PHASE_16_22_RUN_ID: phase-16-22-${{ github.run_id }}-${{ github.run_attempt }}
+          PHASE_16_22_ALLOW_LOCAL_SYNTHETIC: "true"
+          SYNTHETIC_EXECUTION_MODE: CI
+          SYNTHETIC_MONITORING_ENABLED: "true"
+          SYNTHETIC_ALLOWED_BASE_URL: http://127.0.0.1:3000
+          SYNTHETIC_PAYMENT_MODE: boundary
+          SYNTHETIC_PROVIDER_MODE: disabled
+          SYNTHETIC_NOTIFICATION_MODE: suppress
+          FULFILLMENT_PROVIDER_MODE: test
+        run: npm run production-certification:phase-16-22
+
+      - name: Upload Phase 16.22 smoke evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase-16-22-synthetic-production-smoke-evidence
+          path: artifacts/phase-16-22-synthetic-production-smoke-test.json
+          if-no-files-found: error
+
       - name: Run Phase 16.11 performance certification
         run: npm run production-certification:phase-16-11
 
