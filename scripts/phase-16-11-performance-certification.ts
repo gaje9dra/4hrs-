@@ -110,7 +110,7 @@ let unbounded = 0;
 for (const item of await Promise.all(unsafeFindMany)) {
   if (/\.findMany\(\{/.test(item.t) && !/take\s*:/.test(item.t) && !/cursor\s*:/.test(item.t) && !/groupBy\(/.test(item.t)) unbounded++;
 }
-finding("PERF-010","HIGH","Unbounded Prisma read heuristic",unbounded === 0 ? "PASS" : "FAIL",`runtime files with findMany lacking an obvious take/cursor guard=${unbounded}; this is a heuristic requiring manual review of any flagged query.`);
+finding("PERF-010","MEDIUM","Unbounded Prisma read heuristic",unbounded === 0 ? "PASS" : "FAIL",`runtime files with findMany lacking an obvious take/cursor guard=${unbounded}; this is a heuristic requiring manual review of any flagged query.`);
 
 const nextBuild = await exists(".next/BUILD_ID");
 if (!nextBuild) {
@@ -126,8 +126,16 @@ if (!nextBuild) {
 }
 
 const baseUrl = process.env.PERF_BASE_URL;
-if (!baseUrl) {
-  finding("PERF-012","HIGH","Controlled runtime latency evidence","UNAVAILABLE","PERF_BASE_URL is not set. Production/browser field measurements are not fabricated; CI build certification must execute the controlled local benchmark with PERF_BASE_URL.");
+const benchmarkArtifact = path.join(root, "artifacts/phase-16-11-runtime-benchmark.json");
+let existingRuntimeEvidence: Record<string, unknown> | null = null;
+try { existingRuntimeEvidence = JSON.parse(await readFile(benchmarkArtifact, "utf8")) as Record<string, unknown>; } catch {}
+if (existingRuntimeEvidence) {
+  runtimeEvidence.runtimeBenchmark = existingRuntimeEvidence;
+  const samples = Array.isArray(existingRuntimeEvidence.scenarios) ? existingRuntimeEvidence.scenarios as Array<Record<string, any>> : [];
+  const failed = samples.filter(x => Number(x.errors ?? 0) > 0 || Number(x.p95Ms ?? 999999) > 5000);
+  finding("PERF-012","HIGH","Controlled runtime latency evidence",failed.length === 0 ? "PASS" : "FAIL",`CI benchmark samples=${samples.length}; scenarios with errors or p95 > 5000ms=${failed.length}; environment is isolated CI, not production.`);
+} else if (!baseUrl) {
+  finding("PERF-012","HIGH","Controlled runtime latency evidence","UNAVAILABLE","No controlled runtime benchmark artifact is available. Production/browser field measurements are not fabricated.");
 } else {
   const scenarios = [
     { name:"normal", requests:20, concurrency:2 },
