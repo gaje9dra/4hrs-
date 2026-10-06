@@ -181,6 +181,7 @@ async function main() {
   await writeFile(path.join(root, "artifacts/phase-16-12-frontend-accessibility-evidence.json"), JSON.stringify(report, null, 2) + "\n");
 
   const blockers = findings.filter((f) => f.status === "FAIL" && (f.severity === "CRITICAL" || f.severity === "HIGH"));
+  console.log(JSON.stringify(findings.filter((f) => f.status === "FAIL"), null, 2));
   console.log(JSON.stringify(report.certification));
   if (blockers.length) process.exit(1);
 }
