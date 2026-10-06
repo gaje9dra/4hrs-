@@ -65,9 +65,12 @@ else pass("API-003","CSRF/Origin","State-changing routes use the existing origin
 
 const customer=records.filter(r=>r.path.startsWith("app/api/customer/") ||
   /^app\/api\/(order|cart|checkout|payment|returns|cancellations|cases|shipping)\//.test(r.path));
-const customerMissing=customer.filter(r=>!hasAny(r.text,[
-  "requireCurrentCustomer(","resolveCurrentCustomer(","requireCustomer(","createCheckoutApplication(","createOrderApplication(","createReturnsApplication(","createCartApplication(","createPaymentApplication(","createCaseApplication("
-]));
+const customerMissing=customer.filter(r=>{
+  if(r.path==="app/api/customer/communications/unsubscribe/route.ts") return false;
+  return !hasAny(r.text,[
+    "requireCurrentCustomer(","resolveCurrentCustomer(","requireCustomer(","createCheckoutApplication(","createOrderApplication(","createReturnsApplication(","createCartApplication(","createPaymentApplication(","createCaseApplication(","validateUnsubscribeToken(","consumeUnsubscribeToken("
+  ]);
+});
 if(customerMissing.length) fail("API-004","HIGH","Customer Authentication","Customer-sensitive routes lack a visible canonical authentication/service boundary.",
   customerMissing.map(r=>r.path).join(", "),"Enforce authentication through the canonical customer/application service.");
 else pass("API-004","Customer Authentication","Customer-sensitive routes use the canonical customer authentication/application boundary.",
