@@ -1,6 +1,6 @@
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { PrismaClient } from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
 
 type Finding = { id:string; severity:"CRITICAL"|"HIGH"|"MEDIUM"|"LOW"|"INFORMATIONAL"; area:string; description:string; evidence:string; remediation:string; status:"PASS"|"FAIL"|"BLOCKED"|"NOT_APPLICABLE" };
 const findings: Finding[] = [];
@@ -96,18 +96,18 @@ if(!prisma){
     if(unapplied.length||failed.length) fail("DB-012","CRITICAL","Migration State","Database migration state is not fully applied and healthy.",`unapplied=${unapplied.join(",")}; failed=${failed.map(x=>x.migration_name).join(",")}`,"Repair the migration state using the documented Prisma recovery procedure before deployment.");
     else pass("DB-012","Migration State","All repository migrations are recorded as successfully applied in the validation database.",`${migrationRows.length} applied migration records; ${entries.length} repository migrations.`);
 
-    const orphanQueries=[
-      ["OrderItem without Order",`SELECT count(*)::int AS count FROM "OrderItem" oi LEFT JOIN "Order" o ON o.id=oi."orderId" WHERE o.id IS NULL`],
-      ["Payment without Customer",`SELECT count(*)::int AS count FROM "Payment" p LEFT JOIN "Customer" c ON c.id=p."customerId" WHERE c.id IS NULL`],
-      ["Refund without Payment",`SELECT count(*)::int AS count FROM "PaymentRefund" r LEFT JOIN "Payment" p ON p.id=r."paymentId" WHERE p.id IS NULL`],
-      ["Fulfillment without Order",`SELECT count(*)::int AS count FROM "Fulfillment" f LEFT JOIN "Order" o ON o.id=f."orderId" WHERE o.id IS NULL`],
-      ["Shipment without Order",`SELECT count(*)::int AS count FROM "Shipment" s LEFT JOIN "Order" o ON o.id=s."orderId" WHERE o.id IS NULL`],
-      ["CustomerAddress without Customer",`SELECT count(*)::int AS count FROM "CustomerAddress" a LEFT JOIN "Customer" c ON c.id=a."customerId" WHERE c.id IS NULL`],
-      ["ProviderMapping without ProductVariant",`SELECT count(*)::int AS count FROM "FulfillmentProviderMapping" m LEFT JOIN "ProductVariant" v ON v.id=m."variantId" WHERE v.id IS NULL`],
-      ["AdminAuditLog without AdminUser",`SELECT count(*)::int AS count FROM "AdminAuditLog" a LEFT JOIN "AdminUser" u ON u.id=a."adminUserId" WHERE u.id IS NULL`],
+    const orphanQueries: Array<[string, Prisma.Sql]> = [
+      ["OrderItem without Order",Prisma.sql`SELECT count(*)::int AS count FROM "OrderItem" oi LEFT JOIN "Order" o ON o.id=oi."orderId" WHERE o.id IS NULL`],
+      ["Payment without Customer",Prisma.sql`SELECT count(*)::int AS count FROM "Payment" p LEFT JOIN "Customer" c ON c.id=p."customerId" WHERE c.id IS NULL`],
+      ["Refund without Payment",Prisma.sql`SELECT count(*)::int AS count FROM "PaymentRefund" r LEFT JOIN "Payment" p ON p.id=r."paymentId" WHERE p.id IS NULL`],
+      ["Fulfillment without Order",Prisma.sql`SELECT count(*)::int AS count FROM "Fulfillment" f LEFT JOIN "Order" o ON o.id=f."orderId" WHERE o.id IS NULL`],
+      ["Shipment without Order",Prisma.sql`SELECT count(*)::int AS count FROM "Shipment" s LEFT JOIN "Order" o ON o.id=s."orderId" WHERE o.id IS NULL`],
+      ["CustomerAddress without Customer",Prisma.sql`SELECT count(*)::int AS count FROM "CustomerAddress" a LEFT JOIN "Customer" c ON c.id=a."customerId" WHERE c.id IS NULL`],
+      ["ProviderMapping without ProductVariant",Prisma.sql`SELECT count(*)::int AS count FROM "FulfillmentProviderMapping" m LEFT JOIN "ProductVariant" v ON v.id=m."variantId" WHERE v.id IS NULL`],
+      ["AdminAuditLog without AdminUser",Prisma.sql`SELECT count(*)::int AS count FROM "AdminAuditLog" a LEFT JOIN "AdminUser" u ON u.id=a."adminUserId" WHERE u.id IS NULL`],
     ] as const;
     const orphanResults=[] as string[];
-    for(const [label,sql] of orphanQueries){const rows=await prisma.$queryRawUnsafe<Array<{count:number}>>(sql);if(Number(rows[0]?.count??0)!==0) orphanResults.push(`${label}: ${rows[0]?.count}`);}
+    for(const [label,sql] of orphanQueries){const rows=await prisma.$queryRaw<Array<{count:number}>>(sql);if(Number(rows[0]?.count??0)!==0) orphanResults.push(`${label}: ${rows[0]?.count}`);}
     if(orphanResults.length) fail("DB-013","HIGH","Orphan Detection","Critical orphan records exist in the validation database.",orphanResults.join("; "),"Repair orphaned data with a forward, audited remediation before production certification.");
     else pass("DB-013","Orphan Detection","Critical relationship orphan checks returned zero rows.","8 critical orphan queries returned zero rows.");
 
