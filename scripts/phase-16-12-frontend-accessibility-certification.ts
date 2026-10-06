@@ -25,7 +25,7 @@ function add(id: string, severity: Severity, status: Status, title: string, evid
 
 async function main() {
   const files = await walk(".");
-  const sourceFiles = files.filter((file) => /\.(tsx|ts|css)$/.test(file));
+  const sourceFiles = files.filter((file) => /^(app|components)\//.test(file) && /\.(tsx|ts|css)$/.test(file));
   const routePages = files.filter((file) => file.startsWith("app/") && /(?:^|\/)(page|loading|error|not-found)\.tsx$/.test(file)).sort();
   const apiRoutes = files.filter((file) => file.startsWith("app/api/") && /route\.ts$/.test(file)).sort();
   const sources = await Promise.all(sourceFiles.map(async (file) => ({ file, text: await read(file) })));
