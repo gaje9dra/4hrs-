@@ -1,5 +1,6 @@
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { writeFileSync } from "node:fs";
 
 type Finding = {
   id: string;
@@ -136,6 +137,7 @@ function main() {
     },
   };
 
+  writeFileSync(join(process.cwd(), "artifacts/phase-16-24-blocker-classification.json"), JSON.stringify(result, null, 2) + "\n");
   console.log(JSON.stringify(result, null, 2));
   process.exitCode = result.decision === "READY FOR PHASE 16.25" ? 0 : 0;
 }
