@@ -47,3 +47,13 @@ test("Phase 16.17 refuses destructive production recovery",()=>{
   assert.doesNotMatch(recovery,/db push/i);
   assert.match(runbook,/isolated/i);
 });
+
+
+test("Phase 16.17 is wired into package and CI recovery gates",()=>{
+  const pkg=readFileSync("package.json","utf8");
+  const ci=readFileSync(".github/workflows/ci.yml","utf8");
+  assert.match(pkg,/"production-certification:phase-16-17"/);
+  assert.match(ci,/production-certification:phase-16-17/);
+  assert.match(ci,/RUN_PHASE_16_17_RECOVERY_DRILL/);
+  assert.match(ci,/phase-16-17-backup-disaster-recovery-evidence/);
+});
