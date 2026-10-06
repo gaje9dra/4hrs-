@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- audit JSON mirrors untyped npm/GitHub metadata. */
 import { execFileSync } from 'node:child_process';
 import { readFileSync, existsSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
