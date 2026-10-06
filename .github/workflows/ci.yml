@@ -143,6 +143,9 @@ jobs:
       - name: Run Phase 16.6 customer account and privacy certification audit
         run: npm run production-certification:phase-16-6
 
+      - name: Run Phase 16.7 admin and RBAC certification audit
+        run: npm run production-certification:phase-16-7
+
       - name: Audit migration safety
         run: npm run db:audit-migrations
 
