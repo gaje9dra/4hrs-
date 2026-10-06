@@ -63,15 +63,15 @@ async function prepareSyntheticCatalog() {
     orderBy: { updatedAt: "desc" },
   });
   if (existing?.variants[0]) {
-    const linked = await db.productCategory.findFirst({ where: { productId: existing.id, category: { status: "ACTIVE" } }, select: { categoryId: true } });
-    if (linked) categoryId = linked.categoryId;
+    const linked = await db.productCategory.findFirst({ where: { productId: existing.id, category: { status: "ACTIVE" } }, select: { categoryId: true, category: { select: { slug: true } } } });
+    if (linked) { categoryId = linked.categoryId; }
     if (!categoryId) {
       const category = await db.category.create({ data: { name: "4HRS+ Synthetic Smoke Category", slug: `phase-16-22-smoke-category-${randomUUID().replaceAll("-", "")}`, status: "ACTIVE" } });
       await db.productCategory.create({ data: { productId: existing.id, categoryId: category.id } });
       syntheticCategoryCreated.push(category.id);
       categoryId = category.id;
     }
-    return { productId: existing.id, slug: existing.slug, variantId: existing.variants[0].id, categoryId, created: false };
+    return { productId: existing.id, slug: existing.slug, variantId: existing.variants[0].id, categoryId, categorySlug: categoryId ? (await db.category.findUniqueOrThrow({ where: { id: categoryId }, select: { slug: true } })).slug : null, created: false };
   }
 
   const suffix = randomUUID().replaceAll("-", "");
@@ -146,6 +146,8 @@ async function runCriticalBoundaryTests() {
 
 async function main() {
   const fixture = await prepareSyntheticCatalog();
+  if (!fixture.categorySlug) throw new Error("Phase 16.22 requires a synthetic category fixture for category smoke validation.");
+  process.env.PHASE_16_22_CATEGORY_SLUG = fixture.categorySlug;
 
   await http("16.22-HEALTH", "Health", "/api/health", "200 with status=ok and no sensitive data", [200], "HIGH");
   await http("16.22-READYNESS", "Readiness", "/api/readiness", "200 with ready status and database check", [200], "HIGH");
