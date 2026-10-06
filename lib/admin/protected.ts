@@ -1,7 +1,5 @@
-const PERMANENT_SUPER_ADMIN_EMAIL = "gaje9dra@gmail.com";
-
-export function isPermanentSuperAdminEmail(email: string): boolean {
-  return email.trim().toLowerCase() === PERMANENT_SUPER_ADMIN_EMAIL;
-}
-
-export { PERMANENT_SUPER_ADMIN_EMAIL };
+/**
+ * Administrative authority is database-backed through AdminUser -> AdminRole -> AdminPermission.
+ * This module intentionally contains no hardcoded privileged identities or bypasses.
+ */
+export function isPermanentSuperAdminEmail(_email: string): boolean { return false; }
