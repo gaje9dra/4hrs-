@@ -35,7 +35,7 @@ requireText("admin route",files.route,["reconciliation.read","reconciliation.inv
 requireText("schema",files.schema,["ReconciliationCase","ReconciliationAction","idempotencyKey","version","correlationId"]);
 requireText("migration",files.migration,["CREATE TABLE","ReconciliationCase","ReconciliationAction"]);
 requireText("fulfillment boundary",files.fulfillment,["provider","idempotency","AMBIGUOUS"]);
-requireText("payments",files.payments,["providerEventId","processingStatus"]);
+requireText("payment event schema",files.schema,["providerEventId","processingStatus"]);
 requireText("CI",files.ci,["reconciliation:audit"]);
 
 if(/db\.reconciliationCase\.(delete|updateMany)|db\.(payment|order|shipment|fulfillment)\.(update|updateMany|delete|deleteMany)/.test(files.service)){
