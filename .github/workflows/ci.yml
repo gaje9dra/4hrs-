@@ -396,6 +396,8 @@ jobs:
         run: npm run production-certification:phase-16-18
       - name: Run Phase 16.19 release and deployment certification
         run: npm run production-certification:phase-16-19
+      - name: Run Phase 16.20 production configuration certification
+        run: npm run production-certification:phase-16-20
 
 
       - name: Upload Phase 16.18 resilience evidence
