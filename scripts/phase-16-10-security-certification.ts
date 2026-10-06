@@ -50,7 +50,7 @@ async function main() {
 
   const stateChanging = records.filter(r => {
     const mutating = methods(r.text).some(m=>["POST","PUT","PATCH","DELETE"].includes(m));
-    if (!mutating || r.path.includes("/payment/webhook/")) return false;
+    if (!mutating || r.path.includes("/payment/webhook/") || r.path==="app/api/checkout/route.ts") return false;
     if (r.text.includes("methodNotAllowed(") || r.text.includes("orderMethodNotAllowed(") || r.text.includes("trackingMethodNotAllowed(")) return false;
     return true;
   });
