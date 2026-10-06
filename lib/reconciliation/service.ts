@@ -54,13 +54,15 @@ async function scanRule(rule: typeof RULES[number]): Promise<Finding[]> {
 }
 
 async function persistFinding(finding:Finding, correlationId?:string) {
-  const existing=await db.reconciliationCase.findFirst({
-    where:{type:finding.type,domain:finding.domain,affectedEntityType:finding.affectedEntityType,affectedEntityId:finding.affectedEntityId,status:{notIn:["RESOLVED","IGNORED","NOT_REPRODUCIBLE"]}},
-    select:{id:true,version:true,retryCount:true,severity:true,status:true,affectedEntityType:true,domain:true,type:true,description:true},
-  });
-  if(existing) return existing;
-  const id=randomUUID();
+  const lockKey=`${finding.type}:${finding.domain}:${finding.affectedEntityType}:${finding.affectedEntityId}`;
   return db.$transaction(async(tx)=>{
+    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${lockKey}))`;
+    const existing=await tx.reconciliationCase.findFirst({
+      where:{type:finding.type,domain:finding.domain,affectedEntityType:finding.affectedEntityType,affectedEntityId:finding.affectedEntityId,status:{notIn:["RESOLVED","IGNORED","NOT_REPRODUCIBLE"]}},
+      select:{id:true,version:true,retryCount:true,severity:true,status:true,affectedEntityType:true,domain:true,type:true,description:true},
+    });
+    if(existing) return existing;
+    const id=randomUUID();
     const row=await tx.reconciliationCase.create({data:{
       id, type:finding.type, domain:finding.domain, severity:finding.severity, status:canAutoRepair(finding.type,finding.domain)?"AUTO_RESOLVABLE":"AWAITING_REVIEW",
       detectedBy:"reconciliation-engine", source:"integrity-scan", correlationId:correlationId?.slice(0,128),
