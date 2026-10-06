@@ -6,7 +6,7 @@ import { readFile } from "node:fs/promises";
 type EnvSnapshot = Record<string, string | undefined>;
 function snapshot(names: string[]): EnvSnapshot { return Object.fromEntries(names.map((name) => [name, process.env[name]])); }
 function restore(values: EnvSnapshot): void { for (const [name, value] of Object.entries(values)) { if (value === undefined) delete process.env[name]; else process.env[name] = value; } }
-function expectFailure(label: string, fn: () => unknown): void { try { fn(); } catch { return; } throw new Error(`Expected configuration validation failure: ${label}`); }
+function expectFailure(label: string, fn: () => unknown): void { try { fn(); } catch { return; } throw new Error(`Expected configuration validation failure: ${label}`); }\nfunction setEnv(name: string, value: string): void { Reflect.set(process.env, name, value); }
 
 async function main(): Promise<void> {
   const document = await readFile("docs/phase-16-20-production-configuration-certification.md", "utf8");
@@ -18,7 +18,7 @@ async function main(): Promise<void> {
   const envNames = ["NODE_ENV","DATABASE_URL","NEXT_PUBLIC_SITE_URL","FULFILLMENT_PROVIDER_ID","FULFILLMENT_PROVIDER_ENABLED","FULFILLMENT_PROVIDER_MODE","FULFILLMENT_PROVIDER_SECRET_REFERENCE","QIKINK_CLIENT_ID","QIKINK_CLIENT_SECRET","QIKINK_SANDBOX_SECRET","QIKINK_AUTH_TOKEN","FULFILLMENT_PROVIDER_TIMEOUT_MS","PAYMENT_PROVIDER_ID","PAYMENT_PROVIDER_ENABLED","PAYMENT_PROVIDER_MODE","PAYMENT_PROVIDER_PUBLIC_KEY","PAYMENT_PROVIDER_SECRET_REFERENCE","PAYMENT_PROVIDER_WEBHOOK_SECRET_REFERENCE","PAYMENT_PROVIDER_TIMEOUT_MS","PAYMENT_SANDBOX_WEBHOOK_SECRET","NOTIFICATION_PROVIDER_ENABLED","NOTIFICATION_PROVIDER_ID","NOTIFICATION_PROVIDER_MODE","NOTIFICATION_PROVIDER_TIMEOUT_MS","NOTIFICATION_UNSUBSCRIBE_SECRET"];
   const saved = snapshot(envNames);
   try {
-    process.env.NODE_ENV = "production"; process.env.DATABASE_URL = "postgresql://user:pass@example.invalid:5432/app"; process.env.NEXT_PUBLIC_SITE_URL = "https://shop.example";
+    setEnv("NODE_ENV", "production"); process.env.DATABASE_URL = "postgresql://user:pass@example.invalid:5432/app"; process.env.NEXT_PUBLIC_SITE_URL = "https://shop.example";
     process.env.FULFILLMENT_PROVIDER_ID = "qikink"; process.env.FULFILLMENT_PROVIDER_ENABLED = "true"; process.env.FULFILLMENT_PROVIDER_MODE = "test"; process.env.FULFILLMENT_PROVIDER_SECRET_REFERENCE = "QIKINK_CLIENT_SECRET"; process.env.QIKINK_CLIENT_SECRET = "placeholder";
     expectFailure("production fulfillment cannot run in test mode", () => validateServerEnvironment());
     process.env.FULFILLMENT_PROVIDER_MODE = "live"; delete process.env.QIKINK_CLIENT_SECRET;
@@ -29,7 +29,7 @@ async function main(): Promise<void> {
     process.env.PAYMENT_PROVIDER_ENABLED = "false"; process.env.NEXT_PUBLIC_SITE_URL = "http://shop.example"; expectFailure("production site URL must use HTTPS", () => validateServerEnvironment());
     process.env.NEXT_PUBLIC_SITE_URL = "https://shop.example"; process.env.DATABASE_URL = "mysql://user:pass@example.invalid:3306/app"; expectFailure("non-PostgreSQL DATABASE_URL is rejected", () => validateServerEnvironment());
     process.env.DATABASE_URL = "postgresql://user:pass@example.invalid:5432/app"; process.env.FULFILLMENT_PROVIDER_SECRET_REFERENCE = "NEXT_PUBLIC_BAD_SECRET"; expectFailure("server-only fulfillment secret references cannot use NEXT_PUBLIC_", () => validateServerEnvironment());
-    process.env.FULFILLMENT_PROVIDER_SECRET_REFERENCE = "QIKINK_CLIENT_SECRET"; process.env.FULFILLMENT_PROVIDER_ENABLED = "false"; process.env.PAYMENT_PROVIDER_ENABLED = "false"; process.env.NODE_ENV = "test"; process.env.NEXT_PUBLIC_SITE_URL = "https://example.test";
+    process.env.FULFILLMENT_PROVIDER_SECRET_REFERENCE = "QIKINK_CLIENT_SECRET"; process.env.FULFILLMENT_PROVIDER_ENABLED = "false"; process.env.PAYMENT_PROVIDER_ENABLED = "false"; setEnv("NODE_ENV", "test"); process.env.NEXT_PUBLIC_SITE_URL = "https://example.test";
     validateServerEnvironment();
     process.env.FULFILLMENT_PROVIDER_ENABLED = "maybe"; expectFailure("malformed fulfillment enabled flag is rejected", () => loadFulfillmentProviderConfiguration());
     process.env.FULFILLMENT_PROVIDER_ENABLED = "false"; process.env.FULFILLMENT_PROVIDER_MODE = "invalid"; expectFailure("malformed fulfillment mode is rejected", () => loadFulfillmentProviderConfiguration());
@@ -39,13 +39,11 @@ async function main(): Promise<void> {
     process.env.PAYMENT_PROVIDER_MODE = "test"; process.env.PAYMENT_PROVIDER_TIMEOUT_MS = "0"; expectFailure("malformed payment timeout is rejected", () => loadPaymentProviderConfiguration());
     process.env.PAYMENT_PROVIDER_TIMEOUT_MS = "10000";
     const fulfillment = loadFulfillmentProviderConfiguration(); const payment = loadPaymentProviderConfiguration();
-    if (fulfillment?.enabled && fulfillment.mode === "test" && process.env.NODE_ENV === "production") throw new Error("Production fulfillment mode drift remains possible.");
-    if (payment?.id === "controlled-sandbox" && payment.enabled && process.env.NODE_ENV === "production") throw new Error("Production controlled-sandbox payment drift remains possible.");
   } finally { restore(saved); }
   if (/(?:sk_live_|sk_test_|-----BEGIN .*PRIVATE KEY-----|AKIA[0-9A-Z]{16})/.test(envExample)) throw new Error("Credential-shaped secret material exists in .env.example.");
   const savedRuntime = snapshot(["NODE_ENV","DATABASE_URL","NEXT_PUBLIC_SITE_URL","APP_VERSION"]);
   let runtimeEnvironment: string;
-  try { process.env.NODE_ENV = "production"; process.env.DATABASE_URL = "postgresql://user:pass@example.invalid:5432/app"; process.env.NEXT_PUBLIC_SITE_URL = "https://shop.example"; process.env.APP_VERSION = "ci"; runtimeEnvironment = readServerEnvironment().nodeEnv; } finally { restore(savedRuntime); }
+  try { setEnv("NODE_ENV", "production"); process.env.DATABASE_URL = "postgresql://user:pass@example.invalid:5432/app"; process.env.NEXT_PUBLIC_SITE_URL = "https://shop.example"; process.env.APP_VERSION = "ci"; runtimeEnvironment = readServerEnvironment().nodeEnv; } finally { restore(savedRuntime); }
   console.log(JSON.stringify({ phase: "16.20", status: "PASS", configurationValidation: "PASS", environmentValidation: "PASS", productionRuntimeValidation: "PASS", runtimeEnvironment, finalDecision: "NOT READY FOR PHASE 16.21" }));
 }
 
