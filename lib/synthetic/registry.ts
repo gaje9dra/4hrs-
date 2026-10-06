@@ -28,6 +28,8 @@ async function activeProductSlug(): Promise<string | null> {
 
 
 async function activeCategorySlug(): Promise<string | null> {
+  const configured = process.env.PHASE_16_22_CATEGORY_SLUG?.trim();
+  if (configured) return configured;
   const row = await db.category.findFirst({ where: { status: "ACTIVE" }, select: { slug: true }, orderBy: { updatedAt: "desc" } });
   return row?.slug ?? null;
 }
