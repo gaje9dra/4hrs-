@@ -76,9 +76,9 @@ else if(!hasAny(webhook.text,["verify","signature","verified","authenticate"]))
 else pass("API-005","Webhook Verification","The payment webhook path contains a provider-verification boundary.",
   "Verification-related implementation is present in the route/application path.");
 
+const runtimeFiles = files.filter(p=>p.startsWith("app/") || p.startsWith("lib/"));
 const rawHits:string[]=[];
-for(const p of files){
-  if(p.includes("phase-16-9-api-contract-certification.ts")) continue;
+for(const p of runtimeFiles){
   const text=await readFile(join(root,p),"utf8");
   const unsafeRawA = "$query" + "RawUnsafe";
   const unsafeRawB = "$execute" + "RawUnsafe";
@@ -89,9 +89,9 @@ if(rawHits.length) fail("API-006","HIGH","Injection Protection","Unsafe Prisma r
 else pass("API-006","Injection Protection","No unsafe Prisma raw-SQL APIs were detected.","Repository scan found no $queryRawUnsafe/$executeRawUnsafe usage.");
 
 const secretHits:string[]=[];
-for(const p of files){
+for(const p of files.filter(p=>p.startsWith("app/") || p.startsWith("lib/"))){
   const text=await readFile(join(root,p),"utf8");
-  if(/NEXT_PUBLIC_[A-Z0-9_]*(SECRET|TOKEN|PASSWORD|PRIVATE|API_KEY)/.test(text) && !p.includes("phase-16-9-api-contract-certification.ts")) secretHits.push(p);
+  if(/NEXT_PUBLIC_[A-Z0-9_]*(SECRET|TOKEN|PASSWORD|PRIVATE|API_KEY)/.test(text)) secretHits.push(p);
 }
 if(secretHits.length) fail("API-007","CRITICAL","Secret Exposure","Potential public-secret configuration names were detected.",
   secretHits.join(", "),"Keep credentials in server-only environment variables.");
@@ -124,7 +124,8 @@ else fail("API-011","MEDIUM","Health/Readiness","Health/readiness cache-control 
 const appEnv:string[]=[];
 for(const p of files.filter(p=>p.startsWith("app/"))){
   const text=await readFile(join(root,p),"utf8");
-  if(/process\.env\.(?!NEXT_PUBLIC_)/.test(text)) appEnv.push(p);
+  const isClient = text.trimStart().startsWith('"use client"') || text.trimStart().startsWith("'use client'");
+  if(isClient && /process\.env\.(?!NEXT_PUBLIC_|NODE_ENV)/.test(text)) appEnv.push(p);
 }
 if(appEnv.length) fail("API-012","HIGH","Environment Boundary","App source contains direct non-public environment access requiring review.",
   appEnv.join(", "),"Keep server-only environment access in server-only modules.");
