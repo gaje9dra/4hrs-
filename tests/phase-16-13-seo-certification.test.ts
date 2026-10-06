@@ -33,5 +33,5 @@ test("Phase 16.13 protects private routes from indexing", async () => {
 test("Phase 16.13 explicitly records unavailable external evidence", async () => {
   const script = await readFile("scripts/phase-16-13-seo-certification.ts", "utf8");
   assert.match(script, /External search-engine validation/);
-  assert.match(script, /No indexing claim is made/);
+  assert.match(script, /no indexing claim is made/);
 });
