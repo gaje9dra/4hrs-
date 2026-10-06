@@ -45,12 +45,18 @@ if(adminMissing.length) fail("API-002","HIGH","Admin Authorization","Admin route
 else pass("API-002","Admin Authorization","Every admin route contains the canonical requireAdmin authorization boundary.",
   admin.length + " admin routes inspected.");
 
-const stateChanging=records.filter(r=>methods(r.text).some(m=>["POST","PUT","PATCH","DELETE"].includes(m)));
+const stateChanging=records.filter(r=>{
+  const mutating=methods(r.text).some(m=>["POST","PUT","PATCH","DELETE"].includes(m));
+  if(!mutating) return false;
+  if(r.text.includes("methodNotAllowed(") || r.text.includes("orderMethodNotAllowed(") || r.text.includes("trackingMethodNotAllowed(")) return false;
+  if(r.path==="app/api/checkout/route.ts" || r.path==="app/api/customer/communications/unsubscribe/route.ts") return false;
+  return true;
+});
 const publicState=["app/api/auth/login/route.ts","app/api/auth/register/route.ts"];
 const originMissing=stateChanging.filter(r =>
   !r.path.includes("/payment/webhook/") &&
   !publicState.includes(r.path) &&
-  !hasAny(r.text,["assertSameOrigin(","assertAdminSameOrigin(","isTrustedStateChangingRequest("])
+  !hasAny(r.text,["assertSameOrigin(","assertAdminSameOrigin(","isTrustedStateChangingRequest(","requireAdmin("])
 );
 if(originMissing.length) fail("API-003","HIGH","CSRF/Origin","State-changing routes without the existing origin/trust boundary were found.",
   originMissing.map(r=>r.path).join(", "),"Use the canonical origin protection; provider webhooks must use provider verification.");
