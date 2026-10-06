@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { mkdir, writeFile } from "node:fs/promises";
 import { db } from "@/lib/db/client";
 import { recordReliabilityFindings } from "@/lib/reliability/service";
 import { incidentFingerprint } from "@/lib/reliability/incidents";
@@ -49,7 +50,7 @@ async function main() {
   assert.equal(second.events.length, 2);
   assert.equal((second.events[1]?.metadata as Record<string, unknown>).alertEmitted, false);
 
-  console.log(JSON.stringify({
+  const evidence = {
     phase: "16.14",
     drill: "synthetic-alert-deduplication-and-redaction",
     result: "PASS",
@@ -60,7 +61,10 @@ async function main() {
       metadataSecretRedacted: true,
     },
     evidenceClass: "simulated",
-  }));
+  };
+  await mkdir("artifacts", { recursive: true });
+  await writeFile("artifacts/phase-16-14-incident-drill-evidence.json", JSON.stringify(evidence, null, 2) + "\\n");
+  console.log(JSON.stringify(evidence));
 }
 
 main()
