@@ -70,7 +70,8 @@
     "production-certification:phase-16-15": "tsx scripts/phase-16-15-background-event-certification.ts",
     "production-certification:phase-16-16": "tsx scripts/phase-16-16-reconciliation-certification.ts",
     "production-certification:phase-16-17": "tsx scripts/phase-16-17-backup-disaster-recovery-certification.ts",
-    "production-certification:phase-16-18": "tsx scripts/phase-16-18-resilience-failure-injection-certification.ts"
+    "production-certification:phase-16-18": "tsx scripts/phase-16-18-resilience-failure-injection-certification.ts",
+    "production-certification:phase-16-19": "tsx scripts/phase-16-19-release-deployment-certification.ts"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.1.14",
