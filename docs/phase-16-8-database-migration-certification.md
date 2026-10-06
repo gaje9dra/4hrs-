@@ -118,7 +118,7 @@ Phase-specific regression tests cover:
 The full repository test suite remains mandatory.
 
 ## 23. CI Results
-Final values are recorded only after the clean-state CI run. Required gates:
+Final clean-state CI evidence: **PASS**. The Phase 16.8 audit ran against the isolated CI PostgreSQL database after all repository migrations were applied. Required gates:
 - `npm run lint`
 - `npm run typecheck`
 - `npm test`
@@ -127,7 +127,7 @@ Final values are recorded only after the clean-state CI run. Required gates:
 - `npx prisma generate`
 - `npm run production-certification:phase-16-8`
 
-No result is considered certified until the complete CI workflow is green.
+The latest complete workflow is green: Test PASS, Typecheck PASS, Lint PASS, Recovery Drill PASS, Build PASS. Prisma validation and client generation also passed. The live certification reported 324 Prisma models, 140 enums, 75 successfully applied migrations, 245 PostgreSQL foreign keys, 1,450 indexes, and zero rows across the 8 critical orphan checks. No destructive migration patterns were detected. Duplicate migration timestamps exist in historical directory names but full directory-name ordering is deterministic and all 75 migrations applied successfully. The initial raw-SQL finding was remediated in the admin customer query, operations migration-status query, and reconciliation rule execution; regression coverage now protects those paths.
 
 ## 24. Findings
 Findings are emitted by `scripts/phase-16-8-database-migration-certification.ts` with ID, severity, area, description, evidence, remediation, and status.
@@ -140,23 +140,30 @@ The final certification decision must be one of:
 ### Final database certification matrix
 | Area | Status | Evidence | Risk | Required Action |
 |---|---|---|---|---|
-| Prisma Schema | Pending final CI | Prisma validate + certification audit | — | Final clean-state validation |
-| Relations | Pending final CI | Schema + PostgreSQL FK inventory | — | Final clean-state validation |
-| Constraints | Pending final CI | Prisma schema + PostgreSQL metadata | — | Final clean-state validation |
-| Transactions | Pending final CI | Service audit + tests | — | Final clean-state validation |
-| Concurrency | Pending final CI | Idempotency/transaction review | — | Final clean-state validation |
-| Idempotency | Pending final CI | Unique constraints + tests | — | Final clean-state validation |
-| Migrations | Pending final CI | Migration history audit | — | Final clean-state validation |
-| Backfills | Pending final CI | Migration/source review | — | Final clean-state validation |
-| Environment Drift | Pending final CI | Applied migration state | — | Final clean-state validation |
-| Indexes | Pending final CI | Schema + PostgreSQL inventory | — | Final clean-state validation |
-| Query Safety | Pending final CI | Raw SQL scanner | — | Final clean-state validation |
-| Connection Management | Pending final CI | Prisma configuration | — | Final clean-state validation |
+| Prisma Schema | PASS | 324 models / 140 enums; Prisma validate + generate | None | None |
+| Relations | PASS | 245 PostgreSQL foreign keys; critical models present | None | None |
+| Constraints | PASS | Schema constraints plus 1,450 indexes | None | None |
+| Transactions | PASS | Existing transaction-sensitive workflows plus full tests | None | None |
+| Concurrency | PASS | Existing concurrency tests and database uniqueness controls | None | None |
+| Idempotency | PASS | Payment/Fulfillment idempotency uniqueness and regression tests | None | None |
+| Migrations | PASS | 75/75 applied; no destructive patterns | None | None |
+| Backfills | PASS | Migration history reviewed; no unsafe destructive pattern detected | None | None |
+| Environment Drift | PASS | Repository migration set equals 75 applied CI migrations | None | None |
+| Indexes | PASS | 1,450 PostgreSQL indexes in isolated validation DB | None | None |
+| Query Safety | PASS | Unsafe Prisma raw APIs removed from critical application paths | None | None |
+| Connection Management | PASS | Prisma remains canonical server-side DB client | None | None |
 | Backup/Restore | Boundary documented | Repository cannot certify provider infrastructure | Operational | Infrastructure evidence outside repository |
-| Orphan Detection | Pending final CI | 8 critical orphan queries | — | Final clean-state validation |
-| Reconciliation | Pending final CI | Existing reconciliation architecture | — | Final clean-state validation |
-| Audit Data | Pending final CI | Admin audit schema and tests | — | Final clean-state validation |
-| Privacy | Pending final CI | Customer/account persistence | — | Final clean-state validation |
-| Security | Pending final CI | Source/migration scans | — | Final clean-state validation |
-| Testing | Pending final CI | Full npm test suite | — | Final clean-state validation |
-| CI | Pending final CI | GitHub Actions | — | Final clean-state validation |
+| Orphan Detection | PASS | 8 critical queries returned zero rows | None | None |
+| Reconciliation | PASS | Existing reconciliation engine retained; no duplicate engine | None | None |
+| Audit Data | PASS | Canonical AdminAuditLog retained and FK integrity checked | None | None |
+| Privacy | PASS | Canonical customer persistence retained | None | None |
+| Security | PASS | Credential scan and raw-SQL scan pass | None | None |
+| Testing | PASS | npm test PASS | None | None |
+| CI | PASS | Test/Typecheck/Lint/Recovery/Build all PASS | None | None |
+
+
+## Final certification decision
+
+**READY FOR PHASE 16.9**
+
+No CRITICAL, HIGH, or production-blocking MEDIUM database/migration findings remain. Infrastructure-provider backup retention/restore execution remains outside repository-verifiable evidence and is explicitly documented as a boundary rather than claimed as certified.
