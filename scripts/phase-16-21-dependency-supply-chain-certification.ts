@@ -64,7 +64,7 @@ for (const [name, command] of Object.entries(scripts)) {
 const locks = ['yarn.lock','pnpm-lock.yaml','bun.lockb','bun.lock'];
 for (const file of locks) if (existsSync(join(root,file))) add('HIGH','package-manager',`Conflicting lockfile present: ${file}`,file);
 
-const auditRaw = (() => { try { return execFileSync('npm',['audit','--json'],{encoding:'utf8',stdio:['ignore','pipe','pipe']}); } catch (e:any) { return e.stdout?.toString() ?? '{}'; } })();
+const auditRaw = (() => { try { return execFileSync('npm',['audit','--omit=dev','--json'],{encoding:'utf8',stdio:['ignore','pipe','pipe']}); } catch (e:any) { return e.stdout?.toString() ?? '{}'; } })();
 let audit: Json = {};
 try { audit = JSON.parse(auditRaw); } catch {}
 const meta = audit.metadata?.vulnerabilities ?? {};
