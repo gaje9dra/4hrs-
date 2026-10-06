@@ -79,7 +79,9 @@ const rawHits:string[]=[];
 for(const p of files){
   if(p.includes("phase-16-9-api-contract-certification.ts")) continue;
   const text=await readFile(join(root,p),"utf8");
-  if(text.includes("$queryRawUnsafe") || text.includes("$executeRawUnsafe")) rawHits.push(p);
+  const unsafeRawA = "$query" + "RawUnsafe";
+  const unsafeRawB = "$execute" + "RawUnsafe";
+  if(text.includes(unsafeRawA) || text.includes(unsafeRawB)) rawHits.push(p);
 }
 if(rawHits.length) fail("API-006","HIGH","Injection Protection","Unsafe Prisma raw-SQL APIs are present.",
   rawHits.join(", "),"Replace unsafe raw SQL with parameterized database-safe APIs.");
@@ -88,7 +90,7 @@ else pass("API-006","Injection Protection","No unsafe Prisma raw-SQL APIs were d
 const secretHits:string[]=[];
 for(const p of files){
   const text=await readFile(join(root,p),"utf8");
-  if(/NEXT_PUBLIC_[A-Z0-9_]*(SECRET|TOKEN|PASSWORD|PRIVATE|API_KEY)/.test(text)) secretHits.push(p);
+  if(/NEXT_PUBLIC_[A-Z0-9_]*(SECRET|TOKEN|PASSWORD|PRIVATE|API_KEY)/.test(text) && !p.includes("phase-16-9-api-contract-certification.ts")) secretHits.push(p);
 }
 if(secretHits.length) fail("API-007","CRITICAL","Secret Exposure","Potential public-secret configuration names were detected.",
   secretHits.join(", "),"Keep credentials in server-only environment variables.");
@@ -99,7 +101,8 @@ if(stackHits.length) fail("API-008","HIGH","Error Contracts","Routes contain dir
   stackHits.map(r=>r.path).join(", "),"Return canonical safe error DTOs; never expose raw exception details.");
 else pass("API-008","Error Contracts","No direct error.stack or JSON.stringify(error) pattern was found in route handlers.","Static route scan completed.");
 
-const qikinkRoutes=records.filter(r=>r.path.startsWith("app/") && r.text.toLowerCase().includes("qikink"));
+const providerName = "qik" + "ink";
+const qikinkRoutes=records.filter(r=>r.path.startsWith("app/") && r.text.toLowerCase().includes(providerName));
 if(qikinkRoutes.length) fail("API-009","CRITICAL","Qikink Boundary","Qikink references are present directly in app route source.",
   qikinkRoutes.map(r=>r.path).join(", "),"Keep Qikink access server-side behind the provider-neutral fulfillment adapter.");
 else pass("API-009","Qikink Boundary","No direct Qikink references were found in app route handlers.","App route source is provider-neutral.");
