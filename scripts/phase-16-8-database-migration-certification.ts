@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { Prisma, PrismaClient } from "@prisma/client";
 
 type Finding = { id:string; severity:"CRITICAL"|"HIGH"|"MEDIUM"|"LOW"|"INFORMATIONAL"; area:string; description:string; evidence:string; remediation:string; status:"PASS"|"FAIL"|"BLOCKED"|"NOT_APPLICABLE" };
-const findings: Finding[] = [];
+async function main() {\nconst findings: Finding[] = [];
 const root = process.cwd();
 const schemaPath = join(root,"prisma","schema.prisma");
 const migrationsRoot = join(root,"prisma","migrations");
