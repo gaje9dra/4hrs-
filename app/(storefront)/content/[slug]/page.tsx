@@ -41,11 +41,11 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 export default async function EditorialLandingPage({ params }: { params: Params }) {
   const { result, media, links } = await load((await params).slug);
   const snapshot = publicContentSnapshot(result.snapshot);
-  return <main className="border-b-4 border-border">
+  return <div className="border-b-4 border-border">
     <div className="mx-auto max-w-5xl px-5 py-12 sm:px-8 lg:py-20">
       <p className="text-xs font-black uppercase tracking-[.25em] text-primary-red">Editorial / {result.item.locale}</p>
       <h1 className="mt-3 text-5xl font-black uppercase leading-[.9] tracking-tight">{snapshot.title}</h1>
       <div className="mt-10"><EditorialAnalytics contentId={result.item.id} contentType={result.item.type} locale={result.item.locale}><EditorialContent snapshot={result.snapshot} media={Object.fromEntries(media)} links={Object.fromEntries(links)} /></EditorialAnalytics></div>
     </div>
-  </main>;
+  </div>;
 }
