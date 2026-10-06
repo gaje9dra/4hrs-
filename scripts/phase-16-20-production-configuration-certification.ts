@@ -30,7 +30,7 @@ async function main(): Promise<void> {
     process.env.PAYMENT_PROVIDER_ENABLED = "false"; process.env.NEXT_PUBLIC_SITE_URL = "http://shop.example"; expectFailure("production site URL must use HTTPS", () => validateServerEnvironment());
     process.env.NEXT_PUBLIC_SITE_URL = "https://shop.example"; process.env.DATABASE_URL = "mysql://user:pass@example.invalid:3306/app"; expectFailure("non-PostgreSQL DATABASE_URL is rejected", () => validateServerEnvironment());
     process.env.DATABASE_URL = "postgresql://user:pass@example.invalid:5432/app"; process.env.FULFILLMENT_PROVIDER_SECRET_REFERENCE = "NEXT_PUBLIC_BAD_SECRET"; expectFailure("server-only fulfillment secret references cannot use NEXT_PUBLIC_", () => validateServerEnvironment());
-    process.env.FULFILLMENT_PROVIDER_SECRET_REFERENCE = "QIKINK_CLIENT_SECRET"; process.env.FULFILLMENT_PROVIDER_ENABLED = "false"; process.env.PAYMENT_PROVIDER_ENABLED = "false"; setEnv("NODE_ENV", "test"); process.env.NEXT_PUBLIC_SITE_URL = "https://example.test";
+    process.env.FULFILLMENT_PROVIDER_SECRET_REFERENCE = "QIKINK_CLIENT_SECRET"; process.env.FULFILLMENT_PROVIDER_ENABLED = "false"; process.env.PAYMENT_PROVIDER_ENABLED = "false"; process.env.PAYMENT_PROVIDER_MODE = "test"; setEnv("NODE_ENV", "test"); process.env.NEXT_PUBLIC_SITE_URL = "https://example.test";
     validateServerEnvironment();
     process.env.FULFILLMENT_PROVIDER_ENABLED = "maybe"; expectFailure("malformed fulfillment enabled flag is rejected", () => loadFulfillmentProviderConfiguration());
     process.env.FULFILLMENT_PROVIDER_ENABLED = "false"; process.env.FULFILLMENT_PROVIDER_MODE = "invalid"; expectFailure("malformed fulfillment mode is rejected", () => loadFulfillmentProviderConfiguration());
