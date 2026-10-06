@@ -21,7 +21,7 @@ test("Phase 16.12 mobile navigation retains keyboard focus management", async ()
   assert.match(source, /role="dialog"/);
   assert.match(source, /aria-modal="true"/);
   assert.match(source, /Escape/);
-  assert.match(source, /document\.body\.style\.overflow = "hidden"/);
+  assert.match(source, /document\\.body\\.style\\.overflow\\s*=\\s*['\"]hidden['\"]/);
   assert.match(source, /trigger\?\.focus\(\)/);
 });
 
