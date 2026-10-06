@@ -67,7 +67,8 @@
     "production-certification:phase-16-13": "tsx scripts/phase-16-13-seo-certification.ts",
     "production-certification:phase-16-14": "tsx scripts/phase-16-14-observability-certification.ts",
     "observability:incident-drill": "tsx scripts/phase-16-14-incident-drill.ts",
-    "production-certification:phase-16-15": "tsx scripts/phase-16-15-background-event-certification.ts"
+    "production-certification:phase-16-15": "tsx scripts/phase-16-15-background-event-certification.ts",
+    "production-certification:phase-16-16": "tsx scripts/phase-16-16-reconciliation-certification.ts"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.1.14",
