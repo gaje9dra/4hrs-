@@ -185,3 +185,11 @@ test("admin product form exposes category assignment", () => {
   assert.match(editPage, /listCatalogCategories/);
   assert.match(editPage, /categories=\{categories\}/);
 });
+
+
+test("admin product lifecycle changes revalidate dynamic category listings", () => {
+  const route = readFileSync(join(process.cwd(), "app", "api", "admin", "catalog", "[...path]", "route.ts"), "utf8");
+  assert.match(route, /revalidatePath\("\/category\/\[slug\]", "page"\)/);
+  assert.match(route, /p\[2\] === "publish"/);
+  assert.match(route, /updateCatalogProduct/);
+});
