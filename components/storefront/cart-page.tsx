@@ -148,14 +148,14 @@ export function CartPage() {
               return (
                 <article key={item.id} className="border-4 border-border bg-white p-4 shadow-hard-sm sm:p-5" aria-busy={busy}>
                   <div className="grid gap-5 sm:grid-cols-[7rem_minmax(0,1fr)_auto] sm:items-start">
-                    <div className="aspect-square overflow-hidden border-2 border-border bg-muted">
+                    <div className="relative size-24 shrink-0 overflow-hidden border-2 border-border bg-white sm:size-28">
                       {item.product?.media?.url ? (
                         <Image
                           src={item.product.media.url}
                           alt={item.product.media.altText ?? item.product.title}
                           fill
-                          sizes="(max-width: 639px) 7rem, 7rem"
-                          className="object-cover"
+                          sizes="(max-width: 639px) 6rem, 7rem"
+                          className="object-contain p-2"
                         />
                       ) : (
                         <div className="flex h-full items-center justify-center p-3 text-center text-xs font-900 uppercase">No image</div>
