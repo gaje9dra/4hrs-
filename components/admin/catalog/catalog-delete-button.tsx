@@ -15,7 +15,15 @@ export function CatalogDeleteButton({ productId, title }: { productId: string; t
     try {
       const response = await fetch(`/api/admin/catalog/${productId}`, { method: "DELETE" });
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.error ?? "Product could not be deleted.");
+      if (!response.ok) {
+        const apiError = payload?.error;
+        const message = typeof apiError === "string"
+          ? apiError
+          : apiError && typeof apiError.message === "string"
+            ? apiError.message
+            : "Product could not be deleted.";
+        throw new Error(message);
+      }
       router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Product could not be deleted.");
