@@ -52,11 +52,12 @@ test("Bauhaus auth surfaces use existing primitives and token classes", () => {
 });
 
 
-test("logout leaves private storefront state by navigating to a public destination", () => {
+test("header no longer exposes a visible sign-out control", () => {
   const source = read("components/storefront/customer-auth-status.tsx");
-  assert.match(source, /\/api\/auth\/logout/);
-  assert.match(source, /router\.replace\("\/"\)/);
-  assert.match(source, /router\.refresh\(\)/);
+  assert.doesNotMatch(source, /Sign out|LogOut|customer\.email/);
+  assert.match(source, /href="\/cart"/);
+  assert.match(source, /UserRound/);
+  assert.match(source, /ShoppingCart/);
 });
 
 
