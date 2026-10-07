@@ -33,7 +33,7 @@ export async function POST(request: Request) {
       const normalizedValue = input.size.trim().replace(/\s+/g, " ").toLowerCase();
       const optionType =
         await catalog.getOptionTypeByNormalizedName("size") ??
-        await catalog.createOptionType({ name: "Size", normalizedName: "size", sortOrder: 0 });
+        await catalog.createOptionType({ name: "Size", sortOrder: 0 });
       const optionValue =
         await catalog.getOptionValueByIdentity(optionType.id, normalizedValue) ??
         await catalog.createOptionValue({
