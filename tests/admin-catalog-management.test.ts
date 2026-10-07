@@ -201,3 +201,18 @@ test("catalog service exposes product deletion", async () => {
   const repository=await read("lib/catalog/repository.ts");
   assert.match(repository,/export async function deleteProduct\(id: string/);
 });
+
+
+test("catalog delete cleans disposable cart and inventory dependencies", async () => {
+  const repository=await read("lib/catalog/repository.ts");
+  assert.match(repository,/cartItem\.deleteMany\(\{ where: \{ productId: id \} \}\)/);
+  assert.match(repository,/inventoryTransaction\.deleteMany/);
+  assert.match(repository,/inventory\.deleteMany/);
+  assert.match(repository,/db\.\$transaction/);
+});
+
+test("catalog delete button handles structured API errors", async () => {
+  const button=await read("components/admin/catalog/catalog-delete-button.tsx");
+  assert.match(button,/typeof apiError === "string"/);
+  assert.match(button,/typeof apiError\.message === "string"/);
+});
