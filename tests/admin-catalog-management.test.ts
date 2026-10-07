@@ -171,7 +171,7 @@ test("product size management generates variant SKUs from one base SKU", async (
   assert.match(manager,/function skuFor\(baseSku:string,size:string\)/);
   assert.match(manager,/skuFor\(baseSku,normalized\)/);
   assert.match(manager,/Add the product base SKU first/);
-  assert.match(manager,/providerSku.*input\.sku/);
+  assert.match(manager,/providerSku.*variant\.sku/);
 });
 
 test("product model exposes a single base SKU for automatic size suffixes", async () => {
