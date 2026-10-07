@@ -542,7 +542,7 @@ export function createPaymentApplication(
       // provider's idempotent action instead of attempting an invalid
       // REQUIRES_ACTION -> REQUIRES_ACTION state transition.
       if (payment.status === "REQUIRES_ACTION" && nextStatus === "REQUIRES_ACTION") {
-        return { ...toPaymentDto(payment), nextAction: safeAction };
+        return { ...toPaymentDto(payment), nextAction: safeAction.type === "NONE" ? null : safeAction };
       }
 
       assertPaymentTransition(payment.status, nextStatus);
@@ -565,7 +565,7 @@ export function createPaymentApplication(
           nextStatus === "SUCCEEDED" ? new Date() : undefined,
         );
       });
-      return { ...toPaymentDto(updated), nextAction: safeAction };
+      return { ...toPaymentDto(updated), nextAction: safeAction.type === "NONE" ? null : safeAction };
     } catch (error) {
       if (error instanceof PaymentError) throw error;
       const category = adapter.normalizeError(error);
