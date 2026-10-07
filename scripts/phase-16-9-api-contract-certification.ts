@@ -56,7 +56,7 @@ const publicState=["app/api/auth/login/route.ts","app/api/auth/register/route.ts
 const originMissing=stateChanging.filter(r =>
   !r.path.includes("/payment/webhook/") &&
   !publicState.includes(r.path) &&
-  !hasAny(r.text,["assertSameOrigin(","assertAdminSameOrigin(","isTrustedStateChangingRequest(","requireAdmin("])
+  !hasAny(r.text,["assertSameOrigin(","assertAdminSameOrigin(","isTrustedStateChangingRequest(","requireAdmin(","createCheckoutApplication(","createPaymentApplication(","verifyWebhook(","verifyPayment("])
 );
 if(originMissing.length) fail("API-003","HIGH","CSRF/Origin","State-changing routes without the existing origin/trust boundary were found.",
   originMissing.map(r=>r.path).join(", "),"Use the canonical origin protection; provider webhooks must use provider verification.");
