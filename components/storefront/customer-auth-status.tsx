@@ -62,16 +62,16 @@ export function CustomerAuthStatus() {
     return (
       <div className="flex shrink-0 items-center gap-1.5" aria-label="Account and cart">
         <span
-          className={`${iconBaseClassName} rounded-full bg-primary-red animate-pulse`}
+          className={`${iconBaseClassName} bg-white animate-pulse`}
           aria-hidden="true"
         >
-          <UserRound size={20} strokeWidth={2.5} className="text-white" />
+          <span className="flex size-7 items-center justify-center rounded-full bg-primary-red"><UserRound size={17} strokeWidth={2.5} className="text-white" /></span>
         </span>
         <span
-          className={`${iconBaseClassName} rotate-45 bg-primary-blue animate-pulse`}
+          className={`${iconBaseClassName} bg-white animate-pulse`}
           aria-hidden="true"
         >
-          <ShoppingCart size={20} strokeWidth={2.5} className="-rotate-45 text-white" />
+          <span className="flex size-7 rotate-45 items-center justify-center bg-primary-blue"><ShoppingCart size={17} strokeWidth={2.5} className="-rotate-45 text-white" /></span>
         </span>
       </div>
     );
@@ -86,11 +86,11 @@ export function CustomerAuthStatus() {
         aria-current={accountActive ? "page" : undefined}
         className={[
           iconBaseClassName,
-          "rounded-full bg-primary-red",
+          "bg-white",
           accountActive ? "ring-2 ring-primary-yellow ring-offset-2" : "",
         ].filter(Boolean).join(" ")}
       >
-        <UserRound size={20} strokeWidth={2.5} className="text-white" aria-hidden="true" />
+        <span className="flex size-7 items-center justify-center rounded-full bg-primary-red"><UserRound size={17} strokeWidth={2.5} className="text-white" aria-hidden="true" /></span>
       </Link>
       <Link
         href="/cart"
@@ -99,11 +99,11 @@ export function CustomerAuthStatus() {
         aria-current={cartActive ? "page" : undefined}
         className={[
           iconBaseClassName,
-          "rotate-45 bg-primary-blue",
+          "bg-white",
           cartActive ? "ring-2 ring-primary-yellow ring-offset-2" : "",
         ].filter(Boolean).join(" ")}
       >
-        <ShoppingCart size={20} strokeWidth={2.5} className="-rotate-45 text-white" aria-hidden="true" />
+        <span className="flex size-7 rotate-45 items-center justify-center bg-primary-blue"><ShoppingCart size={17} strokeWidth={2.5} className="-rotate-45 text-white" aria-hidden="true" /></span>
       </Link>
     </nav>
   );

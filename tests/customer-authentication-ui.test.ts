@@ -72,8 +72,17 @@ test("Product Detail preserves the approved authenticated Cart boundary", () => 
 test("header account and cart use the 4HRS geometric color treatment", () => {
   const source = read("components/storefront/customer-auth-status.tsx");
   assert.match(source, /rounded-full bg-primary-red/);
-  assert.match(source, /rotate-45 bg-primary-blue/);
+  assert.match(source, /rotate-45/);
+  assert.match(source, /bg-primary-blue/);
   assert.match(source, /-rotate-45 text-white/);
   assert.match(source, /ring-2 ring-primary-yellow/);
   assert.doesNotMatch(source, /bg-white no-underline shadow-hard-sm hover:bg-primary-yellow/);
+});
+
+
+test("header geometric shapes are contained inside square controls", () => {
+  const source = read("components/storefront/customer-auth-status.tsx");
+  assert.match(source, /bg-white/);
+  assert.match(source, /size-7 items-center justify-center rounded-full bg-primary-red/);
+  assert.match(source, /size-7 rotate-45 items-center justify-center bg-primary-blue/);
 });
