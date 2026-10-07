@@ -193,3 +193,17 @@ test("admin product lifecycle changes revalidate dynamic category listings", () 
   assert.match(route, /p\[2\] === "publish"/);
   assert.match(route, /updateCatalogProduct/);
 });
+
+
+test("operations dashboard serializes database-heavy summaries", () => {
+  const operations = readFileSync(join(process.cwd(), "lib", "operations", "service.ts"), "utf8");
+  const governance = readFileSync(join(process.cwd(), "lib", "governance", "service.ts"), "utf8");
+  assert.match(operations, /const synthetic=await syntheticSummary\(\);/);
+  assert.match(operations, /const incidents=await listReliabilityIncidents/);
+  assert.match(operations, /const reconciliation=await reconciliationSummary\(\);/);
+  assert.match(operations, /const costCapacity=await costCapacitySummary\(\);/);
+  assert.match(operations, /const governance=await governanceSummary\(\);/);
+  assert.doesNotMatch(operations, /const \[synthetic,incidents,reconciliation,costCapacity,governance\]=await Promise\.all/);
+  assert.match(governance, /await db\.\$transaction\(\[/);
+  assert.doesNotMatch(governance, /const \[total, critical, failed, blocked, unknown, overdue, exceptions, recent\] = await Promise\.all/);
+});
