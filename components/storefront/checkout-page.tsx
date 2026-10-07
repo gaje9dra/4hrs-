@@ -11,7 +11,7 @@ import type { CheckoutDto } from "@/lib/checkout/contracts";
 import type { CustomerAddressDto, CustomerDto } from "@/lib/customer/contracts";
 
 type ApiError = { error?: { code?: string; message?: string } };
-type UiState = "loading" | "ready" | "address_required" | "validating" | "valid" | "validation_error" | "price_changed" | "availability_changed" | "cart_changed" | "session_expired" | "server_error";
+type UiState = "loading" | "ready" | "address_required" | "validating" | "valid" | "starting_payment" | "validation_error" | "price_changed" | "availability_changed" | "cart_changed" | "session_expired" | "server_error";
 
 const availabilityStates = new Set(["PRODUCT_UNAVAILABLE", "VARIANT_UNAVAILABLE", "INVALID_QUANTITY", "INSUFFICIENT_AVAILABILITY"]);
 const addressStates = new Set(["INVALID_ADDRESS", "ADDRESS_NOT_OWNED", "ADDRESS_NOT_FOUND", "INCOMPLETE_CHECKOUT"]);
@@ -190,6 +190,63 @@ export function CheckoutPage({ customer }: { customer: CustomerDto }) {
     void validateSelection(address.id);
   }
 
+  async function startPayment() {
+    if (!canContinue || pendingRef.current || !checkout?.address) return;
+    pendingRef.current = true;
+    setPending(true);
+    setState("starting_payment");
+    setError(null);
+
+    try {
+      const key = crypto.randomUUID();
+      const response = await fetch("/api/payments", {
+        method: "POST",
+        cache: "no-store",
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          "Idempotency-Key": key,
+        },
+        body: JSON.stringify({
+          selectedAddressId: checkout.address.id,
+          expectedRevision: revisionRef.current,
+        }),
+      });
+      const body = await response.json().catch(() => null) as
+        | { id?: string; status?: string; nextAction?: { type?: string; redirectUrl?: string } | null }
+        | ApiError
+        | null;
+
+      if (response.status === 401) throw new Error("SESSION_EXPIRED");
+      if (!response.ok) {
+        const message = body && typeof body === "object" && "error" in body ? body.error?.message : undefined;
+        throw new Error(message || "Payment could not be started.");
+      }
+
+      const payment = body as { status?: string; nextAction?: { type?: string; redirectUrl?: string } | null };
+      if (payment.nextAction?.type === "REDIRECT" && payment.nextAction.redirectUrl) {
+        window.location.assign(payment.nextAction.redirectUrl);
+        return;
+      }
+      if (payment.status === "SUCCEEDED") {
+        window.location.assign("/checkout?payment=success");
+        return;
+      }
+      throw new Error("Payment provider did not return a checkout action.");
+    } catch (reason) {
+      if (reason instanceof Error && reason.message === "SESSION_EXPIRED") {
+        setState("session_expired");
+        return;
+      }
+      setState("valid");
+      setError(reason instanceof Error ? reason.message : "Payment could not be started.");
+    } finally {
+      pendingRef.current = false;
+      setPending(false);
+    }
+  }
+
   const issues = checkout?.validation.issues ?? [];
   const affectedItems = new Set(issues.flatMap((item) => item.itemId ? [item.itemId] : []));
   const canContinue = state === "valid" && Boolean(checkout?.address) && !pending;
@@ -205,7 +262,7 @@ export function CheckoutPage({ customer }: { customer: CustomerDto }) {
       <header className="border-b-4 border-border pb-6">
         <p className="text-xs font-900 uppercase tracking-[.25em] text-primary-blue">4HRS / Secure storefront</p>
         <h1 className="mt-3">Checkout</h1>
-        <p className="mt-4 max-w-2xl text-sm leading-6">Review your server-confirmed Cart, choose a delivery address, and validate Checkout. Payment is not available in this release.</p>
+        <p className="mt-4 max-w-2xl text-sm leading-6">Review your server-confirmed Cart, choose a delivery address, and continue securely to PayU for payment.</p>
       </header>
 
       <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
@@ -221,14 +278,14 @@ export function CheckoutPage({ customer }: { customer: CustomerDto }) {
 
           {stateMessage ? <section aria-labelledby="cart-state"><Alert variant="error" title={state === "price_changed" ? "Price changed" : state === "cart_changed" ? "Cart changed" : "Availability changed"}>{stateMessage}</Alert><div className="mt-4"><Button href="/cart" variant="yellow">Review Cart</Button></div></section> : null}
 
-          <Card><p className="text-xs font-900 uppercase tracking-[.2em] text-primary-blue">Next step</p><h2 className="mt-2 text-2xl">Payment unavailable</h2><p className="mt-3 text-sm leading-6">Payment processing is not implemented yet. No payment credentials are collected and no payment action is simulated.</p></Card>
+          <Card><p className="text-xs font-900 uppercase tracking-[.2em] text-primary-blue">Payment</p><h2 className="mt-2 text-2xl">Secure PayU checkout</h2><p className="mt-3 text-sm leading-6">Your final amount and delivery address are revalidated on our server before you are sent to PayU.</p></Card>
         </div>
 
         <aside className="border-4 border-border bg-primary-yellow p-5 shadow-hard-md lg:sticky lg:top-6" aria-labelledby="checkout-summary">
           <div className="flex items-center justify-between gap-4"><h2 id="checkout-summary" className="text-2xl">Order summary</h2><span className="text-xs font-900 uppercase">{checkout.cart.items.length} items</span></div>
           <div className="mt-5 grid gap-4">{checkout.cart.items.map((item) => <article key={item.id} className={"border-2 border-border bg-white p-3 " + (affectedItems.has(item.id) ? "ring-2 ring-primary-red" : "")}><div className="flex gap-3"><div className="relative size-16 shrink-0 overflow-hidden border-2 border-border bg-muted">{item.product?.media?.url ? <Image src={item.product.media.url} alt={item.product.media.altText ?? item.product.title} fill sizes="4rem" className="object-cover" /> : <span className="flex h-full items-center justify-center text-[9px] font-900 uppercase">No image</span>}</div><div className="min-w-0 flex-1"><h3 className="break-words text-sm font-900 uppercase">{item.product?.title ?? "Unavailable product"}</h3>{item.variant ? <p className="mt-1 text-xs font-700">{[item.variant.displayName, item.variant.size, item.variant.color].filter(Boolean).join(" · ")}</p> : null}<p className="mt-2 text-xs font-800 uppercase">Qty {item.quantity}</p></div><p className="text-sm font-900">{money(item.subtotal ?? "—", item.currency)}</p></div></article>)}</div>
           <dl className="mt-6 grid gap-3 border-t-2 border-border pt-4 text-sm"><div className="flex justify-between gap-4"><dt className="font-900 uppercase">Merchandise</dt><dd>{money(checkout.totals.merchandiseSubtotal, checkout.totals.currency)}</dd></div>{checkout.totals.adjustments.map((item) => <div key={item.code} className="flex justify-between gap-4"><dt>{item.code}</dt><dd>{money(item.amount, checkout.totals.currency)}</dd></div>)}{checkout.totals.charges.map((item) => <div key={item.code} className="flex justify-between gap-4"><dt>{item.code}</dt><dd>{money(item.amount, checkout.totals.currency)}</dd></div>)}<div className="flex justify-between gap-4 border-t-2 border-border pt-3 text-xl font-900"><dt className="uppercase">Total</dt><dd>{money(checkout.totals.total, checkout.totals.currency)}</dd></div></dl>
-          <div className="mt-5"><Button type="button" disabled={!canContinue} loading={state === "validating"} className="w-full">Continue to payment</Button><p className="mt-3 text-xs font-700 uppercase">Payment will become available in a future phase.</p></div>
+          <div className="mt-5"><Button type="button" disabled={!canContinue || state === "starting_payment"} loading={state === "starting_payment"} onClick={() => void startPayment()} className="w-full">Continue to payment</Button>{error && state === "valid" ? <Alert variant="error" title="Payment could not be started" className="mt-3">{error}</Alert> : null}<p className="mt-3 text-xs font-700 uppercase">You will be redirected to PayU's secure payment page.</p></div>
           <Button href="/cart" variant="ghost" className="mt-4 w-full text-xs">Return to Cart</Button>
         </aside>
       </div>
