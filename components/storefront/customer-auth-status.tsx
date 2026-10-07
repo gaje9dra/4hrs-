@@ -1,10 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { LogOut, UserRound } from "lucide-react";
+import { ShoppingCart, UserRound } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { usePathname } from "next/navigation";
 import type { CustomerDto } from "@/lib/customer/contracts";
 
 type SessionResponse =
@@ -13,11 +12,13 @@ type SessionResponse =
 
 type Status = "loading" | "anonymous" | "authenticated" | "unavailable";
 
+const iconLinkClassName =
+  "motion-icon inline-flex h-11 w-11 shrink-0 items-center justify-center border-2 border-border bg-white no-underline shadow-hard-sm hover:bg-primary-yellow focus:outline-none focus:ring-2 focus:ring-primary-blue focus:ring-offset-2";
+
 export function CustomerAuthStatus() {
-  const router = useRouter();
+  const pathname = usePathname();
   const [customer, setCustomer] = useState<CustomerDto | null>(null);
   const [status, setStatus] = useState<Status>("loading");
-  const [loggingOut, setLoggingOut] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -53,83 +54,55 @@ export function CustomerAuthStatus() {
     };
   }, []);
 
-  async function handleLogout() {
-    if (loggingOut) return;
-    setLoggingOut(true);
-    try {
-      const response = await fetch("/api/auth/logout", {
-        method: "POST",
-        credentials: "same-origin",
-        cache: "no-store",
-        headers: { Accept: "application/json" },
-      });
-      if (response.ok) {
-        setCustomer(null);
-        setStatus("anonymous");
-        router.replace("/");
-        router.refresh();
-      }
-    } finally {
-      setLoggingOut(false);
-    }
-  }
+  const accountHref = status === "authenticated" && customer ? "/account" : "/login";
+  const accountActive = pathname === "/account";
+  const cartActive = pathname === "/cart";
 
   if (status === "loading") {
     return (
-      <span
-        className="inline-flex min-h-11 items-center border-2 border-border bg-white px-3 text-xs font-900 uppercase tracking-[0.08em]"
-        aria-live="polite"
-        aria-label="Checking account status"
-      >
-        Checking…
-      </span>
-    );
-  }
-
-  if (status === "unavailable") {
-    return (
-      <span
-        className="hidden min-h-11 items-center border-2 border-border bg-primary-yellow px-3 text-xs font-900 uppercase tracking-[0.08em] sm:inline-flex"
-        aria-live="polite"
-      >
-        Account unavailable
-      </span>
-    );
-  }
-
-  if (!customer) {
-    return (
-      <div className="flex shrink-0 items-center gap-2">
-        <Link
-          href="/login"
-          className="inline-flex min-h-11 items-center gap-2 border-2 border-border bg-primary-yellow px-3 py-2 text-xs font-900 uppercase tracking-[0.08em] no-underline shadow-hard-sm hover:bg-white focus:outline-none focus:ring-2 focus:ring-primary-blue focus:ring-offset-2"
+      <div className="flex shrink-0 items-center gap-1.5" aria-label="Account and cart">
+        <span
+          className={`${iconLinkClassName} animate-pulse`}
+          aria-hidden="true"
         >
-          <UserRound size={16} strokeWidth={3} aria-hidden="true" />
-          Sign in
-        </Link>
+          <UserRound size={20} strokeWidth={2.5} />
+        </span>
+        <span
+          className={`${iconLinkClassName} animate-pulse`}
+          aria-hidden="true"
+        >
+          <ShoppingCart size={20} strokeWidth={2.5} />
+        </span>
       </div>
     );
   }
 
   return (
-    <div className="flex min-w-0 shrink-0 items-center gap-2">
+    <nav className="flex shrink-0 items-center gap-1.5" aria-label="Account and cart">
       <Link
-        href="/account"
-        className="hidden max-w-40 truncate text-xs font-900 uppercase tracking-[0.06em] no-underline hover:underline lg:block"
-        title="Open account"
+        href={accountHref}
+        aria-label={status === "authenticated" ? "Open account" : "Sign in"}
+        title={status === "authenticated" ? "Account" : "Sign in"}
+        aria-current={accountActive ? "page" : undefined}
+        className={[
+          iconLinkClassName,
+          accountActive ? "bg-white" : "",
+        ].filter(Boolean).join(" ")}
       >
-        {customer.email}
+        <UserRound size={20} strokeWidth={2.5} aria-hidden="true" />
       </Link>
-      <Button
-        variant="outline"
-        loading={loggingOut}
-        onClick={() => void handleLogout()}
-        aria-label="Sign out"
-        className="min-h-11 px-3 text-xs"
+      <Link
+        href="/cart"
+        aria-label="Open cart"
+        title="Cart"
+        aria-current={cartActive ? "page" : undefined}
+        className={[
+          iconLinkClassName,
+          cartActive ? "bg-white" : "",
+        ].filter(Boolean).join(" ")}
       >
-        <LogOut size={16} strokeWidth={3} aria-hidden="true" />
-        <span className="hidden sm:inline">Sign out</span>
-      </Button>
-    </div>
+        <ShoppingCart size={20} strokeWidth={2.5} aria-hidden="true" />
+      </Link>
+    </nav>
   );
 }

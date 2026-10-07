@@ -29,7 +29,7 @@ test("global navigation contains only implemented storefront destinations", () =
   for (const href of ["/", "/shop", "/search"]) assert.match(source, new RegExp(href.replace("/", "\/")));
   assert.match(source, /Categories/);
   assert.match(source, /Collections/);
-  assert.match(source, /\/cart/);
+  assert.doesNotMatch(source, /\/cart/);
   assert.doesNotMatch(source, /\/wishlist|\/account|\/checkout|\/orders/i);
 });
 
@@ -72,7 +72,10 @@ test("storefront shell integrates customer authentication without admin navigati
   const authStatus = read("components/storefront/customer-auth-status.tsx");
   assert.match(source, /CustomerAuthStatus/);
   assert.match(authStatus, /\/api\/auth\/session/);
-  assert.match(authStatus, /\/api\/auth\/logout/);
+  assert.match(authStatus, /href="\/cart"/);
+  assert.match(authStatus, /UserRound/);
+  assert.match(authStatus, /ShoppingCart/);
+  assert.doesNotMatch(authStatus, /customer\.email|Sign out|LogOut/);
   assert.doesNotMatch(authStatus, /admin|passwordHash|sessionToken/i);
 });
 
