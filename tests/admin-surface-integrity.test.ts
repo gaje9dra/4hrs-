@@ -135,6 +135,9 @@ test("admin variant creation defaults new variants to active and exposes validat
   const route = readFileSync(join(process.cwd(), "app", "api", "admin", "catalog", "[...path]", "route.ts"), "utf8");
   assert.match(service, /status: input\.status \?\? "ACTIVE"/);
   assert.match(manager, /type="hidden" name="status" value="ACTIVE"/);
+  assert.match(manager, /const form=e\.currentTarget/);
+  assert.match(manager, /new FormData\(form\)/);
+  assert.match(manager, /form\.reset\(\)/);
   assert.match(manager, /body\.error\?\.details\?\.issues/);
   assert.match(http, /const details = error\.cause && typeof error\.cause === "object"/);
   assert.match(route, /catch \(error\) \{ return adminCatalogErrorResponse\(error\); \}/);
