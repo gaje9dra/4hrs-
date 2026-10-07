@@ -4,8 +4,8 @@ import type { AdminPermission } from "@/lib/admin/permissions";
 const modules: Array<{name:string;description:string;href:string;permission?:AdminPermission}> = [
   {name:"Catalog",description:"Existing catalog administration routes remain owned by the Catalog domain and are permission-protected.",href:"/admin/catalog",permission:"catalog.read"},
   {name:"Orders",description:"Canonical Order administration is available through the protected Order control plane.",href:"/admin/orders",permission:"orders.read"},
-  {name:"Fulfillment",description:"Fulfillment administration is reserved for a later module phase.",href:"/admin/fulfillment",permission:"fulfillment.read"},
-  {name:"Shipping",description:"Shipping administration is reserved for a later module phase.",href:"/admin/shipping",permission:"shipping.read"},
+  {name:"Fulfillment",description:"Fulfillment administration through the canonical Fulfillment control plane.",href:"/admin/fulfillments",permission:"fulfillment.read"},
+  {name:"Shipping",description:"Shipping administration through the protected Shipping control plane.",href:"/admin/shipping",permission:"shipping.read"},
   {name:"Returns",description:"Returns administration is reserved for a later module phase.",href:"/admin/returns",permission:"returns.read"},
   {name:"Customers",description:"Secure customer search, operational context, privacy-gated insights and canonical profile/status management.",href:"/admin/customers",permission:"customers.read"},
   {name:"Cases",description:"Case administration from Phase 13.9 uses the centralized admin authorization boundary.",href:"/admin/cases",permission:"cases.read"},
