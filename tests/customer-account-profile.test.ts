@@ -52,11 +52,14 @@ test("account navigation contains only implemented destinations", () => {
   assert.doesNotMatch(source, /\/wishlist|\/checkout/i);
 });
 
-test("authenticated header links to account and keeps logout server-backed", () => {
+test("authenticated header exposes account and cart icons without customer identity text", () => {
   const source = read("components/storefront/customer-auth-status.tsx");
-  assert.match(source, /href="\/account"/);
-  assert.match(source, /\/api\/auth\/logout/);
-  assert.match(source, /router\.replace\("\/"\)/);
+  assert.match(source, /accountHref/);
+  assert.match(source, /status === "authenticated" && customer/);
+  assert.match(source, /href="\/cart"/);
+  assert.match(source, /UserRound/);
+  assert.match(source, /ShoppingCart/);
+  assert.doesNotMatch(source, /customer\.email|Sign out|LogOut/);
 });
 
 test("profile API uses the private auth response boundary", () => {
