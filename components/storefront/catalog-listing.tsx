@@ -46,8 +46,8 @@ export function CatalogListing({
       ) : null}
       {searchQuery !== undefined ? (
         <section aria-labelledby="search-input-title" className="mb-10 border-4 border-border bg-primary-yellow p-5 shadow-hard-md sm:p-7">
-          <p className="text-xs font-900 uppercase tracking-[.25em] text-primary-blue">Store / Search</p>
-          <h2 id="search-input-title" className="mt-2 uppercase">Find what you want</h2>
+          <p className="text-xs font-900 uppercase tracking-[.25em] text-primary-blue">Search</p>
+          <h2 id="search-input-title" className="mt-2 uppercase">Search the catalog</h2>
           <div className="mt-5"><SearchInput defaultValue={searchQuery} preservedParams={params} /></div>
         </section>
       ) : null}
@@ -69,20 +69,20 @@ export function CatalogListing({
 
       {outOfRange ? (
         <section aria-labelledby="catalog-page-range-title" className="border-4 border-border bg-primary-yellow p-8 shadow-hard-md sm:p-10">
-          <p className="text-xs font-900 uppercase tracking-[.25em] text-primary-red">Catalog / Page Range</p>
+          <p className="text-xs font-900 uppercase tracking-[.25em] text-primary-red">Page unavailable</p>
           <h2 id="catalog-page-range-title" className="mt-3 uppercase">That page is no longer available</h2>
-          <p className="mt-4 max-w-2xl text-base leading-7">The catalog has changed and page {products.pagination.page} is outside the current result range. Return to the last available page without changing your filters or sorting.</p>
+          <p className="mt-4 max-w-2xl text-base leading-7">The catalog has changed and page {products.pagination.page} is no longer available. Continue to the last available page while keeping your current filters and sorting.</p>
           <Link href={buildCatalogHref(pathname, params, products.pagination.totalPages)} className="motion-press mt-7 inline-flex min-h-12 items-center border-2 border-border bg-white px-5 py-3 text-sm font-900 uppercase no-underline shadow-hard-sm focus:outline-none focus:ring-2 focus:ring-primary-blue focus:ring-offset-2">
             Go to page {products.pagination.totalPages}
           </Link>
         </section>
       ) : empty ? (
         <section aria-labelledby="catalog-empty-title" className="border-4 border-border bg-primary-yellow p-8 shadow-hard-md sm:p-10">
-          <p className="text-xs font-900 uppercase tracking-[.25em] text-primary-red">Catalog / Empty</p>
+          <p className="text-xs font-900 uppercase tracking-[.25em] text-primary-red">No results</p>
           <h2 id="catalog-empty-title" className="mt-3 uppercase">{emptyTitle ?? (searchQuery ? <>No results for “{searchQuery}”</> : "No products found")}</h2>
-          <p className="mt-4 max-w-2xl text-base leading-7">{emptyDescription ?? (searchQuery ? "Try another search or explore the full collection." : "Try changing your filters or return to the full shop.")}</p>
+          <p className="mt-4 max-w-2xl text-base leading-7">{emptyDescription ?? (searchQuery ? "Try another search or explore the full collection." : "Try adjusting your filters or browse the full shop.")}</p>
           <Link href="/shop" className="motion-press mt-7 inline-flex min-h-12 items-center border-2 border-border bg-white px-5 py-3 text-sm font-900 uppercase no-underline shadow-hard-sm focus:outline-none focus:ring-2 focus:ring-primary-blue focus:ring-offset-2">
-            Shop all
+            Browse all products
           </Link>
         </section>
       ) : (
