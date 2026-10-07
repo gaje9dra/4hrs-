@@ -126,3 +126,16 @@ test("catalog publish route preserves catalog readiness errors", () => {
   assert.match(action, /error\?\.details\?\.issues/);
   assert.match(service, /MISSING_QIKINK_MAPPING/);
 });
+
+
+test("admin variant creation defaults new variants to active and exposes validation issues", () => {
+  const service = readFileSync(join(process.cwd(), "lib", "catalog", "service.ts"), "utf8");
+  const manager = readFileSync(join(process.cwd(), "components", "admin", "catalog", "catalog-variant-manager.tsx"), "utf8");
+  const http = readFileSync(join(process.cwd(), "lib", "admin", "http.ts"), "utf8");
+  const route = readFileSync(join(process.cwd(), "app", "api", "admin", "catalog", "[...path]", "route.ts"), "utf8");
+  assert.match(service, /status: input\.status \?\? "ACTIVE"/);
+  assert.match(manager, /type="hidden" name="status" value="ACTIVE"/);
+  assert.match(manager, /error\.details\?\.issues/);
+  assert.match(http, /const details = error\.cause && typeof error\.cause === "object"/);
+  assert.match(route, /catch \(error\) \{ return adminCatalogErrorResponse\(error\); \}/);
+});
