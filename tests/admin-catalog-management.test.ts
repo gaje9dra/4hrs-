@@ -182,3 +182,22 @@ test("product model exposes a single base SKU for automatic size suffixes", asyn
   assert.match(form,/name="baseSku"/);
   assert.match(form,/987364-M/);
 });
+
+
+test("admin catalog exposes permanent product deletion", async () => {
+  const api=await read("app/api/admin/catalog/[productId]/route.ts");
+  assert.match(api,/export async function DELETE/);
+  assert.match(api,/requireAdmin\(request, "catalog\.archive"\)/);
+  const page=await read("app/admin/catalog/page.tsx");
+  assert.match(page,/CatalogDeleteButton/);
+  const button=await read("components/admin/catalog/catalog-delete-button.tsx");
+  assert.match(button,/cannot be undone/);
+  assert.match(button,/method: "DELETE"/);
+});
+
+test("catalog service exposes product deletion", async () => {
+  const service=await read("lib/catalog/service.ts");
+  assert.match(service,/async deleteProduct\(id: string\)/);
+  const repository=await read("lib/catalog/repository.ts");
+  assert.match(repository,/export async function deleteProduct\(id: string/);
+});
