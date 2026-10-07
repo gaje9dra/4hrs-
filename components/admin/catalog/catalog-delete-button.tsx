@@ -13,7 +13,7 @@ export function CatalogDeleteButton({ productId, title }: { productId: string; t
     setBusy(true);
     setError(null);
     try {
-      const response = await fetch(`/api/admin/catalog/${productId}`, { method: "DELETE" });
+      const response = await fetch(`/api/admin/catalog/${productId}`, { method: "DELETE", credentials: "include", headers: { "X-Requested-With": "XMLHttpRequest" } });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
         const apiError = payload?.error;
