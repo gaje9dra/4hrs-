@@ -17,6 +17,11 @@ export type PaymentAmount = {
   currency: string;
 };
 
+export type PaymentNextAction =
+  | { type: "REDIRECT"; redirectUrl: string; publicReference?: string }
+  | { type: "EMBEDDED" | "SDK_ACTION"; publicToken: string; publicReference?: string }
+  | null;
+
 export type PaymentDto = {
   id: string;
   reference: string;
@@ -24,7 +29,7 @@ export type PaymentDto = {
   status: PaymentStatus;
   amount: PaymentAmount;
   expiresAt: string | null;
-  nextAction: null;
+  nextAction: PaymentNextAction;
   createdAt: string;
   updatedAt: string;
 };
