@@ -249,3 +249,10 @@ test("successful product deletion is not reported as failed when audit logging f
   assert.match(admin,/admin\/catalog\/delete-audit/);
   assert.match(admin,/return result;/);
 });
+
+
+test("catalog delete imports its permission guard", async () => {
+  const source=await read("lib/admin/catalog.ts");
+  assert.match(source,/requireHighRiskReason, requirePermission/);
+  assert.match(source,/requirePermission\(context, "catalog\.archive"\)/);
+});
