@@ -204,10 +204,14 @@ export async function listGovernanceControls(options: { status?: GovernanceContr
 
 export async function governanceSummary() {
   const now = new Date();
-  const [total, critical, failed, blocked, unknown, overdue, exceptions, recent] = await Promise.all([
-    db.governanceControl.count(), db.governanceControl.count({where:{criticality:"CRITICAL"}}), db.governanceControl.count({where:{status:"FAILED"}}),
-    db.governanceControl.count({where:{status:"BLOCKED"}}), db.governanceControl.count({where:{status:"UNKNOWN"}}),
-    db.governanceControl.count({where:{nextReviewAt:{lt:now}}}), db.governanceException.count({where:{status:{in:["ACTIVE","APPROVED"]},expiresAt:{gt:now}}}),
+  const [total, critical, failed, blocked, unknown, overdue, exceptions, recent] = await db.$transaction([
+    db.governanceControl.count(),
+    db.governanceControl.count({where:{criticality:"CRITICAL"}}),
+    db.governanceControl.count({where:{status:"FAILED"}}),
+    db.governanceControl.count({where:{status:"BLOCKED"}}),
+    db.governanceControl.count({where:{status:"UNKNOWN"}}),
+    db.governanceControl.count({where:{nextReviewAt:{lt:now}}}),
+    db.governanceException.count({where:{status:{in:["ACTIVE","APPROVED"]},expiresAt:{gt:now}}}),
     db.governanceVerification.count({where:{checkedAt:{gte:new Date(now.getTime()-86400000)}}}),
   ]);
   return { total, critical, failed, blocked, unknown, overdue, activeExceptions:exceptions, verificationsLast24h:recent };
