@@ -134,3 +134,13 @@ test("product card pricing has a dedicated visual hierarchy", () => {
   assert.match(source, /text-lg font-900 leading-none/);
   assert.match(source, /line-through/);
 });
+
+
+test("adding to Cart does not automatically navigate to the Cart page", () => {
+  const source = read("components/storefront/product-options.tsx");
+  assert.match(source, /await addToCart\(purchaseSelection\)/);
+  assert.match(source, /purchaseIntent === "buy"/);
+  assert.match(source, /router\.push\("\/checkout"\)/);
+  assert.doesNotMatch(source, /purchaseIntent === "cart"[\s\S]{0,120}router\.push\("\/cart"\)/);
+  assert.match(source, /View cart/);
+});
