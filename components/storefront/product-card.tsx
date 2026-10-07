@@ -65,6 +65,7 @@ export function ProductCard({ product }: { product: StorefrontProductCard }) {
             className="min-h-11 px-2 text-xs tracking-wide"
             aria-label={`Buy now: ${product.title}`}
             aria-disabled={unavailable || undefined}
+            disabled={unavailable}
           >
             Buy now
           </Button>
