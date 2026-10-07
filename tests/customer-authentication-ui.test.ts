@@ -69,20 +69,23 @@ test("Product Detail preserves the approved authenticated Cart boundary", () => 
   assert.doesNotMatch(source, /customerId.*body|body.*customerId/i);
 });
 
-test("header account and cart use the 4HRS geometric color treatment", () => {
+test("header account and cart use the approved 4HRS color treatment", () => {
   const source = read("components/storefront/customer-auth-status.tsx");
-  assert.match(source, /rounded-full bg-primary-yellow/);
-  assert.match(source, /rotate-45/);
+  assert.match(source, /accountBadgeClassName/);
+  assert.match(source, /bg-primary-yellow/);
+  assert.match(source, /cartBadgeClassName/);
   assert.match(source, /bg-primary-blue/);
   assert.match(source, /-rotate-45 text-white/);
   assert.match(source, /ring-2 ring-primary-yellow/);
-  assert.doesNotMatch(source, /bg-white no-underline shadow-hard-sm hover:bg-primary-yellow/);
 });
 
-
-test("header geometric shapes are contained inside square controls", () => {
+test("header account and cart use professional square controls", () => {
   const source = read("components/storefront/customer-auth-status.tsx");
-  assert.match(source, /bg-white/);
-  assert.match(source, /size-7 items-center justify-center rounded-full bg-primary-yellow/);
-  assert.match(source, /size-7 rotate-45 items-center justify-center bg-primary-blue/);
+  assert.match(source, /h-11 w-11/);
+  assert.match(source, /rounded-md border-2 border-border bg-white/);
+  assert.match(source, /shadow-\[2px_2px_0_#121212\]/);
+  assert.match(source, /hover:shadow-\[3px_3px_0_#121212\]/);
+  assert.match(source, /rounded-full bg-primary-yellow/);
+  assert.match(source, /rounded-sm bg-primary-blue/);
+  assert.match(source, /group-hover:scale-105/);
 });
