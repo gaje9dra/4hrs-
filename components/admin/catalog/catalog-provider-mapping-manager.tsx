@@ -1,11 +1,27 @@
 "use client";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
 type Mapping={id:string;providerId:string;providerSku:string;active:boolean};
 type Group={variantId:string;mappings:Mapping[]};
-export function CatalogProviderMappingManager({groups,canManage}:{groups:Group[];canManage:boolean}) {
- const router=useRouter();const [error,setError]=useState("");const [busy,setBusy]=useState(false);
- async function save(variantId:string,e:React.FormEvent<HTMLFormElement>){e.preventDefault();const form=e.currentTarget;setBusy(true);setError("");const d=Object.fromEntries(new FormData(form).entries());const res=await fetch("/api/admin/catalog/variants/"+variantId+"/provider-mappings",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({providerId:d.providerId,providerSku:d.providerSku,providerVariantReference:d.providerVariantReference||null,active:d.active==="on",reason:d.reason})});const b=await res.json().catch(()=>({}));if(!res.ok)setError(b?.error?.message||"Could not save provider mapping.");else{form.reset();router.refresh()}setBusy(false)}
- async function remove(variantId:string,providerId:string){const reason=window.prompt("Reason for removing this provider mapping:");if(!reason||reason.trim().length<3)return;setBusy(true);const res=await fetch("/api/admin/catalog/variants/"+variantId+"/provider-mappings/"+encodeURIComponent(providerId),{method:"DELETE",headers:{"content-type":"application/json"},body:JSON.stringify({reason})});const b=await res.json().catch(()=>({}));if(!res.ok)setError(b?.error?.message||"Could not remove provider mapping.");else router.refresh();setBusy(false)}
- return <div className="space-y-4">{groups.map(g=><section key={g.variantId} className="border-2 border-black p-3"><strong>Variant {g.variantId}</strong><div className="mt-2 grid gap-2">{g.mappings.map(m=><div key={m.id} className="flex flex-wrap items-center justify-between gap-2 border-2 border-black p-2 text-sm"><span>{m.providerId}: {m.providerSku}</span><span>{m.active?"ACTIVE":"INACTIVE"}</span>{canManage&&<button type="button" onClick={()=>void remove(g.variantId,m.providerId)} className="border-2 border-black bg-[#ff5a36] px-2 py-1 text-xs font-bold uppercase">Remove</button>}</div>)}</div>{canManage&&<form onSubmit={e=>void save(g.variantId,e)} className="mt-3 grid gap-2 md:grid-cols-2"><input name="providerId" defaultValue="qikink" required placeholder="Provider ID" className="border-2 border-black p-2"/><input name="providerSku" required placeholder="Provider SKU" className="border-2 border-black p-2"/><input name="providerVariantReference" placeholder="Provider variant reference" className="border-2 border-black p-2"/><label className="flex items-center gap-2 p-2 text-sm font-bold"><input name="active" type="checkbox" defaultChecked/> Active</label><textarea name="reason" required minLength={3} maxLength={1000} placeholder="Reason for mapping change" className="border-2 border-black p-2 md:col-span-2"/><button disabled={busy} className="border-2 border-black bg-[#f7d51d] p-2 font-bold uppercase md:col-span-2">Save provider mapping</button></form>}</section>)}{error&&<p role="alert" className="border-2 border-black bg-[#ff5a36] p-2 font-bold">{error}</p>}</div>;
+type Variant={id:string;sku:string};
+
+export function CatalogProviderMappingManager({groups,variants}:{groups:Group[];variants:Variant[];canManage:boolean}) {
+ const groupByVariant=new Map(groups.map((group)=>[group.variantId,group]));
+ return <div className="space-y-4">
+  {variants.map((variant)=>{
+   const group=groupByVariant.get(variant.id);
+   const qikink=group?.mappings.find((mapping)=>mapping.providerId==="qikink");
+   const providerSku=qikink?.providerSku||variant.sku;
+   return <section key={variant.id} className="border-2 border-black p-3">
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      <strong>Variant {variant.sku}</strong>
+      <span className="text-xs font-bold uppercase">{qikink?.active?"ACTIVE":"AUTO"}</span>
+    </div>
+    <div className="mt-2 grid gap-2 md:grid-cols-2">
+      <div className="border-2 border-black p-2"><span className="block text-xs font-bold uppercase">Provider</span><span>Qikink</span></div>
+      <div className="border-2 border-black p-2"><span className="block text-xs font-bold uppercase">Provider SKU</span><span>{providerSku}</span></div>
+    </div>
+    <p className="mt-2 text-xs">Automatically mapped from the canonical 4HRS+ variant SKU. No manual SKU entry is required.</p>
+   </section>
+  })}
+  {!variants.length&&<p className="border-2 border-black p-3 text-sm font-bold uppercase">No variants configured yet.</p>}
+ </div>;
 }
