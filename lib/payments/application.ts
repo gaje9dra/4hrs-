@@ -536,7 +536,7 @@ export function createPaymentApplication(
           nextStatus === "SUCCEEDED" ? new Date() : undefined,
         );
       });
-      return toPaymentDto(updated);
+      return { ...toPaymentDto(updated), nextAction: safeAction };
     } catch (error) {
       if (error instanceof PaymentError) throw error;
       const category = adapter.normalizeError(error);
