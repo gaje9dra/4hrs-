@@ -105,6 +105,46 @@ async function verifyPaymentAtPayU(txnid: string): Promise<PaymentProviderResult
   };
 }
 
+export function buildPayUHostedCheckoutFields(input: {
+  txnid: string;
+  amount: string;
+  productinfo: string;
+  firstname: string;
+  email: string;
+  phone: string;
+  udf1?: string;
+  udf2?: string;
+  udf3?: string;
+  udf4?: string;
+  udf5?: string;
+}): Record<string, string> {
+  const key = merchantKey();
+  const fields = {
+    key,
+    txnid: input.txnid,
+    amount: input.amount,
+    productinfo: input.productinfo,
+    firstname: input.firstname,
+    email: input.email,
+    phone: input.phone,
+    udf1: input.udf1 ?? "",
+    udf2: input.udf2 ?? "",
+    udf3: input.udf3 ?? "",
+    udf4: input.udf4 ?? "",
+    udf5: input.udf5 ?? "",
+    surl: absoluteSiteUrl("/api/payments/payu/callback"),
+    furl: absoluteSiteUrl("/api/payments/payu/callback"),
+    curl: absoluteSiteUrl("/api/payments/payu/callback"),
+  };
+  return { ...fields, hash: requestHash(fields) };
+}
+
+export function payUHostedCheckoutUrl(): string {
+  merchantKey();
+  merchantSalt();
+  return paymentUrl();
+}
+
 export const payuPaymentProvider: PaymentProviderAdapter = {
   id: ID,
   capabilities: {
