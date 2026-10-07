@@ -42,7 +42,7 @@ const pkg = JSON.parse(await readFile("package.json", "utf8")) as {
 };
 const ci = await readFile(".github/workflows/ci.yml", "utf8");
 
-const testRun = spawnSync(
+let testRun = spawnSync(
   process.platform === "win32" ? "npx.cmd" : "npx",
   ["tsx", "--test", "--test-concurrency=1", ...testFiles],
   {
