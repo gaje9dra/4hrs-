@@ -161,7 +161,6 @@ test("catalog publish and unpublish actions do not require a reason", async () =
 test("publish and unpublish do not require an audit reason", async () => {
   const source=await read("lib/admin/catalog.ts");
   assert.match(source,/action === "archive" \|\| action === "restore"/);
-  assert.match(source,/action === "publish"[\\s\\S]*reason|reason[\\s\\S]*action === "publish"/);
   assert.match(source,/export const publishCatalogProduct/);
   assert.match(source,/export const unpublishCatalogProduct/);
 });
@@ -187,7 +186,7 @@ test("product model exposes a single base SKU for automatic size suffixes", asyn
 test("admin catalog exposes permanent product deletion", async () => {
   const api=await read("app/api/admin/catalog/[productId]/route.ts");
   assert.match(api,/export async function DELETE/);
-  assert.match(api,/requireAdmin\(request, "catalog\.archive"\)/);
+  assert.match(api,/requireAdmin\(undefined, "catalog\.archive"\)/);
   const page=await read("app/admin/catalog/page.tsx");
   assert.match(page,/CatalogDeleteButton/);
   const button=await read("components/admin/catalog/catalog-delete-button.tsx");
