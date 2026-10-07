@@ -207,3 +207,9 @@ test("operations dashboard serializes database-heavy summaries", () => {
   assert.match(governance, /await db\.\$transaction\(\[/);
   assert.doesNotMatch(governance, /const \[total, critical, failed, blocked, unknown, overdue, exceptions, recent\] = await Promise\.all/);
 });
+
+
+test("merchandising raw SQL casts the environment parameter to the PostgreSQL enum", () => {
+  const merchandising = readFileSync(join(process.cwd(), "lib", "discovery", "merchandising.ts"), "utf8");
+  assert.match(merchandising, /r\."environment" = CAST\(\$\{context\.environment\} AS "FeatureFlagEnvironment"\)/);
+});
