@@ -7,7 +7,7 @@ import {
   createCatalogVariant, updateCatalogVariant, deactivateCatalogVariant,
   addCatalogMedia, removeCatalogMedia, setCatalogPrimaryMedia,
   listVariantProviderMappings, upsertVariantProviderMapping, removeVariantProviderMapping,
-  updateCatalogCategory, archiveCatalogCategory, updateCatalogCollection, archiveCatalogCollection,
+  updateCatalogCategory, archiveCatalogCategory, deleteCatalogCategory, updateCatalogCollection, archiveCatalogCollection,
 } from "@/lib/admin/catalog";
 
 export const dynamic = "force-dynamic";
