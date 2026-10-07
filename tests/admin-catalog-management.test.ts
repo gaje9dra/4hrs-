@@ -7,6 +7,9 @@ import { createSessionToken, hashSessionToken, CUSTOMER_SESSION_TTL_SECONDS } fr
 import { requireAdmin } from "@/lib/admin/authorization";
 import { AdminError } from "@/lib/admin/errors";
 import { CatalogServiceError } from "@/lib/catalog/errors";
+import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
+const read = (path: string) => readFile(resolve(process.cwd(), path), "utf8");
 
 async function fixture(role: "ADMIN"|"VIEWER") {
   const email = `phase14-2-${role.toLowerCase()}-${crypto.randomUUID()}@example.test`;
@@ -120,7 +123,7 @@ test("catalog size management creates orderable variants for customer size selec
     productId=product.id;
 
     const variant=await catalog.createVariant({
-      product: { connect: { id: product.id } },
+      productId: product.id,
       sku: `4HRS-${product.id.slice(0,8)}-M`,
       displayName: "Size M",
       size: "M",
