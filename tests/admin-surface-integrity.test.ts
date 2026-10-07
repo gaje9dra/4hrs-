@@ -171,3 +171,17 @@ test("admin catalog supports safe permanent category deletion", () => {
   assert.match(manager, /\/api\/admin\/catalog\/categories\/"\+id\+"\/delete/);
   assert.match(manager, /Delete/);
 });
+
+
+test("admin product form exposes category assignment", () => {
+  const form = readFileSync(join(process.cwd(), "components", "admin", "catalog", "catalog-product-form.tsx"), "utf8");
+  const newPage = readFileSync(join(process.cwd(), "app", "admin", "catalog", "new", "page.tsx"), "utf8");
+  const editPage = readFileSync(join(process.cwd(), "app", "admin", "catalog", "[id]", "page.tsx"), "utf8");
+  assert.match(form, /name="categoryIds"/);
+  assert.match(form, /categories\?\.some/);
+  assert.match(form, /categoryIds:data\.getAll\("categoryIds"\)/);
+  assert.match(newPage, /listCatalogCategories/);
+  assert.match(newPage, /categories=\{categories\}/);
+  assert.match(editPage, /listCatalogCategories/);
+  assert.match(editPage, /categories=\{categories\}/);
+});
