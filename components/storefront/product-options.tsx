@@ -88,7 +88,7 @@ export function ProductOptions({
     onMediaChange?.(variant.media.length ? variant.media : product.media);
   }
 
-  async function handleAdd() {
+  async function handleAdd(buyNow = false) {
     if (!purchaseSelection || addState === "pending") return;
     const requestId = ++addRequest.current;
     setAddState("pending");
@@ -98,7 +98,7 @@ export function ProductOptions({
       await addToCart(purchaseSelection);
       if (requestId !== addRequest.current) return;
       setAddState("success");
-      if (purchaseIntent === "buy") {
+      if (buyNow || purchaseIntent === "buy") {
         router.push("/checkout");
       }
     } catch (error) {
@@ -113,7 +113,7 @@ export function ProductOptions({
   useEffect(() => {
     if (!purchaseIntent || intentStarted.current || !purchaseSelection) return;
     intentStarted.current = true;
-    void handleAdd();
+    void handleAdd(purchaseIntent === "buy");
   }, [purchaseIntent, purchaseSelection]);
 
   return (
@@ -162,6 +162,7 @@ export function ProductOptions({
         <Button variant="yellow" loading={addState === "pending"} disabled={!purchaseSelection || purchaseIntentState !== "READY"} onClick={() => void handleAdd()} className="mt-3 w-full">
           {addState === "success" ? <><Check size={18} aria-hidden="true" />Added to cart</> : "Add to cart"}
         </Button>
+        <Button variant="yellow" loading={addState === "pending"} disabled={!purchaseSelection || purchaseIntentState !== "READY"} onClick={() => void handleAdd(true)} className="mt-3 w-full">Buy now</Button>
         <p id="purchase-intent-status" className="mt-3 text-sm font-700" aria-live="polite">
           {purchaseIntentState === "PRODUCT_UNAVAILABLE" ? "This product is currently unavailable."
             : purchaseIntentState === "MISSING_REQUIRED_SELECTION" ? "Select every required option before adding to Cart."
