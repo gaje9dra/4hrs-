@@ -65,7 +65,7 @@ export function CustomerAuthStatus() {
           className={`${iconBaseClassName} bg-white animate-pulse`}
           aria-hidden="true"
         >
-          <span className="flex size-7 items-center justify-center rounded-full bg-primary-red"><UserRound size={17} strokeWidth={2.5} className="text-white" /></span>
+          <span className="flex size-7 items-center justify-center rounded-full bg-primary-yellow"><UserRound size={17} strokeWidth={2.5} className="text-white" /></span>
         </span>
         <span
           className={`${iconBaseClassName} bg-white animate-pulse`}
@@ -90,7 +90,7 @@ export function CustomerAuthStatus() {
           accountActive ? "ring-2 ring-primary-yellow ring-offset-2" : "",
         ].filter(Boolean).join(" ")}
       >
-        <span className="flex size-7 items-center justify-center rounded-full bg-primary-red"><UserRound size={17} strokeWidth={2.5} className="text-white" aria-hidden="true" /></span>
+        <span className="flex size-7 items-center justify-center rounded-full bg-primary-yellow"><UserRound size={17} strokeWidth={2.5} className="text-white" aria-hidden="true" /></span>
       </Link>
       <Link
         href="/cart"
