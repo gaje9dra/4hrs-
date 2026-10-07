@@ -8,7 +8,7 @@ import { CatalogVariantManager } from "@/components/admin/catalog/catalog-varian
 import { CatalogMediaManager } from "@/components/admin/catalog/catalog-media-manager";
 import { CatalogProviderMappingManager } from "@/components/admin/catalog/catalog-provider-mapping-manager";
 
-type Product={id:string;title:string;slug:string;description:string|null;shortDescription:string|null;price:string;compareAtPrice:string|null;currency:string;seoTitle:string|null;seoDescription:string|null;status:"DRAFT"|"ACTIVE"|"ARCHIVED";updatedAt:string;variants:Array<{id:string;sku:string;displayName:string|null;size:string|null;color:string|null;price:string|null;status:"ACTIVE"|"INACTIVE";updatedAt:string}>;images:Array<{id:string;url:string;isPrimary:boolean;altText:string|null;sortOrder:number}>};
+type Product={id:string;title:string;slug:string;description:string|null;shortDescription:string|null;price:string;compareAtPrice:string|null;currency:string;seoTitle:string|null;seoDescription:string|null;status:"DRAFT"|"ACTIVE"|"ARCHIVED";updatedAt:string;categories:Array<{category:{id:string}}>;variants:Array<{id:string;sku:string;displayName:string|null;size:string|null;color:string|null;price:string|null;status:"ACTIVE"|"INACTIVE";updatedAt:string}>;images:Array<{id:string;url:string;isPrimary:boolean;altText:string|null;sortOrder:number}>};
 type MappingGroup={variantId:string;mappings:Array<{id:string;providerId:string;providerSku:string;active:boolean}>};
 type ProductData={product:Product;providerMappings:MappingGroup[]};
 
