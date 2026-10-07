@@ -46,6 +46,18 @@ export async function POST(request: Request) {
       await catalog.replaceVariantOptionValues(variant.id, [optionValue.id]);
     }
 
+    if (typeof input?.size === "string" && input.size.trim() && typeof input?.sku === "string" && input.sku.trim()) {
+      // The Qikink SKU follows the canonical 4HRS+ BaseSKU-SIZE convention.
+      // This removes a second manual mapping step while keeping the provider mapping
+      // explicit in the fulfillment layer.
+      await catalog.upsertProviderMapping({
+        variantId: variant.id,
+        providerId: "qikink",
+        providerSku: input.sku.trim(),
+        active: true,
+      });
+    }
+
     return json({ variant }, 201);
   } catch (error) {
     return errorResponse(error);

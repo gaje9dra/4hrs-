@@ -165,3 +165,20 @@ test("publish and unpublish do not require an audit reason", async () => {
   assert.match(source,/export const publishCatalogProduct/);
   assert.match(source,/export const unpublishCatalogProduct/);
 });
+
+
+test("product size management generates variant SKUs from one base SKU", async () => {
+  const manager=await read("components/admin/catalog/catalog-variant-manager.tsx");
+  assert.match(manager,/function skuFor\(baseSku:string,size:string\)/);
+  assert.match(manager,/\$\{baseSku\.trim\(\)\.replace\(\/-\+\$\/, ""\)\}-\$\{compact\}/);
+  assert.match(manager,/Add the product base SKU first/);
+  assert.match(manager,/providerSku.*input\.sku/);
+});
+
+test("product model exposes a single base SKU for automatic size suffixes", async () => {
+  const schema=await read("prisma/schema.prisma");
+  assert.match(schema,/baseSku\s+String\?\s+@unique/);
+  const form=await read("components/admin/catalog/catalog-product-form.tsx");
+  assert.match(form,/name="baseSku"/);
+  assert.match(form,/987364-M/);
+});

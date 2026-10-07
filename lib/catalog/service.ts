@@ -191,6 +191,7 @@ function decimalValue(value: number | string | null | undefined): Prisma.Decimal
 function normalizeProductInput(input: ProductInput): ProductInput {
   return {
     ...input,
+    baseSku: input.baseSku ? normalizeSku(input.baseSku) : null,
     title: normalizeTitle(input.title),
     slug: normalizeSlug(input.slug || input.title),
     seoTitle: normalizeSeoText(input.seoTitle),
@@ -338,6 +339,7 @@ export function createCatalogService(
           const created = await repo.createProduct({
             id: productId,
             title: product.title,
+            baseSku: product.baseSku ?? null,
             slug: product.slug,
             description: product.description ?? null,
             shortDescription: product.shortDescription ?? null,
@@ -465,6 +467,7 @@ export function createCatalogService(
       const existing = await this.getProductById(input.id);
       const merged: ProductInput = normalizeProductInput({
         id: existing.id,
+        baseSku: input.baseSku === undefined ? existing.baseSku : input.baseSku,
         title: input.title ?? existing.title,
         slug: input.slug ?? existing.slug,
         description: input.description === undefined ? existing.description : input.description,
@@ -514,6 +517,7 @@ export function createCatalogService(
               product: {
                 id: currentDetails.id,
                 title: merged.title,
+                baseSku: merged.baseSku ?? null,
                 slug: merged.slug,
                 description: merged.description,
                 shortDescription: merged.shortDescription,
@@ -550,6 +554,7 @@ export function createCatalogService(
           const result = expectedUpdatedAt
             ? await repo.updateProductIfFresh(input.id, expectedUpdatedAt, {
                 title: merged.title,
+                baseSku: merged.baseSku ?? null,
                 slug: merged.slug,
                 description: merged.description,
                 shortDescription: merged.shortDescription,

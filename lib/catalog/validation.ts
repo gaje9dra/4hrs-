@@ -16,7 +16,7 @@ export class CatalogValidationError extends Error {
   }
 }
 
-export type ProductInput = { id?: string; title: string; slug: string; description?: string | null; shortDescription?: string | null; status: ProductStatus; price: number | string; compareAtPrice?: number | string | null; currency: string; seoTitle?: string | null; seoDescription?: string | null };
+export type ProductInput = { id?: string; baseSku?: string | null; title: string; slug: string; description?: string | null; shortDescription?: string | null; status: ProductStatus; price: number | string; compareAtPrice?: number | string | null; currency: string; seoTitle?: string | null; seoDescription?: string | null };
 export type SeoMetadataInput = { seoTitle?: string | null; seoDescription?: string | null };
 export const SEO_TITLE_MAX_LENGTH = 200;
 export const SEO_DESCRIPTION_MAX_LENGTH = 500;
