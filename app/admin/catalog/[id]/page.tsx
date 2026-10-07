@@ -10,6 +10,7 @@ import { CatalogProviderMappingManager } from "@/components/admin/catalog/catalo
 
 type Product={id:string;baseSku:string|null;title:string;slug:string;description:string|null;shortDescription:string|null;price:string;compareAtPrice:string|null;currency:string;seoTitle:string|null;seoDescription:string|null;status:"DRAFT"|"ACTIVE"|"ARCHIVED";updatedAt:string;categories:Array<{category:{id:string}}>;variants:Array<{id:string;sku:string;displayName:string|null;size:string|null;color:string|null;price:string|null;status:"ACTIVE"|"INACTIVE";updatedAt:string}>;images:Array<{id:string;url:string;isPrimary:boolean;altText:string|null;sortOrder:number}>};
 type MappingGroup={variantId:string;mappings:Array<{id:string;providerId:string;providerSku:string;active:boolean}>};
+type VariantSummary={id:string;sku:string};
 type ProductData={product:Product;providerMappings:MappingGroup[]};
 
 export default async function CatalogProductPage({params}:{params:Promise<{id:string}>}){
@@ -20,6 +21,6 @@ export default async function CatalogProductPage({params}:{params:Promise<{id:st
  <CatalogProductForm mode="edit" product={p} categories={categories}/>
  <section className="border-4 border-black bg-white p-5"><h3 className="text-xl font-black uppercase">Variants</h3><div className="mt-4"><CatalogVariantManager productId={p.id} baseSku={p.baseSku} variants={p.variants} canManage={context.permissions.has("catalog.update")}/></div></section>
  <section className="border-4 border-black bg-white p-5"><h3 className="text-xl font-black uppercase">Media</h3><div className="mt-4"><CatalogMediaManager productId={p.id} images={p.images} canManage={context.permissions.has("catalog.media.manage")}/></div></section>
- <section className="border-4 border-black bg-white p-5"><h3 className="text-xl font-black uppercase">Provider mappings</h3><p className="mt-2 text-sm">Fulfillment mappings remain provider-specific and never replace the canonical 4HRS+ Store SKU.</p><div className="mt-4"><CatalogProviderMappingManager groups={data.providerMappings} canManage={context.permissions.has("catalog.provider_mapping.manage")}/></div></section>
+ <section className="border-4 border-black bg-white p-5"><h3 className="text-xl font-black uppercase">Provider mappings</h3><p className="mt-2 text-sm">Fulfillment mappings remain provider-specific and never replace the canonical 4HRS+ Store SKU.</p><div className="mt-4"><CatalogProviderMappingManager groups={data.providerMappings} variants={p.variants.map((variant) => ({ id: variant.id, sku: variant.sku }))} canManage={context.permissions.has("catalog.provider_mapping.manage")}/></div></section>
  </section>;
 }
