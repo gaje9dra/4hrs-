@@ -96,6 +96,7 @@ type CatalogRepository = {
   listCollections: typeof repository.listCollections;
   updateCategory: typeof repository.updateCategory;
   archiveCategory: typeof repository.archiveCategory;
+  deleteCategory: typeof repository.deleteCategory;
   createCollection: typeof repository.createCollection;
   getCollectionById: typeof repository.getCollectionById;
   getCollectionBySlug: (slug: string, client?: repository.CatalogRepositoryClient) => Promise<{ id: string; status: "ACTIVE" | "DRAFT" | "ARCHIVED"; name: string; slug: string; description: string | null; seoTitle: string | null; seoDescription: string | null; createdAt: Date; updatedAt: Date; _count: { products: number } } | null>;
