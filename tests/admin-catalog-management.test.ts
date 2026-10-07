@@ -102,3 +102,48 @@ test("catalog products can be created and updated with category assignments", as
     if (categoryId) await db.category.delete({where:{id:categoryId}}).catch(()=>undefined);
   }
 });
+
+
+test("catalog size management creates orderable variants for customer size selection", async () => {
+  const f=await fixture("ADMIN"); let productId:string|undefined;
+  try {
+    const context=await requireAdmin(f.request(),"catalog.create");
+    const catalog=createCatalogService({}, { source:"MANUAL", actorType:"USER", actorId:context.adminUser.id, correlationId:undefined });
+    const product=await catalog.createProduct({
+      title:"Size Selection Product",
+      slug:`size-selection-${crypto.randomUUID()}`,
+      description:"Size selection fixture",
+      status:"DRAFT",
+      price:"349.00",
+      currency:"INR",
+    });
+    productId=product.id;
+
+    const variant=await catalog.createVariant({
+      product: { connect: { id: product.id } },
+      sku: `4HRS-${product.id.slice(0,8)}-M`,
+      displayName: "Size M",
+      size: "M",
+      color: null,
+      price: null,
+      status: "ACTIVE",
+    });
+    const optionType=await catalog.createOptionType({name:"Size",sortOrder:0});
+    const optionValue=await catalog.createOptionValue({
+      optionTypeId: optionType.id,
+      displayName:"M",
+      normalizedValue:"m",
+      sortOrder:0,
+    });
+    await catalog.assignProductOptionType(product.id, optionType.id, 0);
+    await catalog.replaceVariantOptionValues(variant.id, [optionValue.id]);
+
+    const details=await catalog.getProductDetails(product.id);
+    assert.equal(details?.optionTypes.length,1);
+    assert.equal(details?.optionTypes[0]?.optionType.normalizedName,"size");
+    assert.equal(details?.variants[0]?.size,"M");
+    assert.equal(details?.variants[0]?.optionValues[0]?.optionValue.displayName,"M");
+  } finally {
+    await cleanup(f,productId);
+  }
+});
