@@ -86,12 +86,14 @@ test("Cart remains bound to authenticated customer identity", () => {
   assert.doesNotMatch(api, /guest|anonymous.*cart.*create/i);
 });
 
-test("logout is server-backed and does not delete the customer's Cart", () => {
+test("logout remains server-backed while the header exposes icon-only account access", () => {
   const logout = read("app/api/auth/logout/route.ts");
   const header = read("components/storefront/customer-auth-status.tsx");
   assert.match(logout, /authentication\.logout/);
   assert.match(logout, /cookies\.set/);
-  assert.match(header, /router\.replace\("\/"\)/);
+  assert.match(header, /UserRound/);
+  assert.match(header, /href="\/cart"/);
+  assert.doesNotMatch(header, /Sign out|LogOut|customer\.email/);
   assert.doesNotMatch(logout, /delete.*cart|clearCart/i);
 });
 
