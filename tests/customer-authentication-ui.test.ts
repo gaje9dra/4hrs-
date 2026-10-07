@@ -33,11 +33,14 @@ test("authentication redirects are constrained to same-origin relative paths", (
   assert.match(source, /DEFAULT_REDIRECT = "\/"/);
 });
 
-test("customer header state uses the server session API and exposes no admin state", () => {
+test("customer header state uses the server session API and exposes icon-only account controls", () => {
   const source = read("components/storefront/customer-auth-status.tsx");
   assert.match(source, /\/api\/auth\/session/);
-  assert.match(source, /ShoppingCart/);\n  assert.match(source, /UserRound/);\n  assert.match(source, /href="\/cart"/);\n  assert.doesNotMatch(source, /customer\\.email|Sign out|LogOut/);
+  assert.match(source, /ShoppingCart/);
+  assert.match(source, /UserRound/);
+  assert.match(source, /href="\/cart"/);
   assert.match(source, /credentials: "same-origin"/);
+  assert.doesNotMatch(source, /customer\.email|Sign out|LogOut/);
   assert.doesNotMatch(source, /admin|passwordHash|sessionToken/i);
 });
 
@@ -51,7 +54,6 @@ test("Bauhaus auth surfaces use existing primitives and token classes", () => {
   assert.doesNotMatch(form, /linear-gradient|backdrop-filter|glassmorphism|rounded-full/i);
 });
 
-
 test("header no longer exposes a visible sign-out control", () => {
   const source = read("components/storefront/customer-auth-status.tsx");
   assert.doesNotMatch(source, /Sign out|LogOut|customer\.email/);
@@ -59,7 +61,6 @@ test("header no longer exposes a visible sign-out control", () => {
   assert.match(source, /UserRound/);
   assert.match(source, /ShoppingCart/);
 });
-
 
 test("Product Detail preserves the approved authenticated Cart boundary", () => {
   const source = read("components/storefront/product-options.tsx");
