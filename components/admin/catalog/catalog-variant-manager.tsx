@@ -1,78 +1,206 @@
 "use client";
-import { useState } from "react";
+
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 type Variant={id:string;sku:string;displayName:string|null;size:string|null;color:string|null;price:string|null;status:"ACTIVE"|"INACTIVE";updatedAt:string};
 type ValidationIssue={field:string;code:string;message:string};
 type ErrorResponse={error?:{message?:unknown;details?:{issues?:unknown}}};
 
+const STANDARD_SIZES = ["XS", "S", "M", "L", "XL", "XXL", "3XL", "4XL"];
+
 function validationIssues(value:unknown):ValidationIssue[]{
- if(!Array.isArray(value)) return [];
- return value.filter((issue:unknown):issue is ValidationIssue =>
-  typeof issue==="object" && issue!==null &&
-  "message" in issue && typeof (issue as {message?:unknown}).message==="string" &&
-  "field" in issue && typeof (issue as {field?:unknown}).field==="string"
- );
+  if(!Array.isArray(value)) return [];
+  return value.filter((issue:unknown):issue is ValidationIssue =>
+    typeof issue==="object" && issue!==null &&
+    "message" in issue && typeof (issue as {message?:unknown}).message==="string" &&
+    "field" in issue && typeof (issue as {field?:unknown}).field==="string"
+  );
 }
 
 function errorMessage(body:ErrorResponse,fallback:string):string{
- const message=typeof body.error?.message==="string"?body.error.message:fallback;
- const issues=validationIssues(body.error?.details?.issues);
- return [message,...issues.map((issue)=>"• "+issue.message)].join("\n");
+  const message=typeof body.error?.message==="string"?body.error.message:fallback;
+  const issues=validationIssues(body.error?.details?.issues);
+  return [message,...issues.map((issue)=>"• "+issue.message)].join("\n");
+}
+
+function normalizeSize(value:string){
+  return value.trim().replace(/\s+/g," ").toUpperCase();
+}
+
+function skuFor(productId:string,size:string){
+  const compact=normalizeSize(size).replace(/[^A-Z0-9]+/g,"-").replace(/^-|-$/g,"");
+  return `4HRS-${productId.slice(0,8)}-${compact}`;
 }
 
 export function CatalogVariantManager({productId,variants,canManage}:{productId:string;variants:Variant[];canManage:boolean}) {
- const router=useRouter(); const [error,setError]=useState(""); const [busy,setBusy]=useState(false);
- async function add(e:React.FormEvent<HTMLFormElement>){
-  e.preventDefault();setBusy(true);setError("");
-  const form=e.currentTarget;
-  const d=Object.fromEntries(new FormData(form).entries());
-  const res=await fetch("/api/admin/catalog/products/variants",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({productId,...d,price:d.price?String(d.price):null,status:d.status==="INACTIVE"?"INACTIVE":"ACTIVE"})});
-  const b=await res.json().catch(()=>({})) as ErrorResponse;
-  if(!res.ok)setError(errorMessage(b,"Could not create variant."));
-  else{form.reset();router.refresh()}
-  setBusy(false);
- }
- async function update(id:string,updatedAt:string,e:React.FormEvent<HTMLFormElement>){
-  e.preventDefault();setBusy(true);setError("");
-  const d=Object.fromEntries(new FormData(e.currentTarget).entries());
-  const res=await fetch("/api/admin/catalog/variants/"+id,{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({...d,price:d.price?String(d.price):null,expectedUpdatedAt:updatedAt})});
-  const b=await res.json().catch(()=>({})) as ErrorResponse;
-  if(!res.ok)setError(errorMessage(b,"Could not update variant."));
-  else router.refresh();
-  setBusy(false);
- }
- async function deactivate(id:string){
-  const reason=window.prompt("Reason for deactivating this variant:");if(!reason||reason.trim().length<3)return;
-  setBusy(true);setError("");
-  const res=await fetch("/api/admin/catalog/variants/"+id,{method:"DELETE",headers:{"content-type":"application/json"},body:JSON.stringify({reason})});
-  const b=await res.json().catch(()=>({})) as ErrorResponse;
-  if(!res.ok)setError(errorMessage(b,"Could not deactivate variant."));else router.refresh();
-  setBusy(false);
- }
- return <div className="space-y-4">
-  {canManage&&<form onSubmit={add} className="grid gap-2 border-2 border-black p-3 md:grid-cols-4">
-   <input name="sku" required placeholder="Store SKU" className="border-2 border-black p-2"/>
-   <input name="displayName" placeholder="Display name" className="border-2 border-black p-2"/>
-   <input name="size" placeholder="Size" className="border-2 border-black p-2"/>
-   <input name="color" placeholder="Color" className="border-2 border-black p-2"/>
-   <input name="price" inputMode="decimal" placeholder="Price" className="border-2 border-black p-2"/>
-   <input type="hidden" name="status" value="ACTIVE"/>
-   <button disabled={busy} className="border-2 border-black bg-[#f7d51d] p-2 font-bold uppercase md:col-span-3">Add variant</button>
-  </form>}
-  <div className="grid gap-3">{variants.map(v=><div key={v.id} className="border-2 border-black p-3">
-   <div className="flex flex-wrap justify-between gap-2"><strong>{v.sku}</strong><span className="font-bold">{v.status}</span></div>
-   <p className="mt-1 text-xs">Store SKU is canonical. Provider SKU is managed separately.</p>
-   {canManage&&<form onSubmit={e=>void update(v.id,v.updatedAt,e)} className="mt-3 grid gap-2 md:grid-cols-4">
-    <input name="sku" defaultValue={v.sku} required className="border-2 border-black p-2"/>
-    <input name="displayName" defaultValue={v.displayName??""} placeholder="Display name" className="border-2 border-black p-2"/>
-    <input name="size" defaultValue={v.size??""} placeholder="Size" className="border-2 border-black p-2"/>
-    <input name="color" defaultValue={v.color??""} placeholder="Color" className="border-2 border-black p-2"/>
-    <input name="price" defaultValue={v.price??""} placeholder="Price" className="border-2 border-black p-2"/>
-    <button disabled={busy} className="border-2 border-black bg-[#f7d51d] px-3 py-2 text-xs font-bold uppercase md:col-span-3">Save variant</button>
-   </form>}
-   {canManage&&v.status==="ACTIVE"&&<button type="button" disabled={busy} onClick={()=>void deactivate(v.id)} className="mt-2 border-2 border-black bg-[#ff5a36] px-3 py-2 text-xs font-bold uppercase">Deactivate</button>}
-  </div>)}</div>
-  {error&&<p role="alert" className="whitespace-pre-line border-2 border-black bg-[#ff5a36] p-2 font-bold">{error}</p>}
- </div>;
+  const router=useRouter();
+  const [error,setError]=useState("");
+  const [busy,setBusy]=useState(false);
+  const [customSize,setCustomSize]=useState("");
+  const [pendingSize,setPendingSize]=useState<string|null>(null);
+
+  const existingSizes=useMemo(
+    ()=>new Set(variants.filter(v=>v.status==="ACTIVE" && v.size).map(v=>normalizeSize(v.size!))),
+    [variants],
+  );
+
+  const sizesInCatalog=useMemo(
+    ()=>Array.from(new Set(variants.filter(v=>v.size).map(v=>normalizeSize(v.size!)))),
+    [variants],
+  );
+
+  async function addSize(size:string){
+    const normalized=normalizeSize(size);
+    if(!normalized || existingSizes.has(normalized)) return;
+
+    setBusy(true);
+    setPendingSize(normalized);
+    setError("");
+
+    const res=await fetch("/api/admin/catalog/variants",{
+      method:"POST",
+      headers:{"content-type":"application/json"},
+      body:JSON.stringify({
+        productId,
+        sku:skuFor(productId,normalized),
+        displayName:`Size ${normalized}`,
+        size:normalized,
+        color:null,
+        price:null,
+        status:"ACTIVE",
+      }),
+    });
+
+    const body=await res.json().catch(()=>({})) as ErrorResponse;
+    if(!res.ok){
+      setError(errorMessage(body,"Could not add this size."));
+    }else{
+      setCustomSize("");
+      router.refresh();
+    }
+
+    setPendingSize(null);
+    setBusy(false);
+  }
+
+  async function deactivate(id:string){
+    const reason=window.prompt("Reason for removing this size:");
+    if(!reason || reason.trim().length<3) return;
+
+    setBusy(true);
+    setError("");
+
+    const res=await fetch("/api/admin/catalog/variants/"+id,{
+      method:"DELETE",
+      headers:{"content-type":"application/json"},
+      body:JSON.stringify({reason}),
+    });
+    const body=await res.json().catch(()=>({})) as ErrorResponse;
+
+    if(!res.ok) setError(errorMessage(body,"Could not remove this size."));
+    else router.refresh();
+
+    setBusy(false);
+  }
+
+  return (
+    <div className="space-y-5">
+      {canManage ? (
+        <div className="border-2 border-black bg-[#fafafa] p-4">
+          <div>
+            <p className="text-sm font-black uppercase tracking-[0.12em]">Available sizes</p>
+            <p className="mt-1 text-xs text-gray-600">
+              Select the sizes customers can order. Each size is stored as a real product variant so the selected size is preserved on the cart and order.
+            </p>
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            {STANDARD_SIZES.map((size)=>{
+              const active=existingSizes.has(size);
+              const loading=pendingSize===size;
+              return (
+                <button
+                  key={size}
+                  type="button"
+                  disabled={busy || active}
+                  onClick={()=>void addSize(size)}
+                  className={[
+                    "min-w-14 border-2 border-black px-4 py-3 text-sm font-black uppercase",
+                    active ? "cursor-default bg-black text-white" : "bg-white hover:-translate-y-0.5 hover:bg-[#f7d51d]",
+                    loading ? "opacity-60" : "",
+                  ].join(" ")}
+                  aria-pressed={active}
+                >
+                  {loading ? "..." : size}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            <input
+              value={customSize}
+              onChange={(e)=>setCustomSize(e.target.value)}
+              placeholder="Other size (e.g. 5XL)"
+              aria-label="Other size"
+              className="min-h-11 flex-1 border-2 border-black bg-white px-3 py-2 font-bold uppercase md:max-w-xs"
+            />
+            <button
+              type="button"
+              disabled={busy || !normalizeSize(customSize)}
+              onClick={()=>void addSize(customSize)}
+              className="min-h-11 border-2 border-black bg-[#f7d51d] px-5 py-2 font-black uppercase"
+            >
+              Add size
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {sizesInCatalog.length ? (
+        <div>
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <p className="text-sm font-black uppercase tracking-[0.12em]">Customer size options</p>
+            <span className="text-xs font-bold">{existingSizes.size} active</span>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {variants.filter(v=>v.size).map(v=>(
+              <div key={v.id} className="border-2 border-black bg-white p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-lg font-black uppercase">{v.size}</span>
+                  <span className={v.status==="ACTIVE" ? "text-xs font-black uppercase" : "text-xs font-black uppercase text-gray-500"}>
+                    {v.status==="ACTIVE" ? "Available" : "Unavailable"}
+                  </span>
+                </div>
+                <p className="mt-2 text-[0.68rem] font-bold uppercase text-gray-600">SKU {v.sku}</p>
+                {v.color ? <p className="mt-1 text-xs font-bold">Color: {v.color}</p> : null}
+                {canManage && v.status==="ACTIVE" ? (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={()=>void deactivate(v.id)}
+                    className="mt-3 w-full border-2 border-black bg-[#ff5a36] px-3 py-2 text-xs font-black uppercase"
+                  >
+                    Remove size
+                  </button>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <p className="border-2 border-dashed border-black p-4 text-sm font-bold uppercase">
+          No customer sizes configured yet.
+        </p>
+      )}
+
+      {error ? (
+        <p role="alert" className="whitespace-pre-line border-2 border-black bg-[#ff5a36] p-3 font-bold">
+          {error}
+        </p>
+      ) : null}
+    </div>
+  );
 }
