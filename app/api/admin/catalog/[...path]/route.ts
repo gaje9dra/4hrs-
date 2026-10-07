@@ -97,7 +97,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ pa
       return adminJson({ collection: await updateCatalogCollection(context, p[1], body as unknown as Parameters<typeof updateCatalogCollection>[2]) });
     }
     return bad("Catalog resource is not supported.");
-  } catch (error) { return adminErrorResponse(error); }
+  } catch (error) { return adminCatalogErrorResponse(error); }
 }
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ path: string[] }> }) {

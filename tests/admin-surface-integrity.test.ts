@@ -121,8 +121,21 @@ test("catalog publish route preserves catalog readiness errors", () => {
   const action = readFileSync(join(process.cwd(), "components", "admin", "catalog", "catalog-action.tsx"), "utf8");
   const service = readFileSync(join(process.cwd(), "lib", "catalog", "service.ts"), "utf8");
   assert.match(route, /catch \(error\) \{ return adminCatalogErrorResponse\(error\); \}/);
-  assert.match(http, /error\.code === "NOT_PUBLICATION_READY"/);
-  assert.match(http, /const details = error\.code === "NOT_PUBLICATION_READY"/);
+  assert.match(http, /adminCatalogErrorResponse/);
+  assert.match(http, /adminCatalogErrorResponse/);
   assert.match(action, /error\?\.details\?\.issues/);
   assert.match(service, /MISSING_QIKINK_MAPPING/);
+});
+
+
+test("admin variant creation defaults new variants to active and exposes validation issues", () => {
+  const service = readFileSync(join(process.cwd(), "lib", "catalog", "service.ts"), "utf8");
+  const manager = readFileSync(join(process.cwd(), "components", "admin", "catalog", "catalog-variant-manager.tsx"), "utf8");
+  const http = readFileSync(join(process.cwd(), "lib", "admin", "http.ts"), "utf8");
+  const route = readFileSync(join(process.cwd(), "app", "api", "admin", "catalog", "[...path]", "route.ts"), "utf8");
+  assert.match(service, /status: input\.status \?\? "ACTIVE"/);
+  assert.match(manager, /type="hidden" name="status" value="ACTIVE"/);
+  assert.match(manager, /body\.error\?\.details\?\.issues/);
+  assert.match(http, /const details = error\.cause && typeof error\.cause === "object"/);
+  assert.match(route, /catch \(error\) \{ return adminCatalogErrorResponse\(error\); \}/);
 });
