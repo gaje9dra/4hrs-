@@ -1438,6 +1438,10 @@ export async function archiveCategory(id: string, client?: CatalogRepositoryClie
   return updateCategory(id, { status: "ARCHIVED" }, client);
 }
 
+export async function deleteCategory(id: string, client?: CatalogRepositoryClient) {
+  return clientOrDefault(client).category.delete({ where: { id } });
+}
+
 export async function createCollection(data: Prisma.CollectionCreateInput, client?: CatalogRepositoryClient) {
   return clientOrDefault(client).collection.create({ data });
 }
