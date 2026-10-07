@@ -231,3 +231,21 @@ test("catalog delete does not mask non-auth failures as authentication errors", 
   assert.match(route,/console\.error\("\[admin\/catalog\/delete\]"/);
   assert.match(route,/status: 500/);
 });
+
+
+test("catalog deletion explicitly cleans non-cascading dependencies", async () => {
+  const repository=await read("lib/catalog/repository.ts");
+  assert.match(repository,/fulfillmentProviderMapping\.deleteMany/);
+  assert.match(repository,/productVariantOptionValue\.deleteMany/);
+  assert.match(repository,/inventory\.findMany/);
+  assert.match(repository,/inventoryTransaction\.deleteMany/);
+  assert.match(repository,/inventory\.deleteMany/);
+  assert.match(repository,/cartItem\.deleteMany/);
+});
+
+test("successful product deletion is not reported as failed when audit logging fails", async () => {
+  const admin=await read("lib/admin/catalog.ts");
+  assert.match(admin,/deleteProduct\(id\)/);
+  assert.match(admin,/admin\/catalog\/delete-audit/);
+  assert.match(admin,/return result;/);
+});

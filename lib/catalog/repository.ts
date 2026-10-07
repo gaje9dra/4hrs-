@@ -1112,21 +1112,35 @@ export async function listProductsForExport(
 
 export async function deleteProduct(id: string, client?: CatalogRepositoryClient) {
   const remove = async (tx: CatalogRepositoryClient) => {
-    // Product deletion is permanent, but cart rows are disposable and must not
-    // prevent removal. Historical OrderItems use SetNull and keep their snapshots.
+    // Delete the non-cascading dependencies explicitly. Everything else is
+    // configured with a safe FK cascade/SetNull in the catalog schema.
     await tx.cartItem.deleteMany({ where: { productId: id } });
 
     const variants = await tx.productVariant.findMany({
       where: { productId: id },
       select: { id: true },
     });
-    const variantIds = variants.map((variant) => variant.id);
+    const variantIds = variants.map(({ id: variantId }) => variantId);
 
     if (variantIds.length > 0) {
-      await tx.inventoryTransaction.deleteMany({
-        where: { inventory: { variantId: { in: variantIds } } },
+      await tx.cartItem.deleteMany({ where: { variantId: { in: variantIds } } });
+      await tx.fulfillmentProviderMapping.deleteMany({ where: { variantId: { in: variantIds } } });
+      await tx.productVariantOptionValue.deleteMany({ where: { variantId: { in: variantIds } } });
+
+      const inventories = await tx.inventory.findMany({
+        where: { variantId: { in: variantIds } },
+        select: { id: true },
       });
-      await tx.inventory.deleteMany({ where: { variantId: { in: variantIds } } });
+      const inventoryIds = inventories.map(({ id: inventoryId }) => inventoryId);
+
+      if (inventoryIds.length > 0) {
+        await tx.inventoryTransaction.deleteMany({
+          where: { inventoryId: { in: inventoryIds } },
+        });
+        await tx.inventory.deleteMany({
+          where: { id: { in: inventoryIds } },
+        });
+      }
     }
 
     return tx.product.delete({ where: { id } });
@@ -1135,7 +1149,6 @@ export async function deleteProduct(id: string, client?: CatalogRepositoryClient
   if (client) return remove(client);
   return db.$transaction((tx) => remove(tx));
 }
-
 export async function getProductById(id: string, client?: CatalogRepositoryClient) {
   return clientOrDefault(client).product.findUnique({ where: { id } });
 }

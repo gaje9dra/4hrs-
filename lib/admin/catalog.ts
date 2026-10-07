@@ -47,12 +47,18 @@ export async function listCatalogProducts(context: AdminAuthorizationContext, op
 export async function deleteCatalogProduct(context: AdminAuthorizationContext, id: string) {
   requirePermission(context, "catalog.archive");
   const result = await service(context).deleteProduct(id);
-  await auditAdminAction(context, {
-    action: "CATALOG_PRODUCT_DELETED",
-    resourceType: "Product",
-    resourceId: id,
-    success: true,
-  });
+  try {
+    await auditAdminAction(context, {
+      action: "CATALOG_PRODUCT_DELETED",
+      resourceType: "Product",
+      resourceId: id,
+      success: true,
+    });
+  } catch (auditError) {
+    // The product deletion already committed. Do not report a successful
+    // destructive operation as failed because the separate audit write failed.
+    console.error("[admin/catalog/delete-audit]", auditError);
+  }
   return result;
 }
 
