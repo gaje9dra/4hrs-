@@ -169,7 +169,7 @@ test("publish and unpublish do not require an audit reason", async () => {
 test("product size management generates variant SKUs from one base SKU", async () => {
   const manager=await read("components/admin/catalog/catalog-variant-manager.tsx");
   assert.match(manager,/function skuFor\(baseSku:string,size:string\)/);
-  assert.match(manager,/\$\{baseSku\.trim\(\)\.replace\(\/-\+\$\/, ""\)\}-\$\{compact\}/);
+  assert.match(manager,/skuFor\(baseSku,normalized\)/);
   assert.match(manager,/Add the product base SKU first/);
   assert.match(manager,/providerSku.*input\.sku/);
 });
