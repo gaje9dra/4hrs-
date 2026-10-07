@@ -88,3 +88,10 @@ test("admin product creation submits and defaults to draft status", () => {
   assert.match(route, /catch \(error\) \{ return adminCatalogErrorResponse\(error\); \}/);
   assert.match(form, /name="status" value="DRAFT"/);
 });
+
+
+test("admin catalog serializer handles Prisma Decimal values", () => {
+  const source = readFileSync(join(process.cwd(), "lib", "admin", "catalog.ts"), "utf8");
+  assert.match(source, /Prisma\.Decimal\.isDecimal\(value\)/);
+  assert.doesNotMatch(source, /value\.constructor\?\.name === "Decimal"/);
+});
