@@ -10,7 +10,6 @@ import { CatalogProviderMappingManager } from "@/components/admin/catalog/catalo
 
 type Product={id:string;baseSku:string|null;title:string;slug:string;description:string|null;shortDescription:string|null;price:string;compareAtPrice:string|null;currency:string;seoTitle:string|null;seoDescription:string|null;status:"DRAFT"|"ACTIVE"|"ARCHIVED";updatedAt:string;categories:Array<{category:{id:string}}>;variants:Array<{id:string;sku:string;displayName:string|null;size:string|null;color:string|null;price:string|null;status:"ACTIVE"|"INACTIVE";updatedAt:string}>;images:Array<{id:string;url:string;isPrimary:boolean;altText:string|null;sortOrder:number}>};
 type MappingGroup={variantId:string;mappings:Array<{id:string;providerId:string;providerSku:string;active:boolean}>};
-type VariantSummary={id:string;sku:string};
 type ProductData={product:Product;providerMappings:MappingGroup[]};
 
 export default async function CatalogProductPage({params}:{params:Promise<{id:string}>}){
