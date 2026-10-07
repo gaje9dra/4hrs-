@@ -37,6 +37,7 @@ export type OrderApplicationDependencies = {
 export type CreateOrderFromVerifiedPaymentInput = {
   paymentId: string;
   request?: Request;
+  customerId?: string;
 };
 
 export type OrderListInput = {
@@ -115,7 +116,7 @@ export function createOrderApplication(
 
     let customer: CustomerContext | null = null;
     try {
-      customer = await resolveCustomer(input.request);
+      customer = input.customerId ? { id: input.customerId } : await resolveCustomer(input.request);
       if (!customer) throw new OrderDomainError("PAYMENT_ACCESS_DENIED", "Authentication is required.");
 
       const existing = await existingForPayment(input.paymentId, customer.id);
