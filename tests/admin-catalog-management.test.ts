@@ -156,3 +156,12 @@ test("catalog publish and unpublish actions do not require a reason", async () =
   assert.doesNotMatch(source,/label="Publish" reasonRequired/);
   assert.doesNotMatch(source,/label="Unpublish" reasonRequired/);
 });
+
+
+test("publish and unpublish do not require an audit reason", async () => {
+  const source=await read("lib/admin/catalog.ts");
+  assert.match(source,/action === "archive" \|\| action === "restore"/);
+  assert.match(source,/action === "publish".*reason|reason.*action === "publish"/s);
+  assert.match(source,/export const publishCatalogProduct/);
+  assert.match(source,/export const unpublishCatalogProduct/);
+});
