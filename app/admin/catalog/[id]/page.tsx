@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/admin/authorization";
-import { getCatalogProduct } from "@/lib/admin/catalog";
+import { getCatalogProduct, listCatalogCategories } from "@/lib/admin/catalog";
 import { CatalogProductForm } from "@/components/admin/catalog/catalog-product-form";
 import { CatalogAction } from "@/components/admin/catalog/catalog-action";
 import { CatalogVariantManager } from "@/components/admin/catalog/catalog-variant-manager";
