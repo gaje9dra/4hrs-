@@ -620,14 +620,23 @@ export function createCatalogService(
         const variants = await repo.getVariantsByProduct(id);
         const activeVariants = variants.filter((variant) => variant.status === "ACTIVE");
         const mappings = createFulfillmentProviderMappingRepository();
+        const missingMappings = [];
         for (const variant of activeVariants) {
           const mapping = await mappings.getByVariantAndProvider(variant.id, "qikink");
           if (!mapping?.active || !mapping.providerSku.trim()) {
-            throw new CatalogServiceError(
-              "NOT_PUBLICATION_READY",
-              "Every active ProductVariant requires an active Qikink provider mapping before publication.",
-            );
+            missingMappings.push({
+              field: "variants." + variant.id + ".qikinkMapping",
+              code: "MISSING_QIKINK_MAPPING",
+              message: "Active variant " + variant.sku + " requires an active Qikink provider mapping with a provider SKU before publication.",
+            });
           }
+        }
+        if (missingMappings.length) {
+          throw new CatalogServiceError(
+            "NOT_PUBLICATION_READY",
+            "One or more active ProductVariants are missing an active Qikink provider mapping.",
+            { issues: missingMappings },
+          );
         }
       }
       return lifecycle.publishProduct(id, expectedUpdatedAt);
