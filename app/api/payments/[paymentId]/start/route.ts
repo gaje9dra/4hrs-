@@ -16,7 +16,7 @@ export async function POST(request: Request, context: { params: Promise<{ paymen
       where: { sessionTokenHash: hashSessionToken(token), revokedAt: null, expiresAt: { gt: new Date() } },
       select: { customerId: true },
     });
-    if (!session) throw new PaymentError("SESSION_INVALID", "Authentication is required.");
+    if (!session) throw new PaymentError("UNAUTHENTICATED", "Authentication is required.");
     const payment = await application.startProviderPayment(paymentId, session.customerId);
     return paymentJson(payment);
   } catch (error) {

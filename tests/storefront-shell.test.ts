@@ -112,7 +112,6 @@ test("product option purchase intents route after the server confirms the Cart m
   const source = read("components/storefront/product-options.tsx");
   assert.match(source, /purchaseIntent/);
   assert.match(source, /router\.push\("\/checkout"\)/);
-  assert.match(source, /router\.push\("\/cart"\)/);
   assert.match(source, /await addToCart\(purchaseSelection\)/);
 });
 

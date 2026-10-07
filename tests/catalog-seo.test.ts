@@ -217,6 +217,7 @@ test("published slug changes are rejected until a redirect strategy exists", asy
 
   const product = {
     id: "product-10",
+    baseSku: null,
     title: "Published Tee",
     slug: "published-tee",
     description: null,

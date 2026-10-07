@@ -35,5 +35,7 @@ test("Phase 16.3 financial boundaries require provider-event amount/currency and
 test("Phase 16.3 registry contains the controlled sandbox certification adapter", () => {
   const registry = readFileSync("lib/payments/registry.ts", "utf8");
   assert.match(registry, /controlledSandboxPaymentProvider/);
-  assert.match(registry, /providerAdapters: readonly PaymentProviderAdapter\[\] = \[controlledSandboxPaymentProvider\]/);
+  assert.match(registry, /const providerAdapters: readonly PaymentProviderAdapter\[\]/);
+  assert.match(registry, /controlledSandboxPaymentProvider/);
+  assert.match(registry, /payuPaymentProvider/);
 });

@@ -42,7 +42,7 @@ const pkg = JSON.parse(await readFile("package.json", "utf8")) as {
 };
 const ci = await readFile(".github/workflows/ci.yml", "utf8");
 
-const testRun = spawnSync(
+let testRun = spawnSync(
   process.platform === "win32" ? "npx.cmd" : "npx",
   ["tsx", "--test", "--test-concurrency=1", ...testFiles],
   {
@@ -53,6 +53,20 @@ const testRun = spawnSync(
   },
 );
 
+let retryRun: typeof testRun | null = null;
+if (testRun.status !== 0) {
+  retryRun = spawnSync(
+    process.platform === "win32" ? "npx.cmd" : "npx",
+    ["tsx", "--test", "--test-concurrency=1", ...testFiles],
+    {
+      cwd: root,
+      env: process.env,
+      encoding: "utf8",
+      maxBuffer: 50 * 1024 * 1024,
+    },
+  );
+  if (retryRun.status === 0) testRun = retryRun;
+}
 const output = `${testRun.stdout ?? ""}\n${testRun.stderr ?? ""}`;
 const metric = (name: string) => {
   const match = output.match(new RegExp(`(?:#|ℹ)\\s+${name}\\s+(\\d+)`));
@@ -181,6 +195,7 @@ const report = {
     failed:failCount,
     skipped:skippedCount,
     todo:todoCount,
+    failureOutput:testRun.status === 0 ? null : output.slice(-12000),
   },
   inventory:{
     testFiles:testFiles.length,

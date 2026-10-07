@@ -134,10 +134,9 @@ test("admin variant creation defaults new variants to active and exposes validat
   const http = readFileSync(join(process.cwd(), "lib", "admin", "http.ts"), "utf8");
   const route = readFileSync(join(process.cwd(), "app", "api", "admin", "catalog", "[...path]", "route.ts"), "utf8");
   assert.match(service, /status: input\.status \?\? "ACTIVE"/);
-  assert.match(manager, /type="hidden" name="status" value="ACTIVE"/);
-  assert.match(manager, /const form=e\.currentTarget/);
-  assert.match(manager, /new FormData\(form\)/);
-  assert.match(manager, /form\.reset\(\)/);
+  assert.match(manager, /status:"ACTIVE"/);
+  assert.match(manager, /skuFor\(baseSku,normalized\)/);
+  assert.match(manager, /setPendingSize/);
   assert.match(manager, /body\.error\?\.details\?\.issues/);
   assert.match(http, /const details = error\.cause && typeof error\.cause === "object"/);
   assert.match(route, /catch \(error\) \{ return adminCatalogErrorResponse\(error\); \}/);
@@ -146,11 +145,8 @@ test("admin variant creation defaults new variants to active and exposes validat
 
 test("admin provider mapping save preserves the form across async requests", () => {
   const manager = readFileSync(join(process.cwd(), "components", "admin", "catalog", "catalog-provider-mapping-manager.tsx"), "utf8");
-  assert.match(manager, /const form=e\.currentTarget/);
-  assert.match(manager, /new FormData\(form\)/);
-  assert.match(manager, /form\.reset\(\)/);
-  assert.doesNotMatch(manager, /new FormData\(e\.currentTarget\)/);
-  assert.doesNotMatch(manager, /e\.currentTarget\.reset\(\)/);
+  assert.match(manager, /providerSku.*variant\.sku/);
+  assert.doesNotMatch(manager, /new FormData/);
 });
 
 

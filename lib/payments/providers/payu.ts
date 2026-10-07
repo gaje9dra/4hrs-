@@ -93,7 +93,7 @@ async function verifyPaymentAtPayU(txnid: string): Promise<PaymentProviderResult
   const payload = await response.json() as { status?: number | string; msg?: string; transaction_details?: Record<string, Record<string, unknown>> };
   const details = payload.transaction_details?.[txnid];
   if (!details || typeof details !== "object") throw new Error(payload.msg || "PayU verification did not return transaction details.");
-  const amount = String(details.amount ?? "");
+  const amount = String(details.amount ?? details.amt ?? details.transaction_amount ?? "");
   const status = statusFromPayU(String(details.status ?? ""), String(details.unmappedstatus ?? ""));
   return {
     providerId: ID,

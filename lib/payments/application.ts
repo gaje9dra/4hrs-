@@ -442,6 +442,11 @@ export function createPaymentApplication(
           return { duplicate: true, payment };
         }
 
+        if (payment.status === event.status) {
+          await tx.markPaymentEventProcessed(existing.record.id);
+          return { duplicate: true, payment };
+        }
+
         try {
           assertPaymentTransition(payment.status, event.status);
         } catch (error) {
@@ -454,6 +459,22 @@ export function createPaymentApplication(
           asPrismaStatus(event.status),
           event.status === "SUCCEEDED" ? occurredAt : undefined,
         );
+
+        if (event.providerPaymentReference) {
+          const attempts = await tx.getPaymentAttempts(payment.id);
+          const latestAttempt = attempts.at(-1);
+          if (!latestAttempt) {
+            throw new PaymentError("PAYMENT_INTERNAL_ERROR", "Payment attempt could not be resolved.");
+          }
+          await tx.updatePaymentProviderReferences(
+            payment.id,
+            latestAttempt.id,
+            event.providerId,
+            event.providerPaymentReference,
+            event.internalPaymentReference ?? latestAttempt.providerAttemptReference,
+          );
+        }
+
         await tx.markPaymentEventProcessed(existing.record.id);
         return { duplicate: !existing.created, payment: updated };
       });
@@ -514,9 +535,17 @@ export function createPaymentApplication(
       }
 
       const nextStatus = result.status;
-      assertPaymentTransition(payment.status, nextStatus);
-
       const safeAction = normalizeClientAction(result.clientAction);
+
+      // A retried browser request can find the same payment after the first
+      // provider-start call already moved it to REQUIRES_ACTION. Reuse the
+      // provider's idempotent action instead of attempting an invalid
+      // REQUIRES_ACTION -> REQUIRES_ACTION state transition.
+      if (payment.status === "REQUIRES_ACTION" && nextStatus === "REQUIRES_ACTION") {
+        return { ...toPaymentDto(payment), nextAction: safeAction.type === "NONE" ? null : safeAction };
+      }
+
+      assertPaymentTransition(payment.status, nextStatus);
       if (safeAction.type !== "NONE") {
         // Client-action data is normalized here; the current Payment DTO intentionally remains secret-safe.
       }
@@ -536,7 +565,7 @@ export function createPaymentApplication(
           nextStatus === "SUCCEEDED" ? new Date() : undefined,
         );
       });
-      return { ...toPaymentDto(updated), nextAction: safeAction };
+      return { ...toPaymentDto(updated), nextAction: safeAction.type === "NONE" ? null : safeAction };
     } catch (error) {
       if (error instanceof PaymentError) throw error;
       const category = adapter.normalizeError(error);

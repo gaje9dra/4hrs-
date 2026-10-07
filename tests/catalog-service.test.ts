@@ -7,6 +7,7 @@ import { CatalogServiceError } from "../lib/catalog/errors.ts";
 const product = {
   id: "11111111-1111-4111-8111-111111111111",
   title: "Oversized Graphic T-Shirt",
+  baseSku: null,
   slug: "oversized-graphic-t-shirt",
   description: null,
   shortDescription: null,
