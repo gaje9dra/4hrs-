@@ -15,6 +15,7 @@ export function CatalogProductForm({ product, mode }: { product?: Product; mode:
     router.push(mode==="create"?"/admin/catalog":"/admin/catalog/"+product!.id); router.refresh();
   }
   return <form onSubmit={submit} className="grid gap-5 border-4 border-black bg-white p-5 shadow-[6px_6px_0_0_#000]">
+    <input type="hidden" name="status" value="DRAFT" />
     <div><label className="block text-sm font-black uppercase" htmlFor="title">Title</label><input id="title" name="title" required maxLength={180} defaultValue={product?.title??""} className="mt-2 w-full border-2 border-black p-3" /></div>
     <div className="grid gap-4 md:grid-cols-2"><div><label className="block text-sm font-black uppercase" htmlFor="slug">Slug</label><input id="slug" name="slug" required maxLength={180} defaultValue={product?.slug??""} className="mt-2 w-full border-2 border-black p-3" /></div><div><label className="block text-sm font-black uppercase" htmlFor="price">Price (INR)</label><input id="price" name="price" required inputMode="decimal" defaultValue={product?.price??""} className="mt-2 w-full border-2 border-black p-3" /></div></div>
     <div><label className="block text-sm font-black uppercase" htmlFor="description">Description</label><textarea id="description" name="description" rows={5} defaultValue={product?.description??""} className="mt-2 w-full border-2 border-black p-3" /></div>

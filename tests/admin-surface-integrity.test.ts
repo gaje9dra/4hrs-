@@ -79,3 +79,12 @@ test("admin dashboard does not advertise stale or nonexistent control-plane rout
   assert.match(dashboard, /href:"\/admin\/deployments"/);
   assert.match(dashboard, /href:"\/admin\/resilience"/);
 });
+
+
+test("admin product creation submits and defaults to draft status", () => {
+  const route = readFileSync(join(process.cwd(), "app", "api", "admin", "catalog", "route.ts"), "utf8");
+  const form = readFileSync(join(process.cwd(), "components", "admin", "catalog", "catalog-product-form.tsx"), "utf8");
+  assert.match(route, /body\.status === undefined\) body\.status = "DRAFT"/);
+  assert.match(route, /catch \(error\) \{ return adminCatalogErrorResponse\(error\); \}/);
+  assert.match(form, /name="status" value="DRAFT"/);
+});
