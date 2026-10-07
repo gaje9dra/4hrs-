@@ -1,5 +1,6 @@
 'use client';
 
+import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import type { StorefrontProductDetail } from "@/lib/storefront/catalog";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +16,12 @@ const availabilityLabel = {
 } as const;
 
 export function ProductDetailInteractive({ product }: { product: StorefrontProductDetail }) {
+  const searchParams = useSearchParams();
+  const purchaseIntent = searchParams.get("intent") === "buy"
+    ? "buy"
+    : searchParams.get("intent") === "cart"
+      ? "cart"
+      : undefined;
   const initialVariant = getDeterministicInitialVariant(product);
   const [variantMedia, setVariantMedia] = useState(
     initialVariant?.media.length ? initialVariant.media : product.media,
@@ -44,7 +51,11 @@ export function ProductDetailInteractive({ product }: { product: StorefrontProdu
           className="mt-8 border-t-2 border-border pt-6 lg:border-t-4"
         >
           {product.options.length ? <h2 id="product-options" className="mb-5 text-xl uppercase">Options</h2> : null}
-          <ProductOptions product={product} onMediaChange={setVariantMedia} />
+          <ProductOptions
+            product={product}
+            purchaseIntent={purchaseIntent}
+            onMediaChange={setVariantMedia}
+          />
         </section>
 
         {product.categories.length || product.collections.length ? (

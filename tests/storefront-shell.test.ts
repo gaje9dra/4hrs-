@@ -88,3 +88,30 @@ test("storefront shell preserves the established Bauhaus token system", () => {
   assert.match(source, /--shadow-md: 6px 6px 0 #121212/);
   assert.doesNotMatch(source, /backdrop-filter|linear-gradient|glassmorphism/i);
 });
+
+
+test("product cards expose Buy now and Add to cart actions", () => {
+  const source = read("components/storefront/product-card.tsx");
+  assert.match(source, /<Button[\s\S]*Buy now/);
+  assert.match(source, /<Button[\s\S]*Add to cart/);
+  assert.match(source, /intent=buy/);
+  assert.match(source, /intent=cart/);
+  assert.match(source, /disabled=\{unavailable\}/);
+});
+
+test("product detail consumes card purchase intent", () => {
+  const source = read("components/storefront/product-detail-interactive.tsx");
+  assert.match(source, /useSearchParams/);
+  assert.match(source, /purchaseIntent/);
+  assert.match(source, /intent.*buy/);
+  assert.match(source, /intent.*cart/);
+  assert.match(source, /<ProductOptions/);
+});
+
+test("product option purchase intents route after the server confirms the Cart mutation", () => {
+  const source = read("components/storefront/product-options.tsx");
+  assert.match(source, /purchaseIntent/);
+  assert.match(source, /router\.push\("\/checkout"\)/);
+  assert.match(source, /router\.push\("\/cart"\)/);
+  assert.match(source, /await addToCart\(purchaseSelection\)/);
+});
