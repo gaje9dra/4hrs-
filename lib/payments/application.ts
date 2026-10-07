@@ -442,6 +442,11 @@ export function createPaymentApplication(
           return { duplicate: true, payment };
         }
 
+        if (payment.status === event.status) {
+          await tx.markPaymentEventProcessed(existing.record.id);
+          return { duplicate: true, payment };
+        }
+
         try {
           assertPaymentTransition(payment.status, event.status);
         } catch (error) {
@@ -454,6 +459,22 @@ export function createPaymentApplication(
           asPrismaStatus(event.status),
           event.status === "SUCCEEDED" ? occurredAt : undefined,
         );
+
+        if (event.providerPaymentReference) {
+          const attempts = await tx.getPaymentAttempts(payment.id);
+          const latestAttempt = attempts.at(-1);
+          if (!latestAttempt) {
+            throw new PaymentError("PAYMENT_INTERNAL_ERROR", "Payment attempt could not be resolved.");
+          }
+          await tx.updatePaymentProviderReferences(
+            payment.id,
+            latestAttempt.id,
+            event.providerId,
+            event.providerPaymentReference,
+            event.internalPaymentReference ?? latestAttempt.providerAttemptReference,
+          );
+        }
+
         await tx.markPaymentEventProcessed(existing.record.id);
         return { duplicate: !existing.created, payment: updated };
       });
