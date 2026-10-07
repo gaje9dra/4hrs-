@@ -65,7 +65,7 @@ test("listing UX has an explicit public empty state and accessible pagination", 
   const listing = read("components/storefront/catalog-listing.tsx");
   const pagination = read("components/storefront/catalog-pagination.tsx");
   assert.match(listing, /No products found/);
-  assert.match(listing, /Shop all/);
+  assert.match(listing, /Browse all products/);
   assert.match(listing, /aria-live/);
   assert.match(pagination, /aria-label="Catalog pagination"/);
   assert.match(pagination, /aria-current="page"/);

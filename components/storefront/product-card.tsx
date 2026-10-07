@@ -8,7 +8,7 @@ import { formatCatalogMoney } from "@/lib/storefront/money";
 
 const availabilityLabel: Record<StorefrontProductCard["availability"], string> = {
   IN_STOCK: "In stock",
-  LOW_STOCK: "Limited",
+  LOW_STOCK: "Low stock",
   OUT_OF_STOCK: "Out of stock",
   UNTRACKED: "Available",
 };

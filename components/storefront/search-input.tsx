@@ -32,7 +32,7 @@ export function SearchInput({
         name="q"
         type="search"
         defaultValue={defaultValue}
-        placeholder="SEARCH PRODUCTS, CATEGORIES, COLLECTIONS..."
+        placeholder="Search products, categories, or collections..."
         autoComplete="off"
         spellCheck={false}
         enterKeyHint="search"

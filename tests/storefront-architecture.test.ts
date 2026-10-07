@@ -105,5 +105,5 @@ test("safe error and not-found boundaries avoid raw internal errors", () => {
   const notFound = read("app/(storefront)/not-found.tsx");
   assert.doesNotMatch(error, /console\.error|stack|DATABASE_URL|Prisma/);
   assert.doesNotMatch(notFound, /Prisma|database|SQL|stack/i);
-  assert.match(read("components/storefront/catalog-error.tsx"), /No database or internal error details/);
+  assert.match(read("components/storefront/catalog-error.tsx"), /Please try again in a moment/);
 });

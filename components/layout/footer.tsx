@@ -12,20 +12,22 @@ type FooterProps = {
 }
 
 export function Footer({ navigationGroups }: FooterProps) {
+  const hasSocialLinks = footerSocialLinks.length > 0
+
   return (
     <footer className="border-t-2 border-border bg-foreground text-white lg:border-t-4">
-      <Container className="py-12 sm:py-16 lg:py-20">
-        <div className="grid gap-12 lg:grid-cols-[1.1fr_1.9fr] lg:gap-20">
+      <Container className="py-10 sm:py-14 lg:py-16">
+        <div className="grid gap-10 lg:grid-cols-[minmax(280px,1fr)_minmax(0,1.7fr)] lg:gap-16">
           <FooterBrand />
 
-          <div className="grid gap-10 sm:grid-cols-2">
+          <div className={hasSocialLinks ? 'grid min-w-0 gap-10 md:grid-cols-[minmax(0,1fr)_auto]' : 'min-w-0'}>
             <FooterNav groups={navigationGroups} />
-            <FooterSocial links={footerSocialLinks} />
+            {hasSocialLinks ? <FooterSocial links={footerSocialLinks} /> : null}
           </div>
         </div>
 
-        <div className="mt-12 border-t-2 border-white/30 pt-5 lg:mt-16">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-10 border-t-2 border-white/30 pt-5 sm:mt-12">
+          <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <FooterCopyright />
             <FooterLegal group={footerLegalLinks} />
           </div>

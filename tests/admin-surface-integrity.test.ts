@@ -234,3 +234,21 @@ test("responsive layout foundation guards narrow viewport overflow", () => {
   assert.match(productGrid, /grid-cols-2/);
   assert.match(adminLayout, /lg:grid lg:grid-cols-\[240px_minmax\(0,1fr\)\]/);
 });
+
+
+test("storefront filter and footer presentation uses customer-facing controls", () => {
+  const filters = readFileSync(join(process.cwd(), "components", "storefront", "catalog-filters.tsx"), "utf8");
+  const footer = readFileSync(join(process.cwd(), "components", "layout", "footer.tsx"), "utf8");
+  const footerNav = readFileSync(join(process.cwd(), "components", "layout", "footer-nav.tsx"), "utf8");
+  const search = readFileSync(join(process.cwd(), "components", "storefront", "search-input.tsx"), "utf8");
+
+  assert.match(filters, /Filter &amp; sort/);
+  assert.match(filters, /name="tags"/);
+  assert.match(filters, /In stock only/);
+  assert.match(filters, /Minimum/);
+  assert.match(filters, /Maximum/);
+  assert.doesNotMatch(filters, /Use Ctrl\/Cmd to select multiple tags/);
+  assert.match(footer, /hasSocialLinks/);
+  assert.match(footerNav, /whitespace-nowrap/);
+  assert.match(search, /Search products, categories, or collections/);
+});
