@@ -7,5 +7,5 @@ const widths: Record<ContainerWidth, string> = {
 export type ContainerProps = HTMLAttributes<HTMLDivElement> & { children: ReactNode; width?: ContainerWidth }
 
 export function Container({ children, width = 'standard', className = '', ...props }: ContainerProps) {
-  return <div className={['mx-auto w-full px-4 sm:px-6 lg:px-8', widths[width], className].filter(Boolean).join(' ')} {...props}>{children}</div>
+  return <div className={['mx-auto w-full min-w-0 px-3 sm:px-6 lg:px-8', widths[width], className].filter(Boolean).join(' ')} {...props}>{children}</div>
 }
