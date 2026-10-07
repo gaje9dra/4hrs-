@@ -1,4 +1,5 @@
 import { requireAdmin } from "@/lib/auth/admin";
+import { deleteCatalogProduct } from "@/lib/admin/catalog";
 import { adminErrorResponse } from "@/lib/admin/http";import { AdminError } from "@/lib/admin/errors";import { createCatalogService } from "@/lib/catalog/service";
 import { CatalogServiceError } from "@/lib/catalog/errors";
 import { authErrorResponse } from "@/lib/auth/http";
@@ -16,6 +17,19 @@ export async function GET(request: Request, context: { params: Promise<{ product
   } catch (error) {
     if (error instanceof AdminError) return adminErrorResponse(error);
     if (error instanceof CatalogServiceError) return Response.json({ error: error.message }, { status: 400 });
+    return authErrorResponse(error);
+  }
+}
+
+export async function DELETE(request: Request, context: { params: Promise<{ productId: string }> }) {
+  try {
+    const auth = await requireAdmin(request, "catalog.archive");
+    const { productId } = await context.params;
+    await deleteCatalogProduct(auth, productId);
+    return Response.json({ ok: true });
+  } catch (error) {
+    if (error instanceof AdminError) return adminErrorResponse(error);
+    if (error instanceof CatalogServiceError) return Response.json({ error: error.message, code: error.code }, { status: 400 });
     return authErrorResponse(error);
   }
 }
