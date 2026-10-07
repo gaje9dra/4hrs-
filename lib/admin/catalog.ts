@@ -44,6 +44,18 @@ export async function listCatalogProducts(context: AdminAuthorizationContext, op
   try { return catalogDto(await service(context).listProducts(options)); } catch (error) { adminCatalogError(error); }
 }
 
+export async function deleteCatalogProduct(context: AdminAuthorizationContext, id: string) {
+  requirePermission(context, "catalog.archive");
+  const result = await service(context).deleteProduct(id);
+  await auditAdminAction(context, {
+    action: "CATALOG_PRODUCT_DELETED",
+    resourceType: "Product",
+    resourceId: id,
+    success: true,
+  });
+  return result;
+}
+
 export async function getCatalogProduct(context: AdminAuthorizationContext, id: string) {
   try {
     const product = await service(context).getProductDetails(id);
