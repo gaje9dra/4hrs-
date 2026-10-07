@@ -27,7 +27,7 @@ test("Checkout UI submits only address intent to the Checkout boundary", async (
   assert.doesNotMatch(source, /customerId:\s*customer\.id/);
   assert.doesNotMatch(source, /JSON\.stringify\(\{[^}]*total/);
   assert.doesNotMatch(source, /JSON\.stringify\(\{[^}]*price/);
-  assert.match(source, /Payment unavailable/);
+  assert.match(source, /PayU/);
 });
 
 test("Checkout UI has explicit validation and session states", async () => {
