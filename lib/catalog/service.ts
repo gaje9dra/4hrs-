@@ -186,7 +186,27 @@ function mapDatabaseError(error: unknown): never {
     if (error.code === "P2011") throw new CatalogServiceError("CATALOG_DATABASE_ERROR", "The catalog database rejected a required field. Check the product data and database schema.", error);
     if (error.code === "P2025") throw new CatalogServiceError("CATALOG_DATABASE_ERROR", "The requested catalog record was not found.", error);
     if (error.code === "P2003") throw new CatalogServiceError("CATALOG_DATABASE_ERROR", "A catalog relationship references an invalid record.", error);
+    if (error.code === "P2014") throw new CatalogServiceError("CATALOG_DATABASE_ERROR", "A required catalog relationship is invalid. Verify the selected category, collection, tag, and variant options.", error);
+    if (error.code === "P2021") throw new CatalogServiceError("CATALOG_DATABASE_ERROR", "A required catalog database table is missing. Run prisma migrate deploy and restart the application.", error);
+    if (error.code === "P2024") throw new CatalogServiceError("CATALOG_DATABASE_ERROR", "The catalog database request timed out. Check the database connection and try again.", error);
+    if (error.code === "P2028") throw new CatalogServiceError("CATALOG_DATABASE_ERROR", "The catalog database transaction failed. Check the database connection and migration state.", error);
+    if (error.code === "P2034") throw new CatalogServiceError("CATALOG_DATABASE_ERROR", "The catalog database transaction conflicted with another write. Please try again.", error);
+    console.error("[catalog/service] unhandled Prisma catalog error", { code: error.code, meta: error.meta });
+    throw new CatalogServiceError("CATALOG_DATABASE_ERROR", "Catalog database operation failed.", error);
   }
+  if (error instanceof Prisma.PrismaClientInitializationError) {
+    console.error("[catalog/service] Prisma initialization error", error);
+    throw new CatalogServiceError("CATALOG_DATABASE_ERROR", "The catalog database is unavailable. Check DATABASE_URL and the database service.", error);
+  }
+  if (error instanceof Prisma.PrismaClientUnknownRequestError) {
+    console.error("[catalog/service] unknown Prisma request error", error);
+    throw new CatalogServiceError("CATALOG_DATABASE_ERROR", "The catalog database rejected the request. Check the server logs for the database error.", error);
+  }
+  if (error instanceof Prisma.PrismaClientValidationError) {
+    console.error("[catalog/service] Prisma validation error", error);
+    throw new CatalogServiceError("CATALOG_DATABASE_ERROR", "The catalog request does not match the current Prisma database schema.", error);
+  }
+  console.error("[catalog/service] unhandled catalog database error", error);
   throw new CatalogServiceError("CATALOG_DATABASE_ERROR", "Catalog database operation failed.", error);
 }
 
@@ -342,6 +362,24 @@ export function createCatalogService(
 
       const existingSlug = await repo.getProductBySlug(product.slug);
       if (existingSlug) throw new CatalogServiceError("DUPLICATE_SLUG", "Catalog slug already exists.");
+
+      const [categoryRecords, collectionRecords, tagRecords] = await Promise.all([
+        Promise.all((categoryIds ?? []).map((id) => repo.getCategoryById(id))),
+        Promise.all((collectionIds ?? []).map((id) => repo.getCollectionById(id))),
+        Promise.all((tagIds ?? []).map((id) => repo.getTagById(id))),
+      ]);
+      const missingCategoryIssues = (categoryRecords ?? []).flatMap((record, index) =>
+        record ? [] : [{ field: "categoryIds[" + index + "]", code: "CATEGORY_NOT_FOUND", message: "Selected category was not found." }],
+      );
+      const missingCollectionIssues = (collectionRecords ?? []).flatMap((record, index) =>
+        record ? [] : [{ field: "collectionIds[" + index + "]", code: "COLLECTION_NOT_FOUND", message: "Selected collection was not found." }],
+      );
+      const missingTagIssues = (tagRecords ?? []).flatMap((record, index) =>
+        record ? [] : [{ field: "tagIds[" + index + "]", code: "TAG_NOT_FOUND", message: "Selected tag was not found." }],
+      );
+      if (missingCategoryIssues.length) validationError(missingCategoryIssues, "CATEGORY_NOT_FOUND");
+      if (missingCollectionIssues.length) validationError(missingCollectionIssues, "COLLECTION_NOT_FOUND");
+      if (missingTagIssues.length) validationError(missingTagIssues, "TAG_NOT_FOUND");
       if (product.status === "ACTIVE") {
         const readiness = validatePublishingReadiness({
           product,
