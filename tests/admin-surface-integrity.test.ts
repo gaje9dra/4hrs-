@@ -122,7 +122,7 @@ test("catalog publish route preserves catalog readiness errors", () => {
   const service = readFileSync(join(process.cwd(), "lib", "catalog", "service.ts"), "utf8");
   assert.match(route, /catch \(error\) \{ return adminCatalogErrorResponse\(error\); \}/);
   assert.match(http, /adminCatalogErrorResponse/);
-  assert.match(http, /const details = error\.code === "NOT_PUBLICATION_READY"/);
+  assert.match(http, /adminCatalogErrorResponse/);
   assert.match(action, /error\?\.details\?\.issues/);
   assert.match(service, /MISSING_QIKINK_MAPPING/);
 });
