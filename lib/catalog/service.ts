@@ -201,6 +201,7 @@ function normalizeVariantInput(input: VariantInput): VariantInput {
   return {
     ...input,
     sku: normalizeSku(input.sku),
+    status: input.status ?? "ACTIVE",
     optionValueIds: input.optionValueIds ? [...new Set(input.optionValueIds.map((value) => value.trim()).filter(Boolean))] : undefined,
   };
 }
