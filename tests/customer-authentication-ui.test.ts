@@ -68,3 +68,12 @@ test("Product Detail preserves the approved authenticated Cart boundary", () => 
   assert.match(source, /\/login\?next=%2Fcart/);
   assert.doesNotMatch(source, /customerId.*body|body.*customerId/i);
 });
+
+test("header account and cart use the 4HRS geometric color treatment", () => {
+  const source = read("components/storefront/customer-auth-status.tsx");
+  assert.match(source, /rounded-full bg-primary-red/);
+  assert.match(source, /rotate-45 bg-primary-blue/);
+  assert.match(source, /-rotate-45 text-white/);
+  assert.match(source, /ring-2 ring-primary-yellow/);
+  assert.doesNotMatch(source, /bg-white no-underline shadow-hard-sm hover:bg-primary-yellow/);
+});
