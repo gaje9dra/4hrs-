@@ -13,7 +13,7 @@ const modules: Array<{name:string;description:string;href:string;permission?:Adm
   {name:"Cases",description:"Manage customer cases through centralized authorization, lifecycle transitions and audited actions.",href:"/admin/cases",permission:"case.read"},
   {name:"Payments",description:"Review payment state, verification, reconciliation and permission-gated refund/retry operations.",href:"/admin/payments",permission:"payments.read"},
   {name:"Analytics",description:"Read-only KPI reporting with separate financial, operational and customer permissions.",href:"/admin/analytics",permission:"analytics.read"},
-  {name:"Merchandising",description:"Manage governed merchandising records and presentation rules.",href:"/admin/merchandising",permission:"merchandising.read"},
+  
   {name:"Discovery",description:"Inspect discovery and catalog-search intelligence.",href:"/admin/discovery",permission:"discovery.read"},
   {name:"Feature Flags",description:"Review and manage governed feature-flag state.",href:"/admin/feature-flags",permission:"feature_flags.read"},
   {name:"Experiments",description:"Review and manage governed experiments.",href:"/admin/experiments",permission:"experiments.read"},
