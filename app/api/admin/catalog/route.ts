@@ -72,10 +72,11 @@ export async function POST(request: Request) {
     const context = await requireAdmin(request, resource === "categories" ? "catalog.category.manage" : resource === "collections" ? "catalog.collection.manage" : "catalog.create");
     assertAdminSameOrigin(request);
     const body = await readAdminJson(request);
+    if (resource === "products" && body.status === undefined) body.status = "DRAFT";
     if (resource === "categories") return adminJson({ category: await createCatalogCategory(context, body as unknown as Parameters<typeof createCatalogCategory>[1]) }, { status: 201 });
     if (resource === "collections") return adminJson({ collection: await createCatalogCollection(context, body as unknown as Parameters<typeof createCatalogCollection>[1]) }, { status: 201 });
     return adminJson({ product: await createCatalogProduct(context, body as unknown as Parameters<typeof createCatalogProduct>[1]) }, { status: 201 });
-  } catch (error) { return adminErrorResponse(error); }
+  } catch (error) { return adminCatalogErrorResponse(error); }
 }
 
 export async function PATCH(request: Request) {
