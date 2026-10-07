@@ -170,10 +170,20 @@ function mapDatabaseError(error: unknown): never {
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
     if (error.code === "P2002") {
       const target = Array.isArray(error.meta?.target) ? error.meta?.target.join(",") : String(error.meta?.target ?? "");
-      if (target.includes("slug")) throw new CatalogServiceError("DUPLICATE_SLUG", "Catalog slug already exists.", error);
-      if (target.includes("sku")) throw new CatalogServiceError("DUPLICATE_SKU", "Product SKU already exists.", error);
+      const normalizedTarget = target.toLowerCase();
+      if (normalizedTarget.includes("slug")) throw new CatalogServiceError("DUPLICATE_SLUG", "Catalog slug already exists.", error);
+      if (normalizedTarget.includes("basesku")) throw new CatalogServiceError("DUPLICATE_SKU", "Product base SKU already exists. Use a different base SKU.", error);
+      if (normalizedTarget.includes("sku")) throw new CatalogServiceError("DUPLICATE_SKU", "Product SKU already exists.", error);
       throw new CatalogServiceError("PRODUCT_ALREADY_EXISTS", "A catalog record with the same unique identity already exists.", error);
     }
+    if (error.code === "P2022") {
+      throw new CatalogServiceError(
+        "CATALOG_DATABASE_ERROR",
+        "The catalog database schema is out of date. Run prisma migrate deploy and restart the application.",
+        error,
+      );
+    }
+    if (error.code === "P2011") throw new CatalogServiceError("CATALOG_DATABASE_ERROR", "The catalog database rejected a required field. Check the product data and database schema.", error);
     if (error.code === "P2025") throw new CatalogServiceError("CATALOG_DATABASE_ERROR", "The requested catalog record was not found.", error);
     if (error.code === "P2003") throw new CatalogServiceError("CATALOG_DATABASE_ERROR", "A catalog relationship references an invalid record.", error);
   }
