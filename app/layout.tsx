@@ -19,7 +19,6 @@ const FALLBACK_NAVIGATION: NavigationItem[] = [
   { label: 'Home', href: '/', match: 'exact' },
   { label: 'Shop', href: '/shop', match: 'section', activePrefixes: ['/shop', '/categories/', '/collections/', '/products/'] },
   { label: 'Search', href: '/search', match: 'section' },
-  { label: 'Cart', href: '/cart', match: 'exact' },
 ]
 
 export async function generateMetadata(): Promise<Metadata> {
