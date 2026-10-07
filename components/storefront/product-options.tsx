@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Check, ShoppingBag } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/alert";
@@ -51,9 +52,11 @@ async function addToCart(selection: { productId: string; variantId: string; quan
 
 export function ProductOptions({
   product,
+  purchaseIntent,
   onMediaChange,
 }: {
   product: StorefrontProductDetail;
+  purchaseIntent?: "buy" | "cart";
   onMediaChange?: (media: StorefrontProductDetail["media"]) => void;
 }) {
   const [selection, setSelection] = useState<StorefrontVariantSelection>(() =>
@@ -63,6 +66,8 @@ export function ProductOptions({
   const [addError, setAddError] = useState<string | null>(null);
   const [authRequired, setAuthRequired] = useState(false);
   const addRequest = useRef(0);
+  const intentStarted = useRef(false);
+  const router = useRouter();
 
   const selectedVariant = useMemo(() => resolveSelectedVariant(product, selection), [product, selection]);
   const effectivePrice = selectedVariant?.price ?? product.price;
@@ -93,6 +98,11 @@ export function ProductOptions({
       await addToCart(purchaseSelection);
       if (requestId !== addRequest.current) return;
       setAddState("success");
+      if (purchaseIntent === "buy") {
+        router.push("/checkout");
+      } else if (purchaseIntent === "cart") {
+        router.push("/cart");
+      }
     } catch (error) {
       if (requestId !== addRequest.current) return;
       setAddState("error");
@@ -101,6 +111,12 @@ export function ProductOptions({
       setAddError(mutationError.message || "Could not add this item to Cart.");
     }
   }
+
+  useEffect(() => {
+    if (!purchaseIntent || intentStarted.current || !purchaseSelection) return;
+    intentStarted.current = true;
+    void handleAdd();
+  }, [purchaseIntent, purchaseSelection]);
 
   return (
     <div className="grid gap-6">
