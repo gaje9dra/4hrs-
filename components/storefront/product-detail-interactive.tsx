@@ -22,7 +22,7 @@ export function ProductDetailInteractive({ product }: { product: StorefrontProdu
   const availability = product.availability;
 
   return (
-    <div className="grid gap-10 lg:grid-cols-[1.15fr_.85fr] lg:gap-14">
+    <div className="grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,.85fr)] lg:gap-14">
       <section aria-label="Product media">
         <ProductGallery product={product} mediaOverride={variantMedia} />
       </section>

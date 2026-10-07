@@ -12,7 +12,7 @@ type HeaderProps = {
 export function Header({ items }: HeaderProps) {
   return (
     <header className="relative z-50 border-b-2 border-border bg-background lg:border-b-4">
-      <Container width="standard" className="flex min-h-16 items-center justify-between gap-3 py-3">
+      <Container width="standard" className="flex min-h-16 min-w-0 items-center justify-between gap-2 py-3 sm:gap-3">
         <HeaderBrand />
         <DesktopNav items={items} />
         <CustomerAuthStatus />

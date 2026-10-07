@@ -85,7 +85,7 @@ export function MobileNav({ items }: MobileNavProps) {
         ref={triggerRef}
         type="button"
         onClick={() => setOpen((value) => !value)}
-        className="motion-press inline-flex h-11 w-11 shrink-0 items-center justify-center border-2 border-border bg-primary-yellow hover:bg-white md:hidden"
+        className="motion-press inline-flex h-11 w-11 shrink-0 items-center justify-center border-2 border-border bg-primary-yellow hover:bg-white lg:hidden"
         aria-expanded={open}
         aria-controls="mobile-navigation-panel"
         aria-label={open ? 'Close navigation' : 'Open navigation'}
@@ -104,7 +104,7 @@ export function MobileNav({ items }: MobileNavProps) {
           <aside
             id="mobile-navigation-panel"
             ref={panelRef}
-            className="absolute inset-y-0 right-0 flex w-full max-w-md flex-col border-l-4 border-border bg-background shadow-hard-md lg:shadow-hard-lg"
+            className="absolute inset-y-0 right-0 flex w-full max-w-md flex-col border-l-4 border-border bg-background shadow-hard-md"
             role="dialog"
             aria-modal="true"
             aria-label="Mobile navigation panel"
@@ -121,7 +121,7 @@ export function MobileNav({ items }: MobileNavProps) {
               </button>
             </div>
 
-            <nav className="overflow-y-auto px-4 py-5" aria-label="Mobile navigation">
+            <nav className="overflow-y-auto px-3 py-5 sm:px-4" aria-label="Mobile navigation">
               <ul className="m-0 list-none p-0">
                 {visibleItems.map((item, index) => {
                   const active = isActive(item, pathname)

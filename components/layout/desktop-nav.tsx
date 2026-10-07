@@ -26,8 +26,8 @@ export function DesktopNav({ items }: DesktopNavProps) {
   if (visibleItems.length === 0) return null
 
   return (
-    <nav className="hidden min-w-0 flex-1 items-center justify-center md:flex" aria-label="Primary navigation">
-      <ul className="m-0 flex list-none items-center justify-center gap-1 p-0">
+    <nav className="hidden min-w-0 flex-1 items-center justify-center lg:flex" aria-label="Primary navigation">
+      <ul className="m-0 flex list-none items-center justify-center gap-0.5 p-0">
         {visibleItems.map((item) => {
           const active = isActive(item, pathname)
           const children = item.children?.filter((child) => child.href && !child.disabled) ?? []
@@ -40,7 +40,7 @@ export function DesktopNav({ items }: DesktopNavProps) {
                   aria-current={active && !children.length ? 'page' : undefined}
                   className={[
                     'relative inline-flex min-h-11 items-center border-2 border-transparent px-3 py-2',
-                    'text-xs font-700 uppercase tracking-[0.12em] no-underline',
+                    'text-[0.7rem] font-700 uppercase tracking-[0.1em] no-underline',
                     'motion-link hover:border-border hover:bg-primary-yellow hover:text-foreground',
                     active ? 'border-border bg-white text-foreground after:absolute after:bottom-[-2px] after:left-2 after:right-2 after:h-1 after:bg-primary-red' : '',
                   ].filter(Boolean).join(' ')}

@@ -213,3 +213,24 @@ test("merchandising raw SQL casts the environment parameter to the PostgreSQL en
   const merchandising = readFileSync(join(process.cwd(), "lib", "discovery", "merchandising.ts"), "utf8");
   assert.match(merchandising, /r\."environment" = CAST\(\$\{context\.environment\} AS "FeatureFlagEnvironment"\)/);
 });
+
+
+test("responsive layout foundation guards narrow viewport overflow", () => {
+  const css = readFileSync(join(process.cwd(), "app", "globals.css"), "utf8");
+  const header = readFileSync(join(process.cwd(), "components", "layout", "header.tsx"), "utf8");
+  const desktopNav = readFileSync(join(process.cwd(), "components", "layout", "desktop-nav.tsx"), "utf8");
+  const mobileNav = readFileSync(join(process.cwd(), "components", "layout", "mobile-nav.tsx"), "utf8");
+  const container = readFileSync(join(process.cwd(), "components", "layout", "container.tsx"), "utf8");
+  const productGrid = readFileSync(join(process.cwd(), "components", "storefront", "product-grid.tsx"), "utf8");
+  const adminLayout = readFileSync(join(process.cwd(), "app", "admin", "layout.tsx"), "utf8");
+
+  assert.match(css, /min-width: 0/);
+  assert.match(css, /overflow-wrap: anywhere/);
+  assert.match(css, /@media \(max-width: 767px\)/);
+  assert.match(header, /min-w-0/);
+  assert.match(desktopNav, /lg:flex/);
+  assert.match(mobileNav, /lg:hidden/);
+  assert.match(container, /min-w-0/);
+  assert.match(productGrid, /grid-cols-2/);
+  assert.match(adminLayout, /lg:grid lg:grid-cols-\[240px_minmax\(0,1fr\)\]/);
+});
