@@ -26,6 +26,26 @@ export async function POST(request: Request) {
     assertSameOrigin(request);
     const input = await request.json();
     const variant = await catalog.createVariant(input);
+
+    // Size is a customer-facing option, while ProductVariant remains the canonical
+    // purchasable/orderable record. Keep the option relation in sync automatically.
+    if (typeof input?.size === "string" && input.size.trim()) {
+      const normalizedValue = input.size.trim().replace(/\s+/g, " ").toLowerCase();
+      const optionType =
+        await catalog.getOptionTypeByNormalizedName("size") ??
+        await catalog.createOptionType({ name: "Size", normalizedName: "size", sortOrder: 0 });
+      const optionValue =
+        await catalog.getOptionValueByIdentity(optionType.id, normalizedValue) ??
+        await catalog.createOptionValue({
+          optionTypeId: optionType.id,
+          displayName: input.size.trim().replace(/\s+/g, " ").toUpperCase(),
+          normalizedValue,
+          sortOrder: 0,
+        });
+      await catalog.assignProductOptionType(input.productId, optionType.id, 0);
+      await catalog.replaceVariantOptionValues(variant.id, [optionValue.id]);
+    }
+
     return json({ variant }, 201);
   } catch (error) {
     return errorResponse(error);
