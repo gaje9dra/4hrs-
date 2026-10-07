@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import type { AdminAuthorizationContext } from "@/lib/admin/authorization";
 import { AdminError } from "@/lib/admin/errors";
 import { auditAdminAction } from "@/lib/admin/audit";
@@ -20,9 +21,7 @@ function serialize(value: unknown): unknown {
   if (typeof value === "bigint") return value.toString();
   if (value instanceof Date) return value.toISOString();
   if (typeof value === "object") {
-    if (value && typeof (value as { toString?: () => string }).toString === "function" && value.constructor?.name === "Decimal") {
-      return value.toString();
-    }
+    if (Prisma.Decimal.isDecimal(value)) return value.toString();
     if (Array.isArray(value)) return value.map(serialize);
     const out: Record<string, unknown> = {};
     for (const [key, item] of Object.entries(value)) out[key] = serialize(item);
