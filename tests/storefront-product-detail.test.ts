@@ -44,7 +44,7 @@ test("Product Detail sends only the canonical purchase selection to Cart", () =>
   assert.match(options, /method: "POST"/);
   assert.match(options, /productId: string; variantId: string; quantity: number/);
   assert.doesNotMatch(options, /price.*body|body.*price|provider|inventory|subtotal|total/i);
-  assert.doesNotMatch(interactive + options + detail, /checkout|payment|createOrder|review|rating/i);
+  assert.doesNotMatch(interactive + options + detail, /checkout|payment|createOrder|review|createOrder|review|rating/i);
 });
 
 test("gallery provides keyboard-operable image controls and meaningful primary alt text", () => {
