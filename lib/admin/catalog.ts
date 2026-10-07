@@ -2,7 +2,7 @@ import { Prisma } from "@prisma/client";
 import type { AdminAuthorizationContext } from "@/lib/admin/authorization";
 import { AdminError } from "@/lib/admin/errors";
 import { auditAdminAction } from "@/lib/admin/audit";
-import { requireHighRiskReason } from "@/lib/admin/authorization";
+import { requireHighRiskReason, requirePermission } from "@/lib/admin/authorization";
 import { createCatalogService } from "@/lib/catalog/service";
 import { CatalogServiceError } from "@/lib/catalog/errors";
 import type { CatalogListOptions } from "@/lib/catalog/repository";
