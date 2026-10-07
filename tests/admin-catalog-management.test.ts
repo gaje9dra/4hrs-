@@ -256,3 +256,11 @@ test("catalog delete imports its permission guard", async () => {
   assert.match(source,/requireHighRiskReason, requirePermission/);
   assert.match(source,/requirePermission\(context, "catalog\.archive"\)/);
 });
+
+
+test("catalog database errors identify base SKU conflicts and stale schema", async () => {
+  const service=await read("lib/catalog/service.ts");
+  assert.match(service,/normalizedTarget\.includes\("basesku"\)/);
+  assert.match(service,/error\.code === "P2022"/);
+  assert.match(service,/prisma migrate deploy/);
+});
