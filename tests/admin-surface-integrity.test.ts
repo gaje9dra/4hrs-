@@ -142,3 +142,13 @@ test("admin variant creation defaults new variants to active and exposes validat
   assert.match(http, /const details = error\.cause && typeof error\.cause === "object"/);
   assert.match(route, /catch \(error\) \{ return adminCatalogErrorResponse\(error\); \}/);
 });
+
+
+test("admin provider mapping save preserves the form across async requests", () => {
+  const manager = readFileSync(join(process.cwd(), "components", "admin", "catalog", "catalog-provider-mapping-manager.tsx"), "utf8");
+  assert.match(manager, /const form=e\.currentTarget/);
+  assert.match(manager, /new FormData\(form\)/);
+  assert.match(manager, /form\.reset\(\)/);
+  assert.doesNotMatch(manager, /new FormData\(e\.currentTarget\)/);
+  assert.doesNotMatch(manager, /e\.currentTarget\.reset\(\)/);
+});
