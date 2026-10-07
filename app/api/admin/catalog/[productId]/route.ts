@@ -3,6 +3,7 @@ import { deleteCatalogProduct } from "@/lib/admin/catalog";
 import { adminErrorResponse } from "@/lib/admin/http";import { AdminError } from "@/lib/admin/errors";import { createCatalogService } from "@/lib/catalog/service";
 import { CatalogServiceError } from "@/lib/catalog/errors";
 import { authErrorResponse } from "@/lib/auth/http";
+import { AuthenticationError } from "@/lib/auth/errors";
 import { isTrustedStateChangingRequest } from "@/lib/security/request";
 
 export const dynamic = "force-dynamic";
@@ -31,7 +32,12 @@ export async function DELETE(request: Request, context: { params: Promise<{ prod
     return Response.json({ ok: true });
   } catch (error) {
     if (error instanceof AdminError) return adminErrorResponse(error);
+    if (error instanceof AuthenticationError) return authErrorResponse(error);
     if (error instanceof CatalogServiceError) return Response.json({ error: error.message, code: error.code }, { status: 400 });
-    return authErrorResponse(error);
+    console.error("[admin/catalog/delete]", error);
+    return Response.json(
+      { error: "The product could not be deleted. Please check the product's dependencies and try again." },
+      { status: 500, headers: { "Cache-Control": "no-store" } },
+    );
   }
 }

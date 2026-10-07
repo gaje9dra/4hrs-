@@ -223,3 +223,11 @@ test("catalog delete validates origin and resolves the admin session from server
   assert.match(route,/isTrustedStateChangingRequest\(request\)/);
   assert.match(route,/requireAdmin\(undefined, "catalog\.archive"\)/);
 });
+
+
+test("catalog delete does not mask non-auth failures as authentication errors", async () => {
+  const route=await read("app/api/admin/catalog/[productId]/route.ts");
+  assert.match(route,/error instanceof AuthenticationError/);
+  assert.match(route,/console\.error\("\[admin\/catalog\/delete\]"/);
+  assert.match(route,/status: 500/);
+});
