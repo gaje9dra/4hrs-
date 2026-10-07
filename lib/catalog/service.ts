@@ -519,6 +519,17 @@ export function createCatalogService(
       if (!product) throw new CatalogServiceError("PRODUCT_NOT_FOUND", "Product was not found.");
       return product;
     },
+    async getOptionTypeByNormalizedName(normalizedName: string) {
+      return repo.getOptionTypeByNormalizedName(normalizedName);
+    },
+
+    async getOptionValueByIdentity(optionTypeId: string, normalizedValue: string) {
+      return repo.getOptionValueByIdentity(optionTypeId, normalizedValue);
+    },
+
+    async replaceVariantOptionValues(variantId: string, optionValueIds: string[]) {
+      return repo.replaceVariantOptionValues(variantId, optionValueIds);
+    },
 
     async updateProduct(input: UpdateProductInput) {
       requireId(input.id, "PRODUCT_NOT_FOUND", "Product ID");
