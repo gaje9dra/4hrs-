@@ -25,10 +25,10 @@ export async function POST(request: Request) {
     await requireAdmin(request,"catalog.update");
     assertSameOrigin(request);
     const input = await request.json();
-    const variant = await catalog.createVariant(input);
 
-    // Size is a customer-facing option, while ProductVariant remains the canonical
-    // purchasable/orderable record. Keep the option relation in sync automatically.
+    // Resolve the customer-facing size option before creating the variant so
+    // duplicate size combinations are rejected before the variant is inserted.
+    let optionValueId: string | undefined;
     if (typeof input?.size === "string" && input.size.trim()) {
       const normalizedValue = input.size.trim().replace(/\s+/g, " ").toLowerCase();
       const optionType =
@@ -43,8 +43,13 @@ export async function POST(request: Request) {
           sortOrder: 0,
         });
       await catalog.assignProductOptionType(input.productId, optionType.id, 0);
-      await catalog.replaceVariantOptionValues(variant.id, [optionValue.id]);
+      optionValueId = optionValue.id;
     }
+
+    const variant = await catalog.createVariant({
+      ...input,
+      optionValueIds: optionValueId ? [optionValueId] : input?.optionValueIds,
+    });
 
     let fulfillmentMappingWarning: string | null = null;
     if (typeof input?.size === "string" && input.size.trim()) {
