@@ -178,7 +178,7 @@ test("admin product form exposes category assignment", () => {
   const newPage = readFileSync(join(process.cwd(), "app", "admin", "catalog", "new", "page.tsx"), "utf8");
   const editPage = readFileSync(join(process.cwd(), "app", "admin", "catalog", "[id]", "page.tsx"), "utf8");
   assert.match(form, /name="categoryIds"/);
-  assert.match(form, /categories\.some/);
+  assert.match(form, /categories\?\.some/);
   assert.match(form, /categoryIds:data\.getAll\("categoryIds"\)/);
   assert.match(newPage, /listCatalogCategories/);
   assert.match(newPage, /categories=\{categories\}/);
