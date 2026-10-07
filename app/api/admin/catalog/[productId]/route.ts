@@ -3,6 +3,7 @@ import { deleteCatalogProduct } from "@/lib/admin/catalog";
 import { adminErrorResponse } from "@/lib/admin/http";import { AdminError } from "@/lib/admin/errors";import { createCatalogService } from "@/lib/catalog/service";
 import { CatalogServiceError } from "@/lib/catalog/errors";
 import { authErrorResponse } from "@/lib/auth/http";
+import { isTrustedStateChangingRequest } from "@/lib/security/request";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -23,7 +24,8 @@ export async function GET(request: Request, context: { params: Promise<{ product
 
 export async function DELETE(request: Request, context: { params: Promise<{ productId: string }> }) {
   try {
-    const auth = await requireAdmin(request, "catalog.archive");
+    if (!isTrustedStateChangingRequest(request)) throw new AdminError("FORBIDDEN", "The request origin is not allowed.");
+    const auth = await requireAdmin(undefined, "catalog.archive");
     const { productId } = await context.params;
     await deleteCatalogProduct(auth, productId);
     return Response.json({ ok: true });
