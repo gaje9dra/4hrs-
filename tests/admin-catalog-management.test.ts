@@ -67,3 +67,38 @@ test("catalog search is bounded and deterministic", async () => {
     assert.equal(result.items.some((item) => item?.id===product.id),true);
   } finally { await cleanup(f,productId); }
 });
+
+
+test("catalog products can be created and updated with category assignments", async () => {
+  const f=await fixture("ADMIN"); let productId:string|undefined; let categoryId:string|undefined;
+  try {
+    const context=await requireAdmin(f.request(),"catalog.create");
+    const catalog=createCatalogService({}, { source:"MANUAL", actorType:"USER", actorId:context.adminUser.id, correlationId:undefined });
+    const category=await catalog.createCategory({name:"Category Assignment Test",slug:`category-assignment-${crypto.randomUUID()}`,status:"ACTIVE"});
+    categoryId=category.id;
+    const product=await catalog.createProduct({
+      title:"Category Assignment Product",
+      slug:`category-assignment-product-${crypto.randomUUID()}`,
+      description:"Product category assignment test",
+      status:"DRAFT",
+      price:"100.00",
+      currency:"INR",
+      categoryIds:[category.id],
+    });
+    productId=product.id;
+    const details=await catalog.getProductDetails(product.id);
+    assert.ok(details);
+    assert.equal(details?.categories.some((item) => item.categoryId===category.id),true);
+
+    await catalog.updateProduct({
+      id:product.id,
+      categoryIds:[],
+      expectedUpdatedAt:details!.updatedAt.toISOString(),
+    });
+    const updated=await catalog.getProductDetails(product.id);
+    assert.equal(updated?.categories.some((item) => item.categoryId===category.id),false);
+  } finally {
+    await cleanup(f,productId);
+    if (categoryId) await db.category.delete({where:{id:categoryId}}).catch(()=>undefined);
+  }
+});
