@@ -158,6 +158,12 @@ export async function archiveCatalogCategory(context: AdminAuthorizationContext,
   await auditAdminAction(context, { action: "CATALOG_CATEGORY_ARCHIVED", resourceType: "Category", resourceId: id, success: true, reason: cleanReason });
   return catalogDto(result);
 }
+export async function deleteCatalogCategory(context: AdminAuthorizationContext, id: string, reason: unknown) {
+  const cleanReason = requireHighRiskReason(reason);
+  const result = await service(context).deleteCategory(id);
+  await auditAdminAction(context, { action: "CATALOG_CATEGORY_DELETED", resourceType: "Category", resourceId: id, success: true, reason: cleanReason });
+  return catalogDto(result);
+}
 
 export async function listCatalogCollections(context: AdminAuthorizationContext) {
   return catalogDto(await service(context).listCollections());

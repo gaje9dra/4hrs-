@@ -7,7 +7,7 @@ import {
   createCatalogVariant, updateCatalogVariant, deactivateCatalogVariant,
   addCatalogMedia, removeCatalogMedia, setCatalogPrimaryMedia,
   listVariantProviderMappings, upsertVariantProviderMapping, removeVariantProviderMapping,
-  updateCatalogCategory, archiveCatalogCategory, updateCatalogCollection, archiveCatalogCollection,
+  updateCatalogCategory, archiveCatalogCategory, deleteCatalogCategory, updateCatalogCollection, archiveCatalogCollection,
 } from "@/lib/admin/catalog";
 
 export const dynamic = "force-dynamic";
@@ -119,6 +119,11 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ p
       if (!isValidAdminId(p[1])) return bad("Category ID is invalid.");
       const context = await requireAdmin(request, "catalog.category.manage");
       return adminJson({ category: await archiveCatalogCategory(context, p[1], body.reason) });
+    }
+    if (p[0] === "categories" && p[1] && p[2] === "delete") {
+      if (!isValidAdminId(p[1])) return bad("Category ID is invalid.");
+      const context = await requireAdmin(request, "catalog.category.manage");
+      return adminJson({ category: await deleteCatalogCategory(context, p[1], body.reason) });
     }
     if (p[0] === "collections" && p[1] && p[2] === "archive") {
       if (!isValidAdminId(p[1])) return bad("Collection ID is invalid.");

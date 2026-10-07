@@ -152,3 +152,22 @@ test("admin provider mapping save preserves the form across async requests", () 
   assert.doesNotMatch(manager, /new FormData\(e\.currentTarget\)/);
   assert.doesNotMatch(manager, /e\.currentTarget\.reset\(\)/);
 });
+
+
+test("admin catalog supports safe permanent category deletion", () => {
+  const route = readFileSync(join(process.cwd(), "app", "api", "admin", "catalog", "[...path]", "route.ts"), "utf8");
+  const service = readFileSync(join(process.cwd(), "lib", "catalog", "service.ts"), "utf8");
+  const repository = readFileSync(join(process.cwd(), "lib", "catalog", "repository.ts"), "utf8");
+  const manager = readFileSync(join(process.cwd(), "components", "admin", "catalog", "catalog-taxonomy.tsx"), "utf8");
+  const admin = readFileSync(join(process.cwd(), "lib", "admin", "catalog.ts"), "utf8");
+  assert.match(route, /categories.*delete/);
+  assert.match(route, /deleteCatalogCategory/);
+  assert.match(service, /Cannot delete a category while it has child categories/);
+  assert.match(service, /Cannot delete a category while products are assigned/);
+  assert.match(service, /repo\.deleteCategory/);
+  assert.match(repository, /export async function deleteCategory/);
+  assert.match(admin, /CATALOG_CATEGORY_DELETED/);
+  assert.match(manager, /Permanently delete category/);
+  assert.match(manager, /\/api\/admin\/catalog\/categories\/"\+id\+"\/delete/);
+  assert.match(manager, /Delete/);
+});

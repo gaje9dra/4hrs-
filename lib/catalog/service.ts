@@ -96,6 +96,7 @@ type CatalogRepository = {
   listCollections: typeof repository.listCollections;
   updateCategory: typeof repository.updateCategory;
   archiveCategory: typeof repository.archiveCategory;
+  deleteCategory: typeof repository.deleteCategory;
   createCollection: typeof repository.createCollection;
   getCollectionById: typeof repository.getCollectionById;
   getCollectionBySlug: (slug: string, client?: repository.CatalogRepositoryClient) => Promise<{ id: string; status: "ACTIVE" | "DRAFT" | "ARCHIVED"; name: string; slug: string; description: string | null; seoTitle: string | null; seoDescription: string | null; createdAt: Date; updatedAt: Date; _count: { products: number } } | null>;
@@ -1197,6 +1198,26 @@ export function createCatalogService(
           const updated = await repo.archiveCategory(id, tx);
           await audit({ entityType: "CATEGORY", entityId: id, operation: "ARCHIVE", beforeState: existing, afterState: updated }, tx);
           return updated;
+        });
+      } catch (error) { mapDatabaseError(error); }
+    },
+
+    async deleteCategory(id: string) {
+      const existing = await repo.getCategoryById(id);
+      if (!existing) throw new CatalogServiceError("CATEGORY_NOT_FOUND", "Category was not found.");
+      const hierarchy = await repo.getCategoryHierarchy();
+      if (hierarchy.some((category) => category.parentId === id)) {
+        throw new CatalogServiceError("INVALID_CATEGORY", "Cannot delete a category while it has child categories. Remove or move the child categories first.");
+      }
+      const products = await repo.listCategoryProducts(id);
+      if (products.length > 0) {
+        throw new CatalogServiceError("INVALID_CATEGORY", "Cannot delete a category while products are assigned to it. Remove the products from this category first.");
+      }
+      try {
+        return await repo.withTransaction(async (tx) => {
+          const deleted = await repo.deleteCategory(id, tx);
+          await audit({ entityType: "CATEGORY", entityId: id, operation: "DELETE", beforeState: existing, afterState: deleted }, tx);
+          return deleted;
         });
       } catch (error) { mapDatabaseError(error); }
     },
