@@ -252,3 +252,14 @@ test("storefront filter and footer presentation uses customer-facing controls", 
   assert.match(footerNav, /whitespace-nowrap/);
   assert.match(search, /Search products, categories, or collections/);
 });
+
+test("storefront header exposes only account and cart icon actions", () => {
+  const authStatus = readFileSync(join(process.cwd(), "components", "storefront", "customer-auth-status.tsx"), "utf8");
+  assert.match(authStatus, /ShoppingCart/);
+  assert.match(authStatus, /UserRound/);
+  assert.match(authStatus, /href=\{accountHref\}/);
+  assert.match(authStatus, /href="\/cart"/);
+  assert.doesNotMatch(authStatus, /customer\.email/);
+  assert.doesNotMatch(authStatus, /Sign out/);
+  assert.doesNotMatch(authStatus, /LogOut/);
+});
