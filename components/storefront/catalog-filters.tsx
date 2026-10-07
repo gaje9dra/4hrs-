@@ -86,10 +86,10 @@ export function CatalogFilters({
   }
 
   return (
-    <section aria-label="Catalog filters" className="border-4 border-border bg-white p-5 shadow-hard-md lg:p-6">
+    <section aria-label="Catalog filters" className="border-2 border-border bg-white p-3 shadow-hard-sm sm:border-4 sm:p-5 sm:shadow-hard-md lg:p-6">
       <form method="get" action={pathname}>
         {preservedQuery ? <input type="hidden" name="q" value={preservedQuery} /> : null}
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+        <div className="flex min-w-0 flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="grid flex-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {!fixedCategory ? (
               <label className="grid gap-2 text-xs font-900 uppercase tracking-widest">
