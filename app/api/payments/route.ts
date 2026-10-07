@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     const checkoutRequest = await checkoutApplication.readRequest(request) as CheckoutRequest;
     const checkout = await checkoutApplication.validate(request, checkoutRequest);
 
-    if (!checkout.payment.ready) {
+    if (!checkout.payment.ready || !checkout.payment.checkoutReference || !checkout.customer || !checkout.totals.currency) {
       throw new PaymentError("CHECKOUT_NOT_PAYABLE", "Checkout must be valid and have a delivery address before payment can start.");
     }
 
@@ -32,7 +32,7 @@ export async function POST(request: Request) {
       checkout: {
         customerId: checkout.customer.id,
         checkoutReference: checkout.payment.checkoutReference,
-        amount: { value: checkout.totals.total, currency: checkout.totals.currency ?? "" },
+        amount: { value: checkout.totals.total, currency: checkout.totals.currency },
       },
       idempotencyKey: key,
     });
