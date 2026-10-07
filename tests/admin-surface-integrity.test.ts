@@ -113,3 +113,16 @@ test("catalog image uploads use a file input and server-side size/type validatio
   assert.match(route, /file\.size > MAX_IMAGE_BYTES/);
   assert.match(route, /storageReference = "inline-db:"/);
 });
+
+
+test("catalog publish route preserves catalog readiness errors", () => {
+  const route = readFileSync(join(process.cwd(), "app", "api", "admin", "catalog", "[...path]", "route.ts"), "utf8");
+  const http = readFileSync(join(process.cwd(), "lib", "admin", "http.ts"), "utf8");
+  const action = readFileSync(join(process.cwd(), "components", "admin", "catalog", "catalog-action.tsx"), "utf8");
+  const service = readFileSync(join(process.cwd(), "lib", "catalog", "service.ts"), "utf8");
+  assert.match(route, /catch \(error\) \{ return adminCatalogErrorResponse\(error\); \}/);
+  assert.match(http, /error\.code === "NOT_PUBLICATION_READY"/);
+  assert.match(http, /details\.issues/);
+  assert.match(action, /error\.details\?\.issues/);
+  assert.match(service, /MISSING_QIKINK_MAPPING/);
+});
