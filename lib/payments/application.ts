@@ -514,9 +514,17 @@ export function createPaymentApplication(
       }
 
       const nextStatus = result.status;
-      assertPaymentTransition(payment.status, nextStatus);
-
       const safeAction = normalizeClientAction(result.clientAction);
+
+      // A retried browser request can find the same payment after the first
+      // provider-start call already moved it to REQUIRES_ACTION. Reuse the
+      // provider's idempotent action instead of attempting an invalid
+      // REQUIRES_ACTION -> REQUIRES_ACTION state transition.
+      if (payment.status === "REQUIRES_ACTION" && nextStatus === "REQUIRES_ACTION") {
+        return { ...toPaymentDto(payment), nextAction: safeAction };
+      }
+
+      assertPaymentTransition(payment.status, nextStatus);
       if (safeAction.type !== "NONE") {
         // Client-action data is normalized here; the current Payment DTO intentionally remains secret-safe.
       }
