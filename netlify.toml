@@ -1,5 +1,5 @@
 [build]
-command = "npm run build"
+command = "npx prisma migrate deploy && npm run build"
 functions = "netlify/functions"
 
 [build.environment]
