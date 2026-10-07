@@ -100,8 +100,6 @@ export function ProductOptions({
       setAddState("success");
       if (purchaseIntent === "buy") {
         router.push("/checkout");
-      } else if (purchaseIntent === "cart") {
-        router.push("/cart");
       }
     } catch (error) {
       if (requestId !== addRequest.current) return;
