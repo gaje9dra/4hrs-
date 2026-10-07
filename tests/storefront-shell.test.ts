@@ -72,7 +72,10 @@ test("storefront shell integrates customer authentication without admin navigati
   const authStatus = read("components/storefront/customer-auth-status.tsx");
   assert.match(source, /CustomerAuthStatus/);
   assert.match(authStatus, /\/api\/auth\/session/);
-  assert.match(authStatus, /href="\/cart"/);\n  assert.match(authStatus, /UserRound/);\n  assert.match(authStatus, /ShoppingCart/);\n  assert.doesNotMatch(authStatus, /customer\\.email|Sign out|LogOut/);
+  assert.match(authStatus, /href="\/cart"/);
+  assert.match(authStatus, /UserRound/);
+  assert.match(authStatus, /ShoppingCart/);
+  assert.doesNotMatch(authStatus, /customer\.email|Sign out|LogOut/);
   assert.doesNotMatch(authStatus, /admin|passwordHash|sessionToken/i);
 });
 
