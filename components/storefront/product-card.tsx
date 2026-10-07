@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import type { StorefrontProductCard } from "@/lib/storefront/catalog";
 import { productPath } from "@/lib/catalog/routes";
@@ -14,9 +15,12 @@ const availabilityLabel: Record<StorefrontProductCard["availability"], string> =
 };
 
 export function ProductCard({ product }: { product: StorefrontProductCard }) {
+  const href = productPath(product);
+  const unavailable = product.availability === "OUT_OF_STOCK";
+
   return (
     <Card className="overflow-hidden p-0">
-      <Link href={productPath(product)} className="motion-link block no-underline">
+      <Link href={href} className="motion-link block no-underline">
         <div className="relative aspect-[4/5] overflow-hidden border-b-2 border-border bg-white lg:border-b-4">
           {product.image ? (
             <Image
@@ -33,23 +37,48 @@ export function ProductCard({ product }: { product: StorefrontProductCard }) {
             </div>
           )}
         </div>
-        <div className="space-y-4 p-5">
-          <div className="flex items-start justify-between gap-3">
-            <h3 className="min-w-0 text-xl font-900 uppercase leading-tight">{product.title}</h3>
-            <Badge variant={product.availability === "OUT_OF_STOCK" ? "outline" : "yellow"}>
-              {availabilityLabel[product.availability]}
-            </Badge>
-          </div>
-          <div className="flex flex-wrap items-baseline gap-2">
-            <span className="text-lg font-900">{formatCatalogMoney(product.price, product.currency)}</span>
-            {product.compareAtPrice ? (
-              <span className="text-sm line-through" aria-label="Compare-at price">
-                {formatCatalogMoney(product.compareAtPrice, product.currency)}
-              </span>
-            ) : null}
-          </div>
-        </div>
       </Link>
+
+      <div className="space-y-4 p-5">
+        <div className="flex items-start justify-between gap-3">
+          <Link href={href} className="min-w-0 no-underline hover:no-underline">
+            <h3 className="text-xl font-900 uppercase leading-tight">{product.title}</h3>
+          </Link>
+          <Badge variant={unavailable ? "outline" : "yellow"}>
+            {availabilityLabel[product.availability]}
+          </Badge>
+        </div>
+
+        <div className="flex flex-wrap items-baseline gap-2">
+          <span className="text-lg font-900">{formatCatalogMoney(product.price, product.currency)}</span>
+          {product.compareAtPrice ? (
+            <span className="text-sm line-through" aria-label="Compare-at price">
+              {formatCatalogMoney(product.compareAtPrice, product.currency)}
+            </span>
+          ) : null}
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 border-t-2 border-border pt-4">
+          <Button
+            href={unavailable ? undefined : `${href}?intent=buy`}
+            variant="primary"
+            className="min-h-11 px-2 text-xs tracking-wide"
+            aria-label={`Buy now: ${product.title}`}
+            aria-disabled={unavailable || undefined}
+          >
+            Buy now
+          </Button>
+          <Button
+            href={unavailable ? undefined : `${href}?intent=cart`}
+            variant="yellow"
+            className="min-h-11 px-2 text-xs tracking-wide"
+            aria-label={`Add ${product.title} to cart`}
+            aria-disabled={unavailable || undefined}
+          >
+            Add to cart
+          </Button>
+        </div>
+      </div>
     </Card>
   );
 }
