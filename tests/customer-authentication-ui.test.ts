@@ -36,7 +36,7 @@ test("authentication redirects are constrained to same-origin relative paths", (
 test("customer header state uses the server session API and exposes no admin state", () => {
   const source = read("components/storefront/customer-auth-status.tsx");
   assert.match(source, /\/api\/auth\/session/);
-  assert.match(source, /\/api\/auth\/logout/);
+  assert.match(source, /ShoppingCart/);\n  assert.match(source, /UserRound/);\n  assert.match(source, /href="\/cart"/);\n  assert.doesNotMatch(source, /customer\\.email|Sign out|LogOut/);
   assert.match(source, /credentials: "same-origin"/);
   assert.doesNotMatch(source, /admin|passwordHash|sessionToken/i);
 });
