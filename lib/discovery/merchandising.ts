@@ -161,7 +161,7 @@ export type MerchandisingSqlContext = {
 
 export function merchandisingOrderSql(context: MerchandisingSqlContext): Prisma.Sql {
   const activeWindow = Prisma.sql`r."active" = true
-    AND r."environment" = ${context.environment}
+    AND r."environment" = CAST(${context.environment} AS "FeatureFlagEnvironment")
     AND (r."startAt" IS NULL OR r."startAt" <= CURRENT_TIMESTAMP)
     AND (r."endAt" IS NULL OR r."endAt" > CURRENT_TIMESTAMP)`;
   const scopes: Prisma.Sql[] = [
