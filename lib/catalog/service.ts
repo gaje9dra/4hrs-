@@ -700,7 +700,11 @@ export function createCatalogService(
                 active: true,
               });
             } catch (error) {
-              mapProviderMappingDatabaseError(error);
+              console.error("[catalog/service] automatic Qikink mapping failed", {
+                variantId: variant.id,
+                providerSku: variant.sku,
+                error,
+              });
               missingMappings.push({
                 field: "variants." + variant.id + ".qikinkMapping",
                 code: "MISSING_QIKINK_MAPPING",
