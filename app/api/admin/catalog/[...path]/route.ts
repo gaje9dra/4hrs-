@@ -120,6 +120,11 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ p
       const context = await requireAdmin(request, "catalog.category.manage");
       return adminJson({ category: await archiveCatalogCategory(context, p[1], body.reason) });
     }
+    if (p[0] === "categories" && p[1] && p[2] === "delete") {
+      if (!isValidAdminId(p[1])) return bad("Category ID is invalid.");
+      const context = await requireAdmin(request, "catalog.category.manage");
+      return adminJson({ category: await deleteCatalogCategory(context, p[1], body.reason) });
+    }
     if (p[0] === "collections" && p[1] && p[2] === "archive") {
       if (!isValidAdminId(p[1])) return bad("Collection ID is invalid.");
       const context = await requireAdmin(request, "catalog.collection.manage");
