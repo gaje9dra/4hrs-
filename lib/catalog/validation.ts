@@ -239,7 +239,7 @@ export function validateImage(input: ImageInput): ValidationIssue[] {
   const url = input.url.trim();
   const isInlineUploadedImage =
     input.storageReference?.startsWith("inline-db:") === true &&
-    /^data:image\\/(jpeg|png|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(url);
+    /^data:image\/(jpeg|png|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(url);
   if (!url) {
     issues.push(issue("url", "INVALID_IMAGE_URL", "Image URL is required."));
   } else if (!isInlineUploadedImage) {
