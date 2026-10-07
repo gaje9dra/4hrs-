@@ -28,12 +28,12 @@ function normalizeSize(value:string){
   return value.trim().replace(/\s+/g," ").toUpperCase();
 }
 
-function skuFor(productId:string,size:string){
+function skuFor(baseSku:string,size:string){
   const compact=normalizeSize(size).replace(/[^A-Z0-9]+/g,"-").replace(/^-|-$/g,"");
-  return `4HRS-${productId.slice(0,8)}-${compact}`;
+  return `${baseSku.trim().replace(/-+$/,"")}-${compact}`;
 }
 
-export function CatalogVariantManager({productId,variants,canManage}:{productId:string;variants:Variant[];canManage:boolean}) {
+export function CatalogVariantManager({productId,baseSku,variants,canManage}:{productId:string;baseSku:string|null;variants:Variant[];canManage:boolean}) {
   const router=useRouter();
   const [error,setError]=useState("");
   const [busy,setBusy]=useState(false);
@@ -53,6 +53,7 @@ export function CatalogVariantManager({productId,variants,canManage}:{productId:
   async function addSize(size:string){
     const normalized=normalizeSize(size);
     if(!normalized || existingSizes.has(normalized)) return;
+    if(!baseSku?.trim()){ setError("Add the product base SKU first. Sizes will use Base SKU + size, e.g. 987364-M."); return; }
 
     setBusy(true);
     setPendingSize(normalized);
@@ -63,7 +64,7 @@ export function CatalogVariantManager({productId,variants,canManage}:{productId:
       headers:{"content-type":"application/json"},
       body:JSON.stringify({
         productId,
-        sku:skuFor(productId,normalized),
+        sku:skuFor(baseSku,normalized),
         displayName:`Size ${normalized}`,
         size:normalized,
         color:null,
@@ -110,9 +111,7 @@ export function CatalogVariantManager({productId,variants,canManage}:{productId:
         <div className="border-2 border-black bg-[#fafafa] p-4">
           <div>
             <p className="text-sm font-black uppercase tracking-[0.12em]">Available sizes</p>
-            <p className="mt-1 text-xs text-gray-600">
-              Select the sizes customers can order. Each size is stored as a real product variant so the selected size is preserved on the cart and order.
-            </p>
+            <p className="mt-1 text-xs text-gray-600">Enter the product base SKU once in the product details above. The size buttons below generate the complete SKU automatically.</p>
           </div>
 
           <div className="mt-4 flex flex-wrap gap-2">
