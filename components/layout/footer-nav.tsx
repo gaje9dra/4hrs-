@@ -13,21 +13,23 @@ export function FooterNav({ groups }: FooterNavProps) {
   if (visibleGroups.length === 0) return null
 
   return (
-    <div className="grid gap-8 sm:grid-cols-2">
+    <div className="grid min-w-0 gap-8 sm:grid-cols-2">
       {visibleGroups.map((group) => {
         const id = headingId(group.label)
 
         return (
-          <nav key={group.label} aria-labelledby={id}>
-            <h2 id={id} className="mb-4 text-xs font-900 uppercase tracking-[0.2em] text-primary-yellow">{group.label}</h2>
-            <ul className="m-0 list-none space-y-3 p-0">
+          <nav key={group.label} aria-labelledby={id} className="min-w-0">
+            <h2 id={id} className="mb-4 whitespace-nowrap text-xs font-900 uppercase tracking-[0.16em] text-primary-yellow">
+              {group.label}
+            </h2>
+            <ul className="m-0 list-none space-y-2 p-0">
               {group.items.map((item) => (
-                <li key={item.href}>
+                <li key={item.href} className="min-w-0">
                   <Link
                     href={item.href}
                     target={item.external ? '_blank' : undefined}
                     rel={item.external ? 'noopener noreferrer' : undefined}
-                    className="motion-link inline-flex min-h-11 items-center text-sm font-700 uppercase text-white no-underline hover:bg-primary-yellow hover:text-foreground focus-visible:text-foreground"
+                    className="motion-link inline-flex min-h-11 max-w-full items-center break-words text-sm font-700 uppercase leading-tight text-white no-underline hover:bg-primary-yellow hover:text-foreground focus-visible:bg-primary-yellow focus-visible:text-foreground"
                   >
                     {item.label}
                   </Link>
