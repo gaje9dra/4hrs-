@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { cookies } from "next/headers";
 import { db } from "@/lib/db/client";
 import { CUSTOMER_SESSION_COOKIE, hashSessionToken } from "@/lib/auth/session";
