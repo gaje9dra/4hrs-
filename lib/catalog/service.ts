@@ -255,7 +255,7 @@ export function createCatalogService(
 
   const service = {
     async deleteProduct(id: string) {
-      if (!id) throw new CatalogServiceError("INVALID_REQUEST", "Product id is required.");
+      if (!id) throw new CatalogServiceError("INVALID_PRODUCT", "Product id is required.");
       try {
         return await repo.deleteProduct(id);
       } catch (error) {
