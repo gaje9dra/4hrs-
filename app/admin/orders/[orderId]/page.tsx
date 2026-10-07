@@ -19,7 +19,16 @@ export default async function AdminOrderDetailPage({params}:{params:Promise<{ord
    <Section title="Customer"><p className="font-black">{order.customer.displayName||"Unnamed customer"}</p><p>{order.customer.email}</p><p className="mt-2 text-xs break-all">Customer ID: {order.customer.id}</p>{order.address&&<div className="mt-4 border-2 border-black p-3"><p className="font-black uppercase">Shipping address snapshot</p><p>{order.address.recipientName}{order.address.phone?" · "+order.address.phone:""}</p><p>{order.address.addressLine1}{order.address.addressLine2?", "+order.address.addressLine2:""}</p><p>{order.address.city}, {order.address.stateOrProvince} {order.address.postalCode}, {order.address.countryCode}</p></div>}</Section>
   </div>
 
-  <Section title="Items"><div className="grid gap-3">{order.items.map(item=><article key={item.id} className="border-2 border-black p-3"><div className="flex flex-wrap justify-between gap-2"><div><p className="font-black">{item.productTitle}</p><p className="text-sm">{item.variantTitle||"Default variant"} · Store SKU: {item.storeSku||"—"}</p></div><p className="font-black">{item.currency} {item.lineTotal}</p></div><p className="mt-1 text-sm">Qty {item.quantity} · Unit {item.currency} {item.unitPrice}</p></article>)}</div></Section>
+  <Section title="Items"><div className="grid gap-3">{order.items.map(item=><article key={item.id} className="border-2 border-black p-3"><div className="flex flex-wrap justify-between gap-2"><div><p className="font-black">{item.productTitle}</p><p className="text-sm">{item.variantTitle||"Default variant"} · Store SKU: {item.storeSku||"—"}</p></div><p className="font-black">{item.currency} {item.lineTotal}</p></div><p className="mt-1 text-sm">Qty {item.quantity} · Unit {item.currency} {item.unitPrice}</p>
+   {item.selectedOptions&&Object.keys(item.selectedOptions).length ? (
+    <div className="mt-2 flex flex-wrap gap-2">
+     {Object.entries(item.selectedOptions).map(([name,value])=>(
+      <span key={name} className="border-2 border-black bg-[#f7d51d] px-2 py-1 text-xs font-black uppercase">
+       {name}: {value}
+      </span>
+     ))}
+    </div>
+   ) : null}</article>)}</div></Section>
 
   <div className="grid gap-6 xl:grid-cols-2">
    <Section title="Payment"><p className="font-black">{order.payment.status}</p><p>{order.payment.currency} {order.payment.amount}</p><p className="text-sm">Provider: {order.payment.providerId||"—"} · Reference: {order.payment.providerReference||"—"}</p><h4 className="mt-4 font-black uppercase">Attempts</h4><div className="mt-2 grid gap-2">{order.payment.attempts.map(a=><p key={a.id} className="border-2 border-black p-2 text-sm">#{a.attemptNumber} · {a.status} · {a.providerAttemptReference||"no provider attempt ref"}{a.failureCode?" · "+a.failureCode:""}</p>)}</div></Section>
