@@ -68,7 +68,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ pat
       return adminJson({ media: await addCatalogMedia(context, body as never) }, { status: 201 });
     }
     return bad("Catalog resource is not supported.");
-  } catch (error) { return adminErrorResponse(error); }
+  } catch (error) { return adminCatalogErrorResponse(error); }
 }
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ path: string[] }> }) {
