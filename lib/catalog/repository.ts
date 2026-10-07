@@ -1110,6 +1110,10 @@ export async function listProductsForExport(
   });
 }
 
+export async function deleteProduct(id: string, client?: CatalogRepositoryClient) {
+  return clientOrDefault(client).product.delete({ where: { id } });
+}
+
 export async function getProductById(id: string, client?: CatalogRepositoryClient) {
   return clientOrDefault(client).product.findUnique({ where: { id } });
 }
