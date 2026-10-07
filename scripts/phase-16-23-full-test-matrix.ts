@@ -195,6 +195,7 @@ const report = {
     failed:failCount,
     skipped:skippedCount,
     todo:todoCount,
+    failureOutput:testRun.status === 0 ? null : output.slice(-12000),
   },
   inventory:{
     testFiles:testFiles.length,
