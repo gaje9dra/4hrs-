@@ -216,3 +216,10 @@ test("catalog delete button handles structured API errors", async () => {
   assert.match(button,/typeof apiError === "string"/);
   assert.match(button,/typeof apiError\.message === "string"/);
 });
+
+
+test("catalog delete validates origin and resolves the admin session from server cookies", async () => {
+  const route=await read("app/api/admin/catalog/[productId]/route.ts");
+  assert.match(route,/isTrustedStateChangingRequest\(request\)/);
+  assert.match(route,/requireAdmin\(undefined, "catalog\.archive"\)/);
+});
