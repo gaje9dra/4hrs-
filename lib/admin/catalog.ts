@@ -85,7 +85,11 @@ async function lifecycle(
   reason: unknown,
   expectedUpdatedAt?: unknown,
 ) {
-  const cleanReason = requireHighRiskReason(reason);
+  // Publishing/unpublishing is a routine state transition and does not require
+  // an audit reason. Archive/restore remain high-risk actions and do.
+  const cleanReason = action === "archive" || action === "restore"
+    ? requireHighRiskReason(reason)
+    : undefined;
   const expected = expectedUpdatedAt === undefined ? undefined : new Date(String(expectedUpdatedAt));
   if (expected && Number.isNaN(expected.getTime())) throw new AdminError("INVALID_REQUEST", "expectedUpdatedAt is invalid.");
   try {
