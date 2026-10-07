@@ -42,7 +42,16 @@ export function adminCatalogErrorResponse(error: unknown) {
       error.code === "CATALOG_CONFLICT" ? 409 :
       error.code.startsWith("DUPLICATE_") || error.code === "PRODUCT_ALREADY_EXISTS" ? 409 :
       400;
-    return adminJson({ error: { code: error.code, message: error.message } }, { status });
+    const details = error.code === "NOT_PUBLICATION_READY" && error.cause && typeof error.cause === "object" && "issues" in error.cause
+      ? { issues: (error.cause as { issues?: unknown }).issues }
+      : undefined;
+    return adminJson({
+      error: {
+        code: error.code,
+        message: error.message,
+        ...(details ? { details } : {}),
+      },
+    }, { status });
   }
   return adminErrorResponse(error);
 }
