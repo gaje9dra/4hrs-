@@ -11,7 +11,11 @@ import { SERVICE_INVENTORY,DEPENDENCY_GRAPH,RUNBOOKS,combineHealth,propagateDepe
 function envName(){return process.env.NODE_ENV==="production"?"PRODUCTION":(process.env.NODE_ENV??"development").toUpperCase();}
 export async function getServiceHealthSnapshot(){
  const now=new Date(); const database=await checkDatabaseHealth();
- const [synthetic,incidents,reconciliation,costCapacity,governance]=await Promise.all([syntheticSummary(),listReliabilityIncidents({limit:100}),reconciliationSummary(),costCapacitySummary(),governanceSummary()]);
+ const synthetic=await syntheticSummary();
+ const incidents=await listReliabilityIncidents({limit:100});
+ const reconciliation=await reconciliationSummary();
+ const costCapacity=await costCapacitySummary();
+ const governance=await governanceSummary();
  const qikink=createQikinkFulfillmentProvider(); const states=new Map<string,OperationalHealthState>();
  states.set("database",database.ok?"HEALTHY":"UNAVAILABLE"); states.set("application",database.ok?"HEALTHY":"DEGRADED"); states.set("api",database.ok?"HEALTHY":"DEGRADED"); states.set("storefront",database.ok?"HEALTHY":"DEGRADED");
  states.set("observability","HEALTHY"); states.set("deployment",process.env.NETLIFY_DEPLOY_ID||process.env.COMMIT_REF?"HEALTHY":"UNKNOWN"); states.set("qikink",qikink.capabilities.createFulfillment?"HEALTHY":"BLOCKED"); states.set("tracking",qikink.capabilities.statusLookup?"HEALTHY":"BLOCKED");
