@@ -1111,7 +1111,29 @@ export async function listProductsForExport(
 }
 
 export async function deleteProduct(id: string, client?: CatalogRepositoryClient) {
-  return clientOrDefault(client).product.delete({ where: { id } });
+  const remove = async (tx: CatalogRepositoryClient) => {
+    // Product deletion is permanent, but cart rows are disposable and must not
+    // prevent removal. Historical OrderItems use SetNull and keep their snapshots.
+    await tx.cartItem.deleteMany({ where: { productId: id } });
+
+    const variants = await tx.productVariant.findMany({
+      where: { productId: id },
+      select: { id: true },
+    });
+    const variantIds = variants.map((variant) => variant.id);
+
+    if (variantIds.length > 0) {
+      await tx.inventoryTransaction.deleteMany({
+        where: { inventory: { variantId: { in: variantIds } } },
+      });
+      await tx.inventory.deleteMany({ where: { variantId: { in: variantIds } } });
+    }
+
+    return tx.product.delete({ where: { id } });
+  };
+
+  if (client) return remove(client);
+  return db.$transaction((tx) => remove(tx));
 }
 
 export async function getProductById(id: string, client?: CatalogRepositoryClient) {
