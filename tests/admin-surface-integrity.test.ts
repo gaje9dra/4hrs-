@@ -95,3 +95,21 @@ test("admin catalog serializer handles Prisma Decimal values", () => {
   assert.match(source, /Prisma\.Decimal\.isDecimal\(value\)/);
   assert.doesNotMatch(source, /value\.constructor\?\.name === "Decimal"/);
 });
+
+
+test("catalog publishing revalidates storefront listing routes", () => {
+  const source = readFileSync(join(process.cwd(), "app", "api", "admin", "catalog", "[...path]", "route.ts"), "utf8");
+  assert.match(source, /revalidatePath\("\/"\)/);
+  assert.match(source, /revalidatePath\("\/shop"\)/);
+});
+
+test("catalog image uploads use a file input and server-side size/type validation", () => {
+  const component = readFileSync(join(process.cwd(), "components", "admin", "catalog", "catalog-media-manager.tsx"), "utf8");
+  const route = readFileSync(join(process.cwd(), "app", "api", "admin", "catalog", "images", "upload", "route.ts"), "utf8");
+  assert.match(component, /type="file"/);
+  assert.match(component, /\/api\/admin\/catalog\/images\/upload/);
+  assert.match(route, /MAX_IMAGE_BYTES = 4 \* 1024 \* 1024/);
+  assert.match(route, /ALLOWED_IMAGE_TYPES/);
+  assert.match(route, /file\.size > MAX_IMAGE_BYTES/);
+  assert.match(route, /storageReference = "inline-db:"/);
+});
