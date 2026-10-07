@@ -46,19 +46,33 @@ export async function POST(request: Request) {
       await catalog.replaceVariantOptionValues(variant.id, [optionValue.id]);
     }
 
+    let fulfillmentMappingWarning: string | null = null;
     if (typeof input?.size === "string" && input.size.trim() && typeof input?.sku === "string" && input.sku.trim()) {
       // The Qikink SKU follows the canonical 4HRS+ BaseSKU-SIZE convention.
-      // This removes a second manual mapping step while keeping the provider mapping
-      // explicit in the fulfillment layer.
-      await catalog.upsertProviderMapping({
-        variantId: variant.id,
-        providerId: "qikink",
-        providerSku: input.sku.trim(),
-        active: true,
-      });
+      // Variant creation must not be blocked by a downstream fulfillment-provider
+      // mapping failure. The variant remains valid and publication will continue to
+      // enforce the required active provider mapping.
+      try {
+        await catalog.upsertProviderMapping({
+          variantId: variant.id,
+          providerId: "qikink",
+          providerSku: input.sku.trim(),
+          active: true,
+        });
+      } catch (error) {
+        fulfillmentMappingWarning =
+          error instanceof Error
+            ? error.message
+            : "Qikink fulfillment mapping could not be created. The variant was created successfully.";
+        console.error("[admin/catalog/variants] qikink mapping failed after variant creation", {
+          variantId: variant.id,
+          providerSku: input.sku.trim(),
+          error,
+        });
+      }
     }
 
-    return json({ variant }, 201);
+    return json({ variant, fulfillmentMappingWarning }, 201);
   } catch (error) {
     return errorResponse(error);
   }
