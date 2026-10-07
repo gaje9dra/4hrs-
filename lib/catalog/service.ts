@@ -689,17 +689,34 @@ export function createCatalogService(
         for (const variant of activeVariants) {
           const mapping = await mappings.getByVariantAndProvider(variant.id, "qikink");
           if (!mapping?.active || !mapping.providerSku.trim()) {
-            missingMappings.push({
-              field: "variants." + variant.id + ".qikinkMapping",
-              code: "MISSING_QIKINK_MAPPING",
-              message: "Active variant " + variant.sku + " requires an active Qikink provider mapping with a provider SKU before publication.",
-            });
+            // 4HRS+ owns the canonical SKU. Qikink uses that SKU by default, so
+            // publication must not require an administrator to duplicate the SKU
+            // manually in a provider-mapping form.
+            try {
+              await mappings.upsert({
+                variantId: variant.id,
+                providerId: "qikink",
+                providerSku: variant.sku,
+                active: true,
+              });
+            } catch (error) {
+              console.error("[catalog/service] automatic Qikink mapping failed", {
+                variantId: variant.id,
+                providerSku: variant.sku,
+                error,
+              });
+              missingMappings.push({
+                field: "variants." + variant.id + ".qikinkMapping",
+                code: "MISSING_QIKINK_MAPPING",
+                message: "Automatic Qikink mapping could not be created for variant " + variant.sku + ".",
+              });
+            }
           }
         }
         if (missingMappings.length) {
           throw new CatalogServiceError(
             "NOT_PUBLICATION_READY",
-            "One or more active ProductVariants are missing an active Qikink provider mapping.",
+            "One or more active ProductVariants could not receive an automatic Qikink provider mapping.",
             { issues: missingMappings },
           );
         }
