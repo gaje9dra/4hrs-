@@ -51,6 +51,7 @@ import {
 type CatalogRepository = {
   getProductById: typeof repository.getProductById;
   getProductBySlug: typeof repository.getProductBySlug;
+  deleteProduct: typeof repository.deleteProduct;
   getProductWithVariants: typeof repository.getProductWithVariants;
   getProductDetails: typeof repository.getProductDetails;
   listProducts: typeof repository.listProducts;
@@ -253,6 +254,15 @@ export function createCatalogService(
   const lifecycle = createCatalogLifecycleService(repo, audit, auditContext);
 
   const service = {
+    async deleteProduct(id: string) {
+      if (!id) throw new CatalogServiceError("INVALID_REQUEST", "Product id is required.");
+      try {
+        return await repo.deleteProduct(id);
+      } catch (error) {
+        return mapDatabaseError(error);
+      }
+    },
+
     async createProduct(input: CreateProductInput) {
       const product = normalizeProductInput(input);
       const variants = (input.variants ?? []).map(normalizeVariantInput);
