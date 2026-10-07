@@ -359,6 +359,21 @@ jobs:
           path: artifacts/phase-16-22-synthetic-production-smoke-test.json
           if-no-files-found: error
 
+      - name: Run Phase 16.24 blocker classification
+        env:
+          NEXT_PUBLIC_SITE_URL: https://example.test
+          NODE_ENV: test
+        run: npm run production-certification:phase-16-24
+
+      - name: Upload Phase 16.24 blocker classification evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase-16-24-blocker-classification-evidence
+          path: |
+            artifacts/phase-16-24-blocker-classification.json
+            docs/phase-16-24-blocker-classification.md
+          if-no-files-found: error
+
       - name: Run Phase 16.11 performance certification
         run: npm run production-certification:phase-16-11
 
