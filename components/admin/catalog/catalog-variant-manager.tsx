@@ -25,11 +25,12 @@ export function CatalogVariantManager({productId,variants,canManage}:{productId:
  const router=useRouter(); const [error,setError]=useState(""); const [busy,setBusy]=useState(false);
  async function add(e:React.FormEvent<HTMLFormElement>){
   e.preventDefault();setBusy(true);setError("");
-  const d=Object.fromEntries(new FormData(e.currentTarget).entries());
+  const form=e.currentTarget;
+  const d=Object.fromEntries(new FormData(form).entries());
   const res=await fetch("/api/admin/catalog/products/variants",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({productId,...d,price:d.price?String(d.price):null,status:d.status==="INACTIVE"?"INACTIVE":"ACTIVE"})});
   const b=await res.json().catch(()=>({})) as ErrorResponse;
   if(!res.ok)setError(errorMessage(b,"Could not create variant."));
-  else{e.currentTarget.reset();router.refresh()}
+  else{form.reset();router.refresh()}
   setBusy(false);
  }
  async function update(id:string,updatedAt:string,e:React.FormEvent<HTMLFormElement>){
