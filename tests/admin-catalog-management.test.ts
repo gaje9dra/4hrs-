@@ -131,8 +131,8 @@ test("catalog size management creates orderable variants for customer size selec
       price: null,
       status: "ACTIVE",
     });
-    const optionType=await catalog.createOptionType({name:"Size",sortOrder:0});
-    const optionValue=await catalog.createOptionValue({
+    const optionType=await catalog.getOptionTypeByNormalizedName("size") ?? await catalog.createOptionType({name:"Size",sortOrder:0});
+    const optionValue=await catalog.getOptionValueByIdentity(optionType.id,"m") ?? await catalog.createOptionValue({
       optionTypeId: optionType.id,
       displayName:"M",
       normalizedValue:"m",
