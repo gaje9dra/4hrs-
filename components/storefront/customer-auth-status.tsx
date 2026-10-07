@@ -12,8 +12,8 @@ type SessionResponse =
 
 type Status = "loading" | "anonymous" | "authenticated" | "unavailable";
 
-const iconLinkClassName =
-  "motion-icon inline-flex h-11 w-11 shrink-0 items-center justify-center border-2 border-border bg-white no-underline shadow-hard-sm hover:bg-primary-yellow focus:outline-none focus:ring-2 focus:ring-primary-blue focus:ring-offset-2";
+const iconBaseClassName =
+  "motion-icon inline-flex h-11 w-11 shrink-0 items-center justify-center border-2 border-border no-underline shadow-hard-sm transition-transform duration-150 hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-primary-blue focus:ring-offset-2";
 
 export function CustomerAuthStatus() {
   const pathname = usePathname();
@@ -60,36 +60,37 @@ export function CustomerAuthStatus() {
 
   if (status === "loading") {
     return (
-      <div className="flex shrink-0 items-center gap-1.5" aria-label="Account and cart">
+      <div className="flex shrink-0 items-center gap-2" aria-label="Account and cart">
         <span
-          className={`${iconLinkClassName} animate-pulse`}
+          className={iconBaseClassName + " rounded-full bg-primary-red animate-pulse"}
           aria-hidden="true"
         >
-          <UserRound size={20} strokeWidth={2.5} />
+          <UserRound size={20} strokeWidth={2.5} className="text-white" />
         </span>
         <span
-          className={`${iconLinkClassName} animate-pulse`}
+          className={iconBaseClassName + " rotate-45 bg-primary-blue animate-pulse"}
           aria-hidden="true"
         >
-          <ShoppingCart size={20} strokeWidth={2.5} />
+          <ShoppingCart size={20} strokeWidth={2.5} className="-rotate-45 text-white" />
         </span>
       </div>
     );
   }
 
   return (
-    <nav className="flex shrink-0 items-center gap-1.5" aria-label="Account and cart">
+    <nav className="flex shrink-0 items-center gap-2" aria-label="Account and cart">
       <Link
         href={accountHref}
         aria-label={status === "authenticated" ? "Open account" : "Sign in"}
         title={status === "authenticated" ? "Account" : "Sign in"}
         aria-current={accountActive ? "page" : undefined}
         className={[
-          iconLinkClassName,
-          accountActive ? "bg-white" : "",
+          iconBaseClassName,
+          "rounded-full bg-primary-red",
+          accountActive ? "ring-2 ring-primary-yellow ring-offset-2" : "",
         ].filter(Boolean).join(" ")}
       >
-        <UserRound size={20} strokeWidth={2.5} aria-hidden="true" />
+        <UserRound size={20} strokeWidth={2.5} className="text-white" aria-hidden="true" />
       </Link>
       <Link
         href="/cart"
@@ -97,11 +98,12 @@ export function CustomerAuthStatus() {
         title="Cart"
         aria-current={cartActive ? "page" : undefined}
         className={[
-          iconLinkClassName,
-          cartActive ? "bg-white" : "",
+          iconBaseClassName,
+          "rotate-45 bg-primary-blue",
+          cartActive ? "ring-2 ring-primary-yellow ring-offset-2" : "",
         ].filter(Boolean).join(" ")}
       >
-        <ShoppingCart size={20} strokeWidth={2.5} aria-hidden="true" />
+        <ShoppingCart size={20} strokeWidth={2.5} className="-rotate-45 text-white" aria-hidden="true" />
       </Link>
     </nav>
   );
