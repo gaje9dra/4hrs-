@@ -147,3 +147,12 @@ test("catalog size management creates orderable variants for customer size selec
     await cleanup(f,productId);
   }
 });
+
+
+test("catalog publish and unpublish actions do not require a reason", async () => {
+  const source=await read("app/admin/catalog/[id]/page.tsx");
+  assert.match(source,/label="Publish" expectedUpdatedAt=/);
+  assert.match(source,/label="Unpublish" expectedUpdatedAt=/);
+  assert.doesNotMatch(source,/label="Publish" reasonRequired/);
+  assert.doesNotMatch(source,/label="Unpublish" reasonRequired/);
+});
