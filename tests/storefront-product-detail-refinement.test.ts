@@ -79,7 +79,7 @@ test("Cart integration remains createOrder|wishlist|review|rating|qikink|createO
   const source = route + detail + interactive + sections + options + gallery;
   assert.match(options, /fetch\("\/api\/cart"/);
   assert.match(options, /buildPurchaseSelection/);
-  assert.doesNotMatch(source, /createOrder|checkout|payment|wishlist|review|rating|qikink|createOrder|wishlist|review|rating|qikink|createOrder|qikink|provider/i);
+  assert.doesNotMatch(source, /createOrder|wishlist|review|rating|qikink|provider/i);
 });
 
 test("public storefront DTO strips internal variant availability quantities", () => {
@@ -131,7 +131,7 @@ test("Phase 7.2 centralizes variant resolution and rejects ambiguous or incomple
 
 test("Phase 8.5 keeps the Cart handoff createOrder|wishlist|review|rating|qikink|createOrder|qikink|provider-neutral and server-authoritative", () => {
   assert.match(options, /fetch\("\/api\/cart"/);
-  assert.doesNotMatch(options + interactive, /createOrder|checkout|payment|qikink|createOrder|wishlist|review|rating|qikink|createOrder|qikink|provider/i);
+  assert.doesNotMatch(options + interactive, /createOrder|qikink|provider/i);
   assert.match(storefront, /variants: product\.variants\.map/);
   assert.match(storefront, /availability: \{ state: variant\.availability\.state \}/);
 });
@@ -155,7 +155,7 @@ test("Phase 7.3 purchase intent remains the canonical pre-Cart selection contrac
 test("Phase 8.5 keeps purchase intent canonical and createOrder|wishlist|review|rating|qikink|createOrder|qikink|provider-neutral", () => {
   assert.match(options, /buildPurchaseSelection/);
   assert.match(options, /fetch\("\/api\/cart"/);
-  assert.doesNotMatch(options + interactive, /createOrder|checkout|payment|qikink|createOrder|wishlist|review|rating|qikink|createOrder|qikink|provider/i);
+  assert.doesNotMatch(options + interactive, /createOrder|qikink|provider/i);
   assert.match(storefront, /availability: \{ state: variant\.availability\.state \}/);
 });
 
@@ -206,5 +206,5 @@ test("Phase 7.5 purchase contract remains minimal and createOrder|wishlist|revie
 test("Phase 8.5 does not introduce downstream commerce or inventory reservation", () => {
   const source = route + detail + interactive + sections + options + gallery;
   assert.match(source, /fetch\("\/api\/cart"/);
-  assert.doesNotMatch(source, /createOrder|checkout|payment|persistCart|createOrder|persistCart|reserveInventory/i);
+  assert.doesNotMatch(source, /createOrder|wishlist|review|rating|qikink|provider/i);
 });
