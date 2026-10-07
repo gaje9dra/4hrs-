@@ -53,3 +53,9 @@ test("Header exposes the real Cart route as an icon without a fake count", () =>
   assert.match(headerAuth, /ShoppingCart/);
   assert.doesNotMatch(headerAuth, /cartCount|itemCount|badge.*Cart/i);
 });
+test("Cart product media stays inside a compact thumbnail", () => {
+  assert.match(page, /relative size-24 shrink-0 overflow-hidden/);
+  assert.match(page, /sm:size-28/);
+  assert.match(page, /className="object-contain p-2"/);
+  assert.doesNotMatch(page, /className="object-cover"/);
+});
