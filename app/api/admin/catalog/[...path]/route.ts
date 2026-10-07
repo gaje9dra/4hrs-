@@ -1,3 +1,4 @@
+import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/admin/authorization";
 import { adminCatalogErrorResponse, adminErrorResponse, adminJson, assertAdminSameOrigin, isValidAdminId, readAdminJson } from "@/lib/admin/http";
 import {
@@ -46,7 +47,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ pat
       if (!isValidAdminId(p[1])) return bad("Product ID is invalid.");
       const context = await requireAdmin(request, p[2] === "publish" ? "catalog.publish" : p[2] === "archive" ? "catalog.archive" : p[2] === "restore" || p[2] === "unpublish" ? "catalog.publish" : "catalog.update");
       const reason = body.reason;
-      if (p[2] === "publish") return adminJson({ product: await publishCatalogProduct(context, p[1], reason, body.expectedUpdatedAt) });
+      if (p[2] === "publish") { const result = await publishCatalogProduct(context, p[1], reason, body.expectedUpdatedAt); revalidatePath("/"); revalidatePath("/shop"); revalidatePath("/categories"); return adminJson({ product: result }); }
       if (p[2] === "unpublish") return adminJson({ product: await unpublishCatalogProduct(context, p[1], reason, body.expectedUpdatedAt) });
       if (p[2] === "archive") return adminJson({ product: await archiveCatalogProduct(context, p[1], reason, body.expectedUpdatedAt) });
       if (p[2] === "restore") return adminJson({ product: await restoreCatalogProduct(context, p[1], reason, body.expectedUpdatedAt) });
