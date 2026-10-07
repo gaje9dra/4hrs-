@@ -123,6 +123,6 @@ test("catalog publish route preserves catalog readiness errors", () => {
   assert.match(route, /catch \(error\) \{ return adminCatalogErrorResponse\(error\); \}/);
   assert.match(http, /error\.code === "NOT_PUBLICATION_READY"/);
   assert.match(http, /const details = error\.code === "NOT_PUBLICATION_READY"/);
-  assert.match(action, /error\.details\?\.issues/);
+  assert.match(action, /error\?\.details\?\.issues/);
   assert.match(service, /MISSING_QIKINK_MAPPING/);
 });
