@@ -32,7 +32,7 @@ function requestHash(input: {
   return sha512([
     input.key, input.txnid, input.amount, input.productinfo, input.firstname, input.email,
     input.udf1 ?? "", input.udf2 ?? "", input.udf3 ?? "", input.udf4 ?? "", input.udf5 ?? "",
-    "", "", "", "", "", merchantSalt(),
+    "", "", "", "", merchantSalt(),
   ].join("|"));
 }
 
