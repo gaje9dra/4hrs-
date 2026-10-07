@@ -6,6 +6,7 @@ const route = readFileSync("app/(storefront)/cart/page.tsx", "utf8");
 const page = readFileSync("components/storefront/cart-page.tsx", "utf8");
 const contracts = readFileSync("lib/cart/contracts.ts", "utf8");
 const navigation = readFileSync("lib/storefront/navigation.ts", "utf8");
+const headerAuth = readFileSync("components/storefront/customer-auth-status.tsx", "utf8");
 
 test("Cart route is private, dynamic and uses the storefront Cart page", () => {
   assert.match(route, /force-dynamic/);
@@ -46,7 +47,9 @@ test("Cart DTO contracts contain no persistence or ownership fields", () => {
   assert.doesNotMatch(contracts, /ownerId|customerId|sessionId|createdAt|updatedAt|password|token/i);
 });
 
-test("Global navigation exposes a real Cart route without a fake count", () => {
-  assert.match(navigation, /label: "Cart", href: "\/cart"/);
-  assert.doesNotMatch(navigation, /cartCount|itemCount|badge.*Cart/i);
+test("Header exposes the real Cart route as an icon without a fake count", () => {
+  assert.doesNotMatch(navigation, /label: "Cart", href: "\/cart"/);
+  assert.match(headerAuth, /href="\/cart"/);
+  assert.match(headerAuth, /ShoppingCart/);
+  assert.doesNotMatch(headerAuth, /cartCount|itemCount|badge.*Cart/i);
 });
