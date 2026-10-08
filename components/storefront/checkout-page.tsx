@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
-import type { CheckoutDto } from "@/lib/checkout/contracts";
+import type { CheckoutDto, CheckoutPaymentMethod } from "@/lib/checkout/contracts";
 import type { CustomerAddressDto, CustomerDto } from "@/lib/customer/contracts";
 
 type ApiError = { error?: { code?: string; message?: string } };
@@ -123,6 +123,7 @@ export function CheckoutPage({ customer }: { customer: CustomerDto }) {
   const [state, setState] = useState<UiState>("loading");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<CheckoutPaymentMethod>("upi");
   const pendingRef = useRef(false);
   const requestVersion = useRef(0);
   const selectedAddressRef = useRef<string | null>(null);
@@ -212,6 +213,7 @@ export function CheckoutPage({ customer }: { customer: CustomerDto }) {
         body: JSON.stringify({
           selectedAddressId: checkout.address.id,
           expectedRevision: revisionRef.current,
+          paymentMethod: selectedPaymentMethod,
         }),
       });
       const body = await response.json().catch(() => null) as
@@ -303,10 +305,31 @@ export function CheckoutPage({ customer }: { customer: CustomerDto }) {
                 <p className="mt-3 text-sm leading-6">Your card, UPI, net-banking and other payment details are entered on PayU&apos;s hosted payment page. 4HRS+ does not collect those credentials on this page.</p>
               </div>
             </div>
-            <div className="mt-5 grid gap-3 border-t-2 border-border pt-5 sm:grid-cols-3">
-              <div className="border-2 border-border bg-muted p-3 text-center text-xs font-900 uppercase">UPI</div>
-              <div className="border-2 border-border bg-muted p-3 text-center text-xs font-900 uppercase">Cards</div>
-              <div className="border-2 border-border bg-muted p-3 text-center text-xs font-900 uppercase">Net Banking</div>
+            <div className="mt-5 border-t-2 border-border pt-5">
+              <p className="text-xs font-900 uppercase tracking-[.18em] text-primary-blue">Choose payment method</p>
+              <div className="mt-3 grid gap-3 sm:grid-cols-3" role="radiogroup" aria-label="Payment method">
+                {([
+                  ["upi", "UPI"],
+                  ["cards", "Cards"],
+                  ["netbanking", "Net Banking"],
+                ] as const).map(([value, label]) => {
+                  const selected = selectedPaymentMethod === value;
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      role="radio"
+                      aria-checked={selected}
+                      disabled={pending}
+                      onClick={() => setSelectedPaymentMethod(value)}
+                      className={"border-2 border-border p-3 text-center text-xs font-900 uppercase transition " + (selected ? "bg-primary-yellow shadow-hard-sm" : "bg-muted hover:bg-white") + (pending ? " cursor-not-allowed opacity-60" : " cursor-pointer")}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="mt-3 text-xs leading-5">You will be redirected to PayU&apos;s secure hosted checkout for the selected payment method.</p>
             </div>
           </Card>
         </div>
