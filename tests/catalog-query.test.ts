@@ -496,3 +496,49 @@ test("does not resolve inactive category or collection through public discovery"
     (error: unknown) => error instanceof CatalogServiceError && error.code === "COLLECTION_NOT_FOUND",
   );
 });
+
+
+test("canonicalizes duplicate legacy variant combinations without breaking the PDP contract", async () => {
+  const duplicateProduct = {
+    ...product,
+    variants: [
+      product.variants[0],
+      {
+        ...product.variants[0],
+        id: "variant-duplicate",
+        sku: "TSHIRT-BLK-M-002",
+        price: new Prisma.Decimal("899.00"),
+        inventory: {
+          trackingEnabled: true,
+          onHand: 0,
+          reserved: 0,
+          lowStockThreshold: 2,
+        },
+      },
+    ],
+  };
+
+  const service = createCatalogQueryService({
+    ...queryRepository,
+    async getPublishedProductDetailsBySlug() {
+      return {
+        ...duplicateProduct,
+        description: null,
+        shortDescription: null,
+        seoTitle: null,
+        seoDescription: null,
+        optionTypes: [],
+        categories: [{ category: { id: "category-1", name: "T-Shirts", slug: "t-shirts", description: null, parentId: null } }],
+        collections: [{ collection: { id: "collection-1", name: "New Arrivals", slug: "new-arrivals", description: null } }],
+      };
+    },
+  });
+
+  const result = await service.getPublishedProductDetailsBySlug("OVERSIZED-GRAPHIC-T-SHIRT");
+
+  assert.equal(result.options.length, 1);
+  assert.equal(result.options[0].normalizedName, "size");
+  assert.equal(result.variants.length, 1);
+  assert.equal(result.variants[0].id, "variant-1");
+  assert.equal(result.variants[0].availability.state, "IN_STOCK");
+});
