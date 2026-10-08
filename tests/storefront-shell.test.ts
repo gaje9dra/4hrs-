@@ -90,13 +90,13 @@ test("storefront shell preserves the established Bauhaus token system", () => {
 });
 
 
-test("product cards expose Buy now and Add to cart actions", () => {
+test("product cards expose the canonical Add to cart action", () => {
   const source = read("components/storefront/product-card.tsx");
-  assert.match(source, /<Button[\s\S]*Buy now/);
-  assert.match(source, /<Button[\s\S]*Add to cart/);
-  assert.match(source, /intent=buy/);
   assert.match(source, /intent=cart/);
-  assert.match(source, /disabled=\{unavailable\}/);
+  assert.match(source, /<ShoppingCart/);
+  assert.match(source, /Add to cart/);
+  assert.match(source, /aria-disabled=\{unavailable \|\| undefined\}/);
+  assert.doesNotMatch(source, /intent=buy|Buy now/);
 });
 
 test("product detail consumes card purchase intent", () => {
@@ -118,19 +118,15 @@ test("product option purchase intents route after the server confirms the Cart m
 
 test("product cards keep the title readable and actions compact", () => {
   const source = read("components/storefront/product-card.tsx");
-  assert.match(source, /line-clamp-2 min-h-\[3\.25rem\]/);
-  assert.match(source, /shrink-0 whitespace-nowrap/);
-  assert.match(source, /w-full px-2 text-\[0\.68rem\]/);
-  assert.match(source, /whitespace-nowrap/);
-  assert.match(source, /ShoppingBag/);
+  assert.match(source, /line-clamp-2 min-h-\[2\.7rem\]/);
   assert.match(source, /ShoppingCart/);
-  assert.match(source, /disabled=\{unavailable\}/);
+  assert.match(source, /aria-disabled=\{unavailable \|\| undefined\}/);
 });
 
 test("product card pricing has a dedicated visual hierarchy", () => {
   const source = read("components/storefront/product-card.tsx");
-  assert.match(source, /border-t-2 border-border pt-4/);
-  assert.match(source, /text-lg font-900 leading-none/);
+  assert.match(source, /mt-2 flex flex-wrap items-baseline/);
+  assert.match(source, /text-base font-900 leading-none/);
   assert.match(source, /line-through/);
 });
 

@@ -23,7 +23,7 @@ test("product detail keeps the interactive surface client-only", () => {
 });
 
 test("variant UI is driven by canonical option relationships", () => {
-  assert.match(options, /product\.options\.map/);
+  assert.match(options, /option\.values\.map/);
   assert.match(options, /resolveSelectedVariant/);
   assert.match(options, /aria-pressed/);
   assert.match(options, /disabled={!selectable}/);

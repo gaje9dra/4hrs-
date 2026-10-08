@@ -118,7 +118,7 @@ test("homepage section headings expose their labelled-by targets", () => {
 
 test("product cards remain reusable and use nested heading level", () => {
   const source = read("components/storefront/product-card.tsx");
-  assert.match(source, /<h3 className="line-clamp-2 min-h-\[3\.25rem\]/);
+  assert.match(source, /<h3 className="line-clamp-2 min-h-\[2\.7rem\]/);
   assert.doesNotMatch(source, /<h2 className="text-xl/);
 });
 
