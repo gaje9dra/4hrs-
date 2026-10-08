@@ -65,6 +65,7 @@ export function ProductOptions({
   const [addState, setAddState] = useState<AddState>("idle");
   const [addError, setAddError] = useState<string | null>(null);
   const [authRequired, setAuthRequired] = useState(false);
+  const [sizeChartOpen, setSizeChartOpen] = useState(false);
   const addRequest = useRef(0);
   const intentStarted = useRef(false);
   const router = useRouter();
@@ -111,6 +112,15 @@ export function ProductOptions({
   }
 
   useEffect(() => {
+    if (!sizeChartOpen) return;
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setSizeChartOpen(false);
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [sizeChartOpen]);
+
+  useEffect(() => {
     if (!purchaseIntent || intentStarted.current || !purchaseSelection) return;
     intentStarted.current = true;
     void handleAdd(purchaseIntent === "buy");
@@ -127,7 +137,16 @@ export function ProductOptions({
             <fieldset key={option.id} className="grid gap-3">
               <legend className="flex flex-wrap items-center justify-between gap-3 text-sm font-900 uppercase">
                 <span>{isSize ? "SIZE" : option.name}: {selectedValue?.displayName ?? "Select"}</span>
-                {isSize ? <span className="text-xs font-700 tracking-[0.08em] text-muted-foreground">Choose your fit</span> : null}
+                {isSize ? (
+                  <button
+                    type="button"
+                    onClick={() => setSizeChartOpen(true)}
+                    className="rounded-full border-2 border-border px-4 py-2 text-xs font-900 tracking-[0.08em] text-foreground transition-transform hover:-translate-y-0.5 hover:bg-primary-yellow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-blue"
+                    aria-haspopup="dialog"
+                  >
+                    SIZE CHART
+                  </button>
+                ) : null}
               </legend>
               <div className="flex flex-wrap gap-2">
                 {option.values.map((value) => {
@@ -166,6 +185,70 @@ export function ProductOptions({
           </>
         );
       })()}
+
+      {sizeChartOpen ? (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/55 p-4"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setSizeChartOpen(false);
+          }}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="size-chart-title"
+            className="relative max-h-[90vh] w-full max-w-3xl overflow-auto border-4 border-border bg-[#f7f3ec] p-5 text-foreground shadow-hard-lg sm:p-8"
+          >
+            <button
+              type="button"
+              onClick={() => setSizeChartOpen(false)}
+              aria-label="Close size chart"
+              className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center border-2 border-border bg-white text-xl font-900 leading-none hover:bg-primary-yellow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-blue"
+            >
+              ×
+            </button>
+            <div className="pr-12">
+              <h2 id="size-chart-title" className="text-3xl font-900 uppercase leading-none sm:text-5xl">
+                ACID WASHED
+                <br />
+                OVERSIZED TEE
+              </h2>
+              <div className="mt-6 rounded-full border-2 border-border px-5 py-3 text-center text-xl font-900 uppercase">
+                SIZE CHART
+              </div>
+            </div>
+            <div className="mt-8 overflow-hidden border-2 border-border">
+              <table className="w-full border-collapse text-center">
+                <thead>
+                  <tr className="bg-[#edb8a8] text-sm font-900 uppercase sm:text-lg">
+                    <th className="border-r-2 border-border px-3 py-3">Size</th>
+                    <th className="border-r-2 border-border px-3 py-3">Chest</th>
+                    <th className="px-3 py-3">Length</th>
+                  </tr>
+                </thead>
+                <tbody className="text-base font-700 sm:text-lg">
+                  {[
+                    ["XS", "39", "27"],
+                    ["S", "41", "28"],
+                    ["M", "43", "29"],
+                    ["L", "45", "30"],
+                    ["XL", "47", "31"],
+                    ["2XL", "49", "32"],
+                  ].map(([size, chest, length]) => (
+                    <tr key={size}>
+                      <td className="border-t-2 border-r-2 border-border bg-[#ddd7d1] px-3 py-3 font-900">{size}</td>
+                      <td className="border-t-2 border-r-2 border-border bg-[#eee7dc] px-3 py-3">{chest}</td>
+                      <td className="border-t-2 border-border bg-[#eee7dc] px-3 py-3">{length}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="mt-3 text-right text-xs font-700">*All measurements are in inches.</p>
+          </section>
+        </div>
+      ) : null}
 
       <div className="border-t-2 border-border pt-5 lg:border-t-4" aria-live="polite">
         <div className="flex flex-wrap items-baseline gap-3">
