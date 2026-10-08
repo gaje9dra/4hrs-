@@ -13,7 +13,9 @@ function escapeHtml(value: string): string {
 }
 
 export async function GET(request: Request) {
-  const paymentId = new URL(request.url).searchParams.get("payment")?.trim() ?? "";
+  const searchParams = new URL(request.url).searchParams;
+  const paymentId = searchParams.get("payment")?.trim() ?? "";
+  const method = searchParams.get("method")?.trim() ?? "";
   if (!/^[0-9a-f-]{36}$/i.test(paymentId)) return new Response("Invalid payment reference.", { status: 400 });
 
   const token = (await cookies()).get(CUSTOMER_SESSION_COOKIE)?.value;
@@ -34,7 +36,16 @@ export async function GET(request: Request) {
   const phone = payment.customer.addresses[0]?.phone?.trim() ?? "";
   if (!phone) return new Response("A phone number is required before payment.", { status: 409 });
 
+  const enforcePayMethod = method === "upi"
+    ? "upi"
+    : method === "cards"
+      ? "creditcard|debitcard"
+      : method === "netbanking"
+        ? "netbanking"
+        : undefined;
+
   const fields = buildPayUHostedCheckoutFields({
+    enforcePayMethod,
     txnid: payment.internalReference,
     amount: payment.amount.toFixed(2),
     productinfo: "4HRS+ Order",
