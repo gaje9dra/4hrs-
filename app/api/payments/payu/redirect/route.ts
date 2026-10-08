@@ -14,9 +14,9 @@ function escapeHtml(value: string): string {
 
 export async function GET(request: Request) {
   const searchParams = new URL(request.url).searchParams;
-  const paymentId = searchParams.get("payment")?.trim() ?? "";
+  const paymentReference = searchParams.get("payment")?.trim() ?? "";
   const method = searchParams.get("method")?.trim() ?? "";
-  if (!/^[0-9a-f-]{36}$/i.test(paymentId)) return new Response("Invalid payment reference.", { status: 400 });
+  if (!paymentReference || paymentReference.length > 128) return new Response("Invalid payment reference.", { status: 400 });
 
   const token = (await cookies()).get(CUSTOMER_SESSION_COOKIE)?.value;
   if (!token) return new Response("Authentication is required.", { status: 401 });
@@ -27,7 +27,7 @@ export async function GET(request: Request) {
   if (!session) return new Response("Authentication is required.", { status: 401 });
 
   const payment = await db.payment.findFirst({
-    where: { id: paymentId, customerId: session.customerId },
+    where: { internalReference: paymentReference, customerId: session.customerId },
     include: { customer: { select: { email: true, displayName: true, addresses: { where: { isDefault: true }, take: 1, select: { phone: true } } } } },
   });
   if (!payment) return new Response("Payment could not be found.", { status: 404 });
