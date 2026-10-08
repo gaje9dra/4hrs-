@@ -50,7 +50,7 @@ export async function POST(request: Request) {
       ? await catalog.getProductDetails(input.productId)
       : null;
     const normalizedSize = typeof input?.size === "string"
-      ? input.size.trim().replace(/\\s+/g, " ").toUpperCase()
+      ? input.size.trim().replace(/\s+/g, " ").toUpperCase()
       : "";
     const requestedSku = typeof input?.sku === "string" ? input.sku.trim() : "";
 

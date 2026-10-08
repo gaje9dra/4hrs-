@@ -610,12 +610,12 @@ export function createCatalogQueryService(customRepository: Partial<QueryReposit
         (option) => option.normalizedName === "size" || option.name.trim().toLowerCase() === "size",
       );
       const normalizedLegacySizes = variants.map((variant) => variant.size?.trim()).filter(Boolean);
-      // Only synthesize a legacy Size option when every published variant has
-      // a concrete size. Partial legacy data cannot be represented as a valid
-      // variant matrix without inventing a selection, so leave it unmodified.
-      const hasCompleteLegacySizes =
-        variants.length > 0 && normalizedLegacySizes.length === variants.length;
-      const legacySizes = hasCompleteLegacySizes
+      // Synthesize the legacy Size option from every published variant that
+      // actually has a size. Variants with missing legacy size data are handled
+      // below and must not suppress the real sizes that the administrator already
+      // configured.
+      const hasLegacySizes = variants.length > 0 && normalizedLegacySizes.length > 0;
+      const legacySizes = hasLegacySizes
         ? [...new Set(normalizedLegacySizes)]
         : [];
       const sizeOptionId = "legacy-size";
@@ -710,10 +710,29 @@ export function createCatalogQueryService(customRepository: Partial<QueryReposit
       // but project only option dimensions that every active variant can actually
       // render. This prevents one malformed option dimension from taking the
       // entire PDP down while preserving the real variant ids for checkout.
+      // If Size is configured, a legacy/base variant without a size must not
+      // hide the configured Size selector for every other valid variant. Exclude
+      // only variants that cannot participate in the size matrix; keep their real
+      // variant ids untouched in the database and preserve checkout semantics.
+      const configuredSizeOption = options.find(
+        (option) => option.normalizedName === "size" || option.name.trim().toLowerCase() === "size",
+      );
+      const variantsForRendering = configuredSizeOption
+        ? variantsWithSize.filter((variant) => {
+            const matches = variant.optionValues.filter(
+              (value) =>
+                value.optionType.id === configuredSizeOption.id &&
+                configuredSizeOption.values.some((optionValue) => optionValue.id === value.id),
+            );
+            return matches.length === 1;
+          })
+        : variantsWithSize;
+
       const renderableOptionIds = new Set(
         options
           .filter((option) =>
-            variantsWithSize.every((variant) => {
+            variantsForRendering.length > 0 &&
+            variantsForRendering.every((variant) => {
               const matches = variant.optionValues.filter(
                 (value) => value.optionType.id === option.id &&
                   option.values.some((optionValue) => optionValue.id === value.id),
@@ -724,7 +743,7 @@ export function createCatalogQueryService(customRepository: Partial<QueryReposit
           .map((option) => option.id),
       );
       const renderableOptions = options.filter((option) => renderableOptionIds.has(option.id));
-      const renderableVariants = variantsWithSize.map((variant) => ({
+      const renderableVariants = variantsForRendering.map((variant) => ({
         ...variant,
         optionValues: variant.optionValues.filter((value) => renderableOptionIds.has(value.optionType.id)),
       }));
