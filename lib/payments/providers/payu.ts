@@ -117,6 +117,7 @@ export function buildPayUHostedCheckoutFields(input: {
   udf3?: string;
   udf4?: string;
   udf5?: string;
+  enforcePayMethod?: string;
 }): Record<string, string> {
   const key = merchantKey();
   const fields = {
@@ -135,6 +136,7 @@ export function buildPayUHostedCheckoutFields(input: {
     surl: absoluteSiteUrl("/api/payments/payu/callback"),
     furl: absoluteSiteUrl("/api/payments/payu/callback"),
     curl: absoluteSiteUrl("/api/payments/payu/callback"),
+    ...(input.enforcePayMethod ? { enforce_paymethod: input.enforcePayMethod } : {}),
   };
   return { ...fields, hash: requestHash(fields) };
 }
@@ -161,7 +163,15 @@ export const payuPaymentProvider: PaymentProviderAdapter = {
     merchantKey();
     merchantSalt();
     if (request.amount.currency !== "INR") throw Object.assign(new Error("PayU provider currently supports INR only."), { code: "PAYMENT_INVALID_REQUEST" });
-    const redirectUrl = absoluteSiteUrl(`/api/payments/payu/redirect?payment=${encodeURIComponent(request.paymentReference)}`);
+    const selectedMethod = request.metadata?.paymentMethod;
+    const enforcePayMethod = selectedMethod === "upi"
+      ? "upi"
+      : selectedMethod === "cards"
+        ? "creditcard|debitcard"
+        : selectedMethod === "netbanking"
+          ? "netbanking"
+          : undefined;
+    const redirectUrl = `/api/payments/payu/redirect?payment=${encodeURIComponent(request.paymentReference)}${enforcePayMethod ? `&method=${encodeURIComponent(selectedMethod!)}` : ""}`;
     return {
       providerId: ID,
       providerPaymentReference: null,
