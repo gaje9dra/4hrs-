@@ -598,31 +598,72 @@ export function createCatalogQueryService(customRepository: Partial<QueryReposit
         : configuredOptions;
       const sizeOption = options.find((option) => option.id === sizeOptionId);
 
-      const variantsWithSize = sizeOption
-        ? variants.map((variant) => {
-            const size = variant.size?.trim();
-            const sizeValue = size
-              ? sizeOption.values.find((value) => value.normalizedValue === size.toLowerCase())
-              : undefined;
-            return sizeValue
-              ? {
-                  ...variant,
-                  optionValues: [...variant.optionValues, {
-                    id: sizeValue.id,
-                    displayName: sizeValue.displayName,
-                    normalizedValue: sizeValue.normalizedValue,
-                    hex: sizeValue.hex,
-                    swatch: sizeValue.swatch,
-                    optionType: {
-                      id: sizeOption.id,
-                      name: sizeOption.name,
-                      normalizedName: sizeOption.normalizedName,
-                    },
-                  }],
-                }
-              : variant;
-          })
-        : variants;
+      // Older variants may have their size/color stored on the legacy scalar
+      // fields while the newer option-value relation is incomplete. Reconcile
+      // those known legacy fields into the public option contract at read time.
+      // This keeps the PDP renderable without inventing values: a legacy value
+      // is only added when the product already exposes the same value on the
+      // configured option type.
+      const variantsWithSize = variants.map((variant) => {
+        let optionValues = [...variant.optionValues];
+
+        if (sizeOption) {
+          const size = variant.size?.trim();
+          const sizeValue = size
+            ? sizeOption.values.find((value) => value.normalizedValue === size.toLowerCase())
+            : undefined;
+          if (sizeValue && !optionValues.some((value) => value.optionType.id === sizeOption.id)) {
+            optionValues.push({
+              id: sizeValue.id,
+              displayName: sizeValue.displayName,
+              normalizedValue: sizeValue.normalizedValue,
+              hex: sizeValue.hex,
+              swatch: sizeValue.swatch,
+              optionType: {
+                id: sizeOption.id,
+                name: sizeOption.name,
+                normalizedName: sizeOption.normalizedName,
+              },
+            });
+          }
+        }
+
+        for (const option of options) {
+          if (option.id === sizeOptionId || optionValues.some((value) => value.optionType.id === option.id)) {
+            continue;
+          }
+
+          const legacyValue =
+            option.normalizedName === "size"
+              ? variant.size?.trim()
+              : option.normalizedName === "color"
+                ? variant.color?.trim()
+                : undefined;
+          if (!legacyValue) continue;
+
+          const matchedValue = option.values.find(
+            (value) => value.normalizedValue === legacyValue.toLowerCase(),
+          );
+          if (!matchedValue) continue;
+
+          optionValues.push({
+            id: matchedValue.id,
+            displayName: matchedValue.displayName,
+            normalizedValue: matchedValue.normalizedValue,
+            hex: matchedValue.hex,
+            swatch: matchedValue.swatch,
+            optionType: {
+              id: option.id,
+              name: option.name,
+              normalizedName: option.normalizedName,
+            },
+          });
+        }
+
+        return optionValues.length === variant.optionValues.length
+          ? variant
+          : { ...variant, optionValues };
+      });
 
       const mappedProduct: PublishedProductDetailResult = {
         id: product.id,
