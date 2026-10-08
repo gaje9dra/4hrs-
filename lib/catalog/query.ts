@@ -665,6 +665,30 @@ export function createCatalogQueryService(customRepository: Partial<QueryReposit
           : { ...variant, optionValues };
       });
 
+      // A published product can contain legacy/incomplete option metadata from
+      // older catalog records. Keep the strict matrix validation for healthy data,
+      // but project only option dimensions that every active variant can actually
+      // render. This prevents one malformed option dimension from taking the
+      // entire PDP down while preserving the real variant ids for checkout.
+      const renderableOptionIds = new Set(
+        options
+          .filter((option) =>
+            variantsWithSize.every((variant) => {
+              const matches = variant.optionValues.filter(
+                (value) => value.optionType.id === option.id &&
+                  option.values.some((optionValue) => optionValue.id === value.id),
+              );
+              return matches.length === 1;
+            }),
+          )
+          .map((option) => option.id),
+      );
+      const renderableOptions = options.filter((option) => renderableOptionIds.has(option.id));
+      const renderableVariants = variantsWithSize.map((variant) => ({
+        ...variant,
+        optionValues: variant.optionValues.filter((value) => renderableOptionIds.has(value.optionType.id)),
+      }));
+
       const mappedProduct: PublishedProductDetailResult = {
         id: product.id,
         title: product.title,
@@ -678,14 +702,14 @@ export function createCatalogQueryService(customRepository: Partial<QueryReposit
         seoTitle: product.seoTitle,
         seoDescription: product.seoDescription,
         media: product.images,
-        variants: variantsWithSize,
-        options,
+        variants: renderableVariants,
+        options: renderableOptions,
         categories: product.categories.map(({ category }) => category),
         collections: product.collections.map(({ collection }) => collection),
         tags: product.tags.map(({ tag }) => tag),
         availability: { state: "OUT_OF_STOCK", availableQuantity: null },
       };
-      validateVariantMatrix(mappedProduct, variantsWithSize);
+      validateVariantMatrix(mappedProduct, renderableVariants);
 
       const cheapestVariant = variants.reduce(
         (current, variant) =>
