@@ -569,7 +569,15 @@ export function createCatalogQueryService(customRepository: Partial<QueryReposit
       const hasConfiguredSize = configuredOptions.some(
         (option) => option.normalizedName === "size" || option.name.trim().toLowerCase() === "size",
       );
-      const legacySizes = [...new Set(variants.map((variant) => variant.size?.trim()).filter(Boolean))];
+      const normalizedLegacySizes = variants.map((variant) => variant.size?.trim()).filter(Boolean);
+      // Only synthesize a legacy Size option when every published variant has
+      // a concrete size. Partial legacy data cannot be represented as a valid
+      // variant matrix without inventing a selection, so leave it unmodified.
+      const hasCompleteLegacySizes =
+        variants.length > 0 && normalizedLegacySizes.length === variants.length;
+      const legacySizes = hasCompleteLegacySizes
+        ? [...new Set(normalizedLegacySizes)]
+        : [];
       const sizeOptionId = "legacy-size";
       const sizeValues = legacySizes.map((size, sortOrder) => ({
         id: `${sizeOptionId}:${size!.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
