@@ -554,33 +554,89 @@ export function createCatalogQueryService(customRepository: Partial<QueryReposit
         };
       });
 
+      const configuredOptions = product.optionTypes.map(({ optionType, sortOrder }) => ({
+        id: optionType.id,
+        name: optionType.name,
+        normalizedName: optionType.normalizedName,
+        sortOrder,
+        values: optionType.values,
+      }));
+
+      // Some existing catalog records store size directly on ProductVariant rather
+      // than through the newer option-type relation. Expose that legacy size data
+      // through the same public option contract so the inline SIZE selector works
+      // without introducing a separate product page or changing checkout semantics.
+      const hasConfiguredSize = configuredOptions.some(
+        (option) => option.normalizedName === "size" || option.name.trim().toLowerCase() === "size",
+      );
+      const legacySizes = [...new Set(variants.map((variant) => variant.size?.trim()).filter(Boolean))];
+      const sizeOptionId = "legacy-size";
+      const sizeValues = legacySizes.map((size, sortOrder) => ({
+        id: `${sizeOptionId}:${size!.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+        displayName: size!,
+        normalizedValue: size!.toLowerCase(),
+        hex: null,
+        swatch: null,
+        sortOrder,
+      }));
+      const options = !hasConfiguredSize && sizeValues.length
+        ? [...configuredOptions, {
+            id: sizeOptionId,
+            name: "Size",
+            normalizedName: "size",
+            sortOrder: -1,
+            values: sizeValues,
+          }].sort((a, b) => a.sortOrder - b.sortOrder)
+        : configuredOptions;
+      const sizeOption = options.find((option) => option.id === sizeOptionId);
+
+      const variantsWithSize = sizeOption
+        ? variants.map((variant) => {
+            const size = variant.size?.trim();
+            const sizeValue = size
+              ? sizeOption.values.find((value) => value.normalizedValue === size.toLowerCase())
+              : undefined;
+            return sizeValue
+              ? {
+                  ...variant,
+                  optionValues: [...variant.optionValues, {
+                    id: sizeValue.id,
+                    displayName: sizeValue.displayName,
+                    normalizedValue: sizeValue.normalizedValue,
+                    hex: sizeValue.hex,
+                    swatch: sizeValue.swatch,
+                    optionType: {
+                      id: sizeOption.id,
+                      name: sizeOption.name,
+                      normalizedName: sizeOption.normalizedName,
+                    },
+                  }],
+                }
+              : variant;
+          })
+        : variants;
+
       const mappedProduct: PublishedProductDetailResult = {
         id: product.id,
         title: product.title,
         slug: product.slug,
         description: product.description,
         shortDescription: product.shortDescription,
-        price: formatMoney(product.price)!,
+        price: formatMoney(product.price)! ,
         compareAtPrice: formatValidCompareAtPrice(product.price, product.compareAtPrice),
         currency: product.currency,
         status: "ACTIVE",
         seoTitle: product.seoTitle,
         seoDescription: product.seoDescription,
         media: product.images,
-        variants,
-        options: product.optionTypes.map(({ optionType, sortOrder }) => ({
-          id: optionType.id,
-          name: optionType.name,
-          normalizedName: optionType.normalizedName,
-          sortOrder,
-          values: optionType.values,
-        })),
+        variants: variantsWithSize,
+        options,
         categories: product.categories.map(({ category }) => category),
         collections: product.collections.map(({ collection }) => collection),
         tags: product.tags.map(({ tag }) => tag),
         availability: { state: "OUT_OF_STOCK", availableQuantity: null },
       };
-      validateVariantMatrix(mappedProduct, variants);
+      validateVariantMatrix(mappedProduct, variantsWithSize);
 
       const cheapestVariant = variants.reduce(
         (current, variant) =>
@@ -610,14 +666,8 @@ export function createCatalogQueryService(customRepository: Partial<QueryReposit
         seoTitle: product.seoTitle,
         seoDescription: product.seoDescription,
         media: product.images,
-        variants,
-        options: product.optionTypes.map(({ optionType, sortOrder }) => ({
-          id: optionType.id,
-          name: optionType.name,
-          normalizedName: optionType.normalizedName,
-          sortOrder,
-          values: optionType.values,
-        })),
+        variants: variantsWithSize,
+        options,
         categories: product.categories.map(({ category }) => category),
         collections: product.collections.map(({ collection }) => collection),
         tags: product.tags.map(({ tag }) => tag),
