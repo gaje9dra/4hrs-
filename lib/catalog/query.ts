@@ -366,6 +366,46 @@ function mapProduct(product: {
   };
 }
 
+function variantAvailabilityRank(state: InventoryAvailability): number {
+  switch (state) {
+    case "IN_STOCK":
+      return 4;
+    case "LOW_STOCK":
+      return 3;
+    case "UNTRACKED":
+      return 2;
+    case "OUT_OF_STOCK":
+      return 1;
+  }
+}
+
+function canonicalizeVariantCombinations(
+  optionTypeIds: Set<string>,
+  variants: PublishedProductDetailResult["variants"],
+): PublishedProductDetailResult["variants"] {
+  const canonicalByCombination = new Map<string, PublishedProductDetailResult["variants"][number]>();
+
+  for (const variant of variants) {
+    const combination = [...optionTypeIds]
+      .sort()
+      .map((optionTypeId) => {
+        const value = variant.optionValues.find((optionValue) => optionValue.optionType.id === optionTypeId);
+        return `${optionTypeId}=${value?.id ?? ""}`;
+      })
+      .join("|");
+
+    const existing = canonicalByCombination.get(combination);
+    if (
+      !existing ||
+      variantAvailabilityRank(variant.availability.state) > variantAvailabilityRank(existing.availability.state)
+    ) {
+      canonicalByCombination.set(combination, variant);
+    }
+  }
+
+  return [...canonicalByCombination.values()];
+}
+
 function validateVariantMatrix(
   product: PublishedProductDetailResult,
   variants: PublishedProductDetailResult["variants"],
@@ -689,6 +729,17 @@ export function createCatalogQueryService(customRepository: Partial<QueryReposit
         optionValues: variant.optionValues.filter((value) => renderableOptionIds.has(value.optionType.id)),
       }));
 
+      // Legacy/incomplete option data can collapse multiple database variants
+      // onto the same customer-visible combination after non-renderable option
+      // dimensions are removed. A PDP must expose one canonical variant per
+      // combination; prefer an available variant so a stale duplicate does not
+      // make a valid customer selection appear out of stock.
+      const renderableOptionTypeIds = new Set(renderableOptions.map((option) => option.id));
+      const canonicalVariants = canonicalizeVariantCombinations(
+        renderableOptionTypeIds,
+        renderableVariants,
+      );
+
       const mappedProduct: PublishedProductDetailResult = {
         id: product.id,
         title: product.title,
@@ -702,7 +753,7 @@ export function createCatalogQueryService(customRepository: Partial<QueryReposit
         seoTitle: product.seoTitle,
         seoDescription: product.seoDescription,
         media: product.images,
-        variants: renderableVariants,
+        variants: canonicalVariants,
         options: renderableOptions,
         categories: product.categories.map(({ category }) => category),
         collections: product.collections.map(({ collection }) => collection),
@@ -739,8 +790,8 @@ export function createCatalogQueryService(customRepository: Partial<QueryReposit
         seoTitle: product.seoTitle,
         seoDescription: product.seoDescription,
         media: product.images,
-        variants: variantsWithSize,
-        options,
+        variants: canonicalVariants,
+        options: renderableOptions,
         categories: product.categories.map(({ category }) => category),
         collections: product.collections.map(({ collection }) => collection),
         tags: product.tags.map(({ tag }) => tag),
