@@ -248,7 +248,7 @@ export type StorefrontHomeData = {
 export async function getStorefrontHomeCatalogData(): Promise<StorefrontHomeData> {
   const [newArrivalResult, categories, collections] = await Promise.all([
     getStorefrontProducts({ pageSize: 8, sort: "newest" }),
-    catalog.listActiveCategoriesWithPublishedProducts(),
+    catalog.listActiveCategories(),
     catalog.listActiveCollectionsWithPublishedProducts(),
   ]);
 

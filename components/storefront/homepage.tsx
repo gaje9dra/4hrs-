@@ -108,16 +108,19 @@ function CategoryDiscovery({ categories }: { categories: StorefrontHomeData["cat
           description="Go straight to a product family in the live catalog."
           className="mb-10"
         />
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2">
           {categories.slice(0, 6).map((category, index) => (
-            <Card key={category.id} className="min-h-36 overflow-hidden p-0">
+            <Card key={category.id} className="min-h-48 overflow-hidden p-0">
               <Link
                 href={categoryPath(category)}
-                className="motion-link relative flex min-h-36 h-full items-end justify-between gap-4 p-6 no-underline"
+                className="motion-link relative flex min-h-48 h-full items-end justify-between gap-6 p-7 sm:p-8 no-underline"
               >
-                <span aria-hidden="true" className={`absolute -right-6 -top-8 h-24 w-24 rounded-full ${index % 3 === 0 ? "bg-primary-red" : index % 3 === 1 ? "bg-primary-blue" : "bg-primary-yellow"}`} />
-                <span className="relative z-10 text-2xl font-900 uppercase leading-none">{category.name}</span>
-                <ArrowRight size={24} strokeWidth={3} aria-hidden="true" />
+                <span
+                  aria-hidden="true"
+                  className={`absolute -right-7 -top-9 h-28 w-28 ${index % 2 === 0 ? "rounded-full bg-primary-red" : "bg-primary-blue"}`}
+                />
+                <span className="relative z-10 text-2xl font-900 uppercase leading-none sm:text-3xl">{category.name}</span>
+                <ArrowRight size={28} strokeWidth={3} aria-hidden="true" />
               </Link>
             </Card>
           ))}
