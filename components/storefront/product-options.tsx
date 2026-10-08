@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check, ShoppingBag } from "lucide-react";
+import { Check, Ruler, ShoppingBag } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -134,21 +134,40 @@ export function ProductOptions({
         const renderOption = (option: (typeof product.options)[number], isSize = false) => {
           const selectedValue = option.values.find((value) => selection[option.id] === value.id);
           return (
-            <fieldset key={option.id} className="grid gap-3">
-              <legend className="flex flex-wrap items-center justify-between gap-3 text-sm font-900 uppercase">
-                <span>{isSize ? "SIZE" : option.name}: {selectedValue?.displayName ?? "Select"}</span>
+            <fieldset
+              key={option.id}
+              className={isSize
+                ? "grid gap-4 border-2 border-border bg-white p-4 shadow-[3px_3px_0_0_rgba(18,18,18,0.08)] sm:p-5"
+                : "grid gap-3"}
+            >
+              <legend className="sr-only">{isSize ? "Size" : option.name}</legend>
+              <div className="flex items-center justify-between gap-4">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <span className="text-sm font-900 uppercase tracking-[0.08em]">{isSize ? "Select size" : option.name}</span>
+                    {isSize && selectedValue ? (
+                      <span className="inline-flex items-center rounded-full bg-primary-blue px-2.5 py-1 text-[11px] font-900 uppercase tracking-[0.08em] text-white">
+                        {selectedValue.displayName} selected
+                      </span>
+                    ) : null}
+                  </div>
+                  {isSize ? (
+                    <p className="mt-1 text-xs font-600 text-muted-foreground">Choose the size that fits you best.</p>
+                  ) : null}
+                </div>
                 {isSize ? (
                   <button
                     type="button"
                     onClick={() => setSizeChartOpen(true)}
-                    className="rounded-full border-2 border-border px-4 py-2 text-xs font-900 tracking-[0.08em] text-foreground transition-transform hover:-translate-y-0.5 hover:bg-primary-yellow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-blue"
+                    className="inline-flex shrink-0 items-center gap-2 rounded-md border-2 border-border bg-primary-yellow px-3.5 py-2.5 text-[11px] font-900 uppercase tracking-[0.08em] text-foreground shadow-[2px_2px_0_0_rgba(18,18,18,0.12)] transition-[transform,box-shadow,background-color] hover:-translate-y-0.5 hover:bg-white hover:shadow-hard-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-blue"
                     aria-haspopup="dialog"
                   >
-                    SIZE CHART
+                    <Ruler size={14} strokeWidth={3} aria-hidden="true" />
+                    Size guide
                   </button>
                 ) : null}
-              </legend>
-              <div className="flex flex-wrap gap-2">
+              </div>
+              <div className={isSize ? "grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-6" : "flex flex-wrap gap-2"}>
                 {option.values.map((value) => {
                   const selected = selection[option.id] === value.id;
                   const selectable = isVariantValueSelectable(product, selection, option.id, value.id);
@@ -163,10 +182,12 @@ export function ProductOptions({
                       onClick={() => selectValue(option.id, value.id)}
                       className={[
                         isSize
-                          ? "h-14 min-w-14 border-2 border-border px-3 py-2 text-sm font-900 uppercase focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-blue"
+                          ? "flex h-12 items-center justify-center rounded-md border-2 border-border px-3 text-sm font-900 uppercase tracking-[0.04em] transition-[transform,box-shadow,background-color,color,border-color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-blue"
                           : "min-h-11 border-2 border-border px-4 py-2 text-sm font-800 uppercase focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-blue",
-                        selected ? "bg-primary-blue text-white shadow-hard-sm" : "bg-white",
-                        selectable ? "hover:-translate-y-0.5" : "cursor-not-allowed bg-[linear-gradient(to_bottom_right,transparent_48%,#121212_49%,#121212_51%,transparent_52%)] opacity-45 line-through",
+                        selected
+                          ? "border-primary-blue bg-primary-blue text-white shadow-[3px_3px_0_0_rgba(18,18,18,0.18)]"
+                          : "bg-white text-foreground hover:-translate-y-0.5 hover:border-primary-blue hover:bg-primary-yellow/20 hover:shadow-[2px_2px_0_0_rgba(18,18,18,0.1)]",
+                        selectable ? "" : "cursor-not-allowed bg-[linear-gradient(to_bottom_right,transparent_48%,#121212_49%,#121212_51%,transparent_52%)] opacity-40 line-through shadow-none hover:translate-y-0 hover:border-border hover:bg-white",
                         "motion-reduce:transition-none motion-reduce:hover:translate-y-0",
                       ].join(" ")}
                     >
