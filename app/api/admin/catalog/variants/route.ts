@@ -46,10 +46,34 @@ export async function POST(request: Request) {
       optionValueId = optionValue.id;
     }
 
-    const variant = await catalog.createVariant({
-      ...input,
-      optionValueIds: optionValueId ? [optionValueId] : input?.optionValueIds,
-    });
+    const product = typeof input?.productId === "string"
+      ? await catalog.getProductDetails(input.productId)
+      : null;
+    const normalizedSize = typeof input?.size === "string"
+      ? input.size.trim().replace(/\\s+/g, " ").toUpperCase()
+      : "";
+    const requestedSku = typeof input?.sku === "string" ? input.sku.trim() : "";
+
+    // Re-adding a size that was previously removed should reactivate the
+    // existing canonical variant instead of attempting to insert the same SKU.
+    const existingVariant = product?.variants.find((variant) =>
+      requestedSku && variant.sku === requestedSku
+        ? true
+        : Boolean(normalizedSize && variant.size?.trim().replace(/\\s+/g, " ").toUpperCase() === normalizedSize),
+    );
+
+    const variant = existingVariant && existingVariant.status === "INACTIVE"
+      ? await catalog.updateVariant(existingVariant.id, {
+          status: "ACTIVE",
+          size: normalizedSize || existingVariant.size,
+          sku: requestedSku || existingVariant.sku,
+          displayName: typeof input?.displayName === "string" ? input.displayName : existingVariant.displayName,
+          optionValueIds: optionValueId ? [optionValueId] : undefined,
+        })
+      : await catalog.createVariant({
+          ...input,
+          optionValueIds: optionValueId ? [optionValueId] : input?.optionValueIds,
+        });
 
     let fulfillmentMappingWarning: string | null = null;
     if (typeof input?.size === "string" && input.size.trim()) {
