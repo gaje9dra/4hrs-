@@ -605,7 +605,7 @@ export function createCatalogQueryService(customRepository: Partial<QueryReposit
       // is only added when the product already exposes the same value on the
       // configured option type.
       const variantsWithSize = variants.map((variant) => {
-        let optionValues = [...variant.optionValues];
+        const optionValues = [...variant.optionValues];
 
         if (sizeOption) {
           const size = variant.size?.trim();
