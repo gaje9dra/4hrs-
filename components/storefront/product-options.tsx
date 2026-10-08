@@ -118,44 +118,54 @@ export function ProductOptions({
 
   return (
     <div className="grid gap-6">
-      {product.options.map((option) => {
-        const selectedValue = option.values.find((value) => selection[option.id] === value.id);
-        const isSize = option.name.trim().toLowerCase() === "size";
+      {(() => {
+        const sizeOption = product.options.find((option) => option.name.trim().toLowerCase() === "size");
+        const otherOptions = product.options.filter((option) => option !== sizeOption);
+        const renderOption = (option: (typeof product.options)[number], isSize = false) => {
+          const selectedValue = option.values.find((value) => selection[option.id] === value.id);
+          return (
+            <fieldset key={option.id} className="grid gap-3">
+              <legend className="flex flex-wrap items-center justify-between gap-3 text-sm font-900 uppercase">
+                <span>{isSize ? "SIZE" : option.name}: {selectedValue?.displayName ?? "Select"}</span>
+                {isSize ? <span className="text-xs font-700 tracking-[0.08em] text-muted-foreground">Choose your fit</span> : null}
+              </legend>
+              <div className="flex flex-wrap gap-2">
+                {option.values.map((value) => {
+                  const selected = selection[option.id] === value.id;
+                  const selectable = isVariantValueSelectable(product, selection, option.id, value.id);
+                  return (
+                    <button
+                      key={value.id}
+                      type="button"
+                      aria-label={isSize ? `Size ${value.displayName}` : value.displayName}
+                      aria-pressed={selected}
+                      aria-disabled={!selectable}
+                      disabled={!selectable}
+                      onClick={() => selectValue(option.id, value.id)}
+                      className={[
+                        isSize
+                          ? "h-14 min-w-14 border-2 border-border px-3 py-2 text-sm font-900 uppercase focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-blue"
+                          : "min-h-11 border-2 border-border px-4 py-2 text-sm font-800 uppercase focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-blue",
+                        selected ? "bg-primary-blue text-white shadow-hard-sm" : "bg-white",
+                        selectable ? "hover:-translate-y-0.5" : "cursor-not-allowed bg-[linear-gradient(to_bottom_right,transparent_48%,#121212_49%,#121212_51%,transparent_52%)] opacity-45 line-through",
+                        "motion-reduce:transition-none motion-reduce:hover:translate-y-0",
+                      ].join(" ")}
+                    >
+                      {value.displayName}
+                    </button>
+                  );
+                })}
+              </div>
+            </fieldset>
+          );
+        };
         return (
-        <fieldset key={option.id} className="grid gap-3">
-          <legend className="flex flex-wrap items-center justify-between gap-3 text-sm font-900 uppercase">
-            <span>{option.name}: {selectedValue?.displayName ?? "Select"}</span>
-            {isSize ? <span className="text-xs font-700 tracking-[0.08em] text-muted-foreground">Choose your fit</span> : null}
-          </legend>
-          <div className="flex flex-wrap gap-2">
-            {option.values.map((value) => {
-              const selected = selection[option.id] === value.id;
-              const selectable = isVariantValueSelectable(product, selection, option.id, value.id);
-              return (
-                <button
-                  key={value.id}
-                  type="button"
-                  aria-pressed={selected}
-                  aria-disabled={!selectable}
-                  disabled={!selectable}
-                  onClick={() => selectValue(option.id, value.id)}
-                  className={[
-                    isSize
-                      ? "h-14 min-w-14 border-2 border-border px-3 py-2 text-sm font-900 uppercase focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-blue"
-                      : "min-h-11 border-2 border-border px-4 py-2 text-sm font-800 uppercase focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-blue",
-                    selected ? "bg-primary-blue text-white shadow-hard-sm" : "bg-white",
-                    selectable ? "hover:-translate-y-0.5" : "cursor-not-allowed bg-[linear-gradient(to_bottom_right,transparent_48%,#121212_49%,#121212_51%,transparent_52%)] opacity-45 line-through",
-                    "motion-reduce:transition-none motion-reduce:hover:translate-y-0",
-                  ].join(" ")}
-                >
-                  {value.displayName}
-                </button>
-              );
-            })}
-          </div>
-        </fieldset>
+          <>
+            {sizeOption ? renderOption(sizeOption, true) : null}
+            {otherOptions.map((option) => renderOption(option))}
+          </>
         );
-      })}
+      })()}
 
       <div className="border-t-2 border-border pt-5 lg:border-t-4" aria-live="polite">
         <div className="flex flex-wrap items-baseline gap-3">
