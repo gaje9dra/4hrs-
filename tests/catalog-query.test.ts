@@ -542,3 +542,96 @@ test("canonicalizes duplicate legacy variant combinations without breaking the P
   assert.equal(result.variants[0].id, "variant-1");
   assert.equal(result.variants[0].availability.state, "IN_STOCK");
 });
+
+
+test("keeps configured Size options visible when a legacy variant is missing size data", async () => {
+  const sizeOptionType = {
+    id: "option-size",
+    name: "Size",
+    normalizedName: "size",
+    sortOrder: 0,
+    values: [
+      {
+        id: "size-s",
+        displayName: "S",
+        normalizedValue: "s",
+        hex: null,
+        swatch: null,
+        sortOrder: 0,
+      },
+      {
+        id: "size-m",
+        displayName: "M",
+        normalizedValue: "m",
+        hex: null,
+        swatch: null,
+        sortOrder: 1,
+      },
+    ],
+  };
+
+  const sizeProduct = {
+    ...product,
+    id: "product-with-configured-sizes",
+    title: "Moral",
+    slug: "moral",
+    variants: [
+      {
+        ...product.variants[0],
+        id: "variant-size-m",
+        sku: "MORAL-M",
+        size: "M",
+        optionValues: [
+          {
+            optionValue: {
+              ...sizeOptionType.values[1],
+              optionType: sizeOptionType,
+            },
+          },
+        ],
+      },
+      {
+        ...product.variants[0],
+        id: "variant-size-s",
+        sku: "MORAL-S",
+        size: "S",
+        optionValues: [
+          {
+            optionValue: {
+              ...sizeOptionType.values[0],
+              optionType: sizeOptionType,
+            },
+          },
+        ],
+      },
+      {
+        ...product.variants[0],
+        id: "variant-legacy-base",
+        sku: "MORAL-BASE",
+        size: null,
+        optionValues: [],
+      },
+    ],
+    optionTypes: [{ optionType: sizeOptionType, sortOrder: 0 }],
+  };
+
+  const service = createCatalogQueryService({
+    ...queryRepository,
+    getPublishedProductDetailsBySlug: async () => ({
+      ...sizeProduct,
+      description: null,
+      shortDescription: null,
+      seoTitle: null,
+      seoDescription: null,
+      categories: [{ category: { id: "category-1", name: "T-Shirts", slug: "t-shirts", description: null, parentId: null } }],
+      collections: [{ collection: { id: "collection-1", name: "New Arrivals", slug: "new-arrivals", description: null } }],
+    }),
+  });
+
+  const result = await service.getPublishedProductDetailsBySlug("moral");
+
+  assert.equal(result.options.length, 1);
+  assert.equal(result.options[0].name, "Size");
+  assert.deepEqual(result.options[0].values.map((value) => value.displayName), ["S", "M"]);
+  assert.deepEqual(result.variants.map((variant) => variant.sku), ["MORAL-M", "MORAL-S"]);
+});
