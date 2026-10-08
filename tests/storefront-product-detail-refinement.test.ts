@@ -32,7 +32,7 @@ test("product hierarchy contains breadcrumb, H1, description, price, availabilit
 });
 
 test("variant engine is dynamic, canonical, deterministic and rejects unavailable combinations", () => {
-  assert.match(options, /product\.options\.map/);
+  assert.match(options, /product\.options\.(find|filter)/);
   assert.match(options, /resolveSelectedVariant/);
   assert.match(options, /selectionFromVariant/);
   assert.match(options, /getDeterministicInitialVariant/);
