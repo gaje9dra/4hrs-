@@ -9,8 +9,8 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export const metadata: Metadata = {
-  title: "Checkout — 4HRS",
-  description: "Private 4HRS Checkout.",
+  title: "Payment — 4HRS",
+  description: "Secure 4HRS payment checkout powered by PayU.",
   robots: { index: false, follow: false, noarchive: true },
 };
 

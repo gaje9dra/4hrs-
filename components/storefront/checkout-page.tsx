@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { ArrowLeft, Check, CreditCard, LockKeyhole, ShieldCheck } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -260,9 +261,22 @@ export function CheckoutPage({ customer }: { customer: CustomerDto }) {
   return (
     <div>
       <header className="border-b-4 border-border pb-6">
-        <p className="text-xs font-900 uppercase tracking-[.25em] text-primary-blue">4HRS / Secure storefront</p>
-        <h1 className="mt-3">Checkout</h1>
-        <p className="mt-4 max-w-2xl text-sm leading-6">Review your server-confirmed Cart, choose a delivery address, and continue securely to PayU for payment.</p>
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <p className="text-xs font-900 uppercase tracking-[.25em] text-primary-blue">4HRS+ / Secure payment</p>
+            <h1 className="mt-3 uppercase">Payment</h1>
+            <p className="mt-4 max-w-2xl text-sm leading-6">Confirm your delivery details and order total. You will then be transferred to PayU&apos;s secure hosted payment page.</p>
+          </div>
+          <div className="flex items-center gap-2 border-2 border-border bg-white px-3 py-2 text-xs font-900 uppercase shadow-hard-sm">
+            <LockKeyhole size={16} aria-hidden="true" />
+            Secure checkout
+          </div>
+        </div>
+        <div className="mt-6 grid gap-2 sm:grid-cols-3">
+          <div className="flex items-center gap-2 text-xs font-900 uppercase"><span className="grid size-7 place-items-center rounded-full border-2 border-border bg-primary-yellow"><Check size={14} aria-hidden="true" /></span> Cart confirmed</div>
+          <div className="flex items-center gap-2 text-xs font-900 uppercase"><span className="grid size-7 place-items-center rounded-full border-2 border-border bg-primary-yellow"><Check size={14} aria-hidden="true" /></span> Address verified</div>
+          <div className="flex items-center gap-2 text-xs font-900 uppercase"><span className="grid size-7 place-items-center rounded-full border-2 border-border bg-primary-blue text-white"><CreditCard size={14} aria-hidden="true" /></span> Payment</div>
+        </div>
       </header>
 
       <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
@@ -278,15 +292,38 @@ export function CheckoutPage({ customer }: { customer: CustomerDto }) {
 
           {stateMessage ? <section aria-labelledby="cart-state"><Alert variant="error" title={state === "price_changed" ? "Price changed" : state === "cart_changed" ? "Cart changed" : "Availability changed"}>{stateMessage}</Alert><div className="mt-4"><Button href="/cart" variant="yellow">Review Cart</Button></div></section> : null}
 
-          <Card><p className="text-xs font-900 uppercase tracking-[.2em] text-primary-blue">Payment</p><h2 className="mt-2 text-2xl">Secure PayU checkout</h2><p className="mt-3 text-sm leading-6">Your final amount and delivery address are revalidated on our server before you are sent to PayU.</p></Card>
+          <Card className="border-4">
+            <div className="flex items-start gap-4">
+              <div className="grid size-12 shrink-0 place-items-center border-2 border-border bg-primary-yellow shadow-hard-sm">
+                <ShieldCheck size={24} aria-hidden="true" />
+              </div>
+              <div>
+                <p className="text-xs font-900 uppercase tracking-[.2em] text-primary-blue">Payment provider</p>
+                <h2 className="mt-2 text-2xl uppercase">PayU Hosted Checkout</h2>
+                <p className="mt-3 text-sm leading-6">Your card, UPI, net-banking and other payment details are entered on PayU&apos;s hosted payment page. 4HRS+ does not collect those credentials on this page.</p>
+              </div>
+            </div>
+            <div className="mt-5 grid gap-3 border-t-2 border-border pt-5 sm:grid-cols-3">
+              <div className="border-2 border-border bg-muted p-3 text-center text-xs font-900 uppercase">UPI</div>
+              <div className="border-2 border-border bg-muted p-3 text-center text-xs font-900 uppercase">Cards</div>
+              <div className="border-2 border-border bg-muted p-3 text-center text-xs font-900 uppercase">Net Banking</div>
+            </div>
+          </Card>
         </div>
 
         <aside className="border-4 border-border bg-primary-yellow p-5 shadow-hard-md lg:sticky lg:top-6" aria-labelledby="checkout-summary">
-          <div className="flex items-center justify-between gap-4"><h2 id="checkout-summary" className="text-2xl">Order summary</h2><span className="text-xs font-900 uppercase">{checkout.cart.items.length} items</span></div>
+          <div className="flex items-center justify-between gap-4"><h2 id="checkout-summary" className="text-2xl uppercase">Order summary</h2><span className="text-xs font-900 uppercase">{checkout.cart.items.length} items</span></div>
           <div className="mt-5 grid gap-4">{checkout.cart.items.map((item) => <article key={item.id} className={"border-2 border-border bg-white p-3 " + (affectedItems.has(item.id) ? "ring-2 ring-primary-red" : "")}><div className="flex gap-3"><div className="relative size-16 shrink-0 overflow-hidden border-2 border-border bg-muted">{item.product?.media?.url ? <Image src={item.product.media.url} alt={item.product.media.altText ?? item.product.title} fill sizes="4rem" className="object-cover" /> : <span className="flex h-full items-center justify-center text-[9px] font-900 uppercase">No image</span>}</div><div className="min-w-0 flex-1"><h3 className="break-words text-sm font-900 uppercase">{item.product?.title ?? "Unavailable product"}</h3>{item.variant ? <p className="mt-1 text-xs font-700">{[item.variant.displayName, item.variant.size, item.variant.color].filter(Boolean).join(" · ")}</p> : null}<p className="mt-2 text-xs font-800 uppercase">Qty {item.quantity}</p></div><p className="text-sm font-900">{money(item.subtotal ?? "—", item.currency)}</p></div></article>)}</div>
           <dl className="mt-6 grid gap-3 border-t-2 border-border pt-4 text-sm"><div className="flex justify-between gap-4"><dt className="font-900 uppercase">Merchandise</dt><dd>{money(checkout.totals.merchandiseSubtotal, checkout.totals.currency)}</dd></div>{checkout.totals.adjustments.map((item) => <div key={item.code} className="flex justify-between gap-4"><dt>{item.code}</dt><dd>{money(item.amount, checkout.totals.currency)}</dd></div>)}{checkout.totals.charges.map((item) => <div key={item.code} className="flex justify-between gap-4"><dt>{item.code}</dt><dd>{money(item.amount, checkout.totals.currency)}</dd></div>)}<div className="flex justify-between gap-4 border-t-2 border-border pt-3 text-xl font-900"><dt className="uppercase">Total</dt><dd>{money(checkout.totals.total, checkout.totals.currency)}</dd></div></dl>
-          <div className="mt-5"><Button type="button" disabled={!canContinue} loading={state === "starting_payment"} onClick={() => void startPayment()} className="w-full">Continue to payment</Button>{error && state === "valid" ? <Alert variant="error" title="Payment could not be started" className="mt-3">{error}</Alert> : null}<p className="mt-3 text-xs font-700 uppercase">You will be redirected to PayU&apos;s secure payment page.</p></div>
-          <Button href="/cart" variant="ghost" className="mt-4 w-full text-xs">Return to Cart</Button>
+          <div className="mt-5 border-t-2 border-border pt-5">
+            <div className="flex items-center gap-2 text-xs font-900 uppercase"><LockKeyhole size={16} aria-hidden="true" /> Secure payment via PayU</div>
+            <Button type="button" disabled={!canContinue} loading={state === "starting_payment"} onClick={() => void startPayment()} className="mt-4 w-full text-base">
+              {state === "starting_payment" ? "Connecting to PayU…" : "Pay securely"}
+            </Button>
+            {error && state === "valid" ? <Alert variant="error" title="Payment could not be started" className="mt-3">{error}</Alert> : null}
+            <p className="mt-3 text-xs font-700 uppercase leading-5">The final amount is validated on our server before PayU is opened. Your PayU Salt never reaches the browser.</p>
+          </div>
+          <Button href="/cart" variant="ghost" className="mt-4 w-full text-xs"><ArrowLeft size={14} aria-hidden="true" /> Return to Cart</Button>
         </aside>
       </div>
     </div>
