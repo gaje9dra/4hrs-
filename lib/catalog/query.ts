@@ -760,7 +760,7 @@ export function createCatalogQueryService(customRepository: Partial<QueryReposit
         tags: product.tags.map(({ tag }) => tag),
         availability: { state: "OUT_OF_STOCK", availableQuantity: null },
       };
-      validateVariantMatrix(mappedProduct, renderableVariants);
+      validateVariantMatrix(mappedProduct, canonicalVariants);
 
       const cheapestVariant = variants.reduce(
         (current, variant) =>
