@@ -3,7 +3,7 @@ import { resolveCurrentCustomer } from "@/lib/auth/context";
 import { createCartApplication } from "@/lib/cart/api";
 import { createCustomerAddressService } from "@/lib/customer/address-service";
 import { CheckoutError } from "@/lib/checkout/errors";
-import type { CheckoutApplicationDependencies, CheckoutRequest, CheckoutRevision } from "@/lib/checkout/contracts";
+import type { CheckoutApplicationDependencies, CheckoutRequest, CheckoutRevision, CheckoutPaymentMethod } from "@/lib/checkout/contracts";
 import { createCheckoutService } from "@/lib/checkout/service";
 
 export const CHECKOUT_API_MAX_BODY_BYTES = 16 * 1024;
@@ -43,11 +43,19 @@ function parseSelectedAddressId(value: unknown): string | null | undefined {
   return value;
 }
 
+function parsePaymentMethod(value: unknown): CheckoutPaymentMethod | undefined {
+  if (value === undefined) return undefined;
+  if (value !== "upi" && value !== "cards" && value !== "netbanking") {
+    throw new CheckoutError("CHECKOUT_INCOMPLETE", "Payment method is invalid.");
+  }
+  return value;
+}
+
 function assertRequestObject(value: unknown): asserts value is Record<string, unknown> {
   if (value === null || typeof value !== "object" || Array.isArray(value)) {
     throw new CheckoutError("CHECKOUT_INCOMPLETE", "Checkout request must be a JSON object.");
   }
-  const unexpected = Object.keys(value).filter((key) => key !== "selectedAddressId" && key !== "expectedRevision");
+  const unexpected = Object.keys(value).filter((key) => !["selectedAddressId", "expectedRevision", "paymentMethod"].includes(key));
   if (unexpected.length) throw new CheckoutError("CHECKOUT_INCOMPLETE", "Checkout request contains unsupported fields.");
 }
 
@@ -67,7 +75,7 @@ async function readRequest(request: Request): Promise<CheckoutRequest> {
   try {
     const parsed = JSON.parse(body);
     assertRequestObject(parsed);
-    return { selectedAddressId: parseSelectedAddressId(parsed.selectedAddressId), expectedRevision: parseExpectedRevision(parsed.expectedRevision) };
+    return { selectedAddressId: parseSelectedAddressId(parsed.selectedAddressId), expectedRevision: parseExpectedRevision(parsed.expectedRevision), paymentMethod: parsePaymentMethod(parsed.paymentMethod) };
   } catch (error) {
     if (error instanceof CheckoutError) throw error;
     throw new CheckoutError("CHECKOUT_INCOMPLETE", "Checkout request must contain valid JSON.");

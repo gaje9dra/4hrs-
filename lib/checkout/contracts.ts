@@ -44,7 +44,12 @@ export type CheckoutDto = {
   };
 };
 
-export type CheckoutRequest = { selectedAddressId?: string | null; expectedRevision?: CheckoutRevision };
+export type CheckoutPaymentMethod = "upi" | "cards" | "netbanking";
+export type CheckoutRequest = {
+  selectedAddressId?: string | null;
+  expectedRevision?: CheckoutRevision;
+  paymentMethod?: CheckoutPaymentMethod;
+};
 
 export type CheckoutApplicationDependencies = {
   resolveCustomer: (request: Request) => Promise<CustomerDto | null>;

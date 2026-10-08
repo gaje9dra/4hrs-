@@ -59,7 +59,7 @@ export type PaymentApplicationService = {
     processed: boolean;
     payment: PaymentDto | null;
   }>;
-  startProviderPayment(paymentId: string, customerId: string): Promise<PaymentDto>;
+  startProviderPayment(paymentId: string, customerId: string, paymentMethod?: "upi" | "cards" | "netbanking"): Promise<PaymentDto>;
 };
 
 function toPaymentDto(payment: PaymentRecord): PaymentDto {
@@ -502,7 +502,7 @@ export function createPaymentApplication(
     }
   }
 
-  async function startProviderPayment(paymentId: string, customerId: string): Promise<PaymentDto> {
+  async function startProviderPayment(paymentId: string, customerId: string, paymentMethod?: "upi" | "cards" | "netbanking"): Promise<PaymentDto> {
     const payment = await repository.getPaymentById(paymentId, customerId);
     if (!payment) throw new PaymentError("PAYMENT_NOT_FOUND", "Payment could not be found.");
     if (!providerResolver) throw new PaymentError("PROVIDER_CONFIGURATION_MISSING", "No payment provider is configured.");
@@ -528,6 +528,7 @@ export function createPaymentApplication(
         attemptReference: attempt.id,
         amount: { value: payment.amount.toFixed(2), currency: payment.currency },
         idempotencyReference,
+        ...(paymentMethod ? { metadata: { paymentMethod } } : {}),
       });
 
       if (result.providerId !== adapter.id) {

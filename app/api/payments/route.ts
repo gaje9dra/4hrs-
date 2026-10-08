@@ -39,7 +39,7 @@ export async function POST(request: Request) {
 
     if (payment.status === "SUCCEEDED") return paymentJson(payment);
 
-    const started = await paymentApplication.startProviderPayment(payment.id, checkout.customer.id);
+    const started = await paymentApplication.startProviderPayment(payment.id, checkout.customer.id, checkoutRequest.paymentMethod);
     return paymentJson(started);
   } catch (error) {
     return paymentErrorResponse(error);
