@@ -47,7 +47,7 @@ export function ProductCard({ product }: { product: StorefrontProductCard }) {
                 fill
                 loading="lazy"
                 sizes="(max-width: 1023px) 50vw, (max-width: 1535px) 33vw, 25vw"
-                className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                className="scale-[1.16] object-cover transition-transform duration-300 group-hover:scale-[1.2]"
               />
             ) : (
               <div className="flex h-full items-center justify-center bg-primary-yellow p-6 text-center text-sm font-900 uppercase">
