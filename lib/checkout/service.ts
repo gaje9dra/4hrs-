@@ -200,7 +200,7 @@ export function createCheckoutService(dependencies: CheckoutDependencies) {
           totals = { ...totals, adjustments: [{ code: "Coupon " + calculation.code, amount: "-" + calculation.discountAmount }], total: calculation.payableTotal };
         } catch (error) {
           const message = error instanceof Error ? error.message : "Coupon could not be validated.";
-          issues.push(issue("INCOMPLETE_CHECKOUT", message));
+          issues.push(issue("COUPON_INVALID", message));
         }
       }
       const finalValidationState = issues[0]?.code ?? "VALID";
