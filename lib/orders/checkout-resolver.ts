@@ -144,6 +144,14 @@ export async function resolveOrderCheckout(
     .reduce((sum, item) => sum.add(new Prisma.Decimal(item.lineTotal)), new Prisma.Decimal(0))
     .toFixed(2);
   const revision = revisionForItems(cart.id, items);
+  const redemption = await client.couponRedemption.findUnique({ where: { checkoutReference: paymentCheckoutReference } });
+  if (redemption && (redemption.customerId !== customerId || !["RESERVED", "REDEEMED"].includes(redemption.status) || !new Prisma.Decimal(redemption.eligibleTotal).eq(subtotal) || redemption.currency !== [...currencies][0])) {
+    throw new OrderDomainError("CHECKOUT_INVALID", "The coupon reservation no longer matches the authoritative Checkout.");
+  }
+  const discountTotal = redemption?.discountTotal.toFixed(2) ?? "0.00";
+  const couponCode = redemption?.couponCodeSnapshot ?? null;
+  const couponDiscountPercent = redemption?.discountPercentSnapshot ?? null;
+  const total = new Prisma.Decimal(subtotal).minus(discountTotal).toFixed(2);
 
   const addresses = await client.customerAddress.findMany({
     where: { customerId },
@@ -155,9 +163,11 @@ export async function resolveOrderCheckout(
       customer: { id: customerId, email: "", displayName: null },
       cart: { id: cart.id },
       address: { id: address.id },
-      totals: { total: subtotal, currency },
+      totals: { total, currency },
       revision,
       validation: { state: "VALID" },
+      couponCode,
+      discountTotal,
     });
 
     if (checkoutReference === paymentCheckoutReference) {
@@ -177,7 +187,10 @@ export async function resolveOrderCheckout(
         },
         items,
         subtotal,
-        total: subtotal,
+        discountTotal,
+        couponCode,
+        couponDiscountPercent,
+        total,
         currency,
       };
     }
