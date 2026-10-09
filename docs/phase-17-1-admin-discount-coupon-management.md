@@ -41,12 +41,12 @@ This branch extends the original admin coupon foundation with checkout previews,
 ## Automated tests added
 
 - tests/coupon-calculation.test.ts: 1%, 10%, 20%, 50%, cap, minimum subtotal, inactive/future/expired coupon, and zero-payable boundary checks.
-- tests/coupon-redemption-concurrency.test.ts: PostgreSQL-backed concurrent attempts against a 10-use coupon; verifies accepted and persisted reservations never exceed capacity. It is skipped unless running in CI against an identified test/local database.
+- tests/coupon-redemption-concurrency.test.ts: PostgreSQL-backed concurrent attempts against a 10-use coupon; verifies accepted and persisted reservations never exceed capacity, repeated checkout reservation is idempotent, and per-customer usage limits are enforced. It is skipped unless running in CI against an identified test/local database.
 - tests/coupon-order-financials.test.ts: verifies the verified payment amount matches the discounted order total and rejects excessive or inconsistent discounts.
 
 ## Verification and remaining blockers
 
-The GitHub Actions workflow is the source of truth for CI. The latest completed full test run failed on two existing catalog/performance contract tests (tests/catalog-query.test.ts and tests/phase-15-2-performance.test.ts) and on two coupon/checkout assertions that have since been corrected. A rerun of the corrected branch is required. Typecheck also reports the existing lib/catalog/search.ts CatalogListItem.images contract mismatch; this is outside Phase 17.1 and has not been changed as part of this scoped PR. Build was skipped after typecheck failed. Do not interpret added tests as proof they pass.
+The latest completed GitHub Actions run on the implementation branch reports: lint PASS; Prisma validation, migration, and recovery-drill checks PASS; typecheck FAIL due only to the existing lib/catalog/search.ts CatalogListItem.images contract mismatch; and the full test suite FAIL due two existing failures in tests/catalog-query.test.ts and tests/phase-15-2-performance.test.ts. The coupon calculation, discounted-order financial, checkout UI, and PostgreSQL reservation tests passed in that run. Build was skipped after typecheck failed. The typecheck and catalog/performance failures are outside Phase 17.1 and have not been changed as part of this scoped PR. Do not interpret the overall test suite as green.
 
 Still required before READY:
 - Confirm latest npm ci, npm run lint, npm run typecheck, npm test, npm run build, npx prisma validate, and npx prisma generate results.
