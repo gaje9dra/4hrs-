@@ -173,7 +173,7 @@ export function createShippingApplication(
     }
 
     try {
-      for (let attempt = 0; attempt < 3; attempt += 1) {
+      for (let attempt = 0; attempt < 5; attempt += 1 {
         try {
           return await database.$transaction(async (tx) => {
         const txRepository = createShippingRepository(tx);
@@ -230,8 +230,9 @@ export function createShippingApplication(
           if (
             error instanceof Prisma.PrismaClientKnownRequestError
             && error.code === "P2034"
-            && attempt < 2
+            && attempt < 4
           ) {
+            await new Promise((resolve) => setTimeout(resolve, 20 * (attempt + 1)));
             continue;
           }
           throw error;
