@@ -17,7 +17,7 @@ This branch extends the original admin coupon foundation with checkout previews,
 - Existing checkout request accepts an optional normalized coupon code; checkout can also remove a coupon by sending couponCode: null.
 - Shared lib/coupons/calculation.ts uses Prisma Decimal arithmetic and two-decimal rounding for percentage discounts, maximum-discount caps, minimum-subtotal rules, and non-negative payable totals.
 - Checkout response carries server-calculated coupon preview, discount adjustment, and payable total. Browser-supplied amounts are not accepted.
-- Checkout UI supports apply/remove actions, busy/error/success feedback, and displays savings. Payment initiation revalidates checkout and submits the server-calculated total to the existing payment application.
+- Checkout UI supports apply/remove actions, busy/error/success feedback, and displays savings. Payment initiation revalidates checkout and submits the server-calculated total to the existing payment application. Coupons that would reduce the payable amount to zero are rejected because the current payment/order flow has no zero-value order path.
 - Checkout payment references include coupon identity and discount snapshot, so distinct coupon choices do not alias the same payment reference.
 
 ### Reservation, PayU, and order
@@ -34,7 +34,7 @@ This branch extends the original admin coupon foundation with checkout previews,
 - Capacity is counted as completed redemptions plus active RESERVED rows; the coupon row lock serializes reservations for the same coupon.
 - A checkout reference can own at most one redemption; a reservation cannot be claimed by another customer or checkout.
 - Verified payment success finalizes a reservation once with the order transaction. Duplicate callbacks reuse existing order/redemption state.
-- A definitive unsuccessful provider state releases a matching still-reserved redemption. Unknown/non-terminal payment states retain capacity rather than assuming no money was collected.
+- Cancellation/expiry releases a matching reservation when the provider state is definitive. A retryable FAILED payment retains its reservation through the initial 15-minute retry window; after that window, expiry processing releases the reservation only when the associated payment is known to be FAILED/CANCELLED/EXPIRED. Unknown, CREATED, PROCESSING, REQUIRES_ACTION, or successful payment states retain capacity until verified finalization/reconciliation rather than assuming no money was collected.
 - Completed redemptions remain historical and continue consuming the configured redemption limit after cancellation/refund. This avoids silently reissuing a promotion after a completed payment; the current PayU adapter does not support refunds. Any future policy to restore capacity after a completed refund requires an explicit audited business rule and reconciliation design.
 - A late successful payment with an expired/released reservation is not silently granted a new redemption. Order creation fails safely for reconciliation rather than allowing a different checkout to claim that capacity.
 
@@ -42,10 +42,11 @@ This branch extends the original admin coupon foundation with checkout previews,
 
 - tests/coupon-calculation.test.ts: 1%, 10%, 20%, 50%, cap, minimum subtotal, inactive/future/expired coupon, and zero-payable boundary checks.
 - tests/coupon-redemption-concurrency.test.ts: PostgreSQL-backed concurrent attempts against a 10-use coupon; verifies accepted and persisted reservations never exceed capacity. It is skipped unless running in CI against an identified test/local database.
+- tests/coupon-order-financials.test.ts: verifies the verified payment amount matches the discounted order total and rejects excessive or inconsistent discounts.
 
 ## Verification and remaining blockers
 
-The GitHub Actions workflow is the source of truth for CI. At the time of this update, no green result has been confirmed for the latest branch head. Do not interpret added tests as proof they pass.
+The GitHub Actions workflow is the source of truth for CI. The latest completed full test run failed on two existing catalog/performance contract tests (tests/catalog-query.test.ts and tests/phase-15-2-performance.test.ts) and on two coupon/checkout assertions that have since been corrected. A rerun of the corrected branch is required. Typecheck also reports the existing lib/catalog/search.ts CatalogListItem.images contract mismatch; this is outside Phase 17.1 and has not been changed as part of this scoped PR. Build was skipped after typecheck failed. Do not interpret added tests as proof they pass.
 
 Still required before READY:
 - Confirm latest npm ci, npm run lint, npm run typecheck, npm test, npm run build, npx prisma validate, and npx prisma generate results.
