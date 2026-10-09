@@ -20,6 +20,7 @@ export type StorefrontProductCard = {
   slug: string;
   href: string;
   image: { url: string; altText: string | null } | null;
+  images: Array<{ url: string; altText: string | null }>;
   price: string;
   compareAtPrice: string | null;
   currency: string;
@@ -83,6 +84,7 @@ function toProductCard(product: {
   title: string;
   slug: string;
   primaryImage: { url: string; altText: string | null } | null;
+  images: Array<{ url: string; altText: string | null }>;
   price: string;
   compareAtPrice: string | null;
   currency: string;
@@ -94,6 +96,7 @@ function toProductCard(product: {
     slug: product.slug,
     href: productPath(product),
     image: product.primaryImage,
+    images: product.images,
     price: product.price,
     compareAtPrice: product.compareAtPrice,
     currency: product.currency,

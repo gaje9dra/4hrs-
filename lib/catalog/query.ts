@@ -59,6 +59,7 @@ export type CatalogListItem = {
     url: string;
     altText: string | null;
   } | null;
+  images: Array<{ url: string; altText: string | null }>;
   price: string;
   compareAtPrice: string | null;
   currency: string;
@@ -358,6 +359,7 @@ function mapProduct(product: {
     primaryImage: product.images[0]
       ? { url: product.images[0].url, altText: product.images[0].altText }
       : null,
+    images: product.images.map(({ url, altText }) => ({ url, altText })),
     price: cheapest?.effectivePrice ?? formatMoney(product.price)!,
     compareAtPrice: cheapest?.compareAtPrice ?? formatMoney(product.compareAtPrice),
     currency: product.currency,
