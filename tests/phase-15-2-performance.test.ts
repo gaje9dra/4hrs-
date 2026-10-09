@@ -9,7 +9,9 @@ test("Phase 15.2 keeps public catalog listing projections bounded to card requir
   assert.ok(start >= 0 && end > start, "public catalog list projection must remain explicit");
 
   const projection = source.slice(start, end);
-  assert.match(projection, /take: 1/);
+  assert.doesNotMatch(projection, /take: 1/);
+  assert.match(projection, /images:\s*\{/);
+  assert.match(projection, /orderBy: \[\{ isPrimary: "desc" as const \}, \{ sortOrder: "asc" as const \}, \{ id: "asc" as const \}\]/);
   assert.match(projection, /inventory:/);
   assert.doesNotMatch(projection, /optionValues/);
   assert.doesNotMatch(projection, /categories:/);

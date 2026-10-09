@@ -276,9 +276,9 @@ const publicCatalogSelect = {
   },
 } satisfies Prisma.ProductSelect;
 
-// Product-card/listing DTOs only need the canonical display price, primary image,
-// and variant inventory state. Keep this projection deliberately narrow so public
-// catalog grids do not hydrate unrelated taxonomy or option data.
+// Product-card/listing DTOs include the ordered product gallery so hover
+// previews can cycle through alternate images. Keep taxonomy and option data
+// out of this projection to avoid hydrating unrelated catalog data.
 const publicCatalogListSelect = {
   id: true,
   title: true,
@@ -290,7 +290,6 @@ const publicCatalogListSelect = {
   images: {
     where: { productId: { not: null } },
     orderBy: [{ isPrimary: "desc" as const }, { sortOrder: "asc" as const }, { id: "asc" as const }],
-    take: 1,
     select: { id: true, url: true, altText: true },
   },
   variants: {
