@@ -391,6 +391,7 @@ export function createCatalogSearchService(options: {
           title: item.title,
           slug: item.slug,
           primaryImage: item.primaryImage ? { url: item.primaryImage.url, altText: item.primaryImage.altText } : null,
+          images: item.primaryImage ? [{ url: item.primaryImage.url, altText: item.primaryImage.altText }] : [],
           price: item.price,
           compareAtPrice: item.compareAtPrice,
           currency: item.currency,

@@ -4,6 +4,7 @@ import { createPaymentApplication } from "@/lib/payments/application";
 import { createOrderApplication } from "@/lib/orders/application";
 import { createPaymentRepository } from "@/lib/payments/repository";
 import { PaymentError } from "@/lib/payments/errors";
+import { releaseCouponReservation } from "@/lib/coupons/redemptions";
 
 const application = createPaymentApplication();
 const orderApplication = createOrderApplication();
@@ -28,6 +29,11 @@ export async function POST(request: Request) {
     }
 
     const result = await application.processNormalizedPaymentEvent(event);
+
+    if (result.payment?.status === "CANCELLED" || result.payment?.status === "EXPIRED") {
+      const failedPayment = await paymentRepository.getPaymentByInternalReference(event.internalPaymentReference ?? "");
+      if (failedPayment) await releaseCouponReservation({ checkoutReference: failedPayment.checkoutReference, customerId: failedPayment.customerId });
+    }
 
     if (result.payment?.status === "SUCCEEDED") {
       const payment = await paymentRepository.getPaymentByInternalReference(event.internalPaymentReference ?? "");

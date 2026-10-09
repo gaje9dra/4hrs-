@@ -7,6 +7,8 @@ export type CheckoutPaymentReferenceInput = {
   totals: { total: string; currency: string | null };
   revision: { cart: string; pricing: string; availability: string };
   validation: { state: string };
+  couponCode?: string | null;
+  discountTotal?: string;
 };
 
 export function createCheckoutPaymentReference(
@@ -25,6 +27,8 @@ export function createCheckoutPaymentReference(
     checkout.address?.id ?? "",
     checkout.totals.total,
     checkout.totals.currency ?? "",
+    checkout.couponCode?.trim().toUpperCase() ?? "",
+    checkout.discountTotal ?? "0.00",
   ].join("\n");
   return createHash("sha256").update(value).digest("hex");
 }

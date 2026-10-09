@@ -17,13 +17,13 @@ type UiState = "loading" | "ready" | "address_required" | "validating" | "valid"
 const availabilityStates = new Set(["PRODUCT_UNAVAILABLE", "VARIANT_UNAVAILABLE", "INVALID_QUANTITY", "INSUFFICIENT_AVAILABILITY"]);
 const addressStates = new Set(["INVALID_ADDRESS", "ADDRESS_NOT_OWNED", "ADDRESS_NOT_FOUND", "INCOMPLETE_CHECKOUT"]);
 
-async function checkoutRequest(method: "GET" | "POST", selectedAddressId?: string | null, expectedRevision?: CheckoutDto["revision"]): Promise<CheckoutDto> {
+async function checkoutRequest(method: "GET" | "POST", selectedAddressId?: string | null, expectedRevision?: CheckoutDto["revision"], couponCode?: string | null): Promise<CheckoutDto> {
   const response = await fetch("/api/checkout", {
     method,
     cache: "no-store",
     credentials: "same-origin",
     headers: { Accept: "application/json", ...(method === "POST" ? { "Content-Type": "application/json" } : {}) },
-    body: method === "POST" ? JSON.stringify({ selectedAddressId, ...(expectedRevision ? { expectedRevision } : {}) }) : undefined,
+    body: method === "POST" ? JSON.stringify({ selectedAddressId, ...(expectedRevision ? { expectedRevision } : {}), ...(couponCode !== undefined ? { couponCode } : {}) }) : undefined,
   });
   const body = await response.json().catch(() => null) as CheckoutDto | ApiError | null;
   if (response.status === 401) throw new Error("SESSION_EXPIRED");
@@ -124,18 +124,23 @@ export function CheckoutPage({ customer }: { customer: CustomerDto }) {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<CheckoutPaymentMethod>("upi");
+  const [couponInput, setCouponInput] = useState("");
+  const [couponPending, setCouponPending] = useState(false);
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [couponNotice, setCouponNotice] = useState<string | null>(null);
   const pendingRef = useRef(false);
   const requestVersion = useRef(0);
   const selectedAddressRef = useRef<string | null>(null);
   const revisionRef = useRef<CheckoutDto["revision"] | undefined>(undefined);
+  const appliedCouponRef = useRef<string | null>(null);
 
   const load = useCallback(async (preserveSelection: boolean) => {
     const version = ++requestVersion.current;
     setState("loading"); setError(null);
     try {
-      const [nextCheckout, nextAddresses] = await Promise.all([checkoutRequest("GET"), addressRequest()]);
+      const [nextCheckout, nextAddresses] = await Promise.all([checkoutRequest("POST", preserveSelection ? selectedAddressRef.current : null, undefined, appliedCouponRef.current), addressRequest()]);
       if (version !== requestVersion.current) return;
-      setCheckout(nextCheckout); revisionRef.current = nextCheckout.revision; setAddresses(nextAddresses);
+      setCheckout(nextCheckout); appliedCouponRef.current = nextCheckout.coupon?.code ?? null; revisionRef.current = nextCheckout.revision; setAddresses(nextAddresses); setCouponInput(nextCheckout.coupon?.code ?? ""); setCouponError(nextCheckout.validation.issues.find((item) => item.code === "COUPON_INVALID")?.message ?? null);
       const serverAddress = nextCheckout.address?.id ?? null;
       setSelectedAddressId(preserveSelection && selectedAddressRef.current && nextAddresses.some((item) => item.id === selectedAddressRef.current) ? selectedAddressRef.current : serverAddress);
       setState(classify(nextCheckout));
@@ -152,6 +157,9 @@ export function CheckoutPage({ customer }: { customer: CustomerDto }) {
       .then(([nextCheckout, nextAddresses]) => {
         if (version !== requestVersion.current) return;
         setCheckout(nextCheckout);
+        appliedCouponRef.current = nextCheckout.coupon?.code ?? null;
+        setCouponInput(nextCheckout.coupon?.code ?? "");
+        setCouponError(nextCheckout.validation.issues.find((item) => item.code === "COUPON_INVALID")?.message ?? null);
         revisionRef.current = nextCheckout.revision;
         setAddresses(nextAddresses);
         const serverAddress = nextCheckout.address?.id ?? null;
@@ -176,15 +184,51 @@ export function CheckoutPage({ customer }: { customer: CustomerDto }) {
     selectedAddressRef.current = addressId;
     setSelectedAddressId(addressId); setPending(true); setState("validating"); setError(null);
     try {
-      const next = await checkoutRequest("POST", addressId, revisionRef.current);
+      const next = await checkoutRequest("POST", addressId, revisionRef.current, checkout?.coupon?.code ?? null);
       if (version !== requestVersion.current) return;
-      setCheckout(next); revisionRef.current = next.revision; setState(classify(next));
+      setCheckout(next); appliedCouponRef.current = next.coupon?.code ?? null; revisionRef.current = next.revision; setState(classify(next));
       if (next.address?.id) { selectedAddressRef.current = next.address.id; setSelectedAddressId(next.address.id); }
     } catch (reason) {
       if (version !== requestVersion.current) return;
       setState(reason instanceof Error && reason.message === "SESSION_EXPIRED" ? "session_expired" : "server_error");
       setError("Checkout validation could not be completed. Please try again.");
     } finally { if (version === requestVersion.current) { pendingRef.current = false; setPending(false); } }
+  }
+
+  async function applyCoupon() {
+    if (couponPending || pendingRef.current || !checkout) return;
+    const code = couponInput.trim().toUpperCase();
+    if (!code) {
+      setCouponError("Enter a coupon code, or use Remove coupon to continue without one.");
+      return;
+    }
+    setCouponPending(true); setCouponError(null); setCouponNotice(null);
+    try {
+      const next = await checkoutRequest("POST", selectedAddressId, revisionRef.current, code);
+      setCheckout(next); appliedCouponRef.current = next.coupon?.code ?? null; revisionRef.current = next.revision;
+      const invalid = next.validation.issues.find((item) => item.code === "COUPON_INVALID");
+      if (invalid || !next.coupon) {
+        setCouponError(invalid?.message ?? "This coupon could not be applied.");
+        setState(classify(next));
+        return;
+      }
+      setCouponInput(next.coupon.code); setCouponNotice("Coupon applied. Your total has been recalculated on the server.");
+      setState(classify(next));
+    } catch (reason) {
+      setCouponError(reason instanceof Error ? reason.message : "Coupon could not be applied.");
+    } finally { setCouponPending(false); }
+  }
+
+  async function removeCoupon() {
+    if (couponPending || pendingRef.current || !checkout) return;
+    setCouponPending(true); setCouponError(null); setCouponNotice(null);
+    try {
+      const next = await checkoutRequest("POST", selectedAddressId, revisionRef.current, null);
+      setCheckout(next); appliedCouponRef.current = null; revisionRef.current = next.revision; setCouponInput(""); setCouponNotice("Coupon removed.");
+      setState(classify(next));
+    } catch (reason) {
+      setCouponError(reason instanceof Error ? reason.message : "Coupon could not be removed.");
+    } finally { setCouponPending(false); }
   }
 
   function addressCreated(address: CustomerAddressDto) {
@@ -214,6 +258,7 @@ export function CheckoutPage({ customer }: { customer: CustomerDto }) {
           selectedAddressId: checkout.address.id,
           expectedRevision: revisionRef.current,
           paymentMethod: selectedPaymentMethod,
+          ...(checkout.coupon?.code ? { couponCode: checkout.coupon.code } : {}),
         }),
       });
       const body = await response.json().catch(() => null) as
@@ -337,6 +382,16 @@ export function CheckoutPage({ customer }: { customer: CustomerDto }) {
         <aside className="border-4 border-border bg-primary-yellow p-5 shadow-hard-md lg:sticky lg:top-6" aria-labelledby="checkout-summary">
           <div className="flex items-center justify-between gap-4"><h2 id="checkout-summary" className="text-2xl uppercase">Order summary</h2><span className="text-xs font-900 uppercase">{checkout.cart.items.length} items</span></div>
           <div className="mt-5 grid gap-4">{checkout.cart.items.map((item) => <article key={item.id} className={"border-2 border-border bg-white p-3 " + (affectedItems.has(item.id) ? "ring-2 ring-primary-red" : "")}><div className="flex gap-3"><div className="relative size-16 shrink-0 overflow-hidden border-2 border-border bg-muted">{item.product?.media?.url ? <Image src={item.product.media.url} alt={item.product.media.altText ?? item.product.title} fill sizes="4rem" className="object-cover" /> : <span className="flex h-full items-center justify-center text-[9px] font-900 uppercase">No image</span>}</div><div className="min-w-0 flex-1"><h3 className="break-words text-sm font-900 uppercase">{item.product?.title ?? "Unavailable product"}</h3>{item.variant ? <p className="mt-1 text-xs font-700">{[item.variant.displayName, item.variant.size, item.variant.color].filter(Boolean).join(" · ")}</p> : null}<p className="mt-2 text-xs font-800 uppercase">Qty {item.quantity}</p></div><p className="text-sm font-900">{money(item.subtotal ?? "—", item.currency)}</p></div></article>)}</div>
+          <section className="mt-6 border-t-2 border-border pt-5" aria-labelledby="coupon-heading">
+            <h3 id="coupon-heading" className="text-sm font-900 uppercase">Discount coupon</h3>
+            <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+              <Input id="checkout-coupon-code" name="couponCode" value={couponInput} onChange={(event) => { setCouponInput(event.target.value.toUpperCase()); setCouponError(null); setCouponNotice(null); }} disabled={couponPending || pending} placeholder="Enter coupon code" autoComplete="off" maxLength={64} />
+              {checkout.coupon || couponError ? <Button type="button" variant="ghost" disabled={couponPending || pending} loading={couponPending} onClick={() => void removeCoupon()}>Remove</Button> : <Button type="button" disabled={couponPending || pending || !couponInput.trim()} loading={couponPending} onClick={() => void applyCoupon()}>Apply</Button>}
+            </div>
+            {couponError ? <Alert variant="error" title="Coupon not applied" className="mt-3">{couponError}</Alert> : null}
+            {couponNotice ? <Alert variant="success" title="Coupon updated" className="mt-3">{couponNotice}</Alert> : null}
+            {checkout.coupon ? <p className="mt-3 text-xs font-800 uppercase">{checkout.coupon.discountPercent}% discount · Saved {money(checkout.coupon.discountAmount, checkout.totals.currency)}</p> : null}
+          </section>
           <dl className="mt-6 grid gap-3 border-t-2 border-border pt-4 text-sm"><div className="flex justify-between gap-4"><dt className="font-900 uppercase">Merchandise</dt><dd>{money(checkout.totals.merchandiseSubtotal, checkout.totals.currency)}</dd></div>{checkout.totals.adjustments.map((item) => <div key={item.code} className="flex justify-between gap-4"><dt>{item.code}</dt><dd>{money(item.amount, checkout.totals.currency)}</dd></div>)}{checkout.totals.charges.map((item) => <div key={item.code} className="flex justify-between gap-4"><dt>{item.code}</dt><dd>{money(item.amount, checkout.totals.currency)}</dd></div>)}<div className="flex justify-between gap-4 border-t-2 border-border pt-3 text-xl font-900"><dt className="uppercase">Total</dt><dd>{money(checkout.totals.total, checkout.totals.currency)}</dd></div></dl>
           <div className="mt-5 border-t-2 border-border pt-5">
             <div className="flex items-center gap-2 text-xs font-900 uppercase"><LockKeyhole size={16} aria-hidden="true" /> Secure payment via PayU</div>

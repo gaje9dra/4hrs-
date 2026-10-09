@@ -15,12 +15,14 @@ import {
 } from "@/lib/checkout/contracts";
 import { logCheckoutObservation } from "@/lib/checkout/observability";
 import { createCheckoutPaymentReference, isCheckoutPayable } from "@/lib/payments/checkout";
+import { calculateCouponDiscount, CouponEligibilityError } from "@/lib/coupons/calculation";
 
 type CheckoutDependencies = {
   getCart: () => Promise<CartDto>;
   getAddress: (customerId: string, addressId: string) => Promise<CustomerAddressDto>;
   listAddresses: (customerId: string) => Promise<CustomerAddressDto[]>;
   customer: CustomerDto;
+  findCoupon?: (code: string) => Promise<{ coupon: { id: string; code: string; status: "DRAFT" | "ACTIVE" | "INACTIVE"; discountPercent: number; startsAt: Date | null; expiresAt: Date; minimumSubtotal: Prisma.Decimal | null; maximumDiscountAmount: Prisma.Decimal | null; maxRedemptions: number; perCustomerLimit: number | null }; completed: number; reserved: number; customerUses: number } | null>;
 };
 
 function issue(code: CheckoutIssue["code"], message: string, itemId?: string): CheckoutIssue {
@@ -184,21 +186,43 @@ export function createCheckoutService(dependencies: CheckoutDependencies) {
         });
       }
 
+      let totals = totalsForCart(cart);
+      let coupon: { code: string; discountPercent: number; discountAmount: string; eligibleSubtotal: string } | null = null;
+      if (input.couponCode) {
+        try {
+          if (!dependencies.findCoupon) throw new Error("Coupon validation is unavailable.");
+          const found = await dependencies.findCoupon(input.couponCode);
+          if (!found) throw new CouponEligibilityError("COUPON_INVALID", "This coupon code is not valid.");
+          if (found.completed + found.reserved >= found.coupon.maxRedemptions) throw new CouponEligibilityError("COUPON_EXHAUSTED", "This coupon has reached its redemption limit.");
+          if (found.coupon.perCustomerLimit !== null && found.customerUses >= found.coupon.perCustomerLimit) throw new CouponEligibilityError("COUPON_LIMIT_REACHED", "You have reached this coupon’s usage limit.");
+          const calculation = calculateCouponDiscount({ coupon: found.coupon, eligibleSubtotal: cart.subtotal, currency: cart.currency ?? "", now: new Date() });
+          coupon = { code: calculation.code, discountPercent: calculation.discountPercent, discountAmount: calculation.discountAmount, eligibleSubtotal: calculation.eligibleSubtotal };
+          totals = { ...totals, adjustments: [{ code: "Coupon " + calculation.code, amount: "-" + calculation.discountAmount }], total: calculation.payableTotal };
+        } catch (error) {
+          const message = error instanceof CouponEligibilityError ? error.message : "Coupon could not be validated. Please try again.";
+          issues.push(issue("COUPON_INVALID", message));
+        }
+      }
+      const finalValidationState = issues[0]?.code ?? "VALID";
       const result = {
         customer: toCheckoutCustomer(dependencies.customer),
         cart: { id: cart.id, items: cart.items },
         address,
-        totals: totalsForCart(cart),
+        totals,
         revision: currentRevision,
-        validation: { state: validationState, issues },
+        validation: { state: finalValidationState },
+        couponCode: coupon?.code ?? null,
+        discountTotal: coupon?.discountAmount ?? "0.00",
       };
       const checkoutReference = createCheckoutPaymentReference(dependencies.customer.id, result);
       return {
         ...result,
+        ...(coupon ? { coupon } : { coupon: null }),
+        validation: { state: finalValidationState, issues },
         payment: {
-          ready: isCheckoutPayable(result),
+          ready: isCheckoutPayable({ ...result, validation: { state: finalValidationState } }),
           checkoutReference,
-          reason: isCheckoutPayable(result) ? "PAYMENT_READY" as const : "CHECKOUT_NOT_PAYABLE" as const,
+          reason: isCheckoutPayable({ ...result, validation: { state: finalValidationState } }) ? "PAYMENT_READY" as const : "CHECKOUT_NOT_PAYABLE" as const,
         },
       };
     } catch (error) {

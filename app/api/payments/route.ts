@@ -3,6 +3,7 @@ import type { CheckoutRequest } from "@/lib/checkout/contracts";
 import { createPaymentApplication } from "@/lib/payments/application";
 import { paymentErrorResponse, paymentJson, paymentMethodNotAllowed } from "@/lib/payments/http";
 import { PaymentError } from "@/lib/payments/errors";
+import { reserveCouponForCheckout, CouponRedemptionError } from "@/lib/coupons/redemptions";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -28,6 +29,21 @@ export async function POST(request: Request) {
       throw new PaymentError("CHECKOUT_NOT_PAYABLE", "Checkout must be valid and have a delivery address before payment can start.");
     }
 
+    if (checkout.coupon && checkoutRequest.couponCode) {
+      try {
+        await reserveCouponForCheckout({
+          customerId: checkout.customer.id,
+          checkoutReference: checkout.payment.checkoutReference,
+          code: checkout.coupon.code,
+          eligibleSubtotal: checkout.totals.merchandiseSubtotal,
+          currency: checkout.totals.currency,
+        });
+      } catch (error) {
+        if (error instanceof CouponRedemptionError) throw new PaymentError("CHECKOUT_NOT_PAYABLE", error.message);
+        throw error;
+      }
+    }
+
     const payment = await paymentApplication.createPaymentFromCheckout({
       checkout: {
         customerId: checkout.customer.id,
@@ -39,8 +55,22 @@ export async function POST(request: Request) {
 
     if (payment.status === "SUCCEEDED") return paymentJson(payment);
 
-    const started = await paymentApplication.startProviderPayment(payment.id, checkout.customer.id, checkoutRequest.paymentMethod);
-    return paymentJson(started);
+    try {
+      const started = await paymentApplication.startProviderPayment(payment.id, checkout.customer.id, checkoutRequest.paymentMethod);
+      return paymentJson(started);
+    } catch (error) {
+      const definitivePreflightFailure = error instanceof PaymentError && new Set<string>([
+        "PROVIDER_CONFIGURATION_MISSING", "PROVIDER_UNAVAILABLE", "PAYMENT_INTERNAL_ERROR", "PAYMENT_DECLINED",
+      ]).has(error.code);
+      if (payment.status === "CREATED" && definitivePreflightFailure) {
+        try {
+          await paymentApplication.transitionPaymentState({ paymentId: payment.id, customerId: checkout.customer.id, nextStatus: "FAILED" });
+        } catch {
+          // A concurrent provider callback or state transition takes precedence; retain the reservation for reconciliation.
+        }
+      }
+      throw error;
+    }
   } catch (error) {
     return paymentErrorResponse(error);
   }

@@ -2,7 +2,7 @@ import type { CartDto, CartItemDto } from "@/lib/cart/contracts";
 import type { CustomerAddressDto, CustomerDto } from "@/lib/customer/contracts";
 
 export type CheckoutValidationState =
-  | "VALID" | "UNAUTHENTICATED" | "CART_MISSING" | "CART_EMPTY"
+  | "VALID" | "COUPON_INVALID" | "UNAUTHENTICATED" | "CART_MISSING" | "CART_EMPTY"
   | "INVALID_CART_ITEM" | "PRODUCT_UNAVAILABLE" | "VARIANT_UNAVAILABLE" | "CART_CHANGED"
   | "INVALID_QUANTITY" | "PRICE_CHANGED" | "CURRENCY_CHANGED"
   | "INVALID_ADDRESS" | "ADDRESS_NOT_OWNED" | "ADDRESS_NOT_FOUND"
@@ -37,6 +37,7 @@ export type CheckoutDto = {
   totals: CheckoutTotals;
   revision: CheckoutRevision;
   validation: { state: CheckoutValidationState; issues: CheckoutIssue[] };
+  coupon?: { code: string; discountPercent: number; discountAmount: string; eligibleSubtotal: string } | null;
   payment: {
     ready: boolean;
     checkoutReference: string | null;
@@ -49,6 +50,7 @@ export type CheckoutRequest = {
   selectedAddressId?: string | null;
   expectedRevision?: CheckoutRevision;
   paymentMethod?: CheckoutPaymentMethod;
+  couponCode?: string | null;
 };
 
 export type CheckoutApplicationDependencies = {

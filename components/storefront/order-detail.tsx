@@ -78,6 +78,7 @@ export function OrderDetail({ order, exceptionSummary }: { order: PublicOrderDto
           <p className="text-xs font-900 uppercase tracking-[0.2em]">Order total</p>
           <dl className="mt-5 grid gap-3 text-sm">
             <div className="flex justify-between gap-4"><dt className="font-900 uppercase">Subtotal</dt><dd>{money(order.subtotal, order.currency)}</dd></div>
+            {order.couponCode && order.discountTotal && order.discountTotal !== "0.00" ? <div className="flex justify-between gap-4"><dt className="font-900 uppercase">Coupon {order.couponCode}</dt><dd>-{money(order.discountTotal, order.currency)}</dd></div> : null}
             <div className="flex justify-between gap-4 border-t-4 border-border pt-4 text-xl font-900"><dt className="uppercase">Total</dt><dd>{money(order.total, order.currency)}</dd></div>
           </dl>
           <p className="mt-5 border-t-2 border-border pt-4 text-xs font-700 leading-5">
