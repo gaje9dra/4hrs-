@@ -199,7 +199,7 @@ export function createCheckoutService(dependencies: CheckoutDependencies) {
           coupon = { code: calculation.code, discountPercent: calculation.discountPercent, discountAmount: calculation.discountAmount, eligibleSubtotal: calculation.eligibleSubtotal };
           totals = { ...totals, adjustments: [{ code: "Coupon " + calculation.code, amount: "-" + calculation.discountAmount }], total: calculation.payableTotal };
         } catch (error) {
-          const message = error instanceof Error ? error.message : "Coupon could not be validated.";
+          const message = error instanceof CouponEligibilityError ? error.message : "Coupon could not be validated. Please try again.";
           issues.push(issue("COUPON_INVALID", message));
         }
       }
