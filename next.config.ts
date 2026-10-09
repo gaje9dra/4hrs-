@@ -22,11 +22,11 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   images: {
-    // Allow only this explicit versioned local image URL for cache busting.
+    // Restrict optimized local images to public image assets while allowing both
+    // plain paths (such as the hero banner) and versioned cache-busting URLs.
     localPatterns: [
       {
         pathname: '/images/**',
-        search: '?v=20261009-2',
       },
     ],
   },
