@@ -35,7 +35,7 @@ export function HomepageCampaignCarousel() {
 
   return (
     <section aria-label="Featured 4HRS+ campaigns" className="w-full border-b-2 border-border bg-background lg:border-b-4">
-      <div className="relative w-full aspect-[1507/404] overflow-hidden bg-white">
+      <div className="relative aspect-[1507/404] w-full overflow-hidden bg-[#f5f1e8]">
         <Link
           href={activeBanner.href}
           aria-label={activeBanner.alt}
@@ -56,20 +56,20 @@ export function HomepageCampaignCarousel() {
           type="button"
           onClick={showPrevious}
           aria-label="Previous campaign"
-          className="absolute left-3 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center border-2 border-border bg-white/95 shadow-hard-sm transition-transform hover:scale-105 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-blue sm:left-5 sm:h-12 sm:w-12"
+          className="absolute left-2 top-1/2 z-10 flex h-7 w-7 -translate-y-1/2 items-center justify-center border border-border bg-white/95 shadow-hard-sm transition-transform hover:scale-105 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-blue sm:left-5 sm:h-11 sm:w-11 sm:border-2"
         >
-          <ChevronLeft size={24} strokeWidth={2.5} />
+          <ChevronLeft size={18} strokeWidth={2.5} className="sm:h-6 sm:w-6" />
         </button>
         <button
           type="button"
           onClick={showNext}
           aria-label="Next campaign"
-          className="absolute right-3 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center border-2 border-border bg-white/95 shadow-hard-sm transition-transform hover:scale-105 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-blue sm:right-5 sm:h-12 sm:w-12"
+          className="absolute right-2 top-1/2 z-10 flex h-7 w-7 -translate-y-1/2 items-center justify-center border border-border bg-white/95 shadow-hard-sm transition-transform hover:scale-105 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-blue sm:right-5 sm:h-11 sm:w-11 sm:border-2"
         >
-          <ChevronRight size={24} strokeWidth={2.5} />
+          <ChevronRight size={18} strokeWidth={2.5} className="sm:h-6 sm:w-6" />
         </button>
 
-        <div className="absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2 border-2 border-border bg-white/95 px-3 py-2 shadow-hard-sm sm:bottom-5">
+        <div className="absolute bottom-1.5 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1.5 border border-border/80 bg-white/90 px-2 py-1 shadow-hard-sm sm:bottom-4 sm:gap-2 sm:border-2 sm:px-3 sm:py-2">
           {banners.map((banner, index) => (
             <button
               key={banner.src}
@@ -77,7 +77,7 @@ export function HomepageCampaignCarousel() {
               onClick={() => setActiveIndex(index)}
               aria-label={`Show campaign ${index + 1}: ${banner.alt}`}
               aria-current={index === activeIndex ? "true" : undefined}
-              className={`h-2.5 transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-blue ${index === activeIndex ? "w-7 bg-primary-red" : "w-2.5 bg-primary-blue/40 hover:bg-primary-blue"}`}
+              className={`h-1.5 transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-blue sm:h-2.5 ${index === activeIndex ? "w-5 bg-primary-red sm:w-7" : "w-1.5 bg-primary-blue/40 hover:bg-primary-blue sm:w-2.5"}`}
             />
           ))}
         </div>
