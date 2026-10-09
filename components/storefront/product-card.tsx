@@ -35,7 +35,7 @@ export function ProductCard({ product }: { product: StorefrontProductCard }) {
   const activeImage = hoverImageIndex > 0 ? alternateImages[hoverImageIndex - 1] : primaryImage;
 
   return (
-    <Card className="group overflow-hidden p-0 shadow-none transition-transform duration-200 hover:-translate-y-1 lg:shadow-hard-md">
+    <Card className="group overflow-hidden border-0 p-0 shadow-none transition-transform duration-200 hover:-translate-y-1 lg:shadow-none">
       <div className="relative">
         <Link href={href} className="motion-link block no-underline" aria-label={product.title}>
           <div className="relative aspect-[2/3] overflow-hidden bg-white" onMouseEnter={handleImageEnter} onMouseLeave={handleImageLeave}>
@@ -83,7 +83,7 @@ export function ProductCard({ product }: { product: StorefrontProductCard }) {
 
       <div className="bg-white px-3 pb-4 pt-4 sm:px-4">
         <Link href={href} className="block no-underline hover:no-underline">
-          <h3 className="line-clamp-2 min-h-[2.7rem] text-[0.98rem] font-900 uppercase leading-[1.12] tracking-[-0.01em]">
+          <h3 className="line-clamp-2 min-h-[2.7rem] text-[0.98rem] font-900 uppercase leading-[1.12] tracking-[-0.01em] no-underline">
             {product.title}
           </h3>
         </Link>
