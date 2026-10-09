@@ -37,6 +37,7 @@ export type CheckoutDto = {
   totals: CheckoutTotals;
   revision: CheckoutRevision;
   validation: { state: CheckoutValidationState; issues: CheckoutIssue[] };
+  coupon?: { code: string; discountPercent: number; discountAmount: string; eligibleSubtotal: string } | null;
   payment: {
     ready: boolean;
     checkoutReference: string | null;
@@ -49,6 +50,7 @@ export type CheckoutRequest = {
   selectedAddressId?: string | null;
   expectedRevision?: CheckoutRevision;
   paymentMethod?: CheckoutPaymentMethod;
+  couponCode?: string | null;
 };
 
 export type CheckoutApplicationDependencies = {
