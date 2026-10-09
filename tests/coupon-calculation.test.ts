@@ -18,7 +18,7 @@ test("calculates percentage discounts with two-decimal rounding", () => {
 
 test("respects maximum discount and never discounts beyond subtotal", () => {
   assert.equal(calculateCouponDiscount({ coupon: coupon({ discountPercent: 50, maximumDiscountAmount: new Prisma.Decimal("75") }), eligibleSubtotal: "100", currency: "INR", now: new Date("2029-01-01") }).discountAmount, "75.00");
-  assert.equal(calculateCouponDiscount({ coupon: coupon({ discountPercent: 100, maximumDiscountAmount: null }), eligibleSubtotal: "0.01", currency: "INR", now: new Date("2029-01-01") }).payableTotal, "0.00");
+  assert.throws(() => calculateCouponDiscount({ coupon: coupon({ discountPercent: 100, maximumDiscountAmount: null }), eligibleSubtotal: "0.01", currency: "INR", now: new Date("2029-01-01") }), CouponEligibilityError);
 });
 
 test("rejects subtotal below minimum and invalid coupon status or dates", () => {
