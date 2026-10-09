@@ -28,7 +28,7 @@ async function expireSafeReservations(tx: CouponTx, couponId: string, now: Date)
   const statusByReference = new Map(payments.map((payment) => [payment.checkoutReference, payment.status]));
   for (const item of expired) {
     const status = item.checkoutReference ? statusByReference.get(item.checkoutReference) : undefined;
-    if (status === "FAILED" || status === "CANCELLED") {
+    if (status === "FAILED" || status === "CANCELLED" || status === "EXPIRED") {
       await tx.couponRedemption.updateMany({ where: { id: item.id, status: "RESERVED" }, data: { status: "RELEASED", releasedAt: now, reservationExpiresAt: null } });
     } else if (status) {
       // A known payment attempt with a non-terminal or successful state must retain capacity until reconciliation/finalization.
