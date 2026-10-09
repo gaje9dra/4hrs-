@@ -349,9 +349,14 @@ test("Qikink reconciliation is bounded by verified capabilities", async () => {
 });
 
 after(async () => {
+  const relatedShipments = fulfillmentIds.length
+    ? await db.shipment.findMany({ where: { fulfillmentId: { in: fulfillmentIds } }, select: { id: true } })
+    : [];
+  const allShipmentIds = [...new Set([...shipmentIds, ...relatedShipments.map((shipment) => shipment.id)])];
   if (recoveryActionIds.length) await db.shipmentRecoveryAction.deleteMany({ where: { id: { in: recoveryActionIds } } });
-  if (shipmentIds.length) await db.trackingEvent.deleteMany({ where: { shipmentId: { in: shipmentIds } } });
-  if (shipmentIds.length) await db.shipment.deleteMany({ where: { id: { in: shipmentIds } } });
+  if (allShipmentIds.length) await db.shipmentRecoveryAction.deleteMany({ where: { shipmentId: { in: allShipmentIds } } });
+  if (allShipmentIds.length) await db.trackingEvent.deleteMany({ where: { shipmentId: { in: allShipmentIds } } });
+  if (allShipmentIds.length) await db.shipment.deleteMany({ where: { id: { in: allShipmentIds } } });
   if (fulfillmentIds.length) await db.fulfillment.deleteMany({ where: { id: { in: fulfillmentIds } } });
   if (orderIds.length) await db.order.deleteMany({ where: { id: { in: orderIds } } });
   if (paymentIds.length) await db.payment.deleteMany({ where: { id: { in: paymentIds } } });
