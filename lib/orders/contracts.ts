@@ -33,6 +33,9 @@ export type PublicOrderDto = {
   createdAt: string;
   currency: string;
   subtotal: string;
+  discountTotal?: string;
+  couponCode?: string | null;
+  couponDiscountPercent?: number | null;
   total: string;
   address: PublicOrderAddressDto | null;
   items: PublicOrderItemDto[];
