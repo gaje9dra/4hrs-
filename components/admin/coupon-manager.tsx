@@ -18,7 +18,13 @@ export function CouponManager() {
   const [pending,setPending]=useState(false);
   const [form,setForm]=useState({code:"",discountPercent:"10",maxRedemptions:"10",startsAt:"",expiresAt:"",minimumSubtotal:"",maximumDiscountAmount:"",perCustomerLimit:"",description:"",status:"DRAFT"});
   const load=useCallback(async()=>{try{const data=await request("/api/admin/coupons?search="+encodeURIComponent(search));setItems(data.items??[]);setError(null);}catch(e){setError(e instanceof Error?e.message:"Could not load coupons.");}},[search]);
-  useEffect(()=>{void load();},[load]);
+  useEffect(() => {
+    let active = true;
+    void request("/api/admin/coupons?search=" + encodeURIComponent(search))
+      .then((data) => { if (active) { setItems(data.items ?? []); setError(null); } })
+      .catch((reason) => { if (active) setError(reason instanceof Error ? reason.message : "Could not load coupons."); });
+    return () => { active = false; };
+  }, [search]);
   async function create(event:React.FormEvent<HTMLFormElement>){
     event.preventDefault();setPending(true);setError(null);setNotice(null);
     try{
