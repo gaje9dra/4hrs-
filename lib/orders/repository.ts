@@ -38,6 +38,9 @@ export type CreateOrderInput = {
   checkoutReference: string;
   paymentId: string;
   subtotal: Prisma.Decimal | string;
+  discountTotal?: Prisma.Decimal | string;
+  couponCode?: string | null;
+  couponDiscountPercent?: number | null;
   total: Prisma.Decimal | string;
   currency: string;
   status?: PrismaOrderStatus;
@@ -147,6 +150,9 @@ export function createOrderRepository(client?: OrderRepositoryClient): OrderRepo
           orderNumber: input.orderNumber ?? generateOrderNumber(),
           status: input.status ?? "PENDING",
           subtotal: input.subtotal,
+          discountTotal: input.discountTotal ?? "0.00",
+          ...(input.couponCode !== undefined ? { couponCode: input.couponCode } : {}),
+          ...(input.couponDiscountPercent !== undefined ? { couponDiscountPercent: input.couponDiscountPercent } : {}),
           total: input.total,
           currency: input.currency,
         },
