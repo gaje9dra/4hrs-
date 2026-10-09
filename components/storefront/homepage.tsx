@@ -261,11 +261,11 @@ function EditorialHomepageSections({ sections }: { sections: EditorialHomepageSe
 
 function HomepageCampaignBanners() {
   const banners = [
-    { src: "/images/homepage-banners/4hrs-hero-banner.jpg", alt: "4HRS+ premium streetwear campaign", className: "col-span-full aspect-[3.72/1]" },
-    { src: "/images/homepage-banners/4hrs-men-banner.jpg", alt: "Shop men's streetwear", className: "aspect-[2.9/1]" },
-    { src: "/images/homepage-banners/4hrs-women-banner.jpg", alt: "Shop women's streetwear", className: "aspect-[2.9/1]" },
-    { src: "/images/homepage-banners/4hrs-new-collection-banner.jpg", alt: "Explore the new 4HRS+ collection", className: "aspect-[2.98/1]" },
-    { src: "/images/homepage-banners/4hrs-sale-banner.jpg", alt: "Shop 4HRS+ sale styles", className: "aspect-[2.98/1]" },
+    { src: "/images/homepage-banners/4hrs-hero-banner.png", alt: "4HRS+ premium streetwear campaign", className: "col-span-full aspect-[3.72/1]" },
+    { src: "/images/homepage-banners/4hrs-men-banner.png", alt: "Shop men's streetwear", className: "aspect-[2.9/1]" },
+    { src: "/images/homepage-banners/4hrs-women-banner.png", alt: "Shop women's streetwear", className: "aspect-[2.9/1]" },
+    { src: "/images/homepage-banners/4hrs-new-collection-banner.png", alt: "Explore the new 4HRS+ collection", className: "aspect-[2.98/1]" },
+    { src: "/images/homepage-banners/4hrs-sale-banner.png", alt: "Shop 4HRS+ sale styles", className: "aspect-[2.98/1]" },
   ];
 
   return (
