@@ -58,6 +58,7 @@ export function calculateCouponDiscount(input: {
   const capped = coupon.maximumDiscountAmount ? Prisma.Decimal.min(percentageAmount, coupon.maximumDiscountAmount) : percentageAmount;
   const discount = Prisma.Decimal.min(subtotal, capped).toDecimalPlaces(2);
   const payable = Prisma.Decimal.max(new Prisma.Decimal(0), subtotal.minus(discount)).toDecimalPlaces(2);
+  if (payable.isZero()) throw new CouponEligibilityError("COUPON_ZERO_TOTAL", "This coupon would make the order free, which is not supported by the current payment flow. Remove the coupon or choose another one.");
   return {
     code: coupon.code,
     discountPercent: coupon.discountPercent,
