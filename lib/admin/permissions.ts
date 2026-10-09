@@ -1,4 +1,5 @@
 export const ADMIN_PERMISSIONS = [
+  "coupons.read","coupons.manage",
   "catalog.read","catalog.create","catalog.update","catalog.publish","catalog.archive","catalog.category.manage","catalog.collection.manage","catalog.media.manage","catalog.provider_mapping.manage",
   "orders.read","orders.update","orders.cancel",
   "payments.read","payments.view_sensitive","payments.verify","payments.capture","payments.refund","payments.refund_partial","payments.reconcile","payments.retry","payments.audit.read",
