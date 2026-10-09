@@ -59,7 +59,7 @@ export function ProductCard({ product }: { product: StorefrontProductCard }) {
       <Link
         href={unavailable ? href : `${href}?intent=cart`}
         aria-disabled={unavailable || undefined}
-        className="motion-press flex min-h-12 items-center justify-center gap-2 border-x-0 border-b-2 border-border bg-foreground px-4 py-3 text-xs font-900 uppercase tracking-[0.12em] text-white no-underline transition-colors duration-200 group-hover:bg-primary-blue group-hover:!text-primary-yellow hover:bg-primary-blue hover:!text-primary-yellow lg:border-b-4"
+        className="motion-press flex min-h-12 items-center justify-center gap-2 border-x-0 border-b-2 border-border bg-transparent px-4 py-3 text-xs font-900 uppercase tracking-[0.12em] text-foreground no-underline transition-colors duration-200 group-hover:bg-primary-blue group-hover:!text-primary-yellow hover:bg-primary-blue hover:!text-primary-yellow lg:border-b-4"
       >
         <ShoppingCart className="text-current" size={16} strokeWidth={2.5} aria-hidden="true" />
         <span className="text-current">{unavailable ? "Out of stock" : "Add to cart"}</span>
