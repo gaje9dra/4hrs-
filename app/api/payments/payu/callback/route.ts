@@ -30,7 +30,7 @@ export async function POST(request: Request) {
 
     const result = await application.processNormalizedPaymentEvent(event);
 
-    if (result.payment?.status === "FAILED" || result.payment?.status === "CANCELLED" || result.payment?.status === "EXPIRED") {
+    if (result.payment?.status === "CANCELLED" || result.payment?.status === "EXPIRED") {
       const failedPayment = await paymentRepository.getPaymentByInternalReference(event.internalPaymentReference ?? "");
       if (failedPayment) await releaseCouponReservation({ checkoutReference: failedPayment.checkoutReference, customerId: failedPayment.customerId });
     }
