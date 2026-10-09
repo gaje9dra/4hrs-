@@ -20,6 +20,9 @@ export function toPublicOrderDto(order: OrderWithRelations): PublicOrderDto {
     createdAt: order.createdAt.toISOString(),
     currency: order.currency,
     subtotal: order.subtotal.toFixed(2),
+    discountTotal: order.discountTotal.toFixed(2),
+    couponCode: order.couponCode,
+    couponDiscountPercent: order.couponDiscountPercent,
     total: order.total.toFixed(2),
     address: order.shippingAddress
       ? {
