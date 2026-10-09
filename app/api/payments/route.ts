@@ -3,6 +3,7 @@ import type { CheckoutRequest } from "@/lib/checkout/contracts";
 import { createPaymentApplication } from "@/lib/payments/application";
 import { paymentErrorResponse, paymentJson, paymentMethodNotAllowed } from "@/lib/payments/http";
 import { PaymentError } from "@/lib/payments/errors";
+import { reserveCouponForCheckout, CouponRedemptionError } from "@/lib/coupons/redemptions";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -26,6 +27,21 @@ export async function POST(request: Request) {
 
     if (!checkout.payment.ready || !checkout.payment.checkoutReference || !checkout.customer || !checkout.totals.currency) {
       throw new PaymentError("CHECKOUT_NOT_PAYABLE", "Checkout must be valid and have a delivery address before payment can start.");
+    }
+
+    if (checkout.coupon && checkoutRequest.couponCode) {
+      try {
+        await reserveCouponForCheckout({
+          customerId: checkout.customer.id,
+          checkoutReference: checkout.payment.checkoutReference,
+          code: checkout.coupon.code,
+          eligibleSubtotal: checkout.totals.merchandiseSubtotal,
+          currency: checkout.totals.currency,
+        });
+      } catch (error) {
+        if (error instanceof CouponRedemptionError) throw new PaymentError("CHECKOUT_NOT_PAYABLE", error.message);
+        throw error;
+      }
     }
 
     const payment = await paymentApplication.createPaymentFromCheckout({
