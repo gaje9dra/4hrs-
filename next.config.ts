@@ -21,6 +21,10 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  images: {
+    // Permit local public images with version query parameters used for cache busting.
+    localPatterns: [{ pathname: '/images/**' }],
+  },
   async headers() {
     const privateHeaders = privateNoIndexRoutes.map((source) => ({
       source,
