@@ -35,21 +35,20 @@ export function HomepageCampaignCarousel() {
 
   return (
     <section aria-label="Featured 4HRS+ campaigns" className="w-full border-b-2 border-border bg-background lg:border-b-4">
-      <div className="relative w-full overflow-hidden bg-white">
+      <div className="relative w-full aspect-[1507/404] overflow-hidden bg-white">
         <Link
           href={activeBanner.href}
           aria-label={activeBanner.alt}
-          className="group block w-full focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-primary-blue"
+          className="group absolute inset-0 block focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-primary-blue"
         >
           <Image
             key={activeBanner.src}
             src={activeBanner.src}
             alt={activeBanner.alt}
-            width={activeBanner.width}
-            height={activeBanner.height}
+            fill
             priority={activeIndex === 0}
             sizes="100vw"
-            className="block h-auto w-full object-contain"
+            className="object-contain"
           />
         </Link>
 
