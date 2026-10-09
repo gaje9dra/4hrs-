@@ -137,7 +137,7 @@ export function CheckoutPage({ customer }: { customer: CustomerDto }) {
     const version = ++requestVersion.current;
     setState("loading"); setError(null);
     try {
-      const [nextCheckout, nextAddresses] = await Promise.all([checkoutRequest("GET"), addressRequest()]);
+      const [nextCheckout, nextAddresses] = await Promise.all([checkoutRequest("POST", preserveSelection ? selectedAddressRef.current : null, undefined, checkout?.coupon?.code ?? null), addressRequest()]);
       if (version !== requestVersion.current) return;
       setCheckout(nextCheckout); revisionRef.current = nextCheckout.revision; setAddresses(nextAddresses); setCouponInput(nextCheckout.coupon?.code ?? ""); setCouponError(nextCheckout.validation.issues.find((item) => item.code === "COUPON_INVALID")?.message ?? null);
       const serverAddress = nextCheckout.address?.id ?? null;
@@ -182,7 +182,7 @@ export function CheckoutPage({ customer }: { customer: CustomerDto }) {
     selectedAddressRef.current = addressId;
     setSelectedAddressId(addressId); setPending(true); setState("validating"); setError(null);
     try {
-      const next = await checkoutRequest("POST", addressId, revisionRef.current);
+      const next = await checkoutRequest("POST", addressId, revisionRef.current, checkout?.coupon?.code ?? null);
       if (version !== requestVersion.current) return;
       setCheckout(next); revisionRef.current = next.revision; setState(classify(next));
       if (next.address?.id) { selectedAddressRef.current = next.address.id; setSelectedAddressId(next.address.id); }
