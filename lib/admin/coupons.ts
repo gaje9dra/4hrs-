@@ -66,10 +66,22 @@ export async function createDiscountCoupon(context: AdminAuthorizationContext, i
 
 export async function updateDiscountCoupon(context: AdminAuthorizationContext, input: CouponInput) {
   if (typeof input.id !== "string" || !/^[0-9a-f-]{36}$/i.test(input.id)) throw new AdminError("INVALID_REQUEST", "Coupon ID is invalid.");
-  const current = await db.discountCoupon.findUnique({ where: { id: input.id }, include: { redemptions: { where: { status: "REDEEMED" }, select: { id: true } } } });
+  const current = await db.discountCoupon.findUnique({ where: { id: input.id }, include: { redemptions: { where: { status: { in: ["REDEEMED", "RESERVED"] } }, select: { id: true, status: true, reservationExpiresAt: true } } } });
   if (!current) throw new AdminError("NOT_FOUND", "Coupon was not found.");
   const parsed = parseInput(input, true);
-  if (parsed.maxRedemptions !== undefined && parsed.maxRedemptions < current.redemptions.length) throw new AdminError("INVALID_REQUEST", "Maximum redemptions cannot be lower than completed redemptions.");
+  const completedRedemptions = current.redemptions.filter((redemption) => redemption.status === "REDEEMED").length;
+  const activeReservations = current.redemptions.filter((redemption) => redemption.status === "RESERVED").length;
+  if (parsed.maxRedemptions !== undefined && parsed.maxRedemptions < completedRedemptions + activeReservations) throw new AdminError("INVALID_REQUEST", "Maximum redemptions cannot be lower than completed redemptions plus active reservations.");
+  const hasUsageHistory = current.redemptions.length > 0;
+  const changesFinancialTerms =
+    (parsed.code !== undefined && parsed.code !== current.code) ||
+    (parsed.discountPercent !== undefined && parsed.discountPercent !== current.discountPercent) ||
+    (parsed.expiresAt !== undefined && parsed.expiresAt.getTime() !== current.expiresAt.getTime()) ||
+    (parsed.startsAt !== undefined && (parsed.startsAt?.getTime() ?? null) !== (current.startsAt?.getTime() ?? null)) ||
+    (parsed.minimumSubtotal !== undefined && (parsed.minimumSubtotal?.toFixed(2) ?? null) !== (current.minimumSubtotal?.toFixed(2) ?? null)) ||
+    (parsed.maximumDiscountAmount !== undefined && (parsed.maximumDiscountAmount?.toFixed(2) ?? null) !== (current.maximumDiscountAmount?.toFixed(2) ?? null)) ||
+    (parsed.perCustomerLimit !== undefined && parsed.perCustomerLimit !== current.perCustomerLimit);
+  if (hasUsageHistory && changesFinancialTerms) throw new AdminError("INVALID_REQUEST", "Coupon code and discount terms are immutable after a reservation or redemption. You may deactivate the coupon instead.");
   const { id } = input;
   const data: Prisma.DiscountCouponUpdateInput = { updatedByAdminId: context.adminUser.id };
   for (const key of ["code","discountPercent","maxRedemptions","expiresAt","startsAt","status","minimumSubtotal","maximumDiscountAmount","perCustomerLimit","description","internalNote"] as const) {
