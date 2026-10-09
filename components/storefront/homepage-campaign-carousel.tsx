@@ -28,7 +28,7 @@ export function HomepageCampaignCarousel() {
   const showNext = () => setActiveIndex((current) => (current + 1) % banners.length);
 
   return (
-    <section aria-label="Featured 4HRS+ campaigns" className="w-full border-b-2 border-border bg-[#f5f1e8] lg:border-b-4">
+    <section aria-label="Featured 4HRS+ campaigns" className="hidden w-full border-b-2 border-border bg-[#f5f1e8] lg:border-b-4 sm:block">
       <div
         className="relative w-full overflow-hidden bg-[#f5f1e8] sm:aspect-[1507/404]"
         onMouseEnter={() => setIsPaused(true)}
