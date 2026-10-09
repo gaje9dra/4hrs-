@@ -1,3 +1,5 @@
+"use client";
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Heart, ShoppingCart } from "lucide-react";
@@ -18,16 +20,22 @@ export function ProductCard({ product }: { product: StorefrontProductCard }) {
   const href = productPath(product);
   const unavailable = product.availability === "OUT_OF_STOCK";
   const savings = savingsPercent(product);
+  const [hoverImageIndex, setHoverImageIndex] = useState(0);
+  const gallery = product.images?.length ? product.images : product.image ? [product.image] : [];
+  const advanceHoverImage = () => {
+    if (gallery.length < 2) return;
+    setHoverImageIndex((current) => current === 0 ? 1 : current === 1 && gallery.length > 2 ? 2 : 1);
+  };
 
   return (
-    <Card className="group overflow-hidden p-0 shadow-none transition-transform duration-200 hover:-translate-y-1 lg:shadow-hard-md">
+    <Card onMouseEnter={advanceHoverImage} className="group overflow-hidden p-0 shadow-none transition-transform duration-200 hover:-translate-y-1 lg:shadow-hard-md">
       <div className="relative">
         <Link href={href} className="motion-link block no-underline" aria-label={product.title}>
           <div className="relative aspect-[4/5] overflow-hidden bg-white">
-            {product.image ? (
+            {gallery.length > 0 ? (
               <Image
-                src={product.image.url}
-                alt={product.image.altText ?? product.title}
+                src={(gallery[hoverImageIndex] ?? gallery[0]).url}
+                alt={(gallery[hoverImageIndex] ?? gallery[0]).altText ?? product.title}
                 fill
                 loading="lazy"
                 sizes="(max-width: 639px) 50vw, (max-width: 1024px) 33vw, (max-width: 1535px) 25vw, 320px"
