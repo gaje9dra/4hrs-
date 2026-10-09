@@ -1,5 +1,4 @@
 "use client";
-import { useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Heart, ShoppingCart } from "lucide-react";
@@ -20,34 +19,36 @@ export function ProductCard({ product }: { product: StorefrontProductCard }) {
   const href = productPath(product);
   const unavailable = product.availability === "OUT_OF_STOCK";
   const savings = savingsPercent(product);
-  const [hoverImageIndex, setHoverImageIndex] = useState(0);
-  const hoverCycleIndex = useRef(0);
   const gallery = product.images?.length ? product.images : product.image ? [product.image] : [];
-  const advanceHoverImage = () => {
-    if (gallery.length < 2) return;
-    const nextIndex = hoverCycleIndex.current === 0
-      ? 1
-      : hoverCycleIndex.current === 1 && gallery.length > 2
-        ? 2
-        : 1;
-    hoverCycleIndex.current = nextIndex;
-    setHoverImageIndex(nextIndex);
-  };
+  const primaryImage = product.image ?? gallery[0] ?? null;
+  const secondaryImage = gallery.find((image) => image.url !== primaryImage?.url) ?? null;
 
   return (
-    <Card onMouseEnter={advanceHoverImage} onMouseLeave={() => setHoverImageIndex(0)} className="group overflow-hidden p-0 shadow-none transition-transform duration-200 hover:-translate-y-1 lg:shadow-hard-md">
+    <Card className="group overflow-hidden p-0 shadow-none transition-transform duration-200 hover:-translate-y-1 lg:shadow-hard-md">
       <div className="relative">
         <Link href={href} className="motion-link block no-underline" aria-label={product.title}>
           <div className="relative aspect-[4/5] overflow-hidden bg-white">
-            {gallery.length > 0 ? (
-              <Image
-                src={(gallery[hoverImageIndex] ?? gallery[0]).url}
-                alt={(gallery[hoverImageIndex] ?? gallery[0]).altText ?? product.title}
-                fill
-                loading="lazy"
-                sizes="(max-width: 639px) 50vw, (max-width: 1024px) 33vw, (max-width: 1535px) 25vw, 320px"
-                className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
-              />
+            {primaryImage ? (
+              <>
+                <Image
+                  src={primaryImage.url}
+                  alt={primaryImage.altText ?? product.title}
+                  fill
+                  loading="lazy"
+                  sizes="(max-width: 639px) 50vw, (max-width: 1024px) 33vw, (max-width: 1535px) 25vw, 320px"
+                  className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                />
+                {secondaryImage ? (
+                  <Image
+                    src={secondaryImage.url}
+                    alt={secondaryImage.altText ?? `${product.title} alternate view`}
+                    fill
+                    loading="lazy"
+                    sizes="(max-width: 639px) 50vw, (max-width: 1024px) 33vw, (max-width: 1535px) 25vw, 320px"
+                    className="object-cover opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                  />
+                ) : null}
+              </>
             ) : (
               <div className="flex h-full items-center justify-center bg-primary-yellow p-6 text-center text-sm font-900 uppercase">
                 Image coming soon
