@@ -21,7 +21,7 @@ export type CouponCalculation = {
 
 export class CouponEligibilityError extends Error {
   constructor(
-    public readonly code: "COUPON_INVALID" | "COUPON_INACTIVE" | "COUPON_NOT_STARTED" | "COUPON_EXPIRED" | "COUPON_MINIMUM_NOT_MET" | "COUPON_EXHAUSTED" | "COUPON_LIMIT_REACHED",
+    public readonly code: "COUPON_INVALID" | "COUPON_INACTIVE" | "COUPON_NOT_STARTED" | "COUPON_EXPIRED" | "COUPON_MINIMUM_NOT_MET" | "COUPON_EXHAUSTED" | "COUPON_LIMIT_REACHED" | "COUPON_ZERO_TOTAL",
     message: string,
   ) {
     super(message);
