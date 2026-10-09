@@ -55,8 +55,22 @@ export async function POST(request: Request) {
 
     if (payment.status === "SUCCEEDED") return paymentJson(payment);
 
-    const started = await paymentApplication.startProviderPayment(payment.id, checkout.customer.id, checkoutRequest.paymentMethod);
-    return paymentJson(started);
+    try {
+      const started = await paymentApplication.startProviderPayment(payment.id, checkout.customer.id, checkoutRequest.paymentMethod);
+      return paymentJson(started);
+    } catch (error) {
+      const definitivePreflightFailure = error instanceof PaymentError && new Set<string>([
+        "PROVIDER_CONFIGURATION_MISSING", "PROVIDER_UNAVAILABLE", "PAYMENT_INTERNAL_ERROR", "PAYMENT_DECLINED",
+      ]).has(error.code);
+      if (payment.status === "CREATED" && definitivePreflightFailure) {
+        try {
+          await paymentApplication.transitionPaymentState({ paymentId: payment.id, customerId: checkout.customer.id, nextStatus: "FAILED" });
+        } catch {
+          // A concurrent provider callback or state transition takes precedence; retain the reservation for reconciliation.
+        }
+      }
+      throw error;
+    }
   } catch (error) {
     return paymentErrorResponse(error);
   }
