@@ -378,6 +378,7 @@ model Customer {
   payments        Payment[]
   paymentIdempotencyRecords PaymentIdempotency[]
   orders          Order[]
+  couponRedemptions CouponRedemption[]
   cancellationRequests CancellationRequest[]
   returnRequests ReturnRequest[]
   cases Case[]
@@ -519,6 +520,7 @@ model Order {
   customer         Customer    @relation(fields: [customerId], references: [id], onDelete: Restrict)
   payment          Payment     @relation(fields: [paymentId], references: [id], onDelete: Restrict)
   items            OrderItem[]
+  couponRedemption CouponRedemption?
   shippingAddress  OrderAddressSnapshot?
   fulfillment      Fulfillment?
   shipments        Shipment[]
@@ -7218,4 +7220,63 @@ model GovernanceStabilityCertification {
   createdAt DateTime @default(now())
   @@index([status,expiresAt])
   @@index([assessmentId,createdAt])
+}
+
+
+enum CouponStatus {
+  DRAFT
+  ACTIVE
+  INACTIVE
+}
+
+enum CouponRedemptionStatus {
+  RESERVED
+  REDEEMED
+  RELEASED
+  EXPIRED
+}
+
+model DiscountCoupon {
+  id                    String        @id @default(uuid()) @db.Uuid
+  code                  String        @unique @db.VarChar(64)
+  discountPercent       Int
+  maxRedemptions        Int
+  startsAt              DateTime?
+  expiresAt             DateTime
+  minimumSubtotal       Decimal?      @db.Decimal(12, 2)
+  maximumDiscountAmount Decimal?      @db.Decimal(12, 2)
+  perCustomerLimit      Int?
+  description           String?       @db.VarChar(500)
+  internalNote          String?       @db.VarChar(1000)
+  status                CouponStatus  @default(DRAFT)
+  createdByAdminId      String?       @db.Uuid
+  updatedByAdminId      String?       @db.Uuid
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  redemptions           CouponRedemption[]
+  @@index([status, startsAt, expiresAt])
+  @@index([createdAt])
+}
+
+model CouponRedemption {
+  id            String                 @id @default(uuid()) @db.Uuid
+  couponId      String                 @db.Uuid
+  orderId       String?                @unique @db.Uuid
+  customerId    String                 @db.Uuid
+  status        CouponRedemptionStatus @default(RESERVED)
+  eligibleTotal Decimal                @db.Decimal(12, 2)
+  discountTotal Decimal                @db.Decimal(12, 2)
+  currency      String                 @db.VarChar(3)
+  reservedAt    DateTime               @default(now())
+  reservationExpiresAt DateTime?
+  redeemedAt    DateTime?
+  releasedAt    DateTime?
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+  coupon        DiscountCoupon         @relation(fields: [couponId], references: [id], onDelete: Restrict)
+  order         Order?                 @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  customer      Customer               @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  @@index([couponId, status, createdAt])
+  @@index([customerId, couponId, status])
+  @@index([status, reservationExpiresAt])
 }
