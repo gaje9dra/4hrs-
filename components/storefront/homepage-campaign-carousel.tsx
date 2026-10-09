@@ -35,7 +35,7 @@ export function HomepageCampaignCarousel() {
 
   return (
     <section aria-label="Featured 4HRS+ campaigns" className="w-full border-b-2 border-border bg-background lg:border-b-4">
-      <div className="relative aspect-[1507/404] w-full overflow-hidden bg-[#f5f1e8]">
+      <div className="relative aspect-[1.65/1] w-full overflow-hidden bg-[#f5f1e8] sm:aspect-[1507/404]">
         <Link
           href={activeBanner.href}
           aria-label={activeBanner.alt}
