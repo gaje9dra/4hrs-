@@ -4,7 +4,13 @@ import { randomUUID } from "node:crypto";
 import { db } from "@/lib/db/client";
 import { reserveCouponForCheckout } from "@/lib/coupons/redemptions";
 
-test("PostgreSQL coupon reservation never exceeds configured capacity under concurrency", { skip: !process.env.DATABASE_URL }, async () => {
+const databaseUrl = (() => { try { return new URL(process.env.DATABASE_URL ?? ""); } catch { return null; } })();
+const safeTestDatabase = process.env.CI === "true" && Boolean(databaseUrl) && (
+  databaseUrl!.pathname.toLowerCase().includes("test") ||
+  ["localhost", "127.0.0.1", "postgres", "db"].includes(databaseUrl!.hostname.toLowerCase())
+);
+
+test("PostgreSQL coupon reservation never exceeds configured capacity under concurrency", { skip: !safeTestDatabase }, async () => {
   const customer = await db.customer.create({ data: { email: "coupon-concurrency-" + randomUUID() + "@example.test" } });
   const coupon = await db.discountCoupon.create({
     data: {
