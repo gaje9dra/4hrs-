@@ -37,6 +37,36 @@ test("PostgreSQL coupon reservation never exceeds configured capacity under conc
     assert.ok(accepted.length <= 10, "accepted reservations must not exceed maxRedemptions");
     assert.ok(counted.length <= 10, "persisted completed plus reserved redemptions must not exceed maxRedemptions");
     assert.equal(new Set(rows.map((row) => row.checkoutReference)).size, rows.length, "each checkout must own a unique reservation");
+    if (rows[0]?.checkoutReference) {
+      const repeated = await reserveCouponForCheckout({ customerId: customer.id, checkoutReference: rows[0].checkoutReference, code: coupon.code, eligibleSubtotal: "100.00", currency: "INR" });
+      assert.equal(repeated.id, rows[0].id, "retrying the same checkout must reuse its original reservation");
+    }
+  } finally {
+    await db.couponRedemption.deleteMany({ where: { couponId: coupon.id } });
+    await db.discountCoupon.delete({ where: { id: coupon.id } });
+    await db.customer.delete({ where: { id: customer.id } });
+  }
+});
+
+
+test("PostgreSQL coupon reservation enforces per-customer usage limits", { skip: !safeTestDatabase }, async () => {
+  const customer = await db.customer.create({ data: { email: "coupon-per-customer-" + randomUUID() + "@example.test" } });
+  const coupon = await db.discountCoupon.create({
+    data: {
+      code: "P" + randomUUID().replaceAll("-", "").slice(0, 15).toUpperCase(),
+      discountPercent: 10,
+      maxRedemptions: 5,
+      perCustomerLimit: 1,
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      status: "ACTIVE",
+    },
+  });
+  try {
+    await reserveCouponForCheckout({ customerId: customer.id, checkoutReference: "per-customer-" + randomUUID(), code: coupon.code, eligibleSubtotal: "100.00", currency: "INR" });
+    await assert.rejects(
+      () => reserveCouponForCheckout({ customerId: customer.id, checkoutReference: "per-customer-" + randomUUID(), code: coupon.code, eligibleSubtotal: "100.00", currency: "INR" }),
+      /usage limit/,
+    );
   } finally {
     await db.couponRedemption.deleteMany({ where: { couponId: coupon.id } });
     await db.discountCoupon.delete({ where: { id: coupon.id } });
