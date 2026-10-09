@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Heart, ShoppingCart } from "lucide-react";
@@ -21,14 +21,21 @@ export function ProductCard({ product }: { product: StorefrontProductCard }) {
   const unavailable = product.availability === "OUT_OF_STOCK";
   const savings = savingsPercent(product);
   const [hoverImageIndex, setHoverImageIndex] = useState(0);
+  const hoverCycleIndex = useRef(0);
   const gallery = product.images?.length ? product.images : product.image ? [product.image] : [];
   const advanceHoverImage = () => {
     if (gallery.length < 2) return;
-    setHoverImageIndex((current) => current === 0 ? 1 : current === 1 && gallery.length > 2 ? 2 : 1);
+    const nextIndex = hoverCycleIndex.current === 0
+      ? 1
+      : hoverCycleIndex.current === 1 && gallery.length > 2
+        ? 2
+        : 1;
+    hoverCycleIndex.current = nextIndex;
+    setHoverImageIndex(nextIndex);
   };
 
   return (
-    <Card onMouseEnter={advanceHoverImage} className="group overflow-hidden p-0 shadow-none transition-transform duration-200 hover:-translate-y-1 lg:shadow-hard-md">
+    <Card onMouseEnter={advanceHoverImage} onMouseLeave={() => setHoverImageIndex(0)} className="group overflow-hidden p-0 shadow-none transition-transform duration-200 hover:-translate-y-1 lg:shadow-hard-md">
       <div className="relative">
         <Link href={href} className="motion-link block no-underline" aria-label={product.title}>
           <div className="relative aspect-[4/5] overflow-hidden bg-white">
