@@ -6,11 +6,11 @@ import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const banners = [
-  { src: "/images/homepage-banners/4hrs-hero-banner.png", alt: "4HRS+ premium streetwear campaign", href: "/shop", eyebrow: "4HRS+ / NEW SEASON", title: "Streetwear, redefined.", accent: "redefined." },
-  { src: "/images/homepage-banners/4hrs-men-banner.png", alt: "Shop men's streetwear", href: "/category/men", eyebrow: "THE MEN'S EDIT", title: "Built for everyday.", accent: "everyday." },
-  { src: "/images/homepage-banners/4hrs-women-banner.png", alt: "Shop women's streetwear", href: "/category/women", eyebrow: "THE WOMEN'S EDIT", title: "Make it your own.", accent: "your own." },
-  { src: "/images/homepage-banners/4hrs-new-collection-banner.png", alt: "Explore the new 4HRS+ collection", href: "/shop", eyebrow: "JUST DROPPED", title: "Fresh designs. Same attitude.", accent: "Same attitude." },
-  { src: "/images/homepage-banners/4hrs-sale-banner.png", alt: "Shop 4HRS+ sale styles", href: "/shop", eyebrow: "LIMITED-TIME OFFER", title: "Your next fit costs less.", accent: "costs less." },
+  { src: "/images/homepage-banners/4hrs-hero-banner.png", mobileSrc: "/images/homepage-banners/mobile/4hrs-hero-mobile.svg", alt: "4HRS+ premium streetwear campaign", href: "/shop", eyebrow: "4HRS+ / NEW SEASON", title: "Streetwear, redefined.", accent: "redefined." },
+  { src: "/images/homepage-banners/4hrs-men-banner.png", mobileSrc: "/images/homepage-banners/mobile/4hrs-men-mobile.svg", alt: "Shop men's streetwear", href: "/category/men", eyebrow: "THE MEN'S EDIT", title: "Built for everyday.", accent: "everyday." },
+  { src: "/images/homepage-banners/4hrs-women-banner.png", mobileSrc: "/images/homepage-banners/mobile/4hrs-women-mobile.svg", alt: "Shop women's streetwear", href: "/category/women", eyebrow: "THE WOMEN'S EDIT", title: "Make it your own.", accent: "your own." },
+  { src: "/images/homepage-banners/4hrs-new-collection-banner.png", mobileSrc: "/images/homepage-banners/mobile/4hrs-new-collection-mobile.svg", alt: "Explore the new 4HRS+ collection", href: "/shop", eyebrow: "JUST DROPPED", title: "Fresh designs. Same attitude.", accent: "Same attitude." },
+  { src: "/images/homepage-banners/4hrs-sale-banner.png", mobileSrc: "/images/homepage-banners/mobile/4hrs-sale-mobile.svg", alt: "Shop 4HRS+ sale styles", href: "/shop", eyebrow: "LIMITED-TIME OFFER", title: "Your next fit costs less.", accent: "costs less." },
 ];
 
 export function HomepageCampaignCarousel() {
@@ -42,12 +42,12 @@ export function HomepageCampaignCarousel() {
         >
           <Image
             key={activeBanner.src}
-            src={activeBanner.src}
+            src={activeBanner.mobileSrc}
             alt={activeBanner.alt}
             fill
             priority={activeIndex === 0}
             sizes="100vw"
-            className="object-cover object-center"
+            className="object-contain object-center"
           />
         </Link>
 
