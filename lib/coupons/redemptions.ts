@@ -97,7 +97,10 @@ export async function reserveCouponForCheckout(input: {
         } });
       }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, maxWait: 5000, timeout: 10000 });
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034" && attempt < 2) continue;
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034") {
+        if (attempt < 2) continue;
+        throw new CouponRedemptionError("COUPON_RESERVATION_CONFLICT", "Coupon capacity is busy. Please retry checkout.");
+      }
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
         const existing = await database.couponRedemption.findUnique({ where: { checkoutReference: input.checkoutReference } });
         if (existing && existing.customerId === input.customerId && existing.couponCodeSnapshot === code && (existing.status === "RESERVED" || existing.status === "REDEEMED")) return existing;
