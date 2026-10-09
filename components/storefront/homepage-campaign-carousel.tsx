@@ -12,13 +12,10 @@ const banners = [
 
 export function HomepageCampaignCarousel() {
   const [activeIndex, setActiveIndex] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
-
   useEffect(() => {
-    if (isPaused) return;
     const timer = window.setInterval(() => setActiveIndex((current) => (current + 1) % banners.length), 4000);
     return () => window.clearInterval(timer);
-  }, [isPaused]);
+  }, []);
 
   const activeBanner = banners[activeIndex];
   const showPrevious = () => setActiveIndex((current) => (current - 1 + banners.length) % banners.length);
@@ -26,11 +23,7 @@ export function HomepageCampaignCarousel() {
 
   return (
     <section aria-label="Featured 4HRS+ campaigns" className="hidden w-full border-b-2 border-border bg-[#f5f1e8] lg:border-b-4 sm:block">
-      <div
-        className="relative w-full overflow-hidden bg-[#f5f1e8] sm:aspect-[1507/404]"
-        onMouseEnter={() => setIsPaused(true)}
-        onMouseLeave={() => setIsPaused(false)}
-      >
+      <div className="relative w-full overflow-hidden bg-[#f5f1e8] sm:aspect-[1507/404]">
         {/* Mobile: give the artwork the entire carousel area; no headline or CTA overlay. */}
         <Link
           href={activeBanner.href}
