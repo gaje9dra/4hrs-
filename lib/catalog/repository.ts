@@ -290,6 +290,7 @@ const publicCatalogListSelect = {
   images: {
     where: { productId: { not: null } },
     orderBy: [{ isPrimary: "desc" as const }, { sortOrder: "asc" as const }, { id: "asc" as const }],
+    take: 1,
     select: { id: true, url: true, altText: true },
   },
   variants: {
