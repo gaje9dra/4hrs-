@@ -50,7 +50,7 @@ test("Checkout UI retains the server revision before the first address validatio
   const fs = await import("node:fs/promises");
   const source = await fs.readFile("components/storefront/checkout-page.tsx", "utf8");
   assert.match(source, /revisionRef\.current\s*=\s*nextCheckout\.revision/);
-  assert.match(source, /checkoutRequest\("POST",\s*addressId,\s*revisionRef\.current\)/);
+  assert.match(source, /checkoutRequest\("POST",\s*addressId,\s*revisionRef\.current,\s*checkout\?\.coupon\?\.code\s*\?\?\s*null\)/);
 });
 
 test("Checkout UI guards validation against duplicate submission", async () => {
