@@ -22,9 +22,9 @@ export type OrderCheckoutSnapshot = {
   address: CreateOrderAddressSnapshotInput;
   items: OrderCheckoutItem[];
   subtotal: string;
-  discountTotal: string;
-  couponCode: string | null;
-  couponDiscountPercent: number | null;
+  discountTotal?: string;
+  couponCode?: string | null;
+  couponDiscountPercent?: number | null;
   total: string;
   currency: string;
 };
@@ -104,7 +104,7 @@ export function validateCheckoutForOrder(
   const itemSubtotal = checkout.items
     .reduce((sum, item) => sum.add(new Prisma.Decimal(item.lineTotal)), new Prisma.Decimal(0))
     .toFixed(2);
-  const discountTotal = new Prisma.Decimal(checkout.discountTotal);
+  const discountTotal = new Prisma.Decimal(checkout.discountTotal ?? "0.00");
   if (!discountTotal.isFinite() || discountTotal.isNegative() || discountTotal.greaterThan(new Prisma.Decimal(checkout.subtotal))) {
     throw new OrderDomainError("CHECKOUT_INVALID", "Checkout discount is invalid.");
   }
