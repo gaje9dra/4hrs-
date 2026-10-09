@@ -38,7 +38,7 @@ export function ProductCard({ product }: { product: StorefrontProductCard }) {
     <Card className="group overflow-hidden p-0 shadow-none transition-transform duration-200 hover:-translate-y-1 lg:shadow-hard-md">
       <div className="relative">
         <Link href={href} className="motion-link block no-underline" aria-label={product.title}>
-          <div className="relative aspect-[4/5] overflow-hidden bg-white" onMouseEnter={handleImageEnter} onMouseLeave={handleImageLeave}>
+          <div className="relative aspect-[2/3] overflow-hidden bg-white" onMouseEnter={handleImageEnter} onMouseLeave={handleImageLeave}>
             {activeImage ? (
               <Image
                 key={activeImage.url}
@@ -46,7 +46,7 @@ export function ProductCard({ product }: { product: StorefrontProductCard }) {
                 alt={activeImage.altText ?? (hoverImageIndex > 0 ? `${product.title} alternate view ${hoverImageIndex}` : product.title)}
                 fill
                 loading="lazy"
-                sizes="(max-width: 639px) 50vw, (max-width: 1024px) 33vw, (max-width: 1535px) 25vw, 320px"
+                sizes="(max-width: 1023px) 50vw, (max-width: 1535px) 33vw, 25vw"
                 className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
               />
             ) : (
