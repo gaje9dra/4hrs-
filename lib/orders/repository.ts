@@ -116,7 +116,17 @@ function assertOrder(input: CreateOrderInput): void {
   assertNonEmpty(input.paymentId, "paymentId");
   assertCurrency(input.currency);
   assertNonNegativeMoney(input.subtotal, "subtotal");
+  assertNonNegativeMoney(input.discountTotal ?? "0.00", "discountTotal");
   assertNonNegativeMoney(input.total, "total");
+  const subtotal = new Prisma.Decimal(input.subtotal);
+  const discountTotal = new Prisma.Decimal(input.discountTotal ?? "0.00");
+  const total = new Prisma.Decimal(input.total);
+  if (discountTotal.greaterThan(subtotal) || !subtotal.minus(discountTotal).eq(total)) {
+    throw new Error("Order total must equal subtotal less the authoritative coupon discount.");
+  }
+  if (discountTotal.greaterThan(0) && (!input.couponCode || !Number.isInteger(input.couponDiscountPercent) || input.couponDiscountPercent! < 1 || input.couponDiscountPercent! > 100)) {
+    throw new Error("A discounted Order requires a valid coupon snapshot.");
+  }
 }
 
 export function createOrderRepository(client?: OrderRepositoryClient): OrderRepository {
