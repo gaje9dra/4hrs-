@@ -7,7 +7,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const banners = [
   { src: "/images/homepage-banners/4hrs-hero-banner.png", alt: "4HRS+ premium streetwear campaign", href: "/shop", eyebrow: "4HRS+ / NEW SEASON", title: "Streetwear, redefined.", accent: "redefined." },
-  { src: "/images/homepage-banners/4hrs-men-banner.png", alt: "Shop men's streetwear", href: "/category/men", eyebrow: "THE MEN'S EDIT", title: "Built for everyday.", accent: "everyday." },
+  { src: "/images/homepage-banners/4hrs-men-banner.png?v=20261009-2", alt: "Shop men's streetwear", href: "/category/men", eyebrow: "THE MEN'S EDIT", title: "Built for everyday.", accent: "everyday." },
 ];
 
 export function HomepageCampaignCarousel() {
