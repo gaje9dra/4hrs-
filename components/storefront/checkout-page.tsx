@@ -132,14 +132,15 @@ export function CheckoutPage({ customer }: { customer: CustomerDto }) {
   const requestVersion = useRef(0);
   const selectedAddressRef = useRef<string | null>(null);
   const revisionRef = useRef<CheckoutDto["revision"] | undefined>(undefined);
+  const appliedCouponRef = useRef<string | null>(null);
 
   const load = useCallback(async (preserveSelection: boolean) => {
     const version = ++requestVersion.current;
     setState("loading"); setError(null);
     try {
-      const [nextCheckout, nextAddresses] = await Promise.all([checkoutRequest("POST", preserveSelection ? selectedAddressRef.current : null, undefined, checkout?.coupon?.code ?? null), addressRequest()]);
+      const [nextCheckout, nextAddresses] = await Promise.all([checkoutRequest("POST", preserveSelection ? selectedAddressRef.current : null, undefined, appliedCouponRef.current), addressRequest()]);
       if (version !== requestVersion.current) return;
-      setCheckout(nextCheckout); revisionRef.current = nextCheckout.revision; setAddresses(nextAddresses); setCouponInput(nextCheckout.coupon?.code ?? ""); setCouponError(nextCheckout.validation.issues.find((item) => item.code === "COUPON_INVALID")?.message ?? null);
+      setCheckout(nextCheckout); appliedCouponRef.current = nextCheckout.coupon?.code ?? null; revisionRef.current = nextCheckout.revision; setAddresses(nextAddresses); setCouponInput(nextCheckout.coupon?.code ?? ""); setCouponError(nextCheckout.validation.issues.find((item) => item.code === "COUPON_INVALID")?.message ?? null);
       const serverAddress = nextCheckout.address?.id ?? null;
       setSelectedAddressId(preserveSelection && selectedAddressRef.current && nextAddresses.some((item) => item.id === selectedAddressRef.current) ? selectedAddressRef.current : serverAddress);
       setState(classify(nextCheckout));
@@ -148,7 +149,7 @@ export function CheckoutPage({ customer }: { customer: CustomerDto }) {
       setState(reason instanceof Error && reason.message === "SESSION_EXPIRED" ? "session_expired" : "server_error");
       setError("Checkout could not be loaded. Please try again.");
     }
-  }, [checkout]);
+  }, []);
 
   useEffect(() => {
     const version = ++requestVersion.current;
@@ -156,6 +157,7 @@ export function CheckoutPage({ customer }: { customer: CustomerDto }) {
       .then(([nextCheckout, nextAddresses]) => {
         if (version !== requestVersion.current) return;
         setCheckout(nextCheckout);
+        appliedCouponRef.current = nextCheckout.coupon?.code ?? null;
         setCouponInput(nextCheckout.coupon?.code ?? "");
         setCouponError(nextCheckout.validation.issues.find((item) => item.code === "COUPON_INVALID")?.message ?? null);
         revisionRef.current = nextCheckout.revision;
@@ -184,7 +186,7 @@ export function CheckoutPage({ customer }: { customer: CustomerDto }) {
     try {
       const next = await checkoutRequest("POST", addressId, revisionRef.current, checkout?.coupon?.code ?? null);
       if (version !== requestVersion.current) return;
-      setCheckout(next); revisionRef.current = next.revision; setState(classify(next));
+      setCheckout(next); appliedCouponRef.current = next.coupon?.code ?? null; revisionRef.current = next.revision; setState(classify(next));
       if (next.address?.id) { selectedAddressRef.current = next.address.id; setSelectedAddressId(next.address.id); }
     } catch (reason) {
       if (version !== requestVersion.current) return;
@@ -203,7 +205,7 @@ export function CheckoutPage({ customer }: { customer: CustomerDto }) {
     setCouponPending(true); setCouponError(null); setCouponNotice(null);
     try {
       const next = await checkoutRequest("POST", selectedAddressId, revisionRef.current, code);
-      setCheckout(next); revisionRef.current = next.revision;
+      setCheckout(next); appliedCouponRef.current = next.coupon?.code ?? null; revisionRef.current = next.revision;
       const invalid = next.validation.issues.find((item) => item.code === "COUPON_INVALID");
       if (invalid || !next.coupon) {
         setCouponError(invalid?.message ?? "This coupon could not be applied.");
@@ -222,7 +224,7 @@ export function CheckoutPage({ customer }: { customer: CustomerDto }) {
     setCouponPending(true); setCouponError(null); setCouponNotice(null);
     try {
       const next = await checkoutRequest("POST", selectedAddressId, revisionRef.current, null);
-      setCheckout(next); revisionRef.current = next.revision; setCouponInput(""); setCouponNotice("Coupon removed.");
+      setCheckout(next); appliedCouponRef.current = null; revisionRef.current = next.revision; setCouponInput(""); setCouponNotice("Coupon removed.");
       setState(classify(next));
     } catch (reason) {
       setCouponError(reason instanceof Error ? reason.message : "Coupon could not be removed.");
