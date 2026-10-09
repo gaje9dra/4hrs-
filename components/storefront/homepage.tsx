@@ -1,3 +1,4 @@
+import { HomepageCampaignCarousel } from "@/components/storefront/homepage-campaign-carousel";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Layers3 } from "lucide-react";
@@ -259,44 +260,11 @@ function EditorialHomepageSections({ sections }: { sections: EditorialHomepageSe
   </section>;
 }
 
-function HomepageCampaignBanners() {
-  const banners = [
-    { src: "/images/homepage-banners/4hrs-hero-banner.png", alt: "4HRS+ premium streetwear campaign", className: "col-span-full aspect-[3.72/1]" },
-    { src: "/images/homepage-banners/4hrs-men-banner.png", alt: "Shop men's streetwear", className: "aspect-[2.9/1]" },
-    { src: "/images/homepage-banners/4hrs-women-banner.png", alt: "Shop women's streetwear", className: "aspect-[2.9/1]" },
-    { src: "/images/homepage-banners/4hrs-new-collection-banner.png", alt: "Explore the new 4HRS+ collection", className: "aspect-[2.98/1]" },
-    { src: "/images/homepage-banners/4hrs-sale-banner.png", alt: "Shop 4HRS+ sale styles", className: "aspect-[2.98/1]" },
-  ];
-
-  return (
-    <section aria-label="Featured 4HRS+ campaigns" className="border-b-2 border-border bg-background lg:border-b-4">
-      <Container width="wide" className="grid grid-cols-1 gap-3 py-3 sm:grid-cols-2 sm:gap-4 sm:py-4">
-        {banners.map((banner, index) => (
-          <Link
-            key={banner.src}
-            href={index === 1 ? "/category/men" : index === 2 ? "/category/women" : index === 4 ? "/shop" : "/shop"}
-            aria-label={banner.alt}
-            className={`group relative block overflow-hidden border-2 border-border bg-white shadow-hard-sm transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-hard-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-blue ${banner.className}`}
-          >
-            <Image
-              src={banner.src}
-              alt={banner.alt}
-              fill
-              priority={index === 0}
-              sizes={index === 0 ? "(max-width: 639px) 100vw, 100vw" : "(max-width: 639px) 100vw, 50vw"}
-              className="object-cover transition-transform duration-300 group-hover:scale-[1.01]"
-            />
-          </Link>
-        ))}
-      </Container>
-    </section>
-  );
-}
 
 export function Homepage({ data, editorialSections = [] }: { data: StorefrontHomeData; editorialSections?: EditorialHomepageSection[] }) {
   return (
     <>
-      <HomepageCampaignBanners />
+      <HomepageCampaignCarousel />
       <Hero data={data} />
       <ProductDiscovery eyebrow="Discovery / 01" title="Curated picks" products={data.featuredProducts} />
       <CategoryDiscovery categories={data.categories} />
