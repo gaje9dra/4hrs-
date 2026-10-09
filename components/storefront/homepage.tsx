@@ -106,21 +106,24 @@ function CategoryDiscovery({ categories }: { categories: StorefrontHomeData["cat
           eyebrow="Discover / 02"
           title="Shop by category"
           description="Go straight to a product family in the live catalog."
-          className="mb-10"
+          className="mb-6 sm:mb-8 lg:mb-10 [&_h2]:max-w-[12ch] [&_h2]:text-[clamp(1.85rem,7.4vw,2.75rem)] [&_h2]:leading-[0.92] [&_p]:mt-3 [&_p]:max-w-[32ch] [&_p]:text-sm [&_p]:leading-6 sm:[&_p]:text-base"
         />
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:gap-6">
           {categories.slice(0, 6).map((category, index) => (
-            <Card key={category.id} className="min-h-48 overflow-hidden p-0">
+            <Card key={category.id} className="group min-h-0 overflow-hidden p-0 shadow-hard-md sm:shadow-hard-lg">
               <Link
                 href={categoryPath(category)}
-                className="motion-link relative flex min-h-48 h-full items-end justify-between gap-6 p-7 sm:p-8 no-underline"
+                aria-label={`Shop ${category.name}`}
+                className="motion-link relative flex min-h-[154px] items-end justify-between gap-4 p-5 no-underline sm:min-h-[190px] sm:gap-6 sm:p-7 lg:min-h-[220px] lg:p-8"
               >
                 <span
                   aria-hidden="true"
-                  className={`absolute -right-7 -top-9 h-28 w-28 ${index % 2 === 0 ? "rounded-full bg-primary-red" : "bg-primary-blue"}`}
+                  className={`pointer-events-none absolute right-0 top-0 h-[88px] w-[88px] translate-x-[18%] -translate-y-[18%] transition-transform duration-300 group-hover:translate-x-[10%] group-hover:translate-y-[-10%] sm:h-28 sm:w-28 lg:h-32 lg:w-32 ${index % 2 === 0 ? "rounded-full bg-primary-red" : "bg-primary-blue"}`}
                 />
-                <span className="relative z-10 text-2xl font-900 uppercase leading-none sm:text-3xl">{category.name}</span>
-                <ArrowRight size={28} strokeWidth={3} aria-hidden="true" />
+                <span className="relative z-10 max-w-[75%] text-xl font-900 uppercase leading-[1.05] tracking-[-0.025em] underline decoration-2 underline-offset-4 sm:text-2xl lg:text-3xl">{category.name}</span>
+                <span aria-hidden="true" className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center border-2 border-border bg-white transition-transform duration-200 group-hover:translate-x-1 sm:h-11 sm:w-11">
+                  <ArrowRight size={22} strokeWidth={2.5} />
+                </span>
               </Link>
             </Card>
           ))}
