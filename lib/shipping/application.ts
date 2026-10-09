@@ -173,7 +173,7 @@ export function createShippingApplication(
     }
 
     try {
-      for (let attempt = 0; attempt < 5; attempt += 1 {
+      for (let attempt = 0; attempt < 5; attempt += 1) {
         try {
           return await database.$transaction(async (tx) => {
         const txRepository = createShippingRepository(tx);
