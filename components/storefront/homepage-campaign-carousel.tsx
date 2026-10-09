@@ -54,7 +54,7 @@ export function HomepageCampaignCarousel() {
             fill
             priority={activeIndex === 0}
             sizes="100vw"
-            className="object-contain"
+            className={activeIndex === 1 ? "object-cover object-center" : "object-contain"}
           />
         </Link>
 
