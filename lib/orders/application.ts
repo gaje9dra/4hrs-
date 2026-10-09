@@ -19,6 +19,7 @@ import { logOrderCreationObservation, logOrderLifecycleObservation } from "@/lib
 import { toPublicOrderDto, toPublicOrderListDto } from "@/lib/orders/dto";
 import type { PublicOrderDto, PublicOrderListDto } from "@/lib/orders/contracts";
 import { isAuthenticationError } from "@/lib/auth/errors";
+import { finalizeCouponRedemption } from "@/lib/coupons/redemptions";
 
 type CustomerContext = { id: string };
 
@@ -168,6 +169,9 @@ export function createOrderApplication(
               checkoutReference: checkout.checkoutReference,
               paymentId: payment.id,
               subtotal: checkout.subtotal,
+              discountTotal: checkout.discountTotal,
+              couponCode: checkout.couponCode,
+              couponDiscountPercent: checkout.couponDiscountPercent,
               total: checkout.total,
               currency: checkout.currency,
               status: "PENDING",
@@ -175,6 +179,9 @@ export function createOrderApplication(
               shippingAddress: buildAddressSnapshot(checkout),
             });
 
+            if (checkout.couponCode) {
+              await finalizeCouponRedemption({ checkoutReference: checkout.checkoutReference, customerId: customer!.id, orderId: created.id, database: tx });
+            }
             return toResult(created);
           });
 
