@@ -384,7 +384,7 @@ export function CheckoutPage({ customer }: { customer: CustomerDto }) {
             <h3 id="coupon-heading" className="text-sm font-900 uppercase">Discount coupon</h3>
             <div className="mt-3 flex flex-col gap-2 sm:flex-row">
               <Input id="checkout-coupon-code" name="couponCode" value={couponInput} onChange={(event) => { setCouponInput(event.target.value.toUpperCase()); setCouponError(null); setCouponNotice(null); }} disabled={couponPending || pending} placeholder="Enter coupon code" autoComplete="off" maxLength={64} />
-              {checkout.coupon ? <Button type="button" variant="ghost" disabled={couponPending || pending} loading={couponPending} onClick={() => void removeCoupon()}>Remove</Button> : <Button type="button" disabled={couponPending || pending || !couponInput.trim()} loading={couponPending} onClick={() => void applyCoupon()}>Apply</Button>}
+              {checkout.coupon || couponError ? <Button type="button" variant="ghost" disabled={couponPending || pending} loading={couponPending} onClick={() => void removeCoupon()}>Remove</Button> : <Button type="button" disabled={couponPending || pending || !couponInput.trim()} loading={couponPending} onClick={() => void applyCoupon()}>Apply</Button>}
             </div>
             {couponError ? <Alert variant="error" title="Coupon not applied" className="mt-3">{couponError}</Alert> : null}
             {couponNotice ? <Alert variant="success" title="Coupon updated" className="mt-3">{couponNotice}</Alert> : null}
