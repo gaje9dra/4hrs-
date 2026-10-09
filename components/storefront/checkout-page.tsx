@@ -148,7 +148,7 @@ export function CheckoutPage({ customer }: { customer: CustomerDto }) {
       setState(reason instanceof Error && reason.message === "SESSION_EXPIRED" ? "session_expired" : "server_error");
       setError("Checkout could not be loaded. Please try again.");
     }
-  }, []);
+  }, [checkout]);
 
   useEffect(() => {
     const version = ++requestVersion.current;
