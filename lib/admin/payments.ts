@@ -19,13 +19,19 @@ function date(value:string|null, end=false){if(!value)return undefined;const d=n
 function clean(value:string|null,max=120){const v=value?.trim()??"";return v? v.slice(0,max):undefined;}
 
 export type AdminPaymentQuery={
- page:number;pageSize:number;search?:string;status?:PaymentStatus;providerId?:string;orderId?:string;
+ page:number;pageSize:number;search?:string;status?:PaymentStatus;outcome?:"successful"|"failed";providerId?:string;orderId?:string;
  currency?:string;from?:Date;to?:Date;minAmount?:string;maxAmount?:string;refundStatus?:typeof REFUND_STATUSES[number];
  sort:"createdAt_desc"|"createdAt_asc"|"amount_desc"|"amount_asc";
 };
 
 export function parseAdminPaymentQuery(url:URL):AdminPaymentQuery{
- const status=clean(url.searchParams.get("status"));
+ const requestedStatus=clean(url.searchParams.get("status"));
+ const requestedOutcome=clean(url.searchParams.get("outcome"));
+ const outcome=requestedOutcome as "successful"|"failed"|undefined;
+ if(outcome && outcome!=="successful" && outcome!=="failed")throw new AdminError("INVALID_REQUEST","Payment outcome must be successful or failed.");
+ const outcomeStatus:PaymentStatus|undefined=outcome==="successful"?"SUCCEEDED":outcome==="failed"?"FAILED":undefined;
+ if(requestedStatus && outcomeStatus && requestedStatus!==outcomeStatus)throw new AdminError("INVALID_REQUEST","Payment status conflicts with the selected outcome.");
+ const status=outcomeStatus??requestedStatus;
  const refundStatus=clean(url.searchParams.get("refundStatus"));
  const sort=clean(url.searchParams.get("sort"))??"createdAt_desc";
  const allowedSort=["createdAt_desc","createdAt_asc","amount_desc","amount_asc"] as const;
@@ -39,7 +45,7 @@ export function parseAdminPaymentQuery(url:URL):AdminPaymentQuery{
  const minAmount=clean(url.searchParams.get("minAmount"),32); const maxAmount=clean(url.searchParams.get("maxAmount"),32);
  for(const value of [minAmount,maxAmount])if(value!==undefined && (!/^\d+(?:\.\d{1,2})?$/.test(value)||new Prisma.Decimal(value).lt(0)))throw new AdminError("INVALID_REQUEST","Payment amount filter is invalid.");
  if(minAmount&&maxAmount&&new Prisma.Decimal(minAmount).gt(new Prisma.Decimal(maxAmount)))throw new AdminError("INVALID_REQUEST","Payment amount range is invalid.");
- return {page:boundedInt(url.searchParams.get("page"),1,1,100000),pageSize:boundedInt(url.searchParams.get("pageSize"),25,1,50),search:clean(url.searchParams.get("search"),120),status:status as PaymentStatus|undefined,providerId:clean(url.searchParams.get("providerId"),64),orderId,currency,from,to,minAmount,maxAmount,refundStatus:refundStatus as typeof REFUND_STATUSES[number]|undefined,sort:sort as AdminPaymentQuery["sort"]};
+ return {page:boundedInt(url.searchParams.get("page"),1,1,100000),pageSize:boundedInt(url.searchParams.get("pageSize"),25,1,50),search:clean(url.searchParams.get("search"),120),status:status as PaymentStatus|undefined,outcome,providerId:clean(url.searchParams.get("providerId"),64),orderId,currency,from,to,minAmount,maxAmount,refundStatus:refundStatus as typeof REFUND_STATUSES[number]|undefined,sort:sort as AdminPaymentQuery["sort"]};
 }
 
 function orderBy(sort:AdminPaymentQuery["sort"]):Prisma.PaymentOrderByWithRelationInput[]{switch(sort){case"createdAt_asc":return[{createdAt:"asc"},{id:"asc"}];case"amount_desc":return[{amount:"desc"},{id:"desc"}];case"amount_asc":return[{amount:"asc"},{id:"asc"}];default:return[{createdAt:"desc"},{id:"desc"}];}}

@@ -61,6 +61,12 @@ function appFor(repository:PaymentRepository){return createPaymentApplication({r
 test("admin payment query enforces bounded deterministic sorting and filters",()=>{
  const q=parseAdminPaymentQuery(new URL("https://admin.local/admin/payments?status=SUCCEEDED&currency=inr&minAmount=10.00&maxAmount=100.00&sort=amount_desc&pageSize=50"));
  assert.equal(q.status,"SUCCEEDED");assert.equal(q.currency,"INR");assert.equal(q.sort,"amount_desc");assert.equal(q.pageSize,50);
+ const successful=parseAdminPaymentQuery(new URL("https://admin.local/admin/payments?outcome=successful"));
+ assert.equal(successful.outcome,"successful");assert.equal(successful.status,"SUCCEEDED");
+ const failed=parseAdminPaymentQuery(new URL("https://admin.local/admin/payments?outcome=failed"));
+ assert.equal(failed.outcome,"failed");assert.equal(failed.status,"FAILED");
+ assert.throws(()=>parseAdminPaymentQuery(new URL("https://admin.local/admin/payments?outcome=successful&status=FAILED")));
+ assert.throws(()=>parseAdminPaymentQuery(new URL("https://admin.local/admin/payments?outcome=pending")));
  assert.throws(()=>parseAdminPaymentQuery(new URL("https://admin.local/admin/payments?sort=providerReference")));
  assert.throws(()=>parseAdminPaymentQuery(new URL("https://admin.local/admin/payments?minAmount=200&maxAmount=100")));
 });
