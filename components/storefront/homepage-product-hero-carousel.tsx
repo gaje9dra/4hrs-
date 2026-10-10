@@ -43,7 +43,7 @@ export function HomepageProductHeroCarousel({ products }: HomepageProductHeroCar
               fill
               priority={activeIndex === 0}
               sizes="(max-width: 639px) calc(100vw - 5rem), (max-width: 1024px) 80vw, (max-width: 1535px) 42vw, 620px"
-              className="object-contain p-3 sm:p-5"
+              className="homepage-hero-product-swipe object-contain p-3 sm:p-5"
             />
           ) : null}
         </Link>
