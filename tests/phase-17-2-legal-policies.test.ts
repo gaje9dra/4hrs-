@@ -52,7 +52,7 @@ test("policy pages do not fabricate contact details, processing deadlines, or de
 test("privacy policy describes real data categories, provider sharing and existing self-service controls", () => {
   const content = read("lib/policies/content.ts");
   assert.match(content, /account\/session information/);
-  assert.match(content, /order items, selected sizes\/variants/);
+  assert.match(content, /Order items, selected sizes\/variants/);
   assert.match(content, /PayU where configured/);
   assert.match(content, /Qikink where applicable/);
   assert.match(content, /account deletion\/anonymization controls/);
