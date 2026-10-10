@@ -190,3 +190,5 @@ export function ProductCard({ product }: { product: StorefrontProductCard }) {
         document.body,
       ) : null}
     </Card>
+  );
+}
