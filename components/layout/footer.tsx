@@ -16,19 +16,19 @@ export function Footer({ navigationGroups }: FooterProps) {
 
   return (
     <footer className="border-t-4 border-primary-yellow bg-foreground text-white">
-      <Container className="py-12 sm:py-14 lg:py-16">
-        <div className="grid gap-12 border-b border-white/20 pb-10 sm:pb-12 lg:grid-cols-[minmax(260px,0.85fr)_minmax(0,2.15fr)] lg:gap-12 lg:pb-14">
+      <Container className="py-8 sm:py-12 lg:py-16">
+        <div className="grid gap-8 border-b border-white/20 pb-8 sm:gap-12 sm:pb-10 lg:grid-cols-[minmax(260px,0.85fr)_minmax(0,2.15fr)] lg:gap-12 lg:pb-14">
           <FooterBrand />
 
-          <div className={hasSocialLinks ? 'grid min-w-0 gap-10 md:grid-cols-[minmax(0,1fr)_auto]' : 'min-w-0'}>
+          <div className={hasSocialLinks ? 'grid min-w-0 gap-8 md:grid-cols-[minmax(0,1fr)_auto]' : 'min-w-0'}>
             <FooterNav groups={footerGroups} />
             {hasSocialLinks ? <FooterSocial links={footerSocialLinks} /> : null}
           </div>
         </div>
 
-        <div className="flex min-w-0 flex-col gap-3 pt-5 sm:flex-row sm:items-center sm:justify-between sm:pt-6">
+        <div className="flex min-w-0 flex-col gap-2 pt-5 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:pt-6">
           <FooterCopyright />
-          <p className="text-xs font-700 uppercase tracking-[0.14em] text-white/50">
+          <p className="text-[10px] font-700 uppercase tracking-[0.12em] text-white/50 sm:text-xs sm:tracking-[0.14em]">
             Bold by design.
           </p>
         </div>
