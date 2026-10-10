@@ -41,8 +41,8 @@ test("fulfillment pagination retains active filters and date controls retain sel
 test("orders list and API stay behind the centralized orders permission", () => {
   const page = readFileSync("app/admin/orders/page.tsx", "utf8");
   const route = readFileSync("app/api/admin/orders/route.ts", "utf8");
-  assert.match(page, /requireAdmin\(undefined, "orders\.read"\)/);
-  assert.match(route, /requireAdmin\(request,"orders\.read"\)/);
+  assert.match(page, /requireAdmin\(undefined,\s*"orders\.read"\)/);
+  assert.match(route, /requireAdmin\(request,\s*"orders\.read"\)/);
   assert.match(page, /data\.pagination\.hasNextPage/);
   assert.match(page, /No orders matched the current filters/);
 });
