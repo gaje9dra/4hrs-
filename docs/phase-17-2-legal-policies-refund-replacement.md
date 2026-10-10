@@ -18,7 +18,7 @@ All pages use the existing shared layout, responsive Container, Bauhaus typograp
 
 ## Footer and SEO
 
-The footer's Policies & Help group links to all seven pages. The existing sitemap includes all seven public routes. No private case/order route or evidence route was added to the sitemap. The existing robots configuration already disallows account and API paths.
+The footer's Policies & Help group links to all seven pages. Checkout includes concise links to terms, privacy, shipping, and refund/replacement information; order details link to shipping, refund/replacement, cancellation, and support. The existing sitemap includes all seven public routes. No private case/order route or evidence route was added to the sitemap. The existing robots configuration already disallows account and API paths.
 
 ## Refund/replacement wording and claim procedure
 
