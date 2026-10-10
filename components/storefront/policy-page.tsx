@@ -3,12 +3,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Container } from "@/components/layout/container";
 import { getPolicyPage } from "@/lib/policies/content";
-import { absoluteSiteUrl } from "@/config/site";
 
 export function policyMetadata(slug: string): Metadata {
   const policy = getPolicyPage(slug);
   if (!policy) return { title: "Page not found", robots: { index: false, follow: false } };
-  const canonical = absoluteSiteUrl(`/${policy.slug}`);
+  const canonical = `/${policy.slug}`;
   return {
     title: policy.title,
     description: policy.description,
