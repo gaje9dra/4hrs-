@@ -69,11 +69,29 @@ test("product card uses canonical money representation without UI arithmetic", (
   assert.doesNotMatch(money, /parseFloat|parseInt|Number\(/);
 });
 
-test("homepage imagery uses the framework image component", () => {
+test("homepage hero rotates through product primary images and links to the active product", () => {
+  const hero = read("components/storefront/homepage-product-hero-carousel.tsx");
   const homepage = read("components/storefront/homepage.tsx");
+  assert.match(hero, /import Image from "next\/image"/);
+  assert.match(hero, /window\.setInterval/);
+  assert.match(hero, /\}, 4000\)/);
+  assert.match(hero, /src=\{activeProduct\.image\.url\}/);
+  assert.match(hero, /href=\{activeProduct\.href\}/);
+  assert.match(hero, /Shop <ArrowRight/);
+  assert.match(homepage, /<HomepageProductHeroCarousel products=\{data\.heroProducts\}/);
+});
+
+test("homepage hero data includes every published product primary image across catalog pages", () => {
+  const source = read("lib/storefront/catalog.ts");
+  assert.match(source, /heroProducts: StorefrontProductCard\[\]/);
+  assert.match(source, /getStorefrontProducts\(\{ page: 1, pageSize: 100, sort: "newest" \}\)/);
+  assert.match(source, /heroFirstPage\.pagination\.totalPages/);
+  assert.match(source, /page: index \+ 2, pageSize: 100, sort: "newest"/);
+  assert.match(source, /\.filter\(\(product\) => product\.image !== null\)/);
+});
+
+test("product card imagery continues to use the framework image component", () => {
   const card = read("components/storefront/product-card.tsx");
-  assert.match(homepage, /import Image from "next\/image"/);
-  assert.match(homepage, /<Image[\s\S]*priority/);
   assert.match(card, /import Image from "next\/image"/);
   assert.match(card, /<Image[\s\S]*fill/);
 });

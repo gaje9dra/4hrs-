@@ -1,5 +1,5 @@
 import { HomepageCampaignCarousel } from "@/components/storefront/homepage-campaign-carousel";
-import Image from "next/image";
+import { HomepageProductHeroCarousel } from "@/components/storefront/homepage-product-hero-carousel";
 import Link from "next/link";
 import { ArrowRight, Layers3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -15,8 +15,6 @@ import { EditorialAnalytics } from "@/components/storefront/editorial-analytics"
 import type { ContentSnapshot } from "@/lib/content/service";
 
 function Hero({ data }: { data: StorefrontHomeData }) {
-  const visualProduct = data.featuredProducts[0] ?? data.newArrivals[0];
-
   return (
     <section className="border-b-2 border-border lg:border-b-4" aria-labelledby="home-hero-title">
       <Container width="wide" className="grid min-h-[calc(100vh-76px)] items-stretch gap-8 py-8 sm:py-12 lg:grid-cols-[1.08fr_.92fr] lg:gap-0 lg:py-10">
@@ -41,21 +39,11 @@ function Hero({ data }: { data: StorefrontHomeData }) {
         <div className="relative isolate min-h-[390px] overflow-hidden border-2 border-t-0 border-border bg-background shadow-hard-lg lg:min-h-full lg:border-4 lg:border-l-0 lg:border-t-4">
           <GeometricLayer layer="back" className="right-[-4rem] top-[-4rem] h-48 w-48 rounded-full bg-primary-red sm:h-64 sm:w-64" />
           <GeometricLayer layer="back" className="bottom-[-3rem] left-[-3rem] h-44 w-44 bg-primary-yellow sm:h-60 sm:w-60" />
-          {visualProduct?.image ? (
-            <div className="absolute inset-10 z-10 overflow-hidden border-4 border-border bg-white shadow-hard-md sm:inset-14 lg:inset-16">
-              <Image
-                src={visualProduct.image.url}
-                alt={visualProduct.image.altText ?? visualProduct.title}
-                fill
-                priority
-                sizes="(max-width: 639px) calc(100vw - 5rem), (max-width: 1024px) 80vw, (max-width: 1535px) 42vw, 620px"
-                className="object-cover"
-              />
-            </div>
+          {data.heroProducts.length ? (
+            <HomepageProductHeroCarousel products={data.heroProducts} />
           ) : (
             <GeometricLayer layer="base" className="left-1/2 top-1/2 h-40 w-40 -translate-x-1/2 -translate-y-1/2 rotate-12 bg-primary-blue clip-triangle sm:h-56 sm:w-56" />
           )}
-          <GeometricLayer layer="front" className="bottom-6 right-6 h-16 w-28 border-4 border-border bg-white shadow-hard-sm sm:h-24 sm:w-40" />
         </div>
       </Container>
     </section>

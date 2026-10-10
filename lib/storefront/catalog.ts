@@ -242,6 +242,7 @@ export async function getStorefrontCollectionProducts(slug: string, query: Omit<
 }
 
 export type StorefrontHomeData = {
+  heroProducts: StorefrontProductCard[];
   featuredProducts: StorefrontProductCard[];
   newArrivals: StorefrontProductCard[];
   categories: Array<{ id: string; name: string; slug: string; description: string | null }>;
@@ -249,11 +250,21 @@ export type StorefrontHomeData = {
 };
 
 export async function getStorefrontHomeCatalogData(): Promise<StorefrontHomeData> {
-  const [newArrivalResult, categories, collections] = await Promise.all([
+  const [heroFirstPage, newArrivalResult, categories, collections] = await Promise.all([
+    getStorefrontProducts({ page: 1, pageSize: 100, sort: "newest" }),
     getStorefrontProducts({ pageSize: 8, sort: "newest" }),
     catalog.listActiveCategories(),
     catalog.listActiveCollectionsWithPublishedProducts(),
   ]);
+
+  const remainingHeroPages = await Promise.all(
+    Array.from({ length: Math.max(0, heroFirstPage.pagination.totalPages - 1) }, (_, index) =>
+      getStorefrontProducts({ page: index + 2, pageSize: 100, sort: "newest" }),
+    ),
+  );
+  const heroProducts = [heroFirstPage, ...remainingHeroPages]
+    .flatMap((page) => page.items)
+    .filter((product) => product.image !== null);
 
   const featuredCollection = collections[0] ?? null;
   const featuredResult = featuredCollection
@@ -266,6 +277,7 @@ export async function getStorefrontHomeCatalogData(): Promise<StorefrontHomeData
   const featuredSlugs = new Set(featuredResult?.items.map((product) => product.slug) ?? []);
 
   return {
+    heroProducts,
     featuredProducts: featuredResult?.items ?? [],
     newArrivals: newArrivalResult.items.filter((product) => !featuredSlugs.has(product.slug)).slice(0, 4),
     categories: categories.slice(0, 6).map(({ id, name, slug, description }) => ({ id, name, slug, description })),
