@@ -143,5 +143,8 @@ test("homepage does not introduce unsupported benefits or provider-specific comm
 
 test("homepage product sections show two cards per row on mobile", () => {
   const source = read("components/storefront/homepage.tsx");
-  assert.equal((source.match(/grid grid-cols-2 gap-2 sm:gap-5 lg:grid-cols-4 lg:gap-6/g) ?? []).length, 2);
+  assert.equal((source.match(/homepage-product-grid grid grid-cols-2 gap-2 sm:gap-5 lg:grid-cols-4 lg:gap-6/g) ?? []).length, 2);
+  const styles = read("app/globals.css");
+  assert.match(styles, /\.homepage-product-grid\s*\{\s*display:\s*grid;\s*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/);
+  assert.match(styles, /@media\s*\(min-width:\s*1024px\)[\s\S]*?\.homepage-product-grid\s*\{\s*grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/);
 });
