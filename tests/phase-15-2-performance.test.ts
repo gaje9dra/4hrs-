@@ -22,14 +22,14 @@ test("Phase 15.2 keeps public catalog listing projections bounded to card requir
 });
 
 test("Phase 15.2 preserves storefront image loading priorities", async () => {
-  const [card, home] = await Promise.all([
+  const [card, homeHero] = await Promise.all([
     fs.readFile("components/storefront/product-card.tsx", "utf8"),
-    fs.readFile("components/storefront/homepage.tsx", "utf8"),
+    fs.readFile("components/storefront/homepage-product-hero-carousel.tsx", "utf8"),
   ]);
   assert.match(card, /loading="lazy"/);
   assert.match(card, /sizes=/);
-  assert.match(home, /priority/);
-  assert.match(home, /sizes=/);
+  assert.match(homeHero, /priority=/);
+  assert.match(homeHero, /sizes=/);
 });
 
 test("Phase 15.2 keeps catalog pagination bounded", async () => {
