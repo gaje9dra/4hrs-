@@ -20,3 +20,12 @@ test("Quick-add endpoint exposes only public option and availability data", () =
   assert.match(route, /Cache-Control.*no-store/);
   assert.doesNotMatch(route, /customerId|ownerId|sessionId|password|token/i);
 });
+
+test("Quick-add dialog closes only after the cart API confirms success", () => {
+  const successIndex = card.indexOf('setCartState("success");');
+  const closeIndex = card.indexOf("setQuickAddOpen(false);", successIndex);
+  const catchIndex = card.indexOf("} catch (error)", successIndex);
+  assert.notEqual(successIndex, -1);
+  assert.ok(closeIndex > successIndex, "close the dialog after the cart API succeeds");
+  assert.ok(catchIndex > closeIndex, "do not close the dialog on the error path");
+});
