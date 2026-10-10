@@ -19,7 +19,7 @@ export function FooterNav({ groups }: FooterNavProps) {
 
         return (
           <nav key={group.label} aria-labelledby={id} className="min-w-0">
-            <h2 id={id} className="mb-4 border-l-2 border-primary-yellow pl-3 text-lg font-900 uppercase leading-tight tracking-[-0.03em] text-white sm:mb-5 sm:text-xl">
+            <h2 id={id} className="mb-4 border-l-2 border-primary-yellow pl-3 text-lg font-900 uppercase leading-tight tracking-[-0.03em] text-white whitespace-nowrap sm:mb-5 sm:text-xl">
               {group.label}
             </h2>
             <ul className="m-0 list-none space-y-1 p-0">
