@@ -78,3 +78,17 @@ test("defect claims reuse existing support cases and do not introduce unsafe pub
   assert.match(policy, /current support-case form does not provide a video or photo upload field/);
   assert.match(policy, /does not automatically issue a refund or create a replacement order/);
 });
+
+test("checkout and order details link to relevant policies without changing commerce actions", () => {
+  const checkout = read("components/storefront/checkout-page.tsx");
+  const order = read("components/storefront/order-detail.tsx");
+  assert.match(checkout, /href="\/terms"/);
+  assert.match(checkout, /href="\/privacy"/);
+  assert.match(checkout, /href="\/shipping"/);
+  assert.match(checkout, /href="\/refund-replacement"/);
+  assert.match(order, /aria-label="Order policies and support"/);
+  assert.match(order, /href="\/cancellation"/);
+  assert.match(order, /href="\/contact"/);
+  assert.match(checkout, /startPayment/);
+  assert.match(order, /OrderExceptionActions/);
+});
