@@ -20,11 +20,14 @@ test("operations dashboard exposes only permission-gated, reasoned operator acti
 test("case pages preserve authorization and surface unexpected service errors", () => {
   const list = readFileSync("app/admin/cases/page.tsx", "utf8");
   const detail = readFileSync("app/admin/cases/[caseReference]/page.tsx", "utf8");
+  const actions = readFileSync("components/admin/case-detail-actions.tsx", "utf8");
   assert.match(list, /requireAdmin\(undefined, "case\.read"\)/);
   assert.doesNotMatch(list, /catch\s*\{/);
   assert.match(detail, /error instanceof CaseDomainError && error\.code === "CASE_NOT_FOUND"/);
   assert.match(detail, /throw error/);
   assert.doesNotMatch(detail, /catch\(\(\)\s*=>\s*null\)/);
+  assert.match(actions, /status === "OPEN" \? "TRIAGED" : "IN_PROGRESS"/);
+  assert.match(actions, /canResolveInCurrentState = \["IN_PROGRESS", "WAITING", "RESOLVED"\]/);
 });
 
 test("fulfillment pagination retains active filters and date controls retain selected values", () => {
