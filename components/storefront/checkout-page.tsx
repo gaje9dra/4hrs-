@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, Check, CreditCard, LockKeyhole, ShieldCheck } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
@@ -393,6 +394,9 @@ export function CheckoutPage({ customer }: { customer: CustomerDto }) {
             {checkout.coupon ? <p className="mt-3 text-xs font-800 uppercase">{checkout.coupon.discountPercent}% discount · Saved {money(checkout.coupon.discountAmount, checkout.totals.currency)}</p> : null}
           </section>
           <dl className="mt-6 grid gap-3 border-t-2 border-border pt-4 text-sm"><div className="flex justify-between gap-4"><dt className="font-900 uppercase">Merchandise</dt><dd>{money(checkout.totals.merchandiseSubtotal, checkout.totals.currency)}</dd></div>{checkout.totals.adjustments.map((item) => <div key={item.code} className="flex justify-between gap-4"><dt>{item.code}</dt><dd>{money(item.amount, checkout.totals.currency)}</dd></div>)}{checkout.totals.charges.map((item) => <div key={item.code} className="flex justify-between gap-4"><dt>{item.code}</dt><dd>{money(item.amount, checkout.totals.currency)}</dd></div>)}<div className="flex justify-between gap-4 border-t-2 border-border pt-3 text-xl font-900"><dt className="uppercase">Total</dt><dd>{money(checkout.totals.total, checkout.totals.currency)}</dd></div></dl>
+          <div className="mt-5 border-t-2 border-border pt-4">
+            <p className="text-xs leading-5">Review before payment: <Link href="/terms" className="font-800 underline underline-offset-4">Terms & Conditions</Link>, <Link href="/privacy" className="font-800 underline underline-offset-4">Privacy Policy</Link>, <Link href="/shipping" className="font-800 underline underline-offset-4">Shipping</Link>, and <Link href="/refund-replacement" className="font-800 underline underline-offset-4">Refund & Replacement</Link>.</p>
+          </div>
           <div className="mt-5 border-t-2 border-border pt-5">
             <div className="flex items-center gap-2 text-xs font-900 uppercase"><LockKeyhole size={16} aria-hidden="true" /> Secure payment via PayU</div>
             <Button type="button" disabled={!canContinue} loading={state === "starting_payment"} onClick={() => void startPayment()} className="mt-4 w-full text-base">
