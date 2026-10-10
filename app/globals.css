@@ -424,6 +424,27 @@ code {
   animation: marquee 18s linear infinite;
 }
 
+@keyframes homepage-product-swipe-in {
+  from {
+    opacity: 0.25;
+    transform: translateX(2.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.homepage-hero-product-swipe {
+  animation: homepage-product-swipe-in 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .homepage-hero-product-swipe {
+    animation: none;
+  }
+}
+
 @keyframes marquee {
   to {
     transform: translateX(-50%);
