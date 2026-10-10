@@ -140,3 +140,8 @@ test("homepage does not introduce unsupported benefits or provider-specific comm
   assert.doesNotMatch(source, /free shipping|lifetime warranty|fastest delivery|100% satisfaction|premium quality/i);
   assert.doesNotMatch(source, /Qikink|Printful|Printrove|Printify|supplier|provider/i);
 });
+
+test("homepage product sections show two cards per row on mobile", () => {
+  const source = read("components/storefront/homepage.tsx");
+  assert.equal((source.match(/grid grid-cols-2 gap-2 sm:gap-5 lg:grid-cols-4 lg:gap-6/g) ?? []).length, 2);
+});
