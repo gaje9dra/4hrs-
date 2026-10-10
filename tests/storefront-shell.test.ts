@@ -123,7 +123,7 @@ test("product cards keep the title readable and actions compact", () => {
   const source = read("components/storefront/product-card.tsx");
   assert.match(source, /line-clamp-2 min-h-\[2\.7rem\]/);
   assert.match(source, /ShoppingCart/);
-  assert.match(source, /aria-disabled=\{unavailable \|\| undefined\}/);
+  assert.match(source, /disabled=\{unavailable\}/);
 });
 
 test("product card pricing has a dedicated visual hierarchy", () => {
