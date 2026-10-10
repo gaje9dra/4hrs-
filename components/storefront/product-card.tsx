@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
 import Link from "next/link";
@@ -40,8 +40,6 @@ export function ProductCard({ product }: { product: StorefrontProductCard }) {
   const alternateImages = gallery.filter((image) => image.url !== primaryImage?.url);
   const [hoverImageIndex, setHoverImageIndex] = useState(0);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
-  const [portalReady, setPortalReady] = useState(false);
-  useEffect(() => setPortalReady(true), []);
   const [quickAddData, setQuickAddData] = useState<QuickAddData | null>(null);
   const [selectedValues, setSelectedValues] = useState<Record<string, string>>({});
   const [quickAddLoading, setQuickAddLoading] = useState(false);
@@ -157,7 +155,7 @@ export function ProductCard({ product }: { product: StorefrontProductCard }) {
         </div>
       </div>
 
-      {quickAddOpen && portalReady ? createPortal(
+      {quickAddOpen && typeof document !== "undefined" ? createPortal(
         <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-black/60 p-3 sm:p-4" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setQuickAddOpen(false); }}>
           <section role="dialog" aria-modal="true" aria-labelledby={`quick-add-title-${product.id}`} className="my-auto max-h-[calc(100dvh-1.5rem)] w-full max-w-md overflow-y-auto border-4 border-border bg-[#f7f3ec] p-4 text-foreground shadow-hard-lg sm:max-h-[calc(100dvh-2rem)] sm:p-7">
             <div className="flex min-w-0 items-start justify-between gap-3 sm:gap-4">
