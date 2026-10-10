@@ -20,7 +20,7 @@ test("all Phase 17.2 public policy routes exist and provide route-specific metad
   for (const [slug] of routes) {
     const route = read(`app/(storefront)/${slug}/page.tsx`);
     assert.match(route, new RegExp(`PolicyPage slug="${slug}"`));
-    assert.match(route, new RegExp(`policyMetadata\("${slug}"\)`));
+    assert.ok(route.includes(`policyMetadata("${slug}")`));
   }
   const page = read("components/storefront/policy-page.tsx");
   assert.match(page, /alternates:\s*\{\s*canonical/);
