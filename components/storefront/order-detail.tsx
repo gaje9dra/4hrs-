@@ -87,7 +87,17 @@ export function OrderDetail({ order, exceptionSummary }: { order: PublicOrderDto
         </Card>
       </div>
 
-      <OrderExceptionActions order={order} summary={exceptionSummary} />\n\n      <div className="flex flex-wrap gap-3">
+      <OrderExceptionActions order={order} summary={exceptionSummary} />\n\n      <nav aria-label="Order policies and support" className="border-t-2 border-border pt-4 text-sm leading-6">
+        <p className="font-900 uppercase">Order help</p>
+        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2">
+          <Link href="/shipping" className="underline underline-offset-4">Shipping & Delivery</Link>
+          <Link href="/refund-replacement" className="underline underline-offset-4">Refund & Replacement</Link>
+          <Link href="/cancellation" className="underline underline-offset-4">Cancellation Policy</Link>
+          <Link href="/contact" className="underline underline-offset-4">Contact Support</Link>
+        </div>
+      </nav>
+
+      <div className="flex flex-wrap gap-3">
         <Button href="/account/orders" variant="outline">Back to Orders</Button>
         <Button href="/shop" variant="yellow">Continue Shopping</Button>
       </div>
