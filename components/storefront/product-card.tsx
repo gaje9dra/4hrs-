@@ -147,7 +147,7 @@ export function ProductCard({ product }: { product: StorefrontProductCard }) {
 
       <div className="bg-white px-3 pb-4 pt-3 sm:px-4 sm:pt-4">
         <Link href={href} style={{ textDecoration: "none" }} className="block !no-underline hover:!no-underline">
-          <h3 style={{ textDecoration: "none" }} className="line-clamp-2 min-h-[2.7rem] text-[0.98rem] font-900 uppercase leading-[1.12] tracking-[-0.01em] !no-underline decoration-transparent">{product.title}</h3>
+          <h3 className="line-clamp-2 min-h-[2.7rem] text-[0.98rem] font-900 uppercase leading-[1.12] tracking-[-0.01em] !no-underline decoration-transparent" style={{ textDecoration: "none" }}>{product.title}</h3>
         </Link>
         <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1">
           {product.compareAtPrice ? <span className="text-sm leading-none text-muted-foreground line-through" aria-label="Original price">{formatCatalogMoney(product.compareAtPrice, product.currency)}</span> : null}
