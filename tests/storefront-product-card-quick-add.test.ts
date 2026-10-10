@@ -29,3 +29,13 @@ test("Quick-add dialog closes only after the cart API confirms success", () => {
   assert.ok(closeIndex > successIndex, "close the dialog after the cart API succeeds");
   assert.ok(catchIndex > closeIndex, "do not close the dialog on the error path");
 });
+
+test("Quick-add modal escapes transformed product cards and fits small viewports", () => {
+  assert.match(card, /createPortal/);
+  assert.match(card, /document\.body/);
+  assert.match(card, /max-w-md/);
+  assert.match(card, /max-h-\[calc\(100dvh-1\.5rem\)\]/);
+  assert.match(card, /overflow-y-auto/);
+  assert.match(card, /text-\[clamp\(1\.75rem,7vw,3rem\)\]/);
+  assert.match(card, /overflow-wrap:anywhere/);
+});
