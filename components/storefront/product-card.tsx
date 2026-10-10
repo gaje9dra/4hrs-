@@ -114,6 +114,7 @@ export function ProductCard({ product }: { product: StorefrontProductCard }) {
       }
       setCartState("success");
       setCartMessage("Added to cart. You can keep shopping.");
+      setQuickAddOpen(false);
     } catch (error) {
       setCartState("error");
       setCartMessage(error instanceof Error ? error.message : "Could not add this item to your cart.");
