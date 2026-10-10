@@ -92,7 +92,7 @@ export function ProductCard({ product }: { product: StorefrontProductCard }) {
 
   async function handleAddToCart() {
     if (cartState === "pending" || !quickAddData) return;
-    if (quickAddData.options.length > 0 && (!selectedVariant || selectedVariant.availability.state === "OUT_OF_STOCK")) return;
+    if ((quickAddData.variants.length > 0 && !selectedVariant) || selectedVariant?.availability.state === "OUT_OF_STOCK") return;
     setCartState("pending");
     setCartMessage("");
     try {
@@ -173,7 +173,7 @@ export function ProductCard({ product }: { product: StorefrontProductCard }) {
             {selectedVariant?.availability.state === "OUT_OF_STOCK" ? <p className="mt-4 text-sm font-800 text-primary-red">This option is out of stock.</p> : null}
             {cartMessage ? <p className={`mt-4 text-sm font-800 ${cartState === "error" ? "text-primary-red" : "text-green-800"}`} role="status">{cartMessage}</p> : null}
             {!quickAddLoading && quickAddData ? (
-              <button type="button" onClick={() => void handleAddToCart()} disabled={cartState === "pending" || (quickAddData.options.length > 0 && (!selectedVariant || selectedVariant.availability.state === "OUT_OF_STOCK"))} className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 border-2 border-border bg-primary-blue px-4 py-3 text-sm font-900 uppercase tracking-[.08em] text-primary-yellow shadow-hard-sm hover:bg-primary-yellow hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50">
+              <button type="button" onClick={() => void handleAddToCart()} disabled={cartState === "pending" || ((quickAddData.variants.length > 0 && !selectedVariant) || selectedVariant?.availability.state === "OUT_OF_STOCK")} className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 border-2 border-border bg-primary-blue px-4 py-3 text-sm font-900 uppercase tracking-[.08em] text-primary-yellow shadow-hard-sm hover:bg-primary-yellow hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50">
                 {cartState === "pending" ? "Adding…" : cartState === "success" ? <><Check size={17} /> Added to cart</> : <><ShoppingCart size={17} /> Add to cart</>}
               </button>
             ) : null}
