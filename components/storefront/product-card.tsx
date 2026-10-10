@@ -1,5 +1,6 @@
 "use client";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Image from "next/image";
 import Link from "next/link";
 import { Check, Heart, ShoppingCart, X } from "lucide-react";
@@ -39,6 +40,8 @@ export function ProductCard({ product }: { product: StorefrontProductCard }) {
   const alternateImages = gallery.filter((image) => image.url !== primaryImage?.url);
   const [hoverImageIndex, setHoverImageIndex] = useState(0);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [portalReady, setPortalReady] = useState(false);
+  useEffect(() => setPortalReady(true), []);
   const [quickAddData, setQuickAddData] = useState<QuickAddData | null>(null);
   const [selectedValues, setSelectedValues] = useState<Record<string, string>>({});
   const [quickAddLoading, setQuickAddLoading] = useState(false);
@@ -154,18 +157,21 @@ export function ProductCard({ product }: { product: StorefrontProductCard }) {
         </div>
       </div>
 
-      {quickAddOpen ? (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setQuickAddOpen(false); }}>
-          <section role="dialog" aria-modal="true" aria-labelledby={`quick-add-title-${product.id}`} className="w-full max-w-md border-4 border-border bg-[#f7f3ec] p-5 text-foreground shadow-hard-lg sm:p-7">
-            <div className="flex items-start justify-between gap-4">
-              <div><p className="text-xs font-900 uppercase tracking-[.2em] text-primary-blue">Quick add</p><h2 id={`quick-add-title-${product.id}`} className="mt-2 text-xl font-900 uppercase">{product.title}</h2></div>
+      {quickAddOpen && portalReady ? createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-black/60 p-3 sm:p-4" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setQuickAddOpen(false); }}>
+          <section role="dialog" aria-modal="true" aria-labelledby={`quick-add-title-${product.id}`} className="my-auto max-h-[calc(100dvh-1.5rem)] w-full max-w-md overflow-y-auto border-4 border-border bg-[#f7f3ec] p-4 text-foreground shadow-hard-lg sm:max-h-[calc(100dvh-2rem)] sm:p-7">
+            <div className="flex min-w-0 items-start justify-between gap-3 sm:gap-4">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-900 uppercase tracking-[.2em] text-primary-blue">Quick add</p>
+                <h2 id={`quick-add-title-${product.id}`} className="mt-2 break-words text-[clamp(1.75rem,7vw,3rem)] font-900 uppercase leading-[0.95] tracking-[-0.04em] [overflow-wrap:anywhere]">{product.title}</h2>
+              </div>
               <button type="button" onClick={() => setQuickAddOpen(false)} aria-label="Close quick add" className="flex size-9 shrink-0 items-center justify-center border-2 border-border bg-white hover:bg-primary-yellow"><X size={18} /></button>
             </div>
             {quickAddLoading ? <p className="py-8 text-sm font-800 uppercase" role="status">Loading options…</p> : null}
             {!quickAddLoading && quickAddData?.options.map((option) => (
               <label key={option.id} className="mt-5 block text-xs font-900 uppercase tracking-[.1em]">
                 {option.name}
-                <select value={selectedValues[option.id] ?? ""} onChange={(event) => { setSelectedValues((current) => ({ ...current, [option.id]: event.target.value })); setCartState("idle"); setCartMessage(""); }} className="mt-2 min-h-12 w-full border-2 border-border bg-white px-3 text-sm font-800 normal-case tracking-normal focus:outline-none focus:ring-2 focus:ring-primary-blue">
+                <select value={selectedValues[option.id] ?? ""} onChange={(event) => { setSelectedValues((current) => ({ ...current, [option.id]: event.target.value })); setCartState("idle"); setCartMessage(""); }} className="mt-2 min-h-12 w-full min-w-0 border-2 border-border bg-white px-3 text-sm font-800 normal-case tracking-normal focus:outline-none focus:ring-2 focus:ring-primary-blue">
                   {option.values.map((value) => <option key={value.id} value={value.id}>{value.displayName}</option>)}
                 </select>
               </label>
@@ -174,14 +180,13 @@ export function ProductCard({ product }: { product: StorefrontProductCard }) {
             {selectedVariant?.availability.state === "OUT_OF_STOCK" ? <p className="mt-4 text-sm font-800 text-primary-red">This option is out of stock.</p> : null}
             {cartMessage ? <p className={`mt-4 text-sm font-800 ${cartState === "error" ? "text-primary-red" : "text-green-800"}`} role="status">{cartMessage}</p> : null}
             {!quickAddLoading && quickAddData ? (
-              <button type="button" onClick={() => void handleAddToCart()} disabled={cartState === "pending" || ((quickAddData.variants.length > 0 && !selectedVariant) || selectedVariant?.availability.state === "OUT_OF_STOCK")} className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 border-2 border-border bg-primary-blue px-4 py-3 text-sm font-900 uppercase tracking-[.08em] text-primary-yellow shadow-hard-sm hover:bg-primary-yellow hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50">
+              <button type="button" onClick={() => void handleAddToCart()} disabled={cartState === "pending" || ((quickAddData.variants.length > 0 && !selectedVariant) || selectedVariant?.availability.state === "OUT_OF_STOCK")} className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 border-2 border-border bg-primary-blue px-3 py-3 text-center text-sm font-900 uppercase tracking-[.04em] text-primary-yellow shadow-hard-sm hover:bg-primary-yellow hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50 sm:px-4 sm:tracking-[.08em]">
                 {cartState === "pending" ? "Adding…" : cartState === "success" ? <><Check size={17} /> Added to cart</> : <><ShoppingCart size={17} /> Add to cart</>}
               </button>
             ) : null}
             {cartState === "error" && cartMessage.includes("sign in") ? <Link href={`/login?next=${encodeURIComponent(href)}`} className="mt-3 block text-center text-sm font-900 uppercase underline">Sign in to continue</Link> : null}
           </section>
-        </div>
+        </div>,
+        document.body,
       ) : null}
     </Card>
-  );
-}
