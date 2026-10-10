@@ -13,13 +13,13 @@ export function FooterNav({ groups }: FooterNavProps) {
   if (visibleGroups.length === 0) return null
 
   return (
-    <div className="grid min-w-0 grid-cols-1 gap-x-8 gap-y-10 min-[420px]:grid-cols-2 xl:grid-cols-3 xl:gap-x-10">
+    <div className="grid min-w-0 grid-cols-1 gap-x-6 gap-y-10 min-[420px]:grid-cols-2 xl:grid-cols-[minmax(130px,0.65fr)_minmax(160px,0.8fr)_minmax(240px,1.35fr)] xl:gap-x-6">
       {visibleGroups.map((group) => {
         const id = headingId(group.label)
 
         return (
           <nav key={group.label} aria-labelledby={id} className="min-w-0">
-            <h2 id={id} className="mb-4 border-l-2 border-primary-yellow pl-3 text-lg font-900 uppercase leading-tight tracking-[-0.03em] text-white whitespace-nowrap sm:mb-5 sm:text-xl">
+            <h2 id={id} className="mb-4 border-l-2 border-primary-yellow pl-3 text-base font-900 uppercase leading-tight tracking-[-0.035em] text-white whitespace-nowrap sm:mb-5 sm:text-lg">
               {group.label}
             </h2>
             <ul className="m-0 list-none space-y-1 p-0">

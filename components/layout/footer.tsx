@@ -17,7 +17,7 @@ export function Footer({ navigationGroups }: FooterProps) {
   return (
     <footer className="border-t-4 border-primary-yellow bg-foreground text-white">
       <Container className="py-12 sm:py-14 lg:py-16">
-        <div className="grid gap-12 border-b border-white/20 pb-10 sm:pb-12 lg:grid-cols-[minmax(250px,0.9fr)_minmax(0,2fr)] lg:gap-16 lg:pb-14">
+        <div className="grid gap-12 border-b border-white/20 pb-10 sm:pb-12 lg:grid-cols-[minmax(260px,0.85fr)_minmax(0,2.15fr)] lg:gap-12 lg:pb-14">
           <FooterBrand />
 
           <div className={hasSocialLinks ? 'grid min-w-0 gap-10 md:grid-cols-[minmax(0,1fr)_auto]' : 'min-w-0'}>
