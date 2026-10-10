@@ -175,3 +175,13 @@ test("homepage hero product images use a swipe transition with reduced-motion su
   assert.match(styles, /animation: homepage-product-swipe-in 520ms/);
   assert.match(styles, /prefers-reduced-motion:\s*reduce[\s\S]*?homepage-hero-product-swipe[\s\S]*?animation:\s*none/);
 });
+
+test("homepage shows New Arrivals before the Shop by Category discovery section", () => {
+  const source = read("components/storefront/homepage.tsx");
+  const curatedPicksIndex = source.indexOf('<ProductDiscovery eyebrow="Discovery / 01"');
+  const newArrivalsIndex = source.indexOf("<NewArrivals products={data.newArrivals} />");
+  const categoryDiscoveryIndex = source.indexOf("<CategoryDiscovery categories={data.categories} />");
+  assert.ok(curatedPicksIndex >= 0);
+  assert.ok(newArrivalsIndex > curatedPicksIndex);
+  assert.ok(categoryDiscoveryIndex > newArrivalsIndex);
+});
