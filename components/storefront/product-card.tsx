@@ -126,9 +126,9 @@ export function ProductCard({ product }: { product: StorefrontProductCard }) {
     <Card className="group overflow-hidden border-2 border-border bg-white p-0 shadow-hard-sm transition-[transform,box-shadow] duration-200 hover:-translate-y-1 hover:shadow-hard-md">
       <div className="relative">
         <Link href={href} className="motion-link block no-underline" aria-label={product.title}>
-          <div className="relative aspect-[4/5] overflow-hidden bg-[#f7f5f0] sm:aspect-[2/3]" onMouseEnter={handleImageEnter} onMouseLeave={handleImageLeave}>
+          <div className="relative -mx-0.5 -mt-0.5 aspect-[4/5] overflow-hidden bg-white sm:mx-0 sm:mt-0 sm:aspect-[2/3]" onMouseEnter={handleImageEnter} onMouseLeave={handleImageLeave}>
             {activeImage ? (
-              <Image key={activeImage.url} src={activeImage.url} alt={activeImage.altText ?? (hoverImageIndex > 0 ? `${product.title} alternate view ${hoverImageIndex}` : product.title)} fill loading="lazy" sizes="(max-width: 1023px) 50vw, (max-width: 1535px) 33vw, 25vw" className="scale-[1.45] object-cover transition-transform duration-300 group-hover:scale-[1.5] sm:scale-[1.16] sm:group-hover:scale-[1.2]" />
+              <Image key={activeImage.url} src={activeImage.url} alt={activeImage.altText ?? (hoverImageIndex > 0 ? `${product.title} alternate view ${hoverImageIndex}` : product.title)} fill loading="lazy" sizes="(max-width: 1023px) 50vw, (max-width: 1535px) 33vw, 25vw" className="scale-[1.78] object-cover transition-transform duration-300 group-hover:scale-[1.82] sm:scale-[1.16] sm:group-hover:scale-[1.2]" />
             ) : (
               <div className="flex h-full items-center justify-center bg-primary-yellow p-6 text-center text-sm font-900 uppercase">Image coming soon</div>
             )}
@@ -147,7 +147,7 @@ export function ProductCard({ product }: { product: StorefrontProductCard }) {
 
       <div className="bg-white px-3 pb-4 pt-3 sm:px-4 sm:pt-4">
         <Link href={href} className="block no-underline hover:no-underline">
-          <h3 className="line-clamp-2 min-h-[2.7rem] text-[0.98rem] font-900 uppercase leading-[1.12] tracking-[-0.01em] no-underline">{product.title}</h3>
+          <h3 className="line-clamp-2 min-h-[2.7rem] text-[0.98rem] font-900 uppercase leading-[1.12] tracking-[-0.01em] !no-underline decoration-transparent">{product.title}</h3>
         </Link>
         <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1">
           {product.compareAtPrice ? <span className="text-sm leading-none text-muted-foreground line-through" aria-label="Original price">{formatCatalogMoney(product.compareAtPrice, product.currency)}</span> : null}
