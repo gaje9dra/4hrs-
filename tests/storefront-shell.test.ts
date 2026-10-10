@@ -92,10 +92,13 @@ test("storefront shell preserves the established Bauhaus token system", () => {
 
 test("product cards expose the canonical Add to cart action", () => {
   const source = read("components/storefront/product-card.tsx");
-  assert.match(source, /intent=cart/);
+  assert.match(source, /openQuickAdd/);
+  assert.match(source, /role="dialog"/);
+  assert.match(source, /\/api\/storefront\/products/);
+  assert.doesNotMatch(source, /intent=cart/);
   assert.match(source, /<ShoppingCart/);
   assert.match(source, /Add to cart/);
-  assert.match(source, /aria-disabled=\{unavailable \|\| undefined\}/);
+  assert.match(source, /disabled=\{unavailable\}/);
   assert.doesNotMatch(source, /intent=buy|Buy now/);
 });
 
@@ -120,7 +123,7 @@ test("product cards keep the title readable and actions compact", () => {
   const source = read("components/storefront/product-card.tsx");
   assert.match(source, /line-clamp-2 min-h-\[2\.7rem\]/);
   assert.match(source, /ShoppingCart/);
-  assert.match(source, /aria-disabled=\{unavailable \|\| undefined\}/);
+  assert.match(source, /disabled=\{unavailable\}/);
 });
 
 test("product card pricing has a dedicated visual hierarchy", () => {
