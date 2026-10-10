@@ -51,7 +51,7 @@ test("Mobile product cards are polished and keep Add to Cart on product detail p
 });
 
 test("Mobile product image fills the card frame and product title has no underline", () => {
-  assert.match(card, /-mx-0\.5 -mt-0\.5 aspect-\[4\/5\]/);
+  assert.match(card, /-mx-3 -mt-3 aspect-\[4\/5\]/);
   assert.match(card, /scale-\[1\.78\].*sm:scale-\[1\.16\]/);
   assert.match(card, /!no-underline decoration-transparent/);
   assert.match(card, /style=\{\{ textDecoration: "none" \}\}/);
