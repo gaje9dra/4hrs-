@@ -587,3 +587,28 @@ code {
     padding: 0.625rem;
   }
 }
+
+/* Admin action buttons must keep readable foreground/background contrast.
+   Scoped to the shared admin surface and explicitly excludes Catalog. */
+.admin-polish-surface:not([data-admin-polish-route^="/admin/catalog"]) :where(button, [role="button"])[class*="bg-black"],
+.admin-polish-surface:not([data-admin-polish-route^="/admin/catalog"]) :where(button, [role="button"])[class*="bg-stone-900"] {
+  color: #fff !important;
+  -webkit-text-fill-color: #fff;
+}
+.admin-polish-surface:not([data-admin-polish-route^="/admin/catalog"]) :where(button, [role="button"])[class*="bg-black"]:disabled,
+.admin-polish-surface:not([data-admin-polish-route^="/admin/catalog"]) :where(button, [role="button"])[class*="bg-stone-900"]:disabled {
+  background-color: #e7e5e4 !important;
+  color: #57534e !important;
+  -webkit-text-fill-color: #57534e;
+  opacity: 1;
+}
+.admin-polish-surface:not([data-admin-polish-route^="/admin/catalog"]) :where(button, [role="button"]):not([class*="bg-black"]):not([class*="bg-stone-900"]) {
+  color: #292524;
+}
+.admin-polish-surface:not([data-admin-polish-route^="/admin/catalog"]) :where(button, [role="button"]):not([class*="bg-black"]):not([class*="bg-stone-900"]):disabled {
+  background-color: #e7e5e4 !important;
+  color: #57534e !important;
+  -webkit-text-fill-color: #57534e;
+  opacity: 1;
+}
+
