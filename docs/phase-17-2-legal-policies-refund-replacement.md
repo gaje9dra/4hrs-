@@ -33,7 +33,7 @@ The footer's Policies & Help group links to all seven pages. The existing sitema
 
 The current authenticated customer case flow at `/account/cases/new` and `POST /api/cases` is reused for support intake. The form supports order references and existing categories including order issues, return review, and shipping/delivery issues. Existing order-specific cancellation/return actions remain unchanged.
 
-The current support-case form has no attachment field or evidence upload API. The policy explicitly tells customers to open a case and request the available secure submission method rather than claiming that files can be uploaded. No separate claim/order-management system, refund automation, or replacement-order automation was added.
+The current support-case form has no attachment field or evidence upload API, and no separate private evidence-submission channel is configured in the storefront. The policy explicitly tells customers not to publish evidence or send it to an unverified address; support can receive an initial written report, but a private evidence channel must be configured before video/photo files can be accepted. No separate claim/order-management system, refund automation, or replacement-order automation was added.
 
 ## Privacy and provider notes
 
@@ -42,7 +42,7 @@ The text reflects existing account/session, customer address, order, payment, re
 ## Missing business configuration and blockers
 
 1. **Verified public support/privacy contact details are absent** from the current storefront configuration. The page directs customers to the authenticated case system and does not publish fake contact values. Configure verified support email/phone and any required grievance contact before production.
-2. **Secure defect evidence upload is absent.** Current case forms do not accept files. Before advertising upload as supported, implement private storage with signature validation, file-size/count/duration limits, server-generated keys, ownership checks, authorized admin access, audit events, retention/deletion rules, and short-lived access URLs. No new storage provider was introduced.
+2. **Secure defect evidence upload is absent.** Current case forms do not accept files. Before accepting video/photo evidence, configure an approved private submission channel and, if implemented as uploads, private storage with signature validation, file-size/count/duration limits, server-generated keys, ownership checks, authorized admin access, audit events, retention/deletion rules, and short-lived access URLs. No new storage provider was introduced.
 3. **Legal review required.** Have qualified Indian counsel review the refund/return wording, consumer-protection requirements, privacy obligations, grievance requirements, and governing-law language.
 4. **No verified universal delivery/refund processing SLA is configured.** Policy pages therefore avoid promising one.
 5. **No claim-specific upload or review-status system was added.** Existing case handling is reused for initial contact only.
