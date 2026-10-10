@@ -11,14 +11,10 @@ export const revalidate = 0;
 export default async function AdminCaseDetail({ params }: { params: Promise<{ caseReference: string }> }) {
   const context = await requireAdmin(undefined, "case.read");
   const { caseReference } = await params;
-  let item;
-  try {
-    item = await createCaseApplication().getInternalCase(caseReference);
-  } catch (error) {
+  const item = await createCaseApplication().getInternalCase(caseReference).catch((error: unknown) => {
     if (error instanceof CaseDomainError && error.code === "CASE_NOT_FOUND") notFound();
     throw error;
-  }
-  if (!item) notFound();
+  });
 
   return (
     <section className="mx-auto max-w-5xl space-y-6">
