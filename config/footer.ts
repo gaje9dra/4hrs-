@@ -8,8 +8,16 @@ export const footerNavigationGroups: FooterNavGroup[] = [
 ]
 
 export const footerLegalLinks: FooterNavGroup = {
-  label: 'Legal',
-  items: [],
+  label: 'Policies & Help',
+  items: [
+    { label: 'Refund & Replacement', href: '/refund-replacement' },
+    { label: 'Shipping & Delivery', href: '/shipping' },
+    { label: 'Terms & Conditions', href: '/terms' },
+    { label: 'Privacy Policy', href: '/privacy' },
+    { label: 'Cancellation Policy', href: '/cancellation' },
+    { label: 'Contact Support', href: '/contact' },
+    { label: 'FAQ', href: '/faq' },
+  ],
 }
 
 export const footerSocialLinks: SocialLink[] = []
