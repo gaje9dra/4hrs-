@@ -65,7 +65,8 @@ test("admin payment query enforces bounded deterministic sorting and filters",()
  assert.equal(successful.outcome,"successful");assert.equal(successful.status,"SUCCEEDED");
  const failed=parseAdminPaymentQuery(new URL("https://admin.local/admin/payments?outcome=failed"));
  assert.equal(failed.outcome,"failed");assert.equal(failed.status,"FAILED");
- assert.throws(()=>parseAdminPaymentQuery(new URL("https://admin.local/admin/payments?outcome=successful&status=FAILED")));
+ const staleStatus=parseAdminPaymentQuery(new URL("https://admin.local/admin/payments?outcome=failed&status=SUCCEEDED"));
+ assert.equal(staleStatus.status,"FAILED");
  assert.throws(()=>parseAdminPaymentQuery(new URL("https://admin.local/admin/payments?outcome=pending")));
  assert.throws(()=>parseAdminPaymentQuery(new URL("https://admin.local/admin/payments?sort=providerReference")));
  assert.throws(()=>parseAdminPaymentQuery(new URL("https://admin.local/admin/payments?minAmount=200&maxAmount=100")));

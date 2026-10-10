@@ -30,7 +30,7 @@ export function parseAdminPaymentQuery(url:URL):AdminPaymentQuery{
  const outcome=requestedOutcome as "successful"|"failed"|undefined;
  if(outcome && outcome!=="successful" && outcome!=="failed")throw new AdminError("INVALID_REQUEST","Payment outcome must be successful or failed.");
  const outcomeStatus:PaymentStatus|undefined=outcome==="successful"?"SUCCEEDED":outcome==="failed"?"FAILED":undefined;
- if(requestedStatus && outcomeStatus && requestedStatus!==outcomeStatus)throw new AdminError("INVALID_REQUEST","Payment status conflicts with the selected outcome.");
+ // Outcome is the primary filter. Ignore a stale status query parameter left over from a prior form submission.
  const status=outcomeStatus??requestedStatus;
  const refundStatus=clean(url.searchParams.get("refundStatus"));
  const sort=clean(url.searchParams.get("sort"))??"createdAt_desc";
