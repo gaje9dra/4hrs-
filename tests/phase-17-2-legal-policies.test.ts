@@ -75,6 +75,6 @@ test("defect claims reuse existing support cases and do not introduce unsafe pub
   assert.match(page, /ORDER_ISSUE/);
   assert.match(page, /RETURN_REVIEW/);
   assert.match(api, /createCustomerCase/);
-  assert.match(policy, /current support-case form does not provide a secure video or photo upload field/);
+  assert.match(policy, /current support-case form does not provide a video or photo upload field/);
   assert.match(policy, /does not automatically issue a refund or create a replacement order/);
 });
