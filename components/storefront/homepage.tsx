@@ -83,7 +83,7 @@ function ProductDiscovery({
           description="Start with a deterministic edit from the live catalog, then browse the full range when you want more."
           className="mb-10"
         />
-        <div className="grid grid-cols-2 gap-2 sm:gap-5 lg:grid-cols-4 lg:gap-6">
+        <div className="homepage-product-grid grid grid-cols-2 gap-2 sm:gap-5 lg:grid-cols-4 lg:gap-6">
           {products.slice(0, 4).map((product) => <ProductCard key={product.id} product={product} />)}
         </div>
         <div className="mt-8 flex justify-start">
@@ -147,7 +147,7 @@ function NewArrivals({ products }: { products: StorefrontHomeData["newArrivals"]
           description="The latest published products, ordered by the catalog's canonical creation timestamp."
           className="mb-10"
         />
-        <div className="grid grid-cols-2 gap-2 sm:gap-5 lg:grid-cols-4 lg:gap-6">
+        <div className="homepage-product-grid grid grid-cols-2 gap-2 sm:gap-5 lg:grid-cols-4 lg:gap-6">
           {products.slice(0, 4).map((product) => <ProductCard key={product.id} product={product} />)}
         </div>
       </Container>

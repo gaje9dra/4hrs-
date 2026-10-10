@@ -400,6 +400,18 @@ code {
   }
 }
 
+/* Explicit homepage product columns: two on mobile, four on large screens. */
+.homepage-product-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (min-width: 1024px) {
+  .homepage-product-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
 .bauhaus-grid {
   background-color: var(--background);
 }
