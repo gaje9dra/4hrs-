@@ -500,3 +500,90 @@ code {
 .site-footer a:focus-visible {
   text-decoration: none !important;
 }
+
+
+/* Admin visual refinement. Catalog is deliberately excluded by pathname. */
+.admin-polish-surface {
+  min-width: 0;
+  color: #191919;
+}
+.admin-polish-surface:not([data-admin-polish-route="/admin/catalog"]) :where(input, select, textarea) {
+  min-height: 2.75rem;
+  max-width: 100%;
+  border: 1px solid #c9c4ba !important;
+  border-radius: 0.5rem;
+  background-color: #fff !important;
+  color: #191919 !important;
+  box-shadow: none !important;
+}
+.admin-polish-surface:not([data-admin-polish-route="/admin/catalog"]) :where(input, select, textarea):focus-visible {
+  outline: 3px solid #d8a900;
+  outline-offset: 2px;
+  border-color: #8b6b00 !important;
+}
+.admin-polish-surface:not([data-admin-polish-route="/admin/catalog"]) :where(button, [role="button"]) {
+  border-radius: 0.5rem;
+  transition: background-color 160ms ease, border-color 160ms ease, transform 160ms ease;
+}
+.admin-polish-surface:not([data-admin-polish-route="/admin/catalog"]) :where(button, [role="button"]):focus-visible,
+.admin-polish-surface:not([data-admin-polish-route="/admin/catalog"]) a:focus-visible {
+  outline: 3px solid #d8a900;
+  outline-offset: 3px;
+}
+.admin-polish-surface:not([data-admin-polish-route="/admin/catalog"]) [class*="shadow-["] {
+  box-shadow: 0 1px 3px rgb(24 24 27 / 7%), 0 6px 18px rgb(24 24 27 / 5%) !important;
+}
+.admin-polish-surface:not([data-admin-polish-route="/admin/catalog"]) [class*="border-black"] {
+  border-color: #dedbd4 !important;
+}
+.admin-polish-surface:not([data-admin-polish-route="/admin/catalog"]) [class*="border-4"] {
+  border-width: 1px !important;
+}
+.admin-polish-surface:not([data-admin-polish-route="/admin/catalog"]) [class*="border-2"] {
+  border-width: 1px !important;
+}
+.admin-polish-surface:not([data-admin-polish-route="/admin/catalog"]) [class*="bg-[#f7d51d]"] {
+  background-color: #f8f4e8 !important;
+}
+.admin-polish-surface:not([data-admin-polish-route="/admin/catalog"]) [class*="bg-black"] {
+  background-color: #292929 !important;
+}
+.admin-polish-surface:not([data-admin-polish-route="/admin/catalog"]) :where(table) {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.admin-polish-surface:not([data-admin-polish-route="/admin/catalog"]) :where(th) {
+  background: #f5f3ee;
+  color: #34312b;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+}
+.admin-polish-surface:not([data-admin-polish-route="/admin/catalog"]) :where(td, th) {
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+.admin-polish-surface:not([data-admin-polish-route="/admin/catalog"]) :where(tbody tr:hover) {
+  background-color: #faf9f6;
+}
+.admin-polish-surface:not([data-admin-polish-route="/admin/catalog"]) :where(pre, code) {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+@media (max-width: 640px) {
+  .admin-polish-surface:not([data-admin-polish-route="/admin/catalog"]) {
+    overflow-wrap: anywhere;
+  }
+  .admin-polish-surface:not([data-admin-polish-route="/admin/catalog"]) :where(h2) {
+    font-size: clamp(1.75rem, 8vw, 2.25rem);
+    line-height: 1.05;
+  }
+  .admin-polish-surface:not([data-admin-polish-route="/admin/catalog"]) :where(table) {
+    font-size: 0.8125rem;
+  }
+  .admin-polish-surface:not([data-admin-polish-route="/admin/catalog"]) :where(td, th) {
+    padding: 0.625rem;
+  }
+}
