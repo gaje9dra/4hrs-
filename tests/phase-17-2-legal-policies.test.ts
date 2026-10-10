@@ -37,7 +37,7 @@ test("refund and replacement policy preserves the defect-only standard without e
   assert.match(content, /absence of a video is not, by itself, a universal legal basis/);
   assert.match(content, /late report is not automatically rejected/);
   assert.match(content, /mandatory consumer rights/);
-  assert.match(content, /change of mind, an incorrect size selection/);
+  assert.match(content, /a change of mind, a preference change, an incorrect size selection/);
   assert.match(content, /does not automatically issue a refund or create a replacement order/);
 });
 
