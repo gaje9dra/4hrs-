@@ -8,8 +8,8 @@ const route = readFileSync("app/api/storefront/products/[slug]/quick-add/route.t
 test("Product card quick-add uses a size/options dialog and does not navigate", () => {
   assert.match(card, /role="dialog"/);
   assert.match(card, /selectedValues/);
-  assert.match(card, //api/storefront/products/);
-  assert.match(card, /fetch("/api/cart"/);
+  assert.ok(card.includes("/api/storefront/products/"));
+  assert.ok(card.includes('fetch("/api/cart"'));
   assert.doesNotMatch(card, /router\.push|intent=cart/);
 });
 
