@@ -166,3 +166,12 @@ test("homepage product sections show two cards per row on mobile", () => {
   assert.match(styles, /\.homepage-product-grid\s*\{\s*display:\s*grid;\s*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/);
   assert.match(styles, /@media\s*\(min-width:\s*1024px\)[\s\S]*?\.homepage-product-grid\s*\{\s*grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/);
 });
+
+test("homepage hero product images use a swipe transition with reduced-motion support", () => {
+  const hero = read("components/storefront/homepage-product-hero-carousel.tsx");
+  const styles = read("app/globals.css");
+  assert.match(hero, /homepage-hero-product-swipe/);
+  assert.match(styles, /@keyframes homepage-product-swipe-in/);
+  assert.match(styles, /animation: homepage-product-swipe-in 520ms/);
+  assert.match(styles, /prefers-reduced-motion:\s*reduce[\s\S]*?homepage-hero-product-swipe[\s\S]*?animation:\s*none/);
+});
