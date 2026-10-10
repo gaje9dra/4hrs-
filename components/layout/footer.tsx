@@ -15,7 +15,7 @@ export function Footer({ navigationGroups }: FooterProps) {
   const footerGroups = [...navigationGroups, footerLegalLinks]
 
   return (
-    <footer className="border-t-4 border-primary-yellow bg-foreground text-white">
+    <footer className="site-footer border-t-4 border-primary-yellow bg-foreground text-white">
       <Container className="py-8 sm:py-12 lg:py-16">
         <div className="grid gap-8 border-b border-white/20 pb-8 sm:gap-12 sm:pb-10 lg:grid-cols-[minmax(260px,0.85fr)_minmax(0,2.15fr)] lg:gap-12 lg:pb-14">
           <FooterBrand />

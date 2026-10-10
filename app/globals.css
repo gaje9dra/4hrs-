@@ -492,3 +492,11 @@ code {
     animation-iteration-count: 1 !important;
   }
 }
+
+
+/* Footer navigation stays clean in both mobile and desktop layouts. */
+.site-footer a,
+.site-footer a:hover,
+.site-footer a:focus-visible {
+  text-decoration: none !important;
+}
