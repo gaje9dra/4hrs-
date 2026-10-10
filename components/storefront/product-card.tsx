@@ -123,29 +123,29 @@ export function ProductCard({ product }: { product: StorefrontProductCard }) {
   }
 
   return (
-    <Card className="group overflow-hidden border-0 p-0 shadow-none transition-transform duration-200 hover:-translate-y-1 lg:shadow-none">
+    <Card className="group overflow-hidden border-2 border-border bg-white p-0 shadow-hard-sm transition-[transform,box-shadow] duration-200 hover:-translate-y-1 hover:shadow-hard-md">
       <div className="relative">
         <Link href={href} className="motion-link block no-underline" aria-label={product.title}>
-          <div className="relative aspect-[2/3] overflow-hidden bg-white" onMouseEnter={handleImageEnter} onMouseLeave={handleImageLeave}>
+          <div className="relative aspect-[4/5] overflow-hidden bg-[#f7f5f0] sm:aspect-[2/3]" onMouseEnter={handleImageEnter} onMouseLeave={handleImageLeave}>
             {activeImage ? (
-              <Image key={activeImage.url} src={activeImage.url} alt={activeImage.altText ?? (hoverImageIndex > 0 ? `${product.title} alternate view ${hoverImageIndex}` : product.title)} fill loading="lazy" sizes="(max-width: 1023px) 50vw, (max-width: 1535px) 33vw, 25vw" className="scale-[1.4] object-cover transition-transform duration-300 group-hover:scale-[1.45] sm:scale-[1.16] sm:group-hover:scale-[1.2]" />
+              <Image key={activeImage.url} src={activeImage.url} alt={activeImage.altText ?? (hoverImageIndex > 0 ? `${product.title} alternate view ${hoverImageIndex}` : product.title)} fill loading="lazy" sizes="(max-width: 1023px) 50vw, (max-width: 1535px) 33vw, 25vw" className="scale-[1.45] object-cover transition-transform duration-300 group-hover:scale-[1.5] sm:scale-[1.16] sm:group-hover:scale-[1.2]" />
             ) : (
               <div className="flex h-full items-center justify-center bg-primary-yellow p-6 text-center text-sm font-900 uppercase">Image coming soon</div>
             )}
           </div>
         </Link>
-        {savings ? <span className="absolute left-3 top-3 z-10 border-2 border-primary-red bg-primary-red px-2.5 py-1.5 text-[0.68rem] font-900 uppercase tracking-[0.05em] text-white">Save {savings}%</span> : null}
-        <Link href={href} aria-label={`View ${product.title}`} className="motion-icon absolute right-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-circle border-2 border-border bg-white no-underline shadow-hard-sm hover:bg-primary-yellow">
+        {savings ? <span className="absolute left-2 top-2 z-10 border-2 border-primary-red bg-primary-red px-2 py-1 text-[0.62rem] font-900 uppercase tracking-[0.04em] text-white sm:left-3 sm:top-3 sm:px-2.5 sm:py-1.5 sm:text-[0.68rem]">Save {savings}%</span> : null}
+        <Link href={href} aria-label={`View ${product.title}`} className="motion-icon absolute right-2 top-2 z-10 flex size-9 items-center justify-center rounded-circle border-2 border-border bg-white no-underline shadow-hard-sm hover:bg-primary-yellow sm:right-3 sm:top-3 sm:size-10">
           <Heart size={19} strokeWidth={2.25} aria-hidden="true" />
         </Link>
       </div>
 
-      <button type="button" disabled={unavailable} onClick={() => void openQuickAdd()} aria-label={`Add ${product.title} to cart`} className="motion-press flex min-h-12 w-full items-center justify-center gap-2 border-x-0 border-b-2 border-border bg-transparent px-4 py-3 text-xs font-900 uppercase tracking-[0.12em] text-foreground transition-[background-color,color,opacity,border-color] duration-200 hover:bg-primary-blue hover:text-primary-yellow disabled:cursor-not-allowed sm:border-transparent sm:text-transparent sm:opacity-0 sm:pointer-events-none sm:group-hover:border-border sm:group-hover:border-b-4 sm:group-hover:border-solid sm:group-hover:bg-primary-blue sm:group-hover:!text-primary-yellow sm:group-hover:opacity-100 sm:group-hover:pointer-events-auto lg:border-b-4">
+      <button type="button" disabled={unavailable} onClick={() => void openQuickAdd()} aria-label={`Add ${product.title} to cart`} className="motion-press hidden min-h-12 w-full items-center justify-center gap-2 border-t-2 border-border bg-transparent px-4 py-3 text-xs font-900 uppercase tracking-[0.12em] text-foreground transition-[background-color,color,border-color] duration-200 hover:bg-primary-blue hover:text-primary-yellow disabled:cursor-not-allowed sm:flex sm:border-transparent sm:text-transparent sm:opacity-0 sm:pointer-events-none sm:group-hover:border-border sm:group-hover:border-b-4 sm:group-hover:border-solid sm:group-hover:bg-primary-blue sm:group-hover:!text-primary-yellow sm:group-hover:opacity-100 sm:group-hover:pointer-events-auto lg:border-b-4">
         <ShoppingCart className="text-current" size={16} strokeWidth={2.5} aria-hidden="true" />
         <span className="text-current">{unavailable ? "Out of stock" : "Add to cart"}</span>
       </button>
 
-      <div className="bg-white px-3 pb-4 pt-4 sm:px-4">
+      <div className="bg-white px-3 pb-4 pt-3 sm:px-4 sm:pt-4">
         <Link href={href} className="block no-underline hover:no-underline">
           <h3 className="line-clamp-2 min-h-[2.7rem] text-[0.98rem] font-900 uppercase leading-[1.12] tracking-[-0.01em] no-underline">{product.title}</h3>
         </Link>

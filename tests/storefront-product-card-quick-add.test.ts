@@ -39,3 +39,13 @@ test("Quick-add modal escapes transformed product cards and fits small viewports
   assert.match(card, /text-\[clamp\(1\.75rem,7vw,3rem\)\]/);
   assert.match(card, /overflow-wrap:anywhere/);
 });
+
+test("Mobile product cards are polished and keep Add to Cart on product detail pages", () => {
+  const cardButton = card.match(/<button type="button" disabled=\{unavailable\}[\s\S]*?className="([^"]+)"/);
+  assert.ok(cardButton, "product-card add-to-cart button exists for desktop");
+  assert.match(cardButton[1], /hidden/);
+  assert.match(cardButton[1], /sm:flex/);
+  assert.match(card, /aspect-\[4\/5\].*sm:aspect-\[2\/3\]/);
+  assert.match(card, /border-2 border-border bg-white/);
+  assert.match(card, /href=\{href\}/);
+});
