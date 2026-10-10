@@ -255,8 +255,8 @@ export function Homepage({ data, editorialSections = [] }: { data: StorefrontHom
       <HomepageCampaignCarousel />
       <Hero data={data} />
       <ProductDiscovery eyebrow="Discovery / 01" title="Curated picks" products={data.featuredProducts} />
-      <CategoryDiscovery categories={data.categories} />
       <NewArrivals products={data.newArrivals} />
+      <CategoryDiscovery categories={data.categories} />
       <CollectionDiscovery collections={data.collections} />
       <BrandValue />
       <EditorialHomepageSections sections={editorialSections} />
