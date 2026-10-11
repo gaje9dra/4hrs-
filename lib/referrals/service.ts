@@ -1,6 +1,7 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import { Prisma, type ReferralStatus } from "@prisma/client";
 import { db } from "@/lib/db/client";
+import { enqueueNotificationEvent } from "@/lib/notifications/service";
 
 function couponCode(percent: 14 | 25) {
   return `R${percent}-${randomBytes(12).toString("hex").toUpperCase()}`;
@@ -58,6 +59,13 @@ async function issueRewardPair(
     });
     await tx.referralReward.create({
       data: { id: randomUUID(), referralId: referral.id, recipientCustomerId, couponId: coupon.id, type, reason },
+    });
+    await enqueueNotificationEvent(tx, {
+      customerId: recipientCustomerId,
+      type: type === "REGISTRATION_14" ? "REFERRAL_REGISTRATION_REWARD" : "REFERRAL_DELIVERY_REWARD",
+      payload: { couponCode: coupon.code, discountPercent: percent },
+      idempotencyKey: `referral-reward:${referral.id}:${recipientCustomerId}:${type}`,
+      correlationId: referral.id,
     });
   }
 }
