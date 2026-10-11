@@ -22,6 +22,8 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   images: {
+    // Prefer AVIF, then WebP, for smaller optimized storefront images.
+    formats: ['image/avif', 'image/webp'],
     // Restrict optimized local images to public image assets while allowing both
     // plain paths (such as the hero banner) and versioned cache-busting URLs.
     localPatterns: [
