@@ -85,3 +85,16 @@ test("public taxonomy loaders reject archived categories and collections", () =>
   assert.match(source, /CATEGORY_NOT_FOUND/);
   assert.match(source, /COLLECTION_NOT_FOUND/);
 });
+
+test("homepage reuses its newest-product query for hero and new arrivals", () => {
+  const source = read("lib/storefront/catalog.ts");
+  const start = source.indexOf("export async function getStorefrontHomeCatalogData");
+  const end = source.indexOf("export async function searchStorefrontProducts", start);
+  assert.ok(start >= 0 && end > start, "homepage catalog loader should be present");
+  const homepageLoader = source.slice(start, end);
+
+  assert.match(homepageLoader, /getStorefrontProducts\(\{ page: 1, pageSize: 12, sort: "newest" \}\)/);
+  assert.doesNotMatch(homepageLoader, /getStorefrontProducts\(\{ pageSize: 8, sort: "newest" \}\)/);
+  assert.match(homepageLoader, /newArrivals: heroFirstPage\.items\.filter/);
+});
+
