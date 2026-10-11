@@ -15,7 +15,9 @@ export function createAuthenticatedCartOwnershipBoundary(
   return {
     async authorizeCartAccess(cartId, owner) {
       const customerId = customerIdFromOwner(owner);
-      const cart = await repository.findCartById(cartId);
+      const cart = repository.findCartOwner
+        ? await repository.findCartOwner(cartId)
+        : await repository.findCartById(cartId);
       if (!cart || cart.customerId !== customerId) {
         throw new CartServiceError("CART_UNAUTHORIZED", "Cart access is not authorized.");
       }
