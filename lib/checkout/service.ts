@@ -141,23 +141,37 @@ export function createCheckoutService(dependencies: CheckoutDependencies) {
     const startedAt = Date.now();
 
     try {
-      const cart = await dependencies.getCart();
+      const addressId = input.selectedAddressId?.trim() || null;
+
+      // Cart validation and address lookup are independent reads. Start both
+      // before awaiting either so checkout does not serialize their latency.
+      const cartPromise = dependencies.getCart();
+      const addressPromise = (addressId
+        ? dependencies.getAddress(dependencies.customer.id, addressId)
+        : dependencies.listAddresses(dependencies.customer.id)
+      ).then(
+        (value) => ({ value, error: null as unknown }),
+        (error: unknown) => ({ value: null, error }),
+      );
+
+      const cart = await cartPromise;
       const currentRevision = revisionForCart(cart);
       const issues = validateCart(cart);
       const staleIssue = compareRevision(currentRevision, input.expectedRevision);
       if (staleIssue) issues.unshift(staleIssue);
 
       let address: CustomerAddressDto | null = null;
-      const addressId = input.selectedAddressId?.trim() || null;
-
+      const addressResult = await addressPromise;
       if (addressId) {
-        try {
-          address = await dependencies.getAddress(dependencies.customer.id, addressId);
-        } catch (error) {
-          issues.push(mapAddressError(error));
+        if (addressResult.error) {
+          issues.push(mapAddressError(addressResult.error));
+        } else {
+          address = addressResult.value as CustomerAddressDto;
         }
+      } else if (addressResult.error) {
+        throw addressResult.error;
       } else {
-        const addresses = await dependencies.listAddresses(dependencies.customer.id);
+        const addresses = addressResult.value as CustomerAddressDto[];
         address = addresses.find((candidate) => candidate.isDefault) ?? null;
         if (!address && addresses.length > 0) {
           issues.push(issue("INCOMPLETE_CHECKOUT", "Select a delivery address before continuing."));
