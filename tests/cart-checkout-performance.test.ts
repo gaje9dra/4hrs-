@@ -9,18 +9,23 @@ test("cart resolves unique product details in a bounded batch", () => {
   const service = read("lib/cart/service.ts");
   const catalogRepository = read("lib/catalog/repository.ts");
   const catalogQuery = read("lib/catalog/query.ts");
+  const cartRepository = read("lib/cart/repository.ts");
+  const cartOwnership = read("lib/cart/auth-ownership.ts");
 
   assert.match(service, /new Set\(cart\.items\.map\(\(item\) => item\.productId\)\)/);
   assert.match(service, /getPublishedProductDetailsByIds/);
   assert.match(catalogRepository, /getPublishedProductDetailsByIds[\s\S]*?product\.findMany\([\s\S]*?id: \{ in: uniqueIds \}/);
   assert.match(catalogQuery, /async getPublishedProductDetailsByIds\(ids: string\[\]\)/);
   assert.doesNotMatch(service, /cart\.items\.map\(resolveLine\)/);
+  assert.match(cartRepository, /findCartOwner\(cartId: string\)[\s\S]*?select: \{ customerId: true \}/);
+  assert.match(cartOwnership, /repository\.findCartOwner[\s\S]*?await repository\.findCartById/);
 });
 
 test("checkout bootstrap returns saved addresses without a duplicate initial request", () => {
   const checkoutService = read("lib/checkout/service.ts");
   const checkoutContracts = read("lib/checkout/contracts.ts");
   const checkoutPage = read("components/storefront/checkout-page.tsx");
+  const checkoutRoute = read("app/(storefront)/checkout/page.tsx");
 
   // Checkout bootstrap must return addresses in its own response and avoid
   // a second client request. Cart and address reads should also overlap so
@@ -32,4 +37,6 @@ test("checkout bootstrap returns saved addresses without a duplicate initial req
   assert.match(checkoutContracts, /addresses\?: CustomerAddressDto\[\]/);
   assert.match(checkoutPage, /checkoutRequest\("GET"\)[\s\S]*?const nextAddresses = nextCheckout\.addresses \?\? \[\]/);
   assert.doesNotMatch(checkoutPage, /Promise\.all\(\[checkoutRequest\("GET"\), addressRequest\(\)\]\)/);
+  assert.doesNotMatch(checkoutRoute, /await resolveCurrentCustomer/);
+  assert.match(checkoutPage, /checkout\?\.customer\?\.email/);
 });
