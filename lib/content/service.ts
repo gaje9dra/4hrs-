@@ -444,13 +444,30 @@ export async function listPublishedContentByType(type: ContentType, locale: Supp
     where: { type, locale, publishedAt: { not: null }, publishedVersion: { not: null } },
     orderBy: [{ position: "asc" }, { updatedAt: "desc" }, { id: "asc" }],
   });
+
+  // Batch revision reads into one database round trip instead of querying
+  // sequentially for each item. This path runs on the storefront homepage.
+  const publishedItems = items.filter(
+    (item): item is typeof item & { publishedVersion: number } => item.publishedVersion !== null,
+  );
+  if (!publishedItems.length) return [];
+
+  const revisions = await db.contentRevision.findMany({
+    where: {
+      OR: publishedItems.map((item) => ({
+        contentId: item.id,
+        version: item.publishedVersion,
+      })),
+    },
+  });
+  const revisionByKey = new Map(
+    revisions.map((revision) => [`${revision.contentId}:${revision.version}`, revision]),
+  );
+
   const now = new Date();
   const results: Array<{ item: typeof items[number]; snapshot: ContentSnapshot; version: number }> = [];
-  for (const item of items) {
-    if (item.publishedVersion === null) continue;
-    const revision = await db.contentRevision.findUnique({
-      where: { contentId_version: { contentId: item.id, version: item.publishedVersion } },
-    });
+  for (const item of publishedItems) {
+    const revision = revisionByKey.get(`${item.id}:${item.publishedVersion}`);
     if (!revision) continue;
     const snapshot = validateContentInput(revision.snapshot as ContentInput);
     const start = snapshot.publicationStartAt ? new Date(snapshot.publicationStartAt) : null;
