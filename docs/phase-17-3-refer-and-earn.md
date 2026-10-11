@@ -2,66 +2,53 @@
 
 ## Status
 
-**INCOMPLETE — DO NOT MERGE OR DESCRIBE AS PRODUCTION-READY YET.**
+**INCOMPLETE — KEEP PR #278 DRAFT AND UNMERGED.**
 
-This increment now includes referral attribution at registration, customer tracking UI, admin referral reporting, and reward processing hooks. The critical remaining external dependency is real trusted delivery status: the existing Qikink adapter explicitly declares tracking lookup and webhooks unavailable. The reward processor only reacts to a persisted shipment in `DELIVERED` state and verified successful payment; it does not fabricate a delivery event.
-
-## Implemented in this increment
-
-- Referral profile codes and first-touch referral attribution through a secure HTTP-only referral cookie.
-- New-account registration creates the referred relationship and one single-use 14% coupon for each recipient in the same registration transaction.
-- Referral coupon ownership is enforced by the existing coupon reservation service.
-- Customer Refer & Earn page displays link, referral statuses, progress counts, and own referral coupons, without exposing invitee emails or order identifiers.
-- Admin Refer & Earn page and API allow permission-gated search/filter/reporting of referral, payment, delivery, and coupon state.
-- When a successful verified payment creates an eligible referred order, the referral is moved to awaiting delivery and bound to that order.
-- Persisted trusted shipment delivery state is checked against the current verified payment state before a transaction issues the 25% coupon pair idempotently.
-- Dedicated referral permissions are granted to SUPER_ADMIN by a forward-only migration.
+The verified-payment 25% reward path is implemented in the verified order-creation transaction. The full post-issuance refund/cancellation lifecycle, broader failure-injection coverage, and final CI verification remain completion gates.
 
 ## Business rules
 
-- New registrations only can be attributed. Existing customer login does not issue referral rewards.
-- Visiting a referral URL is not sufficient to issue coupons.
-- Both referrer and invitee receive one 14% coupon after a valid new registration.
-- Both receive one 25% coupon only after the qualifying order's payment is verified as SUCCEEDED and the persisted shipment state is DELIVERED.
-- Coupons are assigned to recipient accounts and each is limited to one redemption.
-- Coupon expiry defaults to 365 days and can be configured using `REFERRAL_COUPON_TTL_DAYS` (bounded to 1–3650; invalid values fall back to 365).
-- A unique referral relationship per invited account and unique reward constraints prevent duplicate attribution/reward issuance.
+- A valid referral is attributed only during new account registration; returning customer login does not create a new referral or issue a second registration reward.
+- On valid new registration, the referrer and invited customer each receive one account-bound, single-use 14% coupon.
+- The invited customer’s first eligible order is bound to the referral during the server-side verified-payment order-creation transaction.
+- The referrer and invited customer each receive one account-bound, single-use 25% coupon in that same transaction when the persisted payment is `SUCCEEDED`, has a completion timestamp, and matches the persisted order’s customer, checkout reference, amount, and currency.
+- A shipment, tracking event, or delivery status is not required and is not consulted for referral reward eligibility.
+- The qualifying order must be in an eligible persisted state (`PENDING` immediately after verified order creation or `CONFIRMED`) and must be the first order bound to the referral.
+- Any refund record that is `PENDING`, `AMBIGUOUS`, or `SUCCEEDED` blocks new 25% issuance. A `FAILED` refund does not by itself block issuance.
+- Coupons are recipient-bound and limited to one redemption. Expiry defaults to 365 days and can be configured with `REFERRAL_COUPON_TTL_DAYS` (1–3650 days; invalid values fall back to 365).
 
-## Delivery and financial lifecycle blockers
+## Transaction, idempotency, and recovery
 
-The Qikink adapter currently has `createShipment: false`, `trackingLookup: false`, and `webhooks: false`. Therefore it cannot reliably emit machine-to-machine delivery state in this repository today. The 25% reward path is safely gated but will not run for Qikink orders unless a trusted existing or future shipment integration records a real `DELIVERED` state. Do not manually create fake provider tracking events.
+- Referral order binding, the pair of 25% coupon records, reward audit rows, notification enqueueing, and the final referral status are written inside the verified order-creation transaction.
+- The reward processor re-reads the persisted order/payment/refunds and locks the referral row before deciding eligibility.
+- Unique constraints on `Referral.qualifyingOrderId` and `ReferralReward(referralId, recipientCustomerId, type)`, together with serializable transactions, protect against duplicate/concurrent issuance.
+- Retrying order creation for an already-persisted order re-runs the idempotent reward processor, providing a recovery path for referrals awaiting the previous delivery-triggered reward.
+- If coupon creation or notification enqueueing fails, the transaction rolls back the order/referral reward changes together; retry the verified order-creation flow after the underlying failure is corrected.
 
-Cancellation, refund, chargeback, reservation-expiry/recovery and post-reward refund handling still require dedicated lifecycle policy and tests. If payment is no longer SUCCEEDED when delivery is processed, no 25% reward is issued. Those exceptional states and recovery behavior must be addressed before calling the whole phase production-ready.
+## Refund, cancellation, and reversal lifecycle — remaining blocker
 
-## Delivery contract investigation (2026-10-11)
+The payment model represents refund states `PENDING`, `SUCCEEDED`, `FAILED`, and `AMBIGUOUS`, including partial/full refund outcomes through payment status and refund amounts. At issuance time, pending, ambiguous, or successful refunds block the 25% pair. Failed refunds do not block issuance.
 
-Reviewed Qikink's official public documentation:
+**Not yet implemented:** automatic post-issuance deactivation of unused 25% coupons on a later pending/ambiguous/successful refund or qualifying cancellation; audited reversal-state transitions; safe restoration after a failed refund; repeated/concurrent refund recovery tests; and behavior for coupons already redeemed before a later refund. Coupon deactivation would not reverse a completed financial transaction and must never rewrite a redemption as if it had not happened. These lifecycle requirements must be implemented before this phase can be marked complete.
 
-- The [Qikink API documentation](https://admins.qikink.com/api-docs) documents creating an order with `POST /erp2/index.php/api/createOrder` and returns an order identifier. The documented operation does not define an authenticated tracking-status lookup endpoint, a delivery webhook, a webhook signature scheme, or a polling contract.
-- Qikink's [tracking guide](https://qikink.com/help/orders/how-to-track-an-order/) describes checking the tracking ID and live shipment information through the merchant dashboard.
-- Qikink's [shipment-status guide](https://qikink.com/help/orders/shipping-statuses/) lists statuses such as `Delivered`, but does not document a machine-to-machine event transport or signature contract for this integration.
+The repository has no verified external chargeback event source in this phase. Chargeback automation is therefore unsupported and must not be claimed.
 
-Therefore these public sources are insufficient to implement a secure Qikink delivery webhook or polling adapter. Do not infer a private endpoint from dashboard behavior. A written, versioned API contract from Qikink (including authentication/signatures, event identifiers, timestamps, status semantics, retry behavior, and order/tracking identifiers) or a separately approved tracking provider is required before delivery-based rewards can be enabled in production.
+## Notifications and interfaces
 
-## Additional safety hardening in this increment
+- Registration and verified-payment reward notifications use the existing notification event infrastructure and stable idempotency keys in the same transaction as coupon issuance.
+- Customer dashboard progress is based on referral registration, qualifying order, verified payment, and reward issuance. It does not state that delivery is required.
+- Admin referral reporting is read-only and permission-gated; payment and reward status come from persisted records. There is no manual payment-success override.
 
-- Reward processing re-reads the order and payment inside the serializable transaction, requires a confirmed order and successful payment, and rejects any payment with a pending, ambiguous, or successful refund record.
-- Reward processing now requires a persisted non-manual delivery tracking event whose provider identity matches the shipment provider and whose timestamp is not later than the recorded delivery timestamp. A shipment `DELIVERED` flag by itself is not enough.
-- Deterministic tests cover matching provider evidence and reject manual, mismatched-provider, future-dated, or absent events.
-- This evidence gate intentionally means current Qikink orders cannot earn 25% delivery rewards: Qikink's adapter declares tracking lookup and webhooks unavailable, and there is no supported trusted event path.
-- Referral reward emails use the existing notification event/delivery infrastructure. Registration and delivered-order coupon notifications are enqueued with stable idempotency keys inside the same database transaction as reward creation, so a rolled-back reward cannot send a notification.
+## Migration and shipping boundaries
 
-## Refund/reversal policy decision (implementation still required)
-
-The qualifying order becomes ineligible for a new 25% reward if any refund is pending, ambiguous, or successful, or if payment is no longer `SUCCEEDED`. This is a conservative issuance gate, not a complete post-issuance reversal workflow. If a refund/cancellation is recorded after reward issuance, the existing coupon audit history must be retained; unused coupons should be deactivated through a dedicated idempotent audited operation, while already redeemed coupons must not be retroactively changed into fake financial reversals. That post-issuance operation and its integration into all refund/cancellation outcomes remain incomplete and block production completion.
+- New enum values are introduced with a forward-only migration; existing delivery reward enum values and historical records are retained for compatibility.
+- Shipping/tracking validation and the Qikink adapter are unchanged. This phase does not invent Qikink tracking capabilities or modify shipment state.
+- Verify migration deployment from a clean PostgreSQL database and run all repository CI, recovery, architecture, security, reconciliation, and production-certification checks on the final head SHA.
 
 ## Operational recovery
 
-1. Do not manually set a shipment to `DELIVERED` to trigger a reward.
-2. If delivery evidence is missing or provider identity/timestamps do not match, leave the referral awaiting delivery and investigate the provider's official records.
-3. Do not retry a reward by editing coupon or referral rows manually. Re-run the supported idempotent reward processor only after verified payment and trusted delivery evidence exist.
-4. For any reward already issued before a later refund/reversal, preserve the original referral/coupon rows and use the approved audited correction process once implemented. Until that process exists, escalate for a recorded administrative decision and do not claim automated reversal support.
-
-## Verification requirements
-
-Check the current branch's GitHub Actions results after each complete increment. Required checks include the repository's actual lint, typecheck, test, build, Prisma validation, migration, and recovery checks. The phase stays a draft/unmerged while any required test fails or while the real delivery contract and refund/recovery behavior remain unresolved.
+1. Confirm the provider payment is server-verified and persisted payment/order amount, currency, customer, and checkout reference match.
+2. Confirm no refund is pending, ambiguous, or successful.
+3. Retry the existing verified order-creation path for the persisted payment. The reward processor is idempotent and rechecks referral and financial records.
+4. Inspect the referral’s qualifying order, reward rows, coupon ownership/status, and notification outbox records before any manual intervention.
+5. Do not manually create shipment/tracking events or edit payment state to force a referral reward.

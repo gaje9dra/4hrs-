@@ -16,6 +16,7 @@ const variants: string[] = [];
 const inventories: string[] = [];
 const payments: string[] = [];
 const orders: string[] = [];
+const referralIds: string[] = [];
 
 function digest(value: string): string {
   return createHash("sha256").update(value).digest("hex");
@@ -162,6 +163,24 @@ test("creates one Order from a verified Payment with immutable snapshots", async
   assert.equal(order.shippingAddress?.addressLine1, "1 Test Street");
 });
 
+test("verified first eligible referred payment issues two 25% coupons without a shipment", async () => {
+  const f = await fixture();
+  const referrer = await db.customer.create({ data: { email: `${randomUUID()}@referral-order.invalid` } });
+  customers.push(referrer.id);
+  const referral = await db.referral.create({ data: { referrerCustomerId: referrer.id, invitedCustomerId: f.customer.id, referralCodeSnapshot: `TEST-${randomUUID().replaceAll("-", "").slice(0, 16)}`, status: "AWAITING_ORDER" } });
+  referralIds.push(referral.id);
+  const result = await appFor(f.customer.id).createOrderFromVerifiedPayment({ paymentId: f.payment.id });
+  orders.push(result.id);
+  const persisted = await db.referral.findUniqueOrThrow({ where: { id: referral.id } });
+  const rewards = await db.referralReward.findMany({ where: { referralId: referral.id }, include: { coupon: true } });
+  assert.equal(persisted.qualifyingOrderId, result.id);
+  assert.equal(persisted.status, "REWARDED");
+  assert.ok(persisted.paymentVerifiedAt);
+  assert.equal(rewards.length, 2);
+  assert.deepEqual(rewards.map((reward) => reward.coupon.discountPercent).sort(), [25, 25]);
+  assert.ok(rewards.every((reward) => reward.coupon.maxRedemptions === 1 && reward.coupon.recipientCustomerId === reward.recipientCustomerId));
+  assert.equal(await db.shipment.count({ where: { orderId: result.id } }), 0);
+});
 test("rejects a missing or non-successful Payment", async () => {
   const f = await fixture({ status: "FAILED" });
   const app = appFor(f.customer.id);
@@ -307,6 +326,11 @@ test("browser-side commercial values are not part of the creation contract", asy
 });
 
 after(async () => {
+  if (referralIds.length) {
+    await db.referralReward.deleteMany({ where: { referralId: { in: referralIds } } });
+    await db.discountCoupon.deleteMany({ where: { referralId: { in: referralIds } } });
+    await db.referral.deleteMany({ where: { id: { in: referralIds } } });
+  }
   if (orders.length) await db.order.deleteMany({ where: { id: { in: orders } } });
   if (cartItems.length) await db.cartItem.deleteMany({ where: { id: { in: cartItems } } });
   if (carts.length) await db.cart.deleteMany({ where: { id: { in: carts } } });

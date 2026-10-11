@@ -2,18 +2,9 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { db } from "@/lib/db/client";
-import { getReferralDashboard, hasTrustedDeliveryEvidence, processReferralDeliveryReward } from "@/lib/referrals/service";
+import { getReferralDashboard } from "@/lib/referrals/service";
 
 
-test("trusted delivery evidence rejects manual, wrong-provider, and post-delivery events", () => {
-  const deliveredAt = new Date("2026-10-11T10:00:00.000Z");
-  const event = { providerId: "supported-carrier", eventTimestamp: new Date("2026-10-11T09:59:00.000Z"), source: "WEBHOOK" as const };
-  assert.equal(hasTrustedDeliveryEvidence({ shipmentProviderId: "supported-carrier", deliveredAt, events: [event] }), true);
-  assert.equal(hasTrustedDeliveryEvidence({ shipmentProviderId: "supported-carrier", deliveredAt, events: [{ ...event, source: "MANUAL" }] }), false);
-  assert.equal(hasTrustedDeliveryEvidence({ shipmentProviderId: "supported-carrier", deliveredAt, events: [{ ...event, providerId: "other-carrier" }] }), false);
-  assert.equal(hasTrustedDeliveryEvidence({ shipmentProviderId: "supported-carrier", deliveredAt, events: [{ ...event, eventTimestamp: new Date("2026-10-11T10:01:00.000Z") }] }), false);
-  assert.equal(hasTrustedDeliveryEvidence({ shipmentProviderId: "supported-carrier", deliveredAt, events: [] }), false);
-});
 
 const databaseUrl = (() => { try { return new URL(process.env.DATABASE_URL ?? ""); } catch { return null; } })();
 const safeTestDatabase = process.env.CI === "true" && Boolean(databaseUrl) && (
@@ -48,7 +39,4 @@ test("referral profile is created on demand and customer dashboard excludes othe
   }
 });
 
-test("delivery reward processor never rewards an absent or non-delivered shipment", { skip: !safeTestDatabase }, async () => {
-  const result = await processReferralDeliveryReward(randomUUID());
-  assert.deepEqual(result, { rewarded: false });
 });
