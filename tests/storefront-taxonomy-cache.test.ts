@@ -21,3 +21,14 @@ test("shared navigation reuses cached taxonomy reads instead of querying categor
   assert.match(source, /getStorefrontNavigationTaxonomy/);
   assert.doesNotMatch(source, /createCatalogQueryService|catalog\.listActiveCategories|catalog\.listActiveCollections/);
 });
+
+test("homepage discovery reuses cached taxonomy lookups", () => {
+  const source = read("lib/storefront/catalog.ts");
+  const start = source.indexOf("export async function getStorefrontHomeCatalogData");
+  const end = source.indexOf("\nexport async function searchStorefrontProducts", start);
+  assert.ok(start >= 0 && end > start);
+  const homeLoader = source.slice(start, end);
+  assert.match(homeLoader, /getActiveCategories\(\)/);
+  assert.match(homeLoader, /getActiveCollectionsWithPublishedProducts\(\)/);
+  assert.doesNotMatch(homeLoader, /catalog\.listActiveCategories|catalog\.listActiveCollectionsWithPublishedProducts/);
+});

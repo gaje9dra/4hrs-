@@ -288,8 +288,8 @@ export async function getStorefrontHomeCatalogData(): Promise<StorefrontHomeData
   const [heroFirstPage, newArrivalResult, categories, collections] = await Promise.all([
     getStorefrontProducts({ page: 1, pageSize: 12, sort: "newest" }),
     getStorefrontProducts({ pageSize: 8, sort: "newest" }),
-    catalog.listActiveCategories(),
-    catalog.listActiveCollectionsWithPublishedProducts(),
+    getActiveCategories(),
+    getActiveCollectionsWithPublishedProducts(),
   ]);
 
   const heroProducts = heroFirstPage.items.filter((product) => product.image !== null);
