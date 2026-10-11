@@ -17,7 +17,6 @@ import type {
 } from "@/lib/shipping/contracts";
 import { logShippingObservation } from "@/lib/shipping/observability";
 import { createShippingProviderResolver } from "@/lib/shipping/resolver";
-import { processReferralDeliveryReward } from "@/lib/referrals/service";
 
 export type ShippingApplicationDependencies = Readonly<{
   database?: PrismaClient;
@@ -356,7 +355,6 @@ export function createShippingApplication(
         return updated;
       }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
       // Reward processing re-reads the persisted shipment and payment states. This is safe on duplicate events.
-      if (processedShipment.status === "DELIVERED") await processReferralDeliveryReward(input.shipmentId);
       return processedShipment;
     } catch (error) {
       logShippingObservation({
@@ -380,7 +378,6 @@ export function createShippingApplication(
               result: "duplicate",
               correlationId,
             });
-            if (current.status === "DELIVERED") await processReferralDeliveryReward(input.shipmentId);
             return current;
           }
         }
