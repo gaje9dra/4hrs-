@@ -325,7 +325,7 @@ async function measureHomepageOperation<T>(
         resourceType: "database",
         outcome: "failure",
         durationMs,
-        errorCode: error instanceof Error && /\\bP2024\\b/.test(error.message) ? "P2024" : "DATABASE_OPERATION_FAILED",
+        errorCode: error instanceof Error && /\bP2024\b/.test(error.message) ? "P2024" : "DATABASE_OPERATION_FAILED",
       }, { operation });
     }
     throw error;
