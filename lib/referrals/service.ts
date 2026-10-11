@@ -73,7 +73,7 @@ async function issueRewardPair(
 export async function processReferralPaymentRewardInTransaction(tx: Prisma.TransactionClient, orderId: string): Promise<{ rewarded: boolean; referralId?: string }> {
   const order = await tx.order.findUnique({ where: { id: orderId }, select: {
     id: true, customerId: true, checkoutReference: true, total: true, currency: true, createdAt: true, status: true,
-    payment: { select: { customerId: true, checkoutReference: true, amount: true, currency: true, status: true, completedAt: true, refunds: { select: { status: true } } } },
+    payment: { select: { customerId: true, checkoutReference: true, amount: true, currency: true, status: true, completedAt: true, refunds: { select: { status: true } }, disputes: { select: { status: true } } } },
     cancellationRequests: { select: { status: true } },
   } });
   if (!order || !["PENDING", "CONFIRMED"].includes(order.status) || order.payment.customerId !== order.customerId || order.payment.checkoutReference !== order.checkoutReference || order.payment.status !== "SUCCEEDED" || !order.payment.completedAt || !order.payment.amount.equals(order.total) || order.payment.currency !== order.currency) return { rewarded: false };
@@ -83,7 +83,7 @@ export async function processReferralPaymentRewardInTransaction(tx: Prisma.Trans
   const referral = await tx.referral.findUnique({ where: { id: candidate.id } });
   if (!referral || referral.referrerCustomerId === referral.invitedCustomerId || order.createdAt < referral.registeredAt || (referral.qualifyingOrderId !== null && referral.qualifyingOrderId !== order.id) || !["REGISTERED", "AWAITING_ORDER", "AWAITING_DELIVERY", "AWAITING_PAYMENT_REVIEW"].includes(referral.status)) return { rewarded: false, ...(referral ? { referralId: referral.id } : {}) };
   if (!referral.qualifyingOrderId || referral.status !== "AWAITING_PAYMENT_REVIEW") await tx.referral.update({ where: { id: referral.id }, data: { qualifyingOrderId: order.id, status: "AWAITING_PAYMENT_REVIEW", paymentVerifiedAt: order.payment.completedAt } });
-  const hasDisqualifyingFinancialState = order.payment.refunds.some((refund) => refund.status !== "FAILED") || order.cancellationRequests.some((cancellation) => !["REJECTED", "FAILED"].includes(cancellation.status));
+  const hasDisqualifyingFinancialState = order.payment.refunds.some((refund) => refund.status !== "FAILED") || order.payment.disputes.some((dispute) => !["CLOSED_MERCHANT_FAVOUR", "CLOSED_FRAUD_LIABILITY"].includes(dispute.status)) || order.cancellationRequests.some((cancellation) => !["REJECTED", "FAILED"].includes(cancellation.status));
   if (hasDisqualifyingFinancialState) return { rewarded: false, referralId: referral.id };
   await issueRewardPair(tx, referral, 25, "PAID_ORDER_25", "First eligible referred order has server-verified successful payment.");
   await tx.referral.update({ where: { id: referral.id }, data: { status: "REWARDED", qualifyingOrderId: order.id, paymentVerifiedAt: order.payment.completedAt, rewardIssuedAt: new Date() } });
@@ -95,7 +95,7 @@ export async function syncReferralRewardLifecycleInTransaction(
 ): Promise<void> {
   const order = await tx.order.findUnique({ where: { id: orderId }, select: {
     id: true,
-    payment: { select: { status: true, completedAt: true, refunds: { select: { status: true } } } },
+    payment: { select: { status: true, completedAt: true, refunds: { select: { status: true } }, disputes: { select: { status: true } } } },
     cancellationRequests: { select: { status: true } },
   } });
   if (!order) return;
@@ -104,7 +104,7 @@ export async function syncReferralRewardLifecycleInTransaction(
     include: { rewards: { where: { type: { in: ["PAID_ORDER_25", "DELIVERED_ORDER_25"] } }, include: { coupon: { include: { redemptions: { select: { status: true } } } } } } },
   });
   if (!referral) return;
-  const disqualified = order.payment.status !== "SUCCEEDED" || !order.payment.completedAt || order.payment.refunds.some((refund) => refund.status !== "FAILED") || order.cancellationRequests.some((cancellation) => !["REJECTED", "FAILED"].includes(cancellation.status));
+  const disqualified = order.payment.status !== "SUCCEEDED" || !order.payment.completedAt || order.payment.refunds.some((refund) => refund.status !== "FAILED") || order.payment.disputes.some((dispute) => !["CLOSED_MERCHANT_FAVOUR", "CLOSED_FRAUD_LIABILITY"].includes(dispute.status)) || order.cancellationRequests.some((cancellation) => !["REJECTED", "FAILED"].includes(cancellation.status));
   const now = new Date();
   for (const reward of referral.rewards) {
     const coupon = reward.coupon;
@@ -131,7 +131,7 @@ export async function syncReferralRewardLifecycleInTransaction(
     }
     if (coupon.status === "INACTIVE" && (!coupon.expiresAt || coupon.expiresAt > now) && !redeemed) {
       const latestDeactivation = await tx.referralRewardLifecycleEvent.findFirst({ where: { referralRewardId: reward.id, eventType: "REWARD_DEACTIVATED" }, orderBy: [{ createdAt: "desc" }, { id: "desc" }] });
-      if (latestDeactivation && /^(REFUND_PENDING|REFUND_AMBIGUOUS|CANCELLATION_ACTIVE):/.test(latestDeactivation.reason)) {
+      if (latestDeactivation && /^(REFUND_PENDING|REFUND_AMBIGUOUS|CANCELLATION_ACTIVE|CHARGEBACK_OPEN|CHARGEBACK_UNKNOWN):/.test(latestDeactivation.reason)) {
         await tx.discountCoupon.update({ where: { id: coupon.id }, data: { status: "ACTIVE" } });
         const key = `${eventKey}:reward:${reward.id}:reactivated`;
         await tx.referralRewardLifecycleEvent.upsert({ where: { eventKey: key }, create: { id: randomUUID(), referralRewardId: reward.id, eventKey: key, eventType: "REWARD_REACTIVATED", reason, previousCouponStatus: "INACTIVE", nextCouponStatus: "ACTIVE" }, update: {} });
