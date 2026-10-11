@@ -155,6 +155,15 @@ export async function getStorefrontProducts(query: CatalogQuery = {}, surface: C
   }
 }
 
+/**
+ * Homepage product cards never use catalog pagination totals. Use the dedicated
+ * bounded query so a cache fill does not issue a second COUNT(*) statement.
+ */
+export async function getStorefrontHomeProducts(limit = 12): Promise<StorefrontProductCard[]> {
+  const products = await catalog.listHomepageProducts(limit);
+  return products.map(toProductCard);
+}
+
 export async function getStorefrontProduct(slug: string): Promise<StorefrontProductDetail> {
   const startedAt = Date.now();
   const product = await catalog.getPublishedProductDetailsBySlug(slug);
@@ -326,14 +335,13 @@ export async function getStorefrontHomeCatalogData(): Promise<StorefrontHomeData
   // The homepage needs a small, representative set for its hero carousel.
   // Loading every catalog page here makes homepage latency and database work grow
   // with the entire inventory, even though only a few products are displayed.
-  const [heroFirstPage, categories, collections] = await Promise.all([
-    measureHomepageOperation("hero_products", () =>
-      getStorefrontProducts({ page: 1, pageSize: 12, sort: "newest" })),
+  const [heroProductSlice, categories, collections] = await Promise.all([
+    measureHomepageOperation("hero_products", () => getStorefrontHomeProducts(12)),
     measureHomepageOperation("active_categories", () => getActiveCategories()),
     measureHomepageOperation("populated_collections", () => getActiveCollectionsWithPublishedProducts()),
   ]);
 
-  const heroProducts = heroFirstPage.items.filter((product) => product.image !== null);
+  const heroProducts = heroProductSlice.filter((product) => product.image !== null);
 
   const featuredCollection = collections[0] ?? null;
   const featuredResult = featuredCollection
@@ -363,7 +371,7 @@ export async function getStorefrontHomeCatalogData(): Promise<StorefrontHomeData
   return {
     heroProducts,
     featuredProducts: featuredResult?.items ?? [],
-    newArrivals: heroFirstPage.items.filter((product) => !featuredSlugs.has(product.slug)).slice(0, 4),
+    newArrivals: heroProductSlice.filter((product) => !featuredSlugs.has(product.slug)).slice(0, 4),
     categories: categories.slice(0, 6).map(({ id, name, slug, description }) => ({ id, name, slug, description })),
     collections: collections.slice(0, 3).map(({ id, name, slug, description }) => ({ id, name, slug, description })),
   };
