@@ -196,7 +196,7 @@ export async function processReferralDeliveryReward(shipmentId: string): Promise
     where: { id: shipmentId },
     select: {
       id: true, status: true, deliveredAt: true, orderId: true, providerId: true,
-      trackingEvents: { where: { normalizedStatus: "DELIVERED", source: { in: ["WEBHOOK", "POLLING", "PROVIDER"] } }, select: { providerId: true, eventTimestamp: true }, orderBy: { eventTimestamp: "desc" }, take: 5 },
+      trackingEvents: { where: { normalizedStatus: "DELIVERED", source: { in: ["WEBHOOK", "POLLING", "PROVIDER"] } }, select: { providerId: true, eventTimestamp: true, source: true }, orderBy: { eventTimestamp: "desc" }, take: 5 },
       order: { select: { id: true, customerId: true, createdAt: true, status: true, payment: { select: { status: true, completedAt: true, refunds: { select: { status: true, amount: true } } } } } },
     },
   });
@@ -239,7 +239,7 @@ export async function processReferralDeliveryReward(shipmentId: string): Promise
         where: { id: shipment.id },
         select: {
           status: true, deliveredAt: true, orderId: true, providerId: true,
-          trackingEvents: { where: { normalizedStatus: "DELIVERED", source: { in: ["WEBHOOK", "POLLING", "PROVIDER"] } }, select: { providerId: true, eventTimestamp: true }, orderBy: { eventTimestamp: "desc" }, take: 5 },
+          trackingEvents: { where: { normalizedStatus: "DELIVERED", source: { in: ["WEBHOOK", "POLLING", "PROVIDER"] } }, select: { providerId: true, eventTimestamp: true, source: true }, orderBy: { eventTimestamp: "desc" }, take: 5 },
         },
       });
       const currentTrustedDeliveryEvent = currentShipment?.deliveredAt
