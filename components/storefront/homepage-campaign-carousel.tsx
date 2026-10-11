@@ -15,22 +15,26 @@ type SlideDirection = "left" | "right";
 export function HomepageCampaignCarousel() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [slideDirection, setSlideDirection] = useState<SlideDirection>("left");
+  const [hasChangedSlide, setHasChangedSlide] = useState(false);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
       setSlideDirection("left");
       setActiveIndex((current) => (current + 1) % banners.length);
-    }, 4000);
+    // Keep the initial LCP banner stable while the page hydrates and paints.
+    }, 10000);
     return () => window.clearInterval(timer);
   }, []);
 
   const activeBanner = banners[activeIndex];
   const showPrevious = () => {
+    setHasChangedSlide(true);
     setSlideDirection("right");
     setActiveIndex((current) => (current - 1 + banners.length) % banners.length);
   };
   const showNext = () => {
+    setHasChangedSlide(true);
     setSlideDirection("left");
     setActiveIndex((current) => (current + 1) % banners.length);
   };
@@ -55,9 +59,12 @@ export function HomepageCampaignCarousel() {
     else showPrevious();
   };
 
-  const slideAnimation = slideDirection === "left"
-    ? "homepage-banner-swipe-in-left"
-    : "homepage-banner-swipe-in-right";
+  // Do not animate the initial LCP image from opacity: 0. Animate only later slide changes.
+  const slideAnimation = hasChangedSlide
+    ? slideDirection === "left"
+      ? "homepage-banner-swipe-in-left"
+      : "homepage-banner-swipe-in-right"
+    : "";
 
   return (
     <section aria-label="Featured 4HRS+ campaigns" className="hidden w-full border-b-2 border-border bg-[#f5f1e8] lg:border-b-4 sm:block">
@@ -123,7 +130,7 @@ export function HomepageCampaignCarousel() {
 
         <div className="absolute bottom-2 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1.5 border border-border/70 bg-white/90 px-2 py-1 shadow-hard-sm sm:bottom-4 sm:gap-2 sm:border-2 sm:px-3 sm:py-2">
           {banners.map((banner, index) => (
-            <button key={banner.src} type="button" onClick={() => { setSlideDirection(index > activeIndex ? "left" : "right"); setActiveIndex(index); }} aria-label={`Show campaign ${index + 1}: ${banner.alt}`} aria-current={index === activeIndex ? "true" : undefined} className={`h-1.5 transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-blue sm:h-2.5 ${index === activeIndex ? "w-5 bg-primary-red sm:w-7" : "w-1.5 bg-primary-blue/40 hover:bg-primary-blue sm:w-2.5"}`} />
+            <button key={banner.src} type="button" onClick={() => { setSlideDirection(index > activeIndex ? "left" : "right"); setHasChangedSlide(true); setActiveIndex(index); }} aria-label={`Show campaign ${index + 1}: ${banner.alt}`} aria-current={index === activeIndex ? "true" : undefined} className={`h-1.5 transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-blue sm:h-2.5 ${index === activeIndex ? "w-5 bg-primary-red sm:w-7" : "w-1.5 bg-primary-blue/40 hover:bg-primary-blue sm:w-2.5"}`} />
           ))}
         </div>
       </div>
