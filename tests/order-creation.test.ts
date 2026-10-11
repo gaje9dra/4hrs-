@@ -17,6 +17,7 @@ const inventories: string[] = [];
 const payments: string[] = [];
 const orders: string[] = [];
 const referralIds: string[] = [];
+const refundIds: string[] = [];
 
 function digest(value: string): string {
   return createHash("sha256").update(value).digest("hex");
@@ -181,6 +182,25 @@ test("verified first eligible referred payment issues two 25% coupons without a 
   assert.ok(rewards.every((reward) => reward.coupon.maxRedemptions === 1 && reward.coupon.recipientCustomerId === reward.recipientCustomerId));
   assert.equal(await db.shipment.count({ where: { orderId: result.id } }), 0);
 });
+test("pending refund blocks referral rewards and failed-refund retry recovers them", async () => {
+  const f = await fixture();
+  const referrer = await db.customer.create({ data: { email: `${randomUUID()}@referral-refund.invalid` } });
+  customers.push(referrer.id);
+  const referral = await db.referral.create({ data: { referrerCustomerId: referrer.id, invitedCustomerId: f.customer.id, referralCodeSnapshot: `TEST-${randomUUID().replaceAll("-", "").slice(0, 16)}`, status: "AWAITING_ORDER" } });
+  referralIds.push(referral.id);
+  const refund = await db.paymentRefund.create({ data: { paymentId: f.payment.id, idempotencyKey: `referral-refund-${randomUUID()}`, amount: new Prisma.Decimal("10.00"), currency: f.payment.currency, reason: "CUSTOMER_REQUEST", status: "PENDING" } });
+  refundIds.push(refund.id);
+  const app = appFor(f.customer.id);
+  const first = await app.createOrderFromVerifiedPayment({ paymentId: f.payment.id });
+  orders.push(first.id);
+  assert.equal((await db.referral.findUniqueOrThrow({ where: { id: referral.id } })).status, "AWAITING_PAYMENT_REVIEW");
+  assert.equal(await db.referralReward.count({ where: { referralId: referral.id } }), 0);
+  await db.paymentRefund.update({ where: { id: refund.id }, data: { status: "FAILED", completedAt: new Date(), failureCode: "TEST_REFUND_FAILED" } });
+  const retried = await app.createOrderFromVerifiedPayment({ paymentId: f.payment.id });
+  assert.equal(retried.id, first.id);
+  assert.equal((await db.referral.findUniqueOrThrow({ where: { id: referral.id } })).status, "REWARDED");
+  assert.equal(await db.referralReward.count({ where: { referralId: referral.id } }), 2);
+});
 test("rejects a missing or non-successful Payment", async () => {
   const f = await fixture({ status: "FAILED" });
   const app = appFor(f.customer.id);
@@ -335,6 +355,7 @@ after(async () => {
   if (cartItems.length) await db.cartItem.deleteMany({ where: { id: { in: cartItems } } });
   if (carts.length) await db.cart.deleteMany({ where: { id: { in: carts } } });
   if (addresses.length) await db.customerAddress.deleteMany({ where: { id: { in: addresses } } });
+  if (refundIds.length) await db.paymentRefund.deleteMany({ where: { id: { in: refundIds } } });
   if (payments.length) await db.payment.deleteMany({ where: { id: { in: payments } } });
   if (inventories.length) await db.inventory.deleteMany({ where: { id: { in: inventories } } });
   if (variants.length) await db.productVariant.deleteMany({ where: { id: { in: variants } } });
