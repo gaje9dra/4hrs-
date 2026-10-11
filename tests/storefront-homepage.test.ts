@@ -81,13 +81,13 @@ test("homepage hero rotates through product primary images and links to the acti
   assert.match(homepage, /<HomepageProductHeroCarousel products=\{data\.heroProducts\}/);
 });
 
-test("homepage hero data includes every published product primary image across catalog pages", () => {
+test("homepage hero data loads a bounded set of recent products", () => {
   const source = read("lib/storefront/catalog.ts");
   assert.match(source, /heroProducts: StorefrontProductCard\[\]/);
-  assert.match(source, /getStorefrontProducts\(\{ page: 1, pageSize: 100, sort: "newest" \}\)/);
-  assert.match(source, /heroFirstPage\.pagination\.totalPages/);
-  assert.match(source, /page: index \+ 2, pageSize: 100, sort: "newest"/);
+  assert.match(source, /getStorefrontProducts\(\{ page: 1, pageSize: 12, sort: "newest" \}\)/);
   assert.match(source, /\.filter\(\(product\) => product\.image !== null\)/);
+  assert.doesNotMatch(source, /heroFirstPage\.pagination\.totalPages/);
+  assert.doesNotMatch(source, /page: index \+ 2, pageSize: 100, sort: "newest"/);
 });
 
 test("product card imagery continues to use the framework image component", () => {
