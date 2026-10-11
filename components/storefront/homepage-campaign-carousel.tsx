@@ -66,6 +66,18 @@ export function HomepageCampaignCarousel() {
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
+        {/* Preload the next campaign too; the carousel may advance before LCP is measured. */}
+        <Image
+          src={banners[1].src}
+          alt=""
+          width={1600}
+          height={500}
+          sizes="100vw"
+          preload
+          aria-hidden="true"
+          className="hidden"
+        />
+
         {/* Mobile: give the artwork the entire carousel area; no headline or CTA overlay. */}
         <Link
           href={activeBanner.href}
