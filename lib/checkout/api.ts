@@ -97,7 +97,7 @@ export function createCheckoutApplication(dependencies: Partial<CheckoutApplicat
     const current = await resolveCurrentCustomer(request);
     return current?.customer ?? null;
   });
-  const getCart = dependencies.getCart ?? ((request: Request) => cartApplication.getCurrentCart(request));
+  const getCart = dependencies.getCart;
   const getAddress = dependencies.getAddress ?? ((customerId: string, addressId: string) => addressService.getAddress(customerId, addressId));
   const listAddresses = dependencies.listAddresses ?? ((customerId: string) => addressService.listAddresses(customerId));
 
@@ -106,7 +106,9 @@ export function createCheckoutApplication(dependencies: Partial<CheckoutApplicat
     if (!customer) throw new AuthenticationError("SESSION_INVALID", "Authentication is required.");
     return createCheckoutService({
       customer,
-      getCart: () => getCart(request),
+      getCart: () => getCart
+        ? getCart(request)
+        : cartApplication.getCurrentCartForCustomer(customer.id),
       getAddress,
       listAddresses,
       findCoupon: async (code: string) => {
