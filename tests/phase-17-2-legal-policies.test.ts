@@ -41,9 +41,10 @@ test("refund and replacement policy preserves the defect-only standard without e
   assert.match(content, /does not automatically issue a refund or create a replacement order/);
 });
 
-test("policy pages do not fabricate contact details, processing deadlines, or delivery promises", () => {
+test("policy pages publish the configured support email without inventing phone numbers, deadlines, or delivery promises", () => {
   const content = read("lib/policies/content.ts");
-  assert.match(content, /No public support email, telephone number, or return address is currently configured/);
+  assert.match(content, /thebunniestd@gmail\.com/);
+  assert.match(content, /No public support telephone number is currently configured/);
   assert.match(content, /do not publish a fixed processing deadline/);
   assert.match(content, /do not publish a universal dispatch or delivery deadline/);
   assert.doesNotMatch(content, /support@4hrs\.(com|store|in)|\+91[ -]?\d{10}/i);
