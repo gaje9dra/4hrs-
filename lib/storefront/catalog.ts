@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { unstable_cache } from "next/cache";
 import { createCatalogQueryService, type CatalogAppliedQuery, type CatalogQuery, type PublishedProductDetailResult } from "@/lib/catalog/query";
 import { createCatalogSearchService, type CatalogSearchQuery } from "@/lib/catalog/search";
 import { productPath } from "@/lib/catalog/routes";
@@ -8,11 +9,34 @@ import { logCatalogObservation, type CatalogSurface } from "@/lib/catalog/observ
 const catalog = createCatalogQueryService();
 const search = createCatalogSearchService();
 
-const getActiveCategories = cache(() => catalog.listActiveCategories());
-const getActiveCategoriesWithPublishedProducts = cache(() => catalog.listActiveCategoriesWithPublishedProducts());
-const getActiveCollections = cache(() => catalog.listActiveCollections());
-const getActiveCollectionsWithPublishedProducts = cache(() => catalog.listActiveCollectionsWithPublishedProducts());
-const getActiveTags = cache(() => catalog.listTags());
+// Taxonomy changes are infrequent. Share these small public lookups across
+// requests to avoid repeating the same database reads on every storefront route.
+// A short TTL bounds staleness while keeping navigation and filter data fresh.
+const getActiveCategories = unstable_cache(
+  () => catalog.listActiveCategories(),
+  ["storefront-active-categories-v1"],
+  { revalidate: 30, tags: ["storefront-taxonomy"] },
+);
+const getActiveCategoriesWithPublishedProducts = unstable_cache(
+  () => catalog.listActiveCategoriesWithPublishedProducts(),
+  ["storefront-populated-categories-v1"],
+  { revalidate: 30, tags: ["storefront-taxonomy"] },
+);
+const getActiveCollections = unstable_cache(
+  () => catalog.listActiveCollections(),
+  ["storefront-active-collections-v1"],
+  { revalidate: 30, tags: ["storefront-taxonomy"] },
+);
+const getActiveCollectionsWithPublishedProducts = unstable_cache(
+  () => catalog.listActiveCollectionsWithPublishedProducts(),
+  ["storefront-populated-collections-v1"],
+  { revalidate: 30, tags: ["storefront-taxonomy"] },
+);
+const getActiveTags = unstable_cache(
+  () => catalog.listTags(),
+  ["storefront-active-tags-v1"],
+  { revalidate: 30, tags: ["storefront-taxonomy"] },
+);
 
 export type StorefrontProductCard = {
   id: string;
@@ -204,6 +228,14 @@ export const getStorefrontCollection = cache(async function getStorefrontCollect
     throw error;
   }
 });
+
+export async function getStorefrontNavigationTaxonomy() {
+  const [categories, collections] = await Promise.all([
+    getActiveCategories(),
+    getActiveCollections(),
+  ]);
+  return { categories, collections };
+}
 
 export async function getStorefrontTags(): Promise<StorefrontTag[]> {
   return (await getActiveTags()).map(({ name, slug }) => ({ name, slug }));

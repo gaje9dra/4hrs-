@@ -1,15 +1,10 @@
 import type { FooterNavGroup } from "@/types/footer";
 import type { NavigationItem } from "@/types/navigation";
-import { createCatalogQueryService } from "@/lib/catalog/query";
+import { getStorefrontNavigationTaxonomy } from "@/lib/storefront/catalog";
 import { categoryPath, collectionPath } from "@/lib/catalog/routes";
 
-const catalog = createCatalogQueryService();
-
 export async function getStorefrontNavigation(): Promise<NavigationItem[]> {
-  const [categories, collections] = await Promise.all([
-    catalog.listActiveCategories(),
-    catalog.listActiveCollections(),
-  ]);
+  const { categories, collections } = await getStorefrontNavigationTaxonomy();
 
   return [
     { label: "Home", href: "/", match: "exact" },
