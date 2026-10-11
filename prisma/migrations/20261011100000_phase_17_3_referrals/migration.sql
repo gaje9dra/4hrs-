@@ -1,3 +1,5 @@
+-- Seed secure referral permissions in the initial referral migration so fresh databases
+-- do not depend on a later patch migration to authorize the admin dashboard.
 CREATE TYPE "ReferralStatus" AS ENUM ('REGISTERED', 'AWAITING_ORDER', 'AWAITING_DELIVERY', 'REWARDED', 'INELIGIBLE', 'CANCELLED');
 CREATE TYPE "ReferralRewardType" AS ENUM ('REGISTRATION_14', 'DELIVERED_ORDER_25');
 
