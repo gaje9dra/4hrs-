@@ -14,7 +14,7 @@ The verified-payment 25% reward path is implemented in the verified order-creati
 - The referrer and invited customer each receive one account-bound, single-use 25% coupon in that same transaction when the persisted payment is `SUCCEEDED`, has a completion timestamp, and matches the persisted order’s customer, checkout reference, amount, and currency.
 - A shipment, tracking event, or delivery status is not required and is not consulted for referral reward eligibility.
 - The qualifying order must be in an eligible persisted state (`PENDING` immediately after verified order creation or `CONFIRMED`) and must be the first order bound to the referral.
-- Any refund record that is `PENDING`, `AMBIGUOUS`, or `SUCCEEDED` blocks new 25% issuance. A `FAILED` refund does not by itself block issuance.
+- Any refund record that is `PENDING`, `AMBIGUOUS`, or `SUCCEEDED` blocks new 25% issuance. A `FAILED` refund does not by itself block issuance. Any cancellation request that is not `REJECTED` or `FAILED` also blocks new issuance.
 - Coupons are recipient-bound and limited to one redemption. Expiry defaults to 365 days and can be configured with `REFERRAL_COUPON_TTL_DAYS` (1–3650 days; invalid values fall back to 365).
 
 ## Transaction, idempotency, and recovery

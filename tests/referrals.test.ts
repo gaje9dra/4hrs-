@@ -38,5 +38,3 @@ test("referral profile is created on demand and customer dashboard excludes othe
     await db.customer.deleteMany({ where: { id: { in: [referrer.id, invitee.id, otherReferrer.id] } } });
   }
 });
-
-});
