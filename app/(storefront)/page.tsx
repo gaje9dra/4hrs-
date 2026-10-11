@@ -6,7 +6,6 @@ import { resolveRequestLocale } from "@/lib/i18n/resolution";
 import { listPublishedContentByType, resolvePublishedContentPresentation } from "@/lib/content/service";
 import { Homepage } from "@/components/storefront/homepage";
 import { logger } from "@/lib/observability/logger";
-import { logPrismaPoolMetrics } from "@/lib/db/client";
 
 export const metadata: Metadata = { title: "4HRS — Fashion by Design", description: "Explore the live 4HRS fashion catalog through a bold Bauhaus-inspired storefront.", alternates: { canonical: "/" }, robots: { index: true, follow: true }, openGraph: { title: "4HRS — Fashion by Design", description: "Explore the live 4HRS fashion catalog.", url: "/", type: "website" } };
 
@@ -33,9 +32,6 @@ const getCachedHomepageData = unstable_cache(
         return result;
       } catch (error) {
         const durationMs = Date.now() - startedAt;
-        if (error instanceof Error && /\bP2024\b/.test(error.message)) {
-          void logPrismaPoolMetrics("P2024-homepage-cache-fill");
-        }
         logger.error("storefront.homepage.cache_fill.operation.failed", {
           resourceType: "database",
           outcome: "failure",
@@ -64,7 +60,6 @@ const getCachedHomepageData = unstable_cache(
     const editorialSections = await resolvePublishedContentPresentation([...editorial, ...banners]);
     const presentationDurationMs = Date.now() - presentationStartedAt;
     const durationMs = Date.now() - fillStartedAt;
-    if (durationMs >= 1000) void logPrismaPoolMetrics("homepage-cache-fill");
     if (durationMs >= 250) {
       logger.warn("storefront.homepage.cache_fill.slow", {
         resourceType: "database",
