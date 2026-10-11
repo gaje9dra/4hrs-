@@ -7307,10 +7307,24 @@ model ReferralReward {
   referral           Referral           @relation(fields: [referralId], references: [id], onDelete: Restrict)
   recipient          Customer           @relation(fields: [recipientCustomerId], references: [id], onDelete: Restrict)
   coupon             DiscountCoupon     @relation(fields: [couponId], references: [id], onDelete: Restrict)
+  lifecycleEvents    ReferralRewardLifecycleEvent[]
   @@unique([referralId, recipientCustomerId, type])
   @@index([recipientCustomerId, issuedAt])
 }
 
+model ReferralRewardLifecycleEvent {
+  id                   String                   @id @default(uuid()) @db.Uuid
+  referralRewardId     String                   @db.Uuid
+  eventKey             String                   @unique @db.VarChar(255)
+  eventType            String                   @db.VarChar(80)
+  reason               String                   @db.VarChar(500)
+  previousCouponStatus CouponStatus?
+  nextCouponStatus     CouponStatus?
+  redemptionStatus     CouponRedemptionStatus?
+  createdAt            DateTime                 @default(now())
+  referralReward       ReferralReward           @relation(fields: [referralRewardId], references: [id], onDelete: Restrict)
+  @@index([referralRewardId, createdAt])
+}
 model DiscountCoupon {
   id                    String        @id @default(uuid()) @db.Uuid
   code                  String        @unique @db.VarChar(64)

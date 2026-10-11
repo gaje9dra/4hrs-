@@ -90,6 +90,55 @@ export async function processReferralPaymentRewardInTransaction(tx: Prisma.Trans
   return { rewarded: true, referralId: referral.id };
 }
 
+export async function syncReferralRewardLifecycleInTransaction(
+  tx: Prisma.TransactionClient, orderId: string, eventKey: string, reason: string,
+): Promise<void> {
+  const order = await tx.order.findUnique({ where: { id: orderId }, select: {
+    id: true,
+    payment: { select: { status: true, completedAt: true, refunds: { select: { status: true } } } },
+    cancellationRequests: { select: { status: true } },
+  } });
+  if (!order) return;
+  const referral = await tx.referral.findUnique({
+    where: { qualifyingOrderId: orderId },
+    include: { rewards: { where: { type: { in: ["PAID_ORDER_25", "DELIVERED_ORDER_25"] } }, include: { coupon: { include: { redemptions: { select: { status: true } } } } } } },
+  });
+  if (!referral) return;
+  const disqualified = order.payment.status !== "SUCCEEDED" || !order.payment.completedAt || order.payment.refunds.some((refund) => refund.status !== "FAILED") || order.cancellationRequests.some((cancellation) => !["REJECTED", "FAILED"].includes(cancellation.status));
+  for (const reward of referral.rewards) {
+    const coupon = reward.coupon;
+    const redeemed = coupon.redemptions.some((redemption) => redemption.status === "REDEEMED");
+    const reserved = coupon.redemptions.some((redemption) => redemption.status === "RESERVED");
+    if (disqualified) {
+      if (redeemed || reserved) {
+        const redemptionStatus = redeemed ? "REDEEMED" : "RESERVED";
+        const key = `${eventKey}:reward:${reward.id}:existing-redemption`;
+        await tx.referralRewardLifecycleEvent.upsert({ where: { eventKey: key }, create: { id: randomUUID(), referralRewardId: reward.id, eventKey: key, eventType: redeemed ? "DISQUALIFIED_AFTER_REDEMPTION" : "DISQUALIFIED_WITH_RESERVED_REDEMPTION", reason, previousCouponStatus: coupon.status, nextCouponStatus: coupon.status, redemptionStatus }, update: {} });
+        continue;
+      }
+      if (coupon.status === "ACTIVE") {
+        await tx.discountCoupon.update({ where: { id: coupon.id }, data: { status: "INACTIVE" } });
+        const key = `${eventKey}:reward:${reward.id}:deactivated`;
+        await tx.referralRewardLifecycleEvent.upsert({ where: { eventKey: key }, create: { id: randomUUID(), referralRewardId: reward.id, eventKey: key, eventType: "REWARD_DEACTIVATED", reason, previousCouponStatus: coupon.status, nextCouponStatus: "INACTIVE" }, update: {} });
+      }
+      continue;
+    }
+    if (coupon.status === "INACTIVE" && !redeemed && !reserved) {
+      const latest = await tx.referralRewardLifecycleEvent.findFirst({ where: { referralRewardId: reward.id }, orderBy: [{ createdAt: "desc" }, { id: "desc" }] });
+      if (latest?.eventType === "REWARD_DEACTIVATED" && /^(REFUND_PENDING|REFUND_AMBIGUOUS|CANCELLATION_ACTIVE):/.test(latest.reason)) {
+        await tx.discountCoupon.update({ where: { id: coupon.id }, data: { status: "ACTIVE" } });
+        const key = `${eventKey}:reward:${reward.id}:reactivated`;
+        await tx.referralRewardLifecycleEvent.upsert({ where: { eventKey: key }, create: { id: randomUUID(), referralRewardId: reward.id, eventKey: key, eventType: "REWARD_REACTIVATED", reason, previousCouponStatus: "INACTIVE", nextCouponStatus: "ACTIVE" }, update: {} });
+      }
+    }
+  }
+}
+
+export async function syncReferralRewardLifecycleForPayment(paymentId: string, eventKey: string, reason: string): Promise<void> {
+  const order = await db.order.findUnique({ where: { paymentId }, select: { id: true } });
+  if (!order) return;
+  await db.$transaction((tx) => syncReferralRewardLifecycleInTransaction(tx, order.id, eventKey, reason), { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, maxWait: 5000, timeout: 15000 });
+}
 export async function processReferralPaymentReward(orderId: string): Promise<{ rewarded: boolean; referralId?: string }> {
   return db.$transaction((tx) => processReferralPaymentRewardInTransaction(tx, orderId), { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, maxWait: 5000, timeout: 15000 });
 }
