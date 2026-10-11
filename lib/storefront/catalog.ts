@@ -250,21 +250,17 @@ export type StorefrontHomeData = {
 };
 
 export async function getStorefrontHomeCatalogData(): Promise<StorefrontHomeData> {
+  // The homepage needs a small, representative set for its hero carousel.
+  // Loading every catalog page here makes homepage latency and database work grow
+  // with the entire inventory, even though only a few products are displayed.
   const [heroFirstPage, newArrivalResult, categories, collections] = await Promise.all([
-    getStorefrontProducts({ page: 1, pageSize: 100, sort: "newest" }),
+    getStorefrontProducts({ page: 1, pageSize: 12, sort: "newest" }),
     getStorefrontProducts({ pageSize: 8, sort: "newest" }),
     catalog.listActiveCategories(),
     catalog.listActiveCollectionsWithPublishedProducts(),
   ]);
 
-  const remainingHeroPages = await Promise.all(
-    Array.from({ length: Math.max(0, heroFirstPage.pagination.totalPages - 1) }, (_, index) =>
-      getStorefrontProducts({ page: index + 2, pageSize: 100, sort: "newest" }),
-    ),
-  );
-  const heroProducts = [heroFirstPage, ...remainingHeroPages]
-    .flatMap((page) => page.items)
-    .filter((product) => product.image !== null);
+  const heroProducts = heroFirstPage.items.filter((product) => product.image !== null);
 
   const featuredCollection = collections[0] ?? null;
   const featuredResult = featuredCollection
