@@ -23,8 +23,11 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 }
 
 export default async function ProductPage({ params }: { params: Params }) {
-  const product = await loadProductForRequest((await params).slug); const relatedProducts = await getStorefrontRelatedProducts(product);
-  const locale = await resolveRequestLocale();
+  const product = await loadProductForRequest((await params).slug);
+  const [relatedProducts, locale] = await Promise.all([
+    getStorefrontRelatedProducts(product),
+    resolveRequestLocale(),
+  ]);
   const editorial = await listPublishedEditorialForReference("PRODUCT_EDITORIAL", "PRODUCT", product.id, locale);
   const editorialSections = await resolvePublishedContentPresentation(editorial);
   const canonical = absoluteSiteUrl("/product/" + encodeURIComponent(product.slug));
