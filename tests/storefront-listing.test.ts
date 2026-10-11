@@ -86,15 +86,23 @@ test("public taxonomy loaders reject archived categories and collections", () =>
   assert.match(source, /COLLECTION_NOT_FOUND/);
 });
 
-test("homepage reuses its newest-product query for hero and new arrivals", () => {
-  const source = read("lib/storefront/catalog.ts");
-  const start = source.indexOf("export async function getStorefrontHomeCatalogData");
-  const end = source.indexOf("export async function searchStorefrontProducts", start);
+test("homepage uses a bounded product slice without a catalog count query", () => {
+  const storefront = read("lib/storefront/catalog.ts");
+  const start = storefront.indexOf("export async function getStorefrontHomeCatalogData");
+  const end = storefront.indexOf("export async function searchStorefrontProducts", start);
   assert.ok(start >= 0 && end > start, "homepage catalog loader should be present");
-  const homepageLoader = source.slice(start, end);
+  const homepageLoader = storefront.slice(start, end);
 
-  assert.match(homepageLoader, /getStorefrontProducts\(\{ page: 1, pageSize: 12, sort: "newest" \}\)/);
-  assert.doesNotMatch(homepageLoader, /getStorefrontProducts\(\{ pageSize: 8, sort: "newest" \}\)/);
-  assert.match(homepageLoader, /newArrivals: heroFirstPage\.items\.filter/);
+  assert.match(homepageLoader, /getStorefrontHomeProducts\(12\)/);
+  assert.doesNotMatch(homepageLoader, /getStorefrontProducts\(\{ page: 1, pageSize: 12, sort: "newest" \}\)/);
+  assert.match(homepageLoader, /newArrivals: heroProductSlice\.filter/);
+
+  const repository = read("lib/catalog/repository.ts");
+  const queryStart = repository.indexOf("export async function queryHomepageCatalogProducts");
+  const queryEnd = repository.indexOf("export type RepositoryCatalogSearchMode", queryStart);
+  assert.ok(queryStart >= 0 && queryEnd > queryStart, "dedicated homepage query should be present");
+  const homepageQuery = repository.slice(queryStart, queryEnd);
+  assert.match(homepageQuery, /findMany/);
+  assert.doesNotMatch(homepageQuery, /\.count\(/);
 });
 

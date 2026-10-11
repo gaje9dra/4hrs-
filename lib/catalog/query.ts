@@ -143,6 +143,7 @@ export type PublishedProductDetailResult = {
 
 type QueryRepository = {
   queryPublishedCatalogProducts: typeof repository.queryPublishedCatalogProducts;
+  queryHomepageCatalogProducts: typeof repository.queryHomepageCatalogProducts;
   getPublishedProductBySlug: typeof repository.getPublishedProductBySlug;
   getPublishedProductDetailsBySlug: typeof repository.getPublishedProductDetailsBySlug;
   getCategoryBySlug: typeof repository.getCategoryBySlug;
@@ -158,6 +159,7 @@ type QueryRepository = {
 
 const defaultRepository: QueryRepository = {
   queryPublishedCatalogProducts: repository.queryPublishedCatalogProducts,
+  queryHomepageCatalogProducts: repository.queryHomepageCatalogProducts,
   getPublishedProductBySlug: repository.getPublishedProductBySlug,
   getPublishedProductDetailsBySlug: repository.getPublishedProductDetailsBySlug,
   getCategoryBySlug: repository.getCategoryBySlug,
@@ -453,6 +455,21 @@ export function createCatalogQueryService(customRepository: Partial<QueryReposit
   const repo = { ...defaultRepository, ...customRepository };
 
   return {
+    async listHomepageProducts(limit = 12): Promise<CatalogListItem[]> {
+      const records = await repo.queryHomepageCatalogProducts(limit);
+      return records.map((record) => {
+        try {
+          return mapProduct(record);
+        } catch (error) {
+          throw new CatalogServiceError(
+            "CATALOG_DATA_INTEGRITY_ERROR",
+            "Homepage catalog data could not be rendered safely.",
+            error,
+          );
+        }
+      });
+    },
+
     async listPublishedProducts(query: CatalogQuery = {}, observation?: { surface: CatalogSurface }): Promise<CatalogListResult> {
       const startedAt = Date.now();
       let appliedQuery: CatalogAppliedQuery | undefined;

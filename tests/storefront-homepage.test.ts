@@ -9,7 +9,10 @@ const read = (path: string) => readFileSync(resolve(root, path), "utf8");
 test("homepage is a server-rendered storefront route with SEO metadata", () => {
   const source = read("app/(storefront)/page.tsx");
   assert.doesNotMatch(source, /"use client"/);
-  assert.match(source, /getStorefrontHomeCatalogData/);
+  assert.doesNotMatch(source, /Date\.now\(|performance\.now\(/, "route rendering must remain deterministic");
+  assert.match(source, /getCachedHomepageData/);
+  const homepageData = read("lib/storefront/homepage-data.ts");
+  assert.match(homepageData, /getStorefrontHomeCatalogData/);
   assert.match(source, /alternates:\s*\{\s*canonical:\s*["']/);
   assert.match(source, /robots:\s*\{\s*index:\s*true,\s*follow:\s*true/);
 });
@@ -17,8 +20,8 @@ test("homepage is a server-rendered storefront route with SEO metadata", () => {
 test("homepage data uses public catalog services and bounded discovery sets", () => {
   const source = read("lib/storefront/catalog.ts");
   assert.match(source, /export type StorefrontHomeData/);
-  assert.match(source, /getStorefrontProducts\(\{ page: 1, pageSize: 12, sort: "newest" \}\)/);
-  assert.match(source, /newArrivals: heroFirstPage\.items\.filter/);
+  assert.match(source, /getStorefrontHomeProducts\(12\)/);
+  assert.match(source, /newArrivals: heroProductSlice\.filter/);
   assert.doesNotMatch(source, /getStorefrontProducts\(\{ pageSize: 8, sort: "newest" \}\)/);
   assert.match(source, /getStorefrontCollectionProducts/);
   assert.match(source, /listActiveCategoriesWithPublishedProducts/);
@@ -86,7 +89,7 @@ test("homepage hero rotates through product primary images and links to the acti
 test("homepage hero data loads a bounded set of recent products", () => {
   const source = read("lib/storefront/catalog.ts");
   assert.match(source, /heroProducts: StorefrontProductCard\[\]/);
-  assert.match(source, /getStorefrontProducts\(\{ page: 1, pageSize: 12, sort: "newest" \}\)/);
+  assert.match(source, /getStorefrontHomeProducts\(12\)/);
   assert.match(source, /\.filter\(\(product\) => product\.image !== null\)/);
   assert.doesNotMatch(source, /heroFirstPage\.pagination\.totalPages/);
   assert.doesNotMatch(source, /page: index \+ 2, pageSize: 100, sort: "newest"/);

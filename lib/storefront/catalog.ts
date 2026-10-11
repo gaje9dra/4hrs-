@@ -5,6 +5,7 @@ import { createCatalogSearchService, type CatalogSearchQuery } from "@/lib/catal
 import { productPath } from "@/lib/catalog/routes";
 import { CatalogServiceError } from "@/lib/catalog/errors";
 import { logCatalogObservation, type CatalogSurface } from "@/lib/catalog/observability";
+import { logger } from "@/lib/observability/logger";
 
 const catalog = createCatalogQueryService();
 const search = createCatalogSearchService();
@@ -154,6 +155,15 @@ export async function getStorefrontProducts(query: CatalogQuery = {}, surface: C
   }
 }
 
+/**
+ * Homepage product cards never use catalog pagination totals. Use the dedicated
+ * bounded query so a cache fill does not issue a second COUNT(*) statement.
+ */
+export async function getStorefrontHomeProducts(limit = 12): Promise<StorefrontProductCard[]> {
+  const products = await catalog.listHomepageProducts(limit);
+  return products.map(toProductCard);
+}
+
 export async function getStorefrontProduct(slug: string): Promise<StorefrontProductDetail> {
   const startedAt = Date.now();
   const product = await catalog.getPublishedProductDetailsBySlug(slug);
@@ -290,38 +300,78 @@ export type StorefrontHomeData = {
   collections: Array<{ id: string; name: string; slug: string; description: string | null }>;
 };
 
+async function measureHomepageOperation<T>(
+  operation: "hero_products" | "active_categories" | "populated_collections" | "featured_collection_products",
+  run: () => Promise<T>,
+): Promise<T> {
+  const startedAt = Date.now();
+  try {
+    const result = await run();
+    const durationMs = Date.now() - startedAt;
+    if (durationMs >= 250) {
+      logger.warn("storefront.homepage.operation.slow", {
+        resourceType: "database",
+        outcome: "success",
+        durationMs,
+      }, { operation, thresholdMs: 250 });
+    }
+    return result;
+  } catch (error) {
+    const durationMs = Date.now() - startedAt;
+    if (durationMs >= 250) {
+      logger.error("storefront.homepage.operation.failed_slow", {
+        resourceType: "database",
+        outcome: "failure",
+        durationMs,
+        errorCode: error instanceof Error && /\bP2024\b/.test(error.message) ? "P2024" : "DATABASE_OPERATION_FAILED",
+      }, { operation });
+    }
+    throw error;
+  }
+}
+
 export async function getStorefrontHomeCatalogData(): Promise<StorefrontHomeData> {
   const startedAt = Date.now();
   // The homepage needs a small, representative set for its hero carousel.
   // Loading every catalog page here makes homepage latency and database work grow
   // with the entire inventory, even though only a few products are displayed.
-  const [heroFirstPage, categories, collections] = await Promise.all([
-    getStorefrontProducts({ page: 1, pageSize: 12, sort: "newest" }),
-    getActiveCategories(),
-    getActiveCollectionsWithPublishedProducts(),
+  const [heroProductSlice, categories, collections] = await Promise.all([
+    measureHomepageOperation("hero_products", () => getStorefrontHomeProducts(12)),
+    measureHomepageOperation("active_categories", () => getActiveCategories()),
+    measureHomepageOperation("populated_collections", () => getActiveCollectionsWithPublishedProducts()),
   ]);
 
-  const heroProducts = heroFirstPage.items.filter((product) => product.image !== null);
+  const heroProducts = heroProductSlice.filter((product) => product.image !== null);
 
   const featuredCollection = collections[0] ?? null;
   const featuredResult = featuredCollection
-    ? await getStorefrontCollectionProducts(featuredCollection.slug, {
-        pageSize: 4,
-        sort: "merchandising",
-      })
+    ? await measureHomepageOperation("featured_collection_products", () =>
+        getStorefrontCollectionProducts(featuredCollection.slug, {
+          pageSize: 4,
+          sort: "merchandising",
+        }))
     : null;
 
   const featuredSlugs = new Set(featuredResult?.items.map((product) => product.slug) ?? []);
 
   const durationMs = Date.now() - startedAt;
-  if (durationMs >= 500) {
-    console.warn(JSON.stringify({ event: "storefront.home-catalog.fetch.slow", durationMs, heroCount: heroProducts.length, featuredCount: featuredResult?.items.length ?? 0 }));
+  if (durationMs >= 250) {
+    logger.warn("storefront.home-catalog.fetch.slow", {
+      resourceType: "database",
+      outcome: "success",
+      durationMs,
+    }, {
+      heroCount: heroProducts.length,
+      featuredCount: featuredResult?.items.length ?? 0,
+      featuredCollectionPresent: featuredCollection !== null,
+      thresholdMs: 250,
+    });
   }
 
   return {
     heroProducts,
     featuredProducts: featuredResult?.items ?? [],
-    newArrivals: heroFirstPage.items.filter((product) => !featuredSlugs.has(product.slug)).slice(0, 4),
+    newArrivals: heroProductSlice.filter((product) => !featuredSlugs.has(product.slug)).slice(0, 4),
     categories: categories.slice(0, 6).map(({ id, name, slug, description }) => ({ id, name, slug, description })),
     collections: collections.slice(0, 3).map(({ id, name, slug, description }) => ({ id, name, slug, description })),
   };
