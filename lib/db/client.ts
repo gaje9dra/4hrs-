@@ -10,6 +10,26 @@ const runtimeDatasourceUrl = getRuntimeDatasourceUrl(
   process.env.PRISMA_CONNECTION_LIMIT,
 );
 
+if (runtimeDatasourceUrl) {
+  try {
+    const datasource = new URL(runtimeDatasourceUrl);
+    const usesSupabasePooler = datasource.hostname.endsWith(".pooler.supabase.com");
+    logger.info("db.pool.configuration", {}, {
+      datasourceMode: usesSupabasePooler ? "supabase_pooler" : "direct_or_other",
+      pgbouncer: datasource.searchParams.get("pgbouncer") === "true",
+      connectionLimit: datasource.searchParams.has("connection_limit")
+        ? Number(datasource.searchParams.get("connection_limit"))
+        : undefined,
+      connectionLimitOverridePresent: Boolean(process.env.PRISMA_CONNECTION_LIMIT),
+    });
+  } catch {
+    logger.warn("db.pool.configuration_unavailable", {}, {
+      datasourceMode: "unparseable",
+      connectionLimitOverridePresent: Boolean(process.env.PRISMA_CONNECTION_LIMIT),
+    });
+  }
+}
+
 export const db = globalForPrisma.prisma ?? new PrismaClient({
   ...(runtimeDatasourceUrl
     ? { datasources: { db: { url: runtimeDatasourceUrl } } }
