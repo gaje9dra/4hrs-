@@ -7,6 +7,7 @@ type Dashboard = {
   referralCode: string;
   referralPath: string;
   stats: { total: number; awaitingOrder: number; awaitingPaymentReview: number; rewarded: number };
+  incomingReferral: null | { status: string; registeredAt: string; paymentVerifiedAt: string | null; rewardIssuedAt: string | null; hasQualifyingOrder: boolean; registrationRewardIssued: boolean; paymentRewardIssued: boolean };
   referrals: Array<{
     id: string; invitee: string; status: string; registeredAt: string; paymentVerifiedAt: string | null; deliveredAt: string | null; rewardIssuedAt: string | null;
     hasQualifyingOrder: boolean; registrationRewardIssued: boolean; paymentRewardIssued: boolean;
@@ -51,6 +52,12 @@ export function ReferralDashboard({ dashboard, referralUrl }: { dashboard: Dashb
         ].map(([label,value]) => <div key={label} className="border-2 border-black bg-white p-4 shadow-hard-sm"><p className="text-xs font-900 uppercase">{label}</p><p className="mt-2 text-3xl font-900">{value}</p></div>)}
       </div>
     </section>
+    {dashboard.incomingReferral && <section className="border-4 border-black bg-white p-5 shadow-hard-sm">
+      <h2 className="text-2xl font-900 uppercase">Your referral progress</h2>
+      <p className="mt-2 text-sm">You joined through a referral on {date(dashboard.incomingReferral.registeredAt)}. Your registration reward: <strong>{dashboard.incomingReferral.registrationRewardIssued ? "14% coupon issued" : "Pending"}</strong>.</p>
+      <p className="mt-2 text-sm">First eligible order: <strong>{dashboard.incomingReferral.hasQualifyingOrder ? "Order recorded" : "Not yet recorded"}</strong>{dashboard.incomingReferral.paymentVerifiedAt ? ` · Payment verified ${date(dashboard.incomingReferral.paymentVerifiedAt)}` : ""}.</p>
+      <p className="mt-2 text-sm">25% payment reward: <strong>{dashboard.incomingReferral.paymentRewardIssued ? "Issued" : dashboard.incomingReferral.hasQualifyingOrder ? "Awaiting payment/refund eligibility review" : "Earned after the first eligible order has verified successful payment"}</strong>{dashboard.incomingReferral.rewardIssuedAt ? ` · ${date(dashboard.incomingReferral.rewardIssuedAt)}` : ""}.</p>
+    </section>}
     <section>
       <h2 className="mb-4 text-2xl font-900 uppercase">My referrals</h2>
       <div className="overflow-x-auto border-4 border-black bg-white">

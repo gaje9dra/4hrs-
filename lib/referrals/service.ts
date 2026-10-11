@@ -93,7 +93,7 @@ export async function processReferralPaymentReward(orderId: string): Promise<{ r
 }
 export async function getReferralDashboard(customerId: string) {
   const profile = await ensureProfile(customerId);
-  const [total, awaitingOrder, awaitingPaymentReview, rewarded, referrals, coupons] = await Promise.all([
+  const [total, awaitingOrder, awaitingPaymentReview, rewarded, referrals, incomingReferral, coupons] = await Promise.all([
     db.referral.count({ where: { referrerCustomerId: customerId } }),
     db.referral.count({ where: { referrerCustomerId: customerId, status: { in: ["REGISTERED", "AWAITING_ORDER"] } } }),
     db.referral.count({ where: { referrerCustomerId: customerId, status: "AWAITING_PAYMENT_REVIEW" } }),
@@ -109,6 +109,13 @@ export async function getReferralDashboard(customerId: string) {
         rewards: { where: { recipientCustomerId: customerId }, select: { type: true, issuedAt: true } },
       },
     }),
+    db.referral.findUnique({
+      where: { invitedCustomerId: customerId },
+      select: {
+        status: true, registeredAt: true, paymentVerifiedAt: true, rewardIssuedAt: true, qualifyingOrder: { select: { id: true } },
+        rewards: { where: { recipientCustomerId: customerId }, select: { type: true } },
+      },
+    }),
     db.discountCoupon.findMany({
       where: { recipientCustomerId: customerId, referralId: { not: null } },
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
@@ -121,6 +128,7 @@ export async function getReferralDashboard(customerId: string) {
     referralCode: profile.code,
     referralPath: `/?ref=${encodeURIComponent(profile.code)}`,
     stats: { total, awaitingOrder, awaitingPaymentReview, rewarded },
+    incomingReferral: incomingReferral ? { status: incomingReferral.status, registeredAt: incomingReferral.registeredAt.toISOString(), paymentVerifiedAt: incomingReferral.paymentVerifiedAt?.toISOString() ?? null, rewardIssuedAt: incomingReferral.rewardIssuedAt?.toISOString() ?? null, hasQualifyingOrder: Boolean(incomingReferral.qualifyingOrder), registrationRewardIssued: incomingReferral.rewards.some((r) => r.type === "REGISTRATION_14"), paymentRewardIssued: incomingReferral.rewards.some((r) => r.type === "PAID_ORDER_25" || r.type === "DELIVERED_ORDER_25") } : null,
     referrals: referrals.map((referral) => ({
       id: referral.id,
       invitee: referral.invited.displayName?.trim() || "Invited customer",
