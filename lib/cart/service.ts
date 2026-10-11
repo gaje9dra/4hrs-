@@ -159,22 +159,27 @@ export function createCartService(dependencies: CartServiceDependencies = {}) {
     }
   }
 
-  async function resolveSelection(productId: string, variantId: string | null | undefined): Promise<ResolvedSelection> {
-    const productRecord = await catalog.getProductById(productId);
-    if (!productRecord) throw new CartServiceError("PRODUCT_NOT_FOUND", "Product was not found.");
-
+  async function resolveSelection(
+    productId: string,
+    variantId: string | null | undefined,
+    prefetchedProduct?: PublishedProductDetailResult,
+  ): Promise<ResolvedSelection> {
     let product: PublishedProductDetailResult;
-    try {
-      product = await catalogQuery.getPublishedProductDetailsBySlug(productRecord.slug);
-    } catch (error) {
-      if (error instanceof CartServiceError) throw error;
-      if (error instanceof CatalogServiceError && error.code === "PRODUCT_NOT_FOUND") {
-        throw new CartServiceError("PRODUCT_UNAVAILABLE", "Product is not currently purchasable.", undefined, error);
+    if (prefetchedProduct) {
+      product = prefetchedProduct;
+    } else {
+      const productRecord = await catalog.getProductById(productId);
+      if (!productRecord) throw new CartServiceError("PRODUCT_NOT_FOUND", "Product was not found.");
+
+      try {
+        product = await catalogQuery.getPublishedProductDetailsBySlug(productRecord.slug);
+      } catch (error) {
+        if (error instanceof CartServiceError) throw error;
+        if (error instanceof CatalogServiceError) {
+          throw new CartServiceError("PRODUCT_UNAVAILABLE", "Product is not currently purchasable.", undefined, error);
+        }
+        throw error;
       }
-      if (error instanceof CatalogServiceError) {
-        throw new CartServiceError("PRODUCT_UNAVAILABLE", "Product is not currently purchasable.", undefined, error);
-      }
-      throw error;
     }
 
     if (product.status !== "ACTIVE") {
@@ -213,14 +218,21 @@ export function createCartService(dependencies: CartServiceDependencies = {}) {
     };
   }
 
-  async function resolveLine(line: {
-    id: string;
-    productId: string;
-    variantId: string | null;
-    quantity: number;
-  }): Promise<CartLine> {
+  async function resolveLine(
+    line: { id: string; productId: string; variantId: string | null; quantity: number },
+    prefetchedProducts?: Map<string, PublishedProductDetailResult | CatalogServiceError>,
+  ): Promise<CartLine> {
     try {
-      const resolved = await resolveSelection(line.productId, line.variantId);
+      let prefetchedProduct: PublishedProductDetailResult | undefined;
+      if (prefetchedProducts) {
+        const prefetched = prefetchedProducts.get(line.productId);
+        if (!prefetched) throw new CartServiceError("PRODUCT_NOT_FOUND", "Product was not found.");
+        if (prefetched instanceof CatalogServiceError) {
+          throw new CartServiceError("PRODUCT_UNAVAILABLE", "Product is not currently purchasable.", undefined, prefetched);
+        }
+        prefetchedProduct = prefetched;
+      }
+      const resolved = await resolveSelection(line.productId, line.variantId, prefetchedProduct);
       const availableQuantity = resolved.availableQuantity;
       const state: CartLineState =
         resolved.variant?.availability.state === "OUT_OF_STOCK" ||
@@ -315,7 +327,14 @@ export function createCartService(dependencies: CartServiceDependencies = {}) {
       const cart = await repository.findCartById(cartId);
       if (!cart) throw new CartServiceError("CART_NOT_FOUND", "Cart was not found.");
 
-      const items = await Promise.all(cart.items.map(resolveLine));
+      const productIds = [...new Set(cart.items.map((item) => item.productId))];
+      const getDetailsByIds = catalogQuery.getPublishedProductDetailsByIds;
+      const prefetchedProducts = typeof getDetailsByIds === "function"
+        ? await getDetailsByIds(productIds)
+        : undefined;
+      const items = await Promise.all(
+        cart.items.map((item) => resolveLine(item, prefetchedProducts)),
+      );
       const availableItems = items.filter((item) => item.state === "AVAILABLE");
       const currency = availableItems[0]?.currency ?? items.find((item) => item.currency)?.currency ?? null;
       const subtotal = availableItems
