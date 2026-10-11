@@ -10,12 +10,23 @@ function customerIdFromOwner(owner: CartOwnerContext): string {
 }
 
 export function createAuthenticatedCartOwnershipBoundary(
-  repository: Pick<CartRepository, "findCartById"> = createCartRepository(),
+  repository: Pick<CartRepository, "findCartById" | "findCartOwner"> = createCartRepository(),
 ): CartOwnershipBoundary {
   return {
     async authorizeCartAccess(cartId, owner) {
       const customerId = customerIdFromOwner(owner);
-      const cart = await repository.findCartById(cartId);
+      const verifiedCartId = owner && typeof owner === "object" && "verifiedCartId" in owner
+        ? owner.verifiedCartId
+        : null;
+
+      // The API context resolver obtained this cart through a customer-scoped
+      // lookup. Reuse that server-only proof instead of querying ownership
+      // again. Direct service callers still take the database verification path.
+      if (verifiedCartId === cartId) return;
+
+      const cart = repository.findCartOwner
+        ? await repository.findCartOwner(cartId)
+        : await repository.findCartById(cartId);
       if (!cart || cart.customerId !== customerId) {
         throw new CartServiceError("CART_UNAUTHORIZED", "Cart access is not authorized.");
       }

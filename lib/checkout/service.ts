@@ -141,7 +141,20 @@ export function createCheckoutService(dependencies: CheckoutDependencies) {
     const startedAt = Date.now();
 
     try {
-      const cart = await dependencies.getCart();
+      const addressId = input.selectedAddressId?.trim() || null;
+
+      // Cart and address reads are independent. Start both together so checkout
+      // latency is bounded by the slower read rather than their sum.
+      const cartPromise = dependencies.getCart();
+      const addressPromise = (addressId
+        ? dependencies.getAddress(dependencies.customer.id, addressId)
+        : dependencies.listAddresses(dependencies.customer.id)
+      ).then(
+        (value) => ({ value, error: null as unknown }),
+        (error: unknown) => ({ value: null, error }),
+      );
+
+      const cart = await cartPromise;
       const currentRevision = revisionForCart(cart);
       const issues = validateCart(cart);
       const staleIssue = compareRevision(currentRevision, input.expectedRevision);
@@ -149,16 +162,18 @@ export function createCheckoutService(dependencies: CheckoutDependencies) {
 
       let address: CustomerAddressDto | null = null;
       let addresses: CustomerAddressDto[] | undefined;
-      const addressId = input.selectedAddressId?.trim() || null;
+      const addressResult = await addressPromise;
 
       if (addressId) {
-        try {
-          address = await dependencies.getAddress(dependencies.customer.id, addressId);
-        } catch (error) {
-          issues.push(mapAddressError(error));
+        if (addressResult.error) {
+          issues.push(mapAddressError(addressResult.error));
+        } else {
+          address = addressResult.value as CustomerAddressDto;
         }
+      } else if (addressResult.error) {
+        throw addressResult.error;
       } else {
-        addresses = await dependencies.listAddresses(dependencies.customer.id);
+        addresses = addressResult.value as CustomerAddressDto[];
         address = addresses.find((candidate) => candidate.isDefault) ?? null;
         if (!address && addresses.length > 0) {
           issues.push(issue("INCOMPLETE_CHECKOUT", "Select a delivery address before continuing."));

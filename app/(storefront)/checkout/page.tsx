@@ -1,9 +1,6 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
 import { Container } from "@/components/layout/container";
 import { CheckoutPage } from "@/components/storefront/checkout-page";
-import { resolveCurrentCustomer } from "@/lib/auth/context";
-import { getSafeAuthRedirect } from "@/lib/auth/redirect";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -14,8 +11,10 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false, noarchive: true },
 };
 
-export default async function CheckoutRoute() {
-  const current = await resolveCurrentCustomer();
-  if (!current) redirect(`/login?next=${encodeURIComponent(getSafeAuthRedirect("/checkout"))}`);
-  return <Container className="py-10 sm:py-14 lg:py-16"><CheckoutPage customer={current.customer} /></Container>;
+export default function CheckoutRoute() {
+  // Render the checkout shell immediately. Authentication, cart ownership,
+  // addresses, and payable totals remain enforced by the authenticated APIs.
+  // Blocking this route on a server-side session lookup delayed first render
+  // and then the client performed the same authentication lookup again.
+  return <Container className="py-10 sm:py-14 lg:py-16"><CheckoutPage /></Container>;
 }

@@ -20,19 +20,14 @@ const customerRepository = createCustomerRepository();
 const cartOwnership = createAuthenticatedCartOwnershipBoundary();
 const authenticatedCartService = createCartService({ ownership: cartOwnership });
 
-const authenticatedRequestContext: CartRequestContextResolver = async (request) => {
-  const current = await resolveCurrentCustomer(request);
-  if (!current) {
-    throw new CartServiceError("CART_UNAUTHORIZED", "Authentication is required to access this Cart.");
-  }
-
-  let cart = await customerRepository.findCustomerCart(current.customer.id);
+async function contextForCustomer(customerId: string): Promise<CartRequestContext> {
+  let cart = await customerRepository.findCustomerCart(customerId);
   if (!cart) {
     try {
-      cart = await authenticatedCartService.createCart({ customerId: current.customer.id });
+      cart = await authenticatedCartService.createCart({ customerId });
     } catch (error) {
       if (error instanceof CartServiceError && error.code === "CART_ITEM_CONFLICT") {
-        cart = await customerRepository.findCustomerCart(current.customer.id);
+        cart = await customerRepository.findCustomerCart(customerId);
       } else {
         throw error;
       }
@@ -40,7 +35,15 @@ const authenticatedRequestContext: CartRequestContextResolver = async (request) 
   }
 
   if (!cart) throw new CartServiceError("CART_DATABASE_ERROR", "Cart could not be initialized.");
-  return { cartId: cart.id, owner: { customerId: current.customer.id } };
+  return { cartId: cart.id, owner: { customerId, verifiedCartId: cart.id } };
+}
+
+const authenticatedRequestContext: CartRequestContextResolver = async (request) => {
+  const current = await resolveCurrentCustomer(request);
+  if (!current) {
+    throw new CartServiceError("CART_UNAUTHORIZED", "Authentication is required to access this Cart.");
+  }
+  return contextForCustomer(current.customer.id);
 };
 
 export function toCartItemDto(item: Awaited<ReturnType<CartService["getCart"]>>["items"][number]): CartItemDto {
@@ -166,6 +169,13 @@ export function createCartApplication(options: {
     return toCartDto(await service.getCart(context.cartId, context.owner));
   }
 
+  // Checkout has already authenticated the request. Reuse that verified
+  // customer identity rather than hashing and querying the same session twice.
+  async function getCurrentCartForCustomer(customerId: string): Promise<CartDto> {
+    const context = await contextForCustomer(customerId);
+    return toCartDto(await service.getCart(context.cartId, context.owner));
+  }
+
   async function addItem(request: Request): Promise<CartDto> {
     const input = parseAddCartItemInput(await readJsonBody(request));
     const context = await resolveRequestContext(request);
@@ -194,7 +204,7 @@ export function createCartApplication(options: {
     return getCurrentCart(request);
   }
 
-  return { getCurrentCart, addItem, updateItem, removeItem, clearCart };
+  return { getCurrentCart, getCurrentCartForCustomer, addItem, updateItem, removeItem, clearCart };
 }
 
 export type CartApplication = ReturnType<typeof createCartApplication>;

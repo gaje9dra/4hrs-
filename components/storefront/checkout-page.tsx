@@ -10,7 +10,7 @@ import { Card } from "@/components/ui/card";
 import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import type { CheckoutDto, CheckoutPaymentMethod } from "@/lib/checkout/contracts";
-import type { CustomerAddressDto, CustomerDto } from "@/lib/customer/contracts";
+import type { CustomerAddressDto } from "@/lib/customer/contracts";
 
 type ApiError = { error?: { code?: string; message?: string } };
 type UiState = "loading" | "ready" | "address_required" | "validating" | "valid" | "starting_payment" | "validation_error" | "price_changed" | "availability_changed" | "cart_changed" | "session_expired" | "server_error";
@@ -117,7 +117,7 @@ function AddAddressForm({ disabled, onCreated, onSessionExpired }: { disabled: b
   );
 }
 
-export function CheckoutPage({ customer }: { customer: CustomerDto }) {
+export function CheckoutPage() {
   const [checkout, setCheckout] = useState<CheckoutDto | null>(null);
   const [addresses, setAddresses] = useState<CustomerAddressDto[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
@@ -330,7 +330,7 @@ export function CheckoutPage({ customer }: { customer: CustomerDto }) {
 
       <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
         <div className="grid gap-6" aria-live="polite">
-          <Card><p className="text-xs font-900 uppercase tracking-[.2em] text-primary-blue">Customer</p><h2 className="mt-2 text-2xl">{customer.displayName || customer.email}</h2><p className="mt-1 text-sm">{customer.email}</p></Card>
+          <Card><p className="text-xs font-900 uppercase tracking-[.2em] text-primary-blue">Customer</p><h2 className="mt-2 text-2xl">{checkout?.customer?.displayName || checkout?.customer?.email || "Signed-in customer"}</h2><p className="mt-1 text-sm">{checkout?.customer?.email ?? ""}</p></Card>
 
           <section aria-labelledby="address-heading" className="grid gap-4">
             <div><p className="text-xs font-900 uppercase tracking-[.2em] text-primary-blue">Delivery</p><h2 id="address-heading" className="mt-2 text-3xl">Choose an address</h2><p className="mt-2 text-sm">The selected address is revalidated against your account on the server.</p></div>
