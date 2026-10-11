@@ -35,7 +35,7 @@ async function contextForCustomer(customerId: string): Promise<CartRequestContex
   }
 
   if (!cart) throw new CartServiceError("CART_DATABASE_ERROR", "Cart could not be initialized.");
-  return { cartId: cart.id, owner: { customerId } };
+  return { cartId: cart.id, owner: { customerId, verifiedCartId: cart.id } };
 }
 
 const authenticatedRequestContext: CartRequestContextResolver = async (request) => {
