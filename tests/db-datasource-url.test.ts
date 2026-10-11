@@ -9,38 +9,40 @@ test("missing database URL remains unset", () => {
 });
 
 test("direct database URLs are not rewritten", () => {
-  const directUrl = "postgresql://app:secret@db.example.com:5432/postgres?sslmode=require";
+  const directUrl = "postgresql://app:secret@db.example.com:5432/postgres?sslmode=require&connection_limit=1";
   assert.equal(getRuntimeDatasourceUrl(directUrl), directUrl);
 });
 
-test("Supabase pooler URLs enable pgbouncer and default to one connection", () => {
+test("Supabase pooler URLs enable pgbouncer and default to a small concurrent pool", () => {
   const result = getRuntimeDatasourceUrl(poolerUrl);
   assert.ok(result);
   const url = new URL(result);
   assert.equal(url.searchParams.get("pgbouncer"), "true");
-  assert.equal(url.searchParams.get("connection_limit"), "1");
+  assert.equal(url.searchParams.get("connection_limit"), "3");
   assert.equal(url.searchParams.get("sslmode"), "require");
 });
 
-test("an explicit URL connection limit takes precedence over the default", () => {
-  const result = getRuntimeDatasourceUrl(poolerUrl + "&connection_limit=4", "2");
+test("runtime default corrects a stale one-connection URL setting", () => {
+  const result = getRuntimeDatasourceUrl(poolerUrl + "&connection_limit=1");
   assert.ok(result);
   const url = new URL(result);
-  assert.equal(url.searchParams.get("connection_limit"), "4");
+  assert.equal(url.searchParams.get("connection_limit"), "3");
   assert.equal(url.searchParams.get("pgbouncer"), "true");
 });
 
-test("a valid environment override can tune the pooler connection limit", () => {
-  const result = getRuntimeDatasourceUrl(poolerUrl, "3");
+test("a valid environment override takes precedence over the URL and default", () => {
+  const result = getRuntimeDatasourceUrl(poolerUrl + "&connection_limit=1", "5");
   assert.ok(result);
-  assert.equal(new URL(result).searchParams.get("connection_limit"), "3");
+  const url = new URL(result);
+  assert.equal(url.searchParams.get("connection_limit"), "5");
+  assert.equal(url.searchParams.get("pgbouncer"), "true");
 });
 
-test("invalid pooler connection limit overrides fall back safely to one", () => {
-  for (const value of ["0", "-1", "1.5", "not-a-number", "101"]) {
+test("invalid overrides fall back to the conservative default", () => {
+  for (const value of ["", "0", "-1", "1.5", "not-a-number", "21"]) {
     const result = getRuntimeDatasourceUrl(poolerUrl, value);
     assert.ok(result);
-    assert.equal(new URL(result).searchParams.get("connection_limit"), "1");
+    assert.equal(new URL(result).searchParams.get("connection_limit"), "3");
   }
 });
 
