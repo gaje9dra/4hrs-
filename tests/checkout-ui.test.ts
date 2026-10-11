@@ -14,8 +14,13 @@ test("Checkout route is private and non-indexable", async () => {
   const source = await fs.readFile("app/(storefront)/checkout/page.tsx", "utf8");
   assert.match(source, /force-dynamic/);
   assert.match(source, /index:\s*false/);
-  assert.match(source, /resolveCurrentCustomer/);
-  assert.match(source, /\/login\?next=/);
+  // Keep the route fast to first render; the checkout API remains the
+  // authentication boundary and must resolve the current customer itself.
+  assert.doesNotMatch(source, /await resolveCurrentCustomer/);
+  assert.doesNotMatch(source, /\/login\?next=/);
+  const api = await fs.readFile("lib/checkout/api.ts", "utf8");
+  assert.match(api, /resolveCurrentCustomer/);
+  assert.match(api, /return current\?\.customer \?\? null/);
 });
 
 test("Checkout UI submits only address intent to the Checkout boundary", async () => {
