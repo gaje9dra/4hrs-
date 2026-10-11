@@ -504,6 +504,14 @@ enum PaymentRefundReason {
   OTHER
 }
 
+enum PaymentDisputeStatus {
+  OPEN
+  CLOSED_CUSTOMER_FAVOUR
+  CLOSED_MERCHANT_FAVOUR
+  CLOSED_FRAUD_LIABILITY
+  UNKNOWN
+}
+
 
 enum OrderStatus {
   PENDING
@@ -729,6 +737,7 @@ model Payment {
   events             PaymentEvent[]
   idempotencyRecords PaymentIdempotency[]
   refunds          PaymentRefund[]
+  disputes         PaymentDispute[]
   order            Order?
   cases            Case[]
 
@@ -829,6 +838,31 @@ model PaymentRefund {
   @@index([paymentId, createdAt])
   @@index([paymentId, status, createdAt])
   @@index([providerId, providerReference])
+}
+
+model PaymentDispute {
+  id                   String              @id @default(uuid()) @db.Uuid
+  paymentId            String              @db.Uuid
+  providerId           String              @db.VarChar(64)
+  providerDisputeId    String              @db.VarChar(128)
+  transactionReference String              @db.VarChar(64)
+  amount               Decimal             @db.Decimal(12, 2)
+  currency             String              @db.VarChar(3)
+  disputeType          String              @db.VarChar(120)
+  reasonCode           String?             @db.VarChar(255)
+  providerStatus       String              @db.VarChar(120)
+  status               PaymentDisputeStatus
+  providerCreatedAt    DateTime?
+  providerUpdatedAt    DateTime
+  lastReceivedAt       DateTime            @default(now())
+  metadata             Json?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  payment              Payment             @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+
+  @@unique([providerId, providerDisputeId])
+  @@index([paymentId, status, providerUpdatedAt])
+  @@index([providerUpdatedAt])
 }
 
 model PaymentAttempt {
