@@ -29,7 +29,7 @@ The verified-payment 25% reward path is implemented in the verified order-creati
 
 The payment model represents refund states `PENDING`, `SUCCEEDED`, `FAILED`, and `AMBIGUOUS`, including partial/full refund outcomes through payment status and refund amounts. At issuance time, pending, ambiguous, or successful refunds block the 25% pair. Failed refunds do not block issuance.
 
-**Not yet implemented:** automatic post-issuance deactivation of unused 25% coupons on a later pending/ambiguous/successful refund or qualifying cancellation; audited reversal-state transitions; safe restoration after a failed refund; repeated/concurrent refund recovery tests; and behavior for coupons already redeemed before a later refund. Coupon deactivation would not reverse a completed financial transaction and must never rewrite a redemption as if it had not happened. These lifecycle requirements must be implemented before this phase can be marked complete.
+Implemented lifecycle policy: pending, ambiguous, or successful refunds and active cancellation requests deactivate unused 25% coupons and create idempotent `ReferralRewardLifecycleEvent` audit rows. A failed refund or rejected cancellation reactivates a coupon only when no other disqualifying refund/cancellation remains and the last deactivation was for a temporary review state. Partial and full successful refunds both disqualify rewards. Coupons with an existing `RESERVED` redemption are not deactivated because an already-validated checkout must not have its commercial terms silently changed; this exception is audited. Already `REDEEMED` coupons retain their true history and are audited without attempting to reverse the completed transaction. Repeated events use stable keys and do not duplicate lifecycle transitions. Full concurrent refund/cancellation failure-injection coverage remains to be verified.
 
 The repository has no verified external chargeback event source in this phase. Chargeback automation is therefore unsupported and must not be claimed.
 
@@ -50,5 +50,6 @@ The repository has no verified external chargeback event source in this phase. C
 1. Confirm the provider payment is server-verified and persisted payment/order amount, currency, customer, and checkout reference match.
 2. Confirm no refund is pending, ambiguous, or successful.
 3. Retry the existing verified order-creation path for the persisted payment. The reward processor is idempotent and rechecks referral and financial records.
-4. Inspect the referral’s qualifying order, reward rows, coupon ownership/status, and notification outbox records before any manual intervention.
-5. Do not manually create shipment/tracking events or edit payment state to force a referral reward.
+4. Retry the refund operation with the same idempotency key to re-run audited referral lifecycle synchronization after a post-persistence processing failure. Review `ReferralRewardLifecycleEvent` before manual intervention.
+5. Inspect the referral’s qualifying order, reward rows, coupon ownership/status, lifecycle events, and notification outbox records before any manual intervention.
+6. Do not manually create shipment/tracking events or edit payment state to force a referral reward.
