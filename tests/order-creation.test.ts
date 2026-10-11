@@ -19,6 +19,7 @@ const payments: string[] = [];
 const orders: string[] = [];
 const referralIds: string[] = [];
 const refundIds: string[] = [];
+const cancellationIds: string[] = [];
 
 function digest(value: string): string {
   return createHash("sha256").update(value).digest("hex");
@@ -215,6 +216,7 @@ test("post-issuance pending refund deactivates unused referral coupons and faile
   orders.push(result.id);
   const rewards = await db.referralReward.findMany({ where: { referralId: referral.id }, include: { coupon: true } });
   assert.equal(rewards.length, 2);
+  await db.discountCoupon.update({ where: { id: rewards[0].coupon.id }, data: { expiresAt: new Date(Date.now() - 60_000) } });
   const refund = await db.paymentRefund.create({ data: { paymentId: f.payment.id, idempotencyKey: `referral-lifecycle-${randomUUID()}`, amount: new Prisma.Decimal("10.00"), currency: f.payment.currency, reason: "CUSTOMER_REQUEST", status: "PENDING" } });
   refundIds.push(refund.id);
   await syncReferralRewardLifecycleForPayment(f.payment.id, `refund:${refund.id}:PENDING`, `REFUND_PENDING:${refund.id}`);
@@ -224,8 +226,27 @@ test("post-issuance pending refund deactivates unused referral coupons and faile
   await db.paymentRefund.update({ where: { id: refund.id }, data: { status: "FAILED", completedAt: new Date(), failureCode: "TEST_REFUND_FAILED" } });
   await syncReferralRewardLifecycleForPayment(f.payment.id, `refund:${refund.id}:FAILED`, `REFUND_FAILED:${refund.id}`);
   coupons = await db.discountCoupon.findMany({ where: { referralId: referral.id } });
+  assert.deepEqual(coupons.map((coupon) => coupon.status).sort(), ["ACTIVE", "INACTIVE"]);
+  assert.equal(await db.referralRewardLifecycleEvent.count({ where: { referralRewardId: { in: rewards.map((reward) => reward.id) }, eventType: "REWARD_REACTIVATED" } }), 1);
+});
+test("approved cancellation deactivates unused referral coupons and rejection restores unexpired coupons", async () => {
+  const f = await fixture();
+  const referrer = await db.customer.create({ data: { email: `${randomUUID()}@referral-cancel.invalid` } });
+  customers.push(referrer.id);
+  const referral = await db.referral.create({ data: { referrerCustomerId: referrer.id, invitedCustomerId: f.customer.id, referralCodeSnapshot: `TEST-${randomUUID().replaceAll("-", "").slice(0, 16)}`, status: "AWAITING_ORDER" } });
+  referralIds.push(referral.id);
+  const result = await appFor(f.customer.id).createOrderFromVerifiedPayment({ paymentId: f.payment.id });
+  orders.push(result.id);
+  const cancellation = await db.cancellationRequest.create({ data: { cancellationReference: `CAN-${randomUUID().replaceAll("-", "").slice(0, 24)}`, customerId: f.customer.id, orderId: result.id, status: "APPROVED", reason: "customer_request" } });
+  cancellationIds.push(cancellation.id);
+  await syncReferralRewardLifecycleForPayment(f.payment.id, `cancellation:${cancellation.id}:APPROVED`, `CANCELLATION_ACTIVE:${cancellation.id}:APPROVED`);
+  let coupons = await db.discountCoupon.findMany({ where: { referralId: referral.id } });
+  assert.ok(coupons.every((coupon) => coupon.status === "INACTIVE"));
+  await db.cancellationRequest.update({ where: { id: cancellation.id }, data: { status: "REJECTED" } });
+  await syncReferralRewardLifecycleForPayment(f.payment.id, `cancellation:${cancellation.id}:REJECTED`, `CANCELLATION_REJECTED:${cancellation.id}:REJECTED`);
+  coupons = await db.discountCoupon.findMany({ where: { referralId: referral.id } });
   assert.ok(coupons.every((coupon) => coupon.status === "ACTIVE"));
-  assert.equal(await db.referralRewardLifecycleEvent.count({ where: { referralRewardId: { in: rewards.map((reward) => reward.id) }, eventType: "REWARD_REACTIVATED" } }), 2);
+  assert.equal(await db.referralRewardLifecycleEvent.count({ where: { referralRewardId: { in: (await db.referralReward.findMany({ where: { referralId: referral.id }, select: { id: true } })).map((reward) => reward.id }, eventType: "REWARD_REACTIVATED" } }), 2);
 });
 test("rejects a missing or non-successful Payment", async () => {
   const f = await fixture({ status: "FAILED" });
@@ -381,6 +402,7 @@ after(async () => {
   }
   await db.notificationDelivery.deleteMany({ where: { customerId: { in: customers } } });
   await db.notificationEvent.deleteMany({ where: { customerId: { in: customers } } });
+  if (cancellationIds.length) await db.cancellationRequest.deleteMany({ where: { id: { in: cancellationIds } } });
   if (orders.length) await db.order.deleteMany({ where: { id: { in: orders } } });
   if (cartItems.length) await db.cartItem.deleteMany({ where: { id: { in: cartItems } } });
   if (carts.length) await db.cart.deleteMany({ where: { id: { in: carts } } });

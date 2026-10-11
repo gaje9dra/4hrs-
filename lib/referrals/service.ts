@@ -105,6 +105,7 @@ export async function syncReferralRewardLifecycleInTransaction(
   });
   if (!referral) return;
   const disqualified = order.payment.status !== "SUCCEEDED" || !order.payment.completedAt || order.payment.refunds.some((refund) => refund.status !== "FAILED") || order.cancellationRequests.some((cancellation) => !["REJECTED", "FAILED"].includes(cancellation.status));
+  const now = new Date();
   for (const reward of referral.rewards) {
     const coupon = reward.coupon;
     const redeemed = coupon.redemptions.some((redemption) => redemption.status === "REDEEMED");
@@ -123,7 +124,7 @@ export async function syncReferralRewardLifecycleInTransaction(
       }
       continue;
     }
-    if (coupon.status === "INACTIVE" && !redeemed && !reserved) {
+    if (coupon.status === "INACTIVE" && (!coupon.expiresAt || coupon.expiresAt > now) && !redeemed && !reserved) {
       const latest = await tx.referralRewardLifecycleEvent.findFirst({ where: { referralRewardId: reward.id }, orderBy: [{ createdAt: "desc" }, { id: "desc" }] });
       if (latest?.eventType === "REWARD_DEACTIVATED" && /^(REFUND_PENDING|REFUND_AMBIGUOUS|CANCELLATION_ACTIVE):/.test(latest.reason)) {
         await tx.discountCoupon.update({ where: { id: coupon.id }, data: { status: "ACTIVE" } });
