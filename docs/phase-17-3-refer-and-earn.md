@@ -4,7 +4,7 @@
 
 **INCOMPLETE — KEEP PR #278 DRAFT AND UNMERGED.**
 
-The verified-payment 25% reward path and audited post-issuance refund/cancellation transitions are implemented. Concurrent lifecycle synchronization now retries PostgreSQL serializable-transaction conflicts up to three attempts, and tests cover ambiguous/successful partial-refund suppression plus concurrent idempotent lifecycle synchronization. Transaction-failure injection coverage and final CI verification on the exact current head remain completion gates.
+The verified-payment 25% reward path and audited post-issuance refund/cancellation transitions are implemented. Concurrent lifecycle synchronization retries PostgreSQL serializable-transaction conflicts up to three attempts. Tests now include transaction rollback under an injected audit-write constraint failure, concurrent refund/cancellation state resolution, and reserved-coupon lifecycle behavior. Final CI verification on the exact current head remains a completion gate.
 
 ## Business rules
 
@@ -29,9 +29,9 @@ The verified-payment 25% reward path and audited post-issuance refund/cancellati
 
 The payment model represents refund states `PENDING`, `SUCCEEDED`, `FAILED`, and `AMBIGUOUS`, including partial/full refund outcomes through payment status and refund amounts. At issuance time, pending, ambiguous, or successful refunds block the 25% pair. Failed refunds do not block issuance.
 
-Implemented lifecycle policy: pending, ambiguous, or successful refunds and active cancellation requests deactivate unused 25% coupons and create idempotent `ReferralRewardLifecycleEvent` audit rows. A failed refund or rejected cancellation reactivates a coupon only when it has not expired, no other disqualifying refund/cancellation remains, and the last deactivation was for a temporary review state. Partial and full successful refunds both disqualify rewards. Coupons with an existing `RESERVED` redemption are not deactivated because an already-validated checkout must not have its commercial terms silently changed; this exception is audited. Already `REDEEMED` coupons retain their true history and are audited without attempting to reverse the completed transaction. Repeated events use stable keys and do not duplicate lifecycle transitions. Full concurrent refund/cancellation failure-injection coverage remains to be verified.
+Implemented lifecycle policy: pending, ambiguous, or successful refunds and active cancellation requests deactivate 25% coupons for any new reservations and create idempotent `ReferralRewardLifecycleEvent` audit rows. A previously reserved checkout retains its persisted discount snapshot and may finalize under the original terms; deactivating the coupon does not rewrite that reservation. If a refund fails or a cancellation is rejected, an unexpired coupon can reactivate only when no other disqualifying refund/cancellation remains. A still-active reservation continues to consume coupon capacity, so reactivation cannot exceed the single-redemption limit. Partial and full successful refunds both disqualify rewards. Already `REDEEMED` coupons retain their true history and are audited without attempting to reverse the completed transaction. Repeated events use stable keys and do not duplicate lifecycle transitions. Tests inject an audit-write constraint failure to verify transaction rollback and exercise concurrent refund/cancellation resolution.
 
-The repository has no verified external chargeback event source in this phase. Chargeback automation is therefore unsupported and must not be claimed.
+The repository still has no verified external chargeback/dispute event source or provider contract that can safely authenticate such events. Do not synthesize chargeback events from browser requests, admin-entered payment statuses, or unverified callbacks. Automated chargeback handling remains an external integration blocker until the payment provider supplies a documented, authenticated event or reconciliation API and that integration is implemented and tested.
 
 ## Notifications and interfaces
 
