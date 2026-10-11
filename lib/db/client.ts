@@ -19,7 +19,7 @@ export const db = globalForPrisma.prisma ?? new PrismaClient({
   ],
 });
 
-type QueryLogEvent = { duration: number; target: string };
+type QueryLogEvent = { duration: number; target: string; query: string };
 type ErrorLogEvent = { target: string; message: string };
 type PrismaEventClient = {
   $on(event: "query", listener: (event: QueryLogEvent) => void): void;
@@ -27,12 +27,20 @@ type PrismaEventClient = {
 };
 
 const events = db as unknown as PrismaEventClient;
+function describeQuery(query: string): { statement: string; tables: string[] } {
+  const statement = /^\\s*(select|insert|update|delete|with|begin|commit|rollback|show|set)\\b/i.exec(query)?.[1]?.toLowerCase() ?? "other";
+  // Log table identifiers only, never raw SQL or bound parameter values.
+  const tables = [...new Set([...query.matchAll(/\\b(?:FROM|JOIN|INTO|UPDATE)\\s+["']?([a-zA-Z_][\\w.]*)/gi)].map((match) => match[1].replace(/"/g, "")))].slice(0, 8);
+  return { statement, tables };
+}
+
 events.$on("query", (event) => {
   if (event.duration >= 500) {
     logger.warn("db.query.slow", {
       resourceType: "database",
       outcome: "success",
       durationMs: event.duration,
+      ...describeQuery(event.query),
     }, { target: event.target });
   }
 });
