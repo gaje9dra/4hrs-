@@ -300,7 +300,7 @@ export function createShippingApplication(
     };
 
     try {
-      return await database.$transaction(async (tx) => {
+      const processedShipment = await database.$transaction(async (tx) => {
         const txRepository = createShippingRepository(tx);
         const shipment = await txRepository.getShipmentById(input.shipmentId);
         if (!shipment) throw new ShippingDomainError("SHIPMENT_NOT_FOUND", "Shipment could not be found.");
