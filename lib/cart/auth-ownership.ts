@@ -10,7 +10,7 @@ function customerIdFromOwner(owner: CartOwnerContext): string {
 }
 
 export function createAuthenticatedCartOwnershipBoundary(
-  repository: Pick<CartRepository, "findCartById"> = createCartRepository(),
+  repository: Pick<CartRepository, "findCartById" | "findCartOwner"> = createCartRepository(),
 ): CartOwnershipBoundary {
   return {
     async authorizeCartAccess(cartId, owner) {
