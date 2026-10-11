@@ -1,4 +1,5 @@
 import { Prisma, type PrismaClient } from "@prisma/client";
+import { randomBytes, randomUUID } from "node:crypto";
 import { db } from "@/lib/db/client";
 
 export type CustomerRepositoryClient = PrismaClient | Prisma.TransactionClient;
@@ -27,6 +28,7 @@ export type CustomerRepository = {
   revokeCustomerSession(customerId: string, sessionId: string, revokedAt?: Date): Promise<{ count: number }>;
   revokeAllCustomerSessions(customerId: string, exceptSessionId?: string, revokedAt?: Date): Promise<{ count: number }>;
   findCustomerCart(customerId: string): Promise<Prisma.CartGetPayload<Record<string, never>> | null>;
+  createReferralRegistration?(input: { customerId: string; referralCode?: string | null; couponExpiresAt: Date }): Promise<void>;
 };
 
 function clientOrDefault(client?: CustomerRepositoryClient): CustomerRepositoryClient {
@@ -148,6 +150,34 @@ export function createCustomerRepository(client?: CustomerRepositoryClient): Cus
         where: { customerId, revokedAt: null, ...(exceptSessionId ? { id: { not: exceptSessionId } } : {}) },
         data: { revokedAt },
       });
+    },
+
+    async createReferralRegistration(input: { customerId: string; referralCode?: string | null; couponExpiresAt: Date }) {
+      const profileCode = "4HRS" + randomBytes(8).toString("hex").toUpperCase();
+      await database.referralProfile.upsert({
+        where: { customerId: input.customerId },
+        create: { id: randomUUID(), customerId: input.customerId, code: profileCode },
+        update: {},
+      });
+      const incomingCode = input.referralCode?.trim().toUpperCase();
+      if (!incomingCode || !/^[A-Z0-9_-]{3,32}$/.test(incomingCode)) return;
+      const referrer = await database.referralProfile.findUnique({ where: { code: incomingCode } });
+      if (!referrer || referrer.customerId === input.customerId) return;
+      const referral = await database.referral.create({
+        data: { id: randomUUID(), referrerCustomerId: referrer.customerId, invitedCustomerId: input.customerId, referralCodeSnapshot: referrer.code, status: "AWAITING_ORDER" },
+      });
+      for (const recipientCustomerId of [referrer.customerId, input.customerId]) {
+        const coupon = await database.discountCoupon.create({
+          data: {
+            id: randomUUID(), code: "R14-" + randomBytes(12).toString("hex").toUpperCase(), discountPercent: 14,
+            maxRedemptions: 1, perCustomerLimit: 1, startsAt: new Date(), expiresAt: input.couponExpiresAt, status: "ACTIVE",
+            description: "Refer & Earn registration reward (14%).", recipientCustomerId, referralId: referral.id, referralRewardType: "REGISTRATION_14",
+          },
+        });
+        await database.referralReward.create({
+          data: { id: randomUUID(), referralId: referral.id, recipientCustomerId, couponId: coupon.id, type: "REGISTRATION_14", reason: "New referral registration reward." },
+        });
+      }
     },
 
     findCustomerCart(customerId: string) {
