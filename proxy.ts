@@ -13,7 +13,9 @@ function contentSecurityPolicy(nonce: string): string {
     "media-src 'self'",
     "object-src 'none'",
     "base-uri 'self'",
-    "form-action 'self'",
+    // PayU Hosted Checkout is submitted as a cross-origin POST form.
+    // Keep form submissions restricted to our site and the two official PayU gateways.
+    "form-action 'self' https://test.payu.in https://secure.payu.in",
     "frame-ancestors 'none'",
     "frame-src 'none'",
     "manifest-src 'self'",
