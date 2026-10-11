@@ -2,7 +2,7 @@
 
 ## Status
 
-**NOT READY for production policy sign-off.** The customer-facing routes, content, footer links, sitemap entries, and regression tests are implemented on this branch. Before production publication, qualified Indian consumer-law counsel must review the policy wording, and the business must configure verified public support/privacy contact details. Secure video/photo upload is not available in the current support-case form, so this phase does not pretend that an upload workflow exists.
+**NOT READY for production policy sign-off.** The customer-facing routes, content, footer links, sitemap entries, and regression tests are implemented on this branch. Before production publication, qualified Indian consumer-law counsel must review the policy wording. The verified support email supplied by the business, thebunniestd@gmail.com, is published on relevant customer-information pages. No public support telephone number or verified business postal/return address is configured. Secure video/photo upload is not available in the current support-case form, so this phase does not pretend that an upload workflow exists.
 
 ## Pages and routes
 
@@ -26,7 +26,7 @@ The footer's Policies & Help group links to all seven pages. Checkout includes c
 - Customers are asked to report a suspected defect within 24 hours of receipt. The text explicitly says this is the standard reporting procedure, not an automatic forfeiture of statutory rights; late claims are still submitted for review where required by law or where an exception is appropriate.
 - Requested evidence includes a continuous unboxing video where available, defect photographs, order number, affected item/size, description, and relevant packaging/shipping-label photos with unnecessary personal information redacted.
 - Claims are individually reviewed. No claim submission automatically approves a claim, refunds a payment, or creates a replacement order.
-- Approved resolution and any return/shipping arrangement are communicated after review. No invented processing deadline, return address, phone number, email address, or universal delivery estimate is published.
+- Approved resolution and any return/shipping arrangement are communicated after review. The configured support email is thebunniestd@gmail.com. No phone number, return address, or universal delivery estimate is invented; no fixed processing deadline is published.
 - Customers are told to keep the item and packaging until resolution and not to return anything before receiving instructions.
 
 ## Existing support-case and order workflow
@@ -41,7 +41,7 @@ The text reflects existing account/session, customer address, order, payment, re
 
 ## Missing business configuration and blockers
 
-1. **Verified public support/privacy contact details are absent** from the current storefront configuration. The page directs customers to the authenticated case system and does not publish fake contact values. Configure verified support email/phone and any required grievance contact before production.
+1. **Partial contact configuration.** The verified support email `thebunniestd@gmail.com` is now published on the contact, refund/replacement, shipping, terms, privacy, and FAQ content. A public support telephone number and verified business/return address remain unconfigured. Confirm and publish any additional grievance contact required by applicable law before production.
 2. **Secure defect evidence upload is absent.** Current case forms do not accept files. Before accepting video/photo evidence, configure an approved private submission channel and, if implemented as uploads, private storage with signature validation, file-size/count/duration limits, server-generated keys, ownership checks, authorized admin access, audit events, retention/deletion rules, and short-lived access URLs. No new storage provider was introduced.
 3. **Legal review required.** Have qualified Indian counsel review the refund/return wording, consumer-protection requirements, privacy obligations, grievance requirements, and governing-law language.
 4. **No verified universal delivery/refund processing SLA is configured.** Policy pages therefore avoid promising one.
@@ -49,4 +49,4 @@ The text reflects existing account/session, customer address, order, payment, re
 
 ## Tests and validation
 
-A regression test file covers route wrappers, policy text safeguards, footer links, sitemap entries, and existing support-case reuse. CI is the source of truth for lint, typecheck, test, build, Prisma validation and generation. This document must be updated with actual results after CI completes; it does not claim tests passed merely because they were authored.
+A regression test file covers route wrappers, policy text safeguards (including the configured support email), footer links, sitemap entries, and existing support-case reuse. CI is the source of truth for lint, typecheck, test, build, Prisma validation and generation. Results must be confirmed for this change before merge.
