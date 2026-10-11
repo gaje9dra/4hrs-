@@ -101,15 +101,17 @@ events.$on("query", (event) => {
   // direct measurement of connection-pool queue time. P2024 errors are tracked
   // separately below so the two signals are not conflated.
   if (event.duration >= 250) {
+    const queryFingerprint = getQueryFingerprint(event.query);
     logger.warn("db.query.slow", {
       resourceType: "database",
       outcome: "success",
       durationMs: event.duration,
     }, {
       target: event.target,
-      queryFingerprint: getQueryFingerprint(event.query),
+      queryFingerprint,
       thresholdMs: 250,
     });
+    if (event.duration >= 1000) void logPrismaPoolMetrics("slow-query:" + (queryFingerprint ?? "unknown"));
   }
 });
 
