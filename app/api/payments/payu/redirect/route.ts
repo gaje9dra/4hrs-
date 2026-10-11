@@ -58,6 +58,20 @@ export async function GET(request: Request) {
     `<input type="hidden" name="${escapeHtml(name)}" value="${escapeHtml(value)}">`,
   ).join("");
   const action = escapeHtml(payUHostedCheckoutUrl());
-  const html = `<!doctype html><html><head><meta charset="utf-8"><title>Redirecting to PayU</title></head><body><p>Redirecting to secure payment…</p><form id="payu" method="post" action="${action}">${inputs}</form><script>document.getElementById("payu").submit()</script></body></html>`;
-  return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" } });
+  // proxy.ts supplies a per-request nonce used by the production CSP. The
+  // hosted-checkout form's auto-submit script must carry that nonce or CSP blocks it.
+  const suppliedNonce = request.headers.get("x-nonce")?.trim() ?? "";
+  const nonce = /^[A-Za-z0-9+/=_-]{16,128}$/.test(suppliedNonce) ? suppliedNonce : "";
+  const script = nonce
+    ? `<script nonce="${nonce}">document.getElementById("payu").submit()</script>`
+    : `<script>document.getElementById("payu").submit()</script>`;
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>Redirecting to PayU</title></head><body><p>Redirecting to secure payment…</p><form id="payu" method="post" action="${action}">${inputs}</form>${script}</body></html>`;
+  const headers = new Headers({
+    "Content-Type": "text/html; charset=utf-8",
+    "Cache-Control": "no-store",
+  });
+  // Keep the same nonce-based policy on this hand-built HTML response.
+  const contentSecurityPolicy = request.headers.get("Content-Security-Policy");
+  if (contentSecurityPolicy) headers.set("Content-Security-Policy", contentSecurityPolicy);
+  return new Response(html, { headers });
 }
