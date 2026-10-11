@@ -33,6 +33,9 @@ const getCachedHomepageData = unstable_cache(
         return result;
       } catch (error) {
         const durationMs = Date.now() - startedAt;
+        if (error instanceof Error && /\bP2024\b/.test(error.message)) {
+          void logPrismaPoolMetrics("P2024-homepage-cache-fill");
+        }
         logger.error("storefront.homepage.cache_fill.operation.failed", {
           resourceType: "database",
           outcome: "failure",
