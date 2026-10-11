@@ -20,6 +20,7 @@ import { toPublicOrderDto, toPublicOrderListDto } from "@/lib/orders/dto";
 import type { PublicOrderDto, PublicOrderListDto } from "@/lib/orders/contracts";
 import { isAuthenticationError } from "@/lib/auth/errors";
 import { finalizeCouponRedemption } from "@/lib/coupons/redemptions";
+import { processReferralPaymentRewardInTransaction } from "@/lib/referrals/service";
 
 type CustomerContext = { id: string };
 
@@ -122,6 +123,7 @@ export function createOrderApplication(
 
       const existing = await existingForPayment(input.paymentId, customer.id);
       if (existing) {
+        await database.$transaction((tx) => processReferralPaymentRewardInTransaction(tx, existing.id), { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
         logOrderCreationObservation({
           operation: "create-from-payment",
           customerId: customer.id,
@@ -149,6 +151,7 @@ export function createOrderApplication(
               if (existingPaymentOrder.customerId !== customer!.id) {
                 throw new OrderDomainError("PAYMENT_ACCESS_DENIED", "Payment is not available to this customer.");
               }
+              await processReferralPaymentRewardInTransaction(tx, existingPaymentOrder.id);
               return toResult(existingPaymentOrder);
             }
 
@@ -160,7 +163,10 @@ export function createOrderApplication(
               if (existingCheckoutOrder.customerId !== customer!.id) {
                 throw new OrderDomainError("CHECKOUT_ALREADY_CONVERTED", "Checkout has already been converted into an Order.");
               }
-              if (existingCheckoutOrder.paymentId === payment.id) return toResult(existingCheckoutOrder);
+              if (existingCheckoutOrder.paymentId === payment.id) {
+                await processReferralPaymentRewardInTransaction(tx, existingCheckoutOrder.id);
+                return toResult(existingCheckoutOrder);
+              }
               throw new OrderDomainError("CHECKOUT_ALREADY_CONVERTED", "Checkout has already been converted into an Order.");
             }
 
@@ -182,13 +188,7 @@ export function createOrderApplication(
             if (checkout.couponCode) {
               await finalizeCouponRedemption({ checkoutReference: checkout.checkoutReference, customerId: customer!.id, orderId: created.id, database: tx });
             }
-            const referral = await tx.referral.findUnique({ where: { invitedCustomerId: customer!.id } });
-            if (referral && !referral.qualifyingOrderId && ["REGISTERED", "AWAITING_ORDER"].includes(referral.status) && created.createdAt >= referral.registeredAt) {
-              await tx.referral.update({
-                where: { id: referral.id },
-                data: { status: "AWAITING_DELIVERY", qualifyingOrderId: created.id, paymentVerifiedAt: payment.completedAt ?? new Date() },
-              });
-            }
+            await processReferralPaymentRewardInTransaction(tx, created.id);
             return toResult(created);
           });
 
