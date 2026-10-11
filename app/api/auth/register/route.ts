@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { createAuthenticationService } from "@/lib/auth/service";
 import { createInMemoryAuthenticationRateLimiter } from "@/lib/auth/rate-limit";
 import { CUSTOMER_SESSION_COOKIE, sessionCookieOptions } from "@/lib/auth/session";
@@ -15,8 +16,10 @@ export async function POST(request: Request) {
     assertSameOrigin(request);
     const credentials = requireCredentials(await readAuthJson(request));
     const rateKey = (request.headers.get("x-forwarded-for") ?? "unknown") + ":" + credentials.email.trim().toLowerCase();
-    const result = await authentication.register(credentials, rateKey);
+    const referralCode = (await cookies()).get("4hrs_referral_code")?.value ?? null;
+    const result = await authentication.register({ ...credentials, referralCode }, rateKey);
     const response = authJson({ authenticated: true, customer: result.customer });
+    response.cookies.set("4hrs_referral_code", "", { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: 0 });
     response.cookies.set(CUSTOMER_SESSION_COOKIE, result.sessionToken, {
       ...sessionCookieOptions(),
       expires: result.expiresAt,
