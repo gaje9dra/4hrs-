@@ -20,6 +20,7 @@ const orders: string[] = [];
 const referralIds: string[] = [];
 const refundIds: string[] = [];
 const cancellationIds: string[] = [];
+const couponRedemptionIds: string[] = [];
 
 function digest(value: string): string {
   return createHash("sha256").update(value).digest("hex");
@@ -471,7 +472,171 @@ test("concurrent refund lifecycle synchronization retries serialization conflict
   );
 });
 
+test("lifecycle transaction failure rolls back coupon deactivation and audit writes", async () => {
+  const f = await fixture();
+  const referrer = await db.customer.create({ data: { email: `${randomUUID()}@referral-failure-injection.invalid` } });
+  customers.push(referrer.id);
+  const referral = await db.referral.create({
+    data: {
+      referrerCustomerId: referrer.id,
+      invitedCustomerId: f.customer.id,
+      referralCodeSnapshot: `TEST-${randomUUID().replaceAll("-", "").slice(0, 16)}`,
+      status: "AWAITING_ORDER",
+    },
+  });
+  referralIds.push(referral.id);
+  const order = await appFor(f.customer.id).createOrderFromVerifiedPayment({ paymentId: f.payment.id });
+  orders.push(order.id);
+  const rewards = await db.referralReward.findMany({ where: { referralId: referral.id } });
+  const refund = await db.paymentRefund.create({
+    data: {
+      paymentId: f.payment.id,
+      idempotencyKey: `referral-failure-injection-${randomUUID()}`,
+      amount: new Prisma.Decimal("10.00"),
+      currency: f.payment.currency,
+      reason: "CUSTOMER_REQUEST",
+      status: "PENDING",
+    },
+  });
+  refundIds.push(refund.id);
+
+  // Force the lifecycle audit insert to violate the database's eventKey length constraint
+  // after the coupon update has been attempted. The enclosing transaction must roll back.
+  await assert.rejects(
+    () => syncReferralRewardLifecycleForPayment(f.payment.id, "x".repeat(250), `REFUND_PENDING:${refund.id}`),
+  );
+
+  const coupons = await db.discountCoupon.findMany({ where: { referralId: referral.id } });
+  assert.equal(coupons.length, 2);
+  assert.ok(coupons.every((coupon) => coupon.status === "ACTIVE"));
+  assert.equal(
+    await db.referralRewardLifecycleEvent.count({ where: { referralRewardId: { in: rewards.map((reward) => reward.id) } } }),
+    0,
+  );
+});
+
+test("reserved referral checkout remains valid while future coupon use is disabled and safely restores after failed refund", async () => {
+  const f = await fixture();
+  const referrer = await db.customer.create({ data: { email: `${randomUUID()}@referral-reserved.invalid` } });
+  customers.push(referrer.id);
+  const referral = await db.referral.create({
+    data: {
+      referrerCustomerId: referrer.id,
+      invitedCustomerId: f.customer.id,
+      referralCodeSnapshot: `TEST-${randomUUID().replaceAll("-", "").slice(0, 16)}`,
+      status: "AWAITING_ORDER",
+    },
+  });
+  referralIds.push(referral.id);
+  const order = await appFor(f.customer.id).createOrderFromVerifiedPayment({ paymentId: f.payment.id });
+  orders.push(order.id);
+  const reward = await db.referralReward.findFirstOrThrow({
+    where: { referralId: referral.id, recipientCustomerId: f.customer.id },
+    include: { coupon: true },
+  });
+  const checkoutReference = `reserved-referral-${randomUUID()}`;
+  const redemption = await db.couponRedemption.create({
+    data: {
+      couponId: reward.couponId,
+      checkoutReference,
+      customerId: f.customer.id,
+      couponCodeSnapshot: reward.coupon.code,
+      discountPercentSnapshot: 25,
+      status: "RESERVED",
+      eligibleTotal: new Prisma.Decimal("499.00"),
+      discountTotal: new Prisma.Decimal("124.75"),
+      currency: "INR",
+      reservationExpiresAt: new Date(Date.now() + 10 * 60_000),
+    },
+  });
+  couponRedemptionIds.push(redemption.id);
+  const refund = await db.paymentRefund.create({
+    data: {
+      paymentId: f.payment.id,
+      idempotencyKey: `referral-reserved-refund-${randomUUID()}`,
+      amount: new Prisma.Decimal("10.00"),
+      currency: f.payment.currency,
+      reason: "CUSTOMER_REQUEST",
+      status: "PENDING",
+    },
+  });
+  refundIds.push(refund.id);
+
+  await syncReferralRewardLifecycleForPayment(f.payment.id, `refund:${refund.id}:PENDING`, `REFUND_PENDING:${refund.id}`);
+  assert.equal((await db.discountCoupon.findUniqueOrThrow({ where: { id: reward.couponId } })).status, "INACTIVE");
+  assert.equal((await db.couponRedemption.findUniqueOrThrow({ where: { id: redemption.id } })).status, "RESERVED");
+
+  await db.paymentRefund.update({ where: { id: refund.id }, data: { status: "FAILED", completedAt: new Date(), failureCode: "TEST_REFUND_FAILED" } });
+  await syncReferralRewardLifecycleForPayment(f.payment.id, `refund:${refund.id}:FAILED`, `REFUND_FAILED:${refund.id}`);
+  assert.equal((await db.discountCoupon.findUniqueOrThrow({ where: { id: reward.couponId } })).status, "ACTIVE");
+  assert.equal((await db.couponRedemption.findUniqueOrThrow({ where: { id: redemption.id } })).status, "RESERVED");
+});
+
+test("concurrent refund and cancellation resolution restores coupons only after both blockers clear", async () => {
+  const f = await fixture();
+  const referrer = await db.customer.create({ data: { email: `${randomUUID()}@referral-dual-lifecycle.invalid` } });
+  customers.push(referrer.id);
+  const referral = await db.referral.create({
+    data: {
+      referrerCustomerId: referrer.id,
+      invitedCustomerId: f.customer.id,
+      referralCodeSnapshot: `TEST-${randomUUID().replaceAll("-", "").slice(0, 16)}`,
+      status: "AWAITING_ORDER",
+    },
+  });
+  referralIds.push(referral.id);
+  const order = await appFor(f.customer.id).createOrderFromVerifiedPayment({ paymentId: f.payment.id });
+  orders.push(order.id);
+  const refund = await db.paymentRefund.create({
+    data: {
+      paymentId: f.payment.id,
+      idempotencyKey: `referral-dual-refund-${randomUUID()}`,
+      amount: new Prisma.Decimal("10.00"),
+      currency: f.payment.currency,
+      reason: "CUSTOMER_REQUEST",
+      status: "PENDING",
+    },
+  });
+  refundIds.push(refund.id);
+  const cancellation = await db.cancellationRequest.create({
+    data: {
+      cancellationReference: `CAN-${randomUUID().replaceAll("-", "").slice(0, 24)}`,
+      customerId: f.customer.id,
+      orderId: order.id,
+      status: "APPROVED",
+      reason: "customer_request",
+    },
+  });
+  cancellationIds.push(cancellation.id);
+
+  await Promise.all([
+    syncReferralRewardLifecycleForPayment(f.payment.id, `refund:${refund.id}:PENDING`, `REFUND_PENDING:${refund.id}`),
+    syncReferralRewardLifecycleForPayment(f.payment.id, `cancellation:${cancellation.id}:APPROVED`, `CANCELLATION_ACTIVE:${cancellation.id}:APPROVED`),
+  ]);
+  let coupons = await db.discountCoupon.findMany({ where: { referralId: referral.id } });
+  assert.ok(coupons.every((coupon) => coupon.status === "INACTIVE"));
+
+  await Promise.all([
+    db.paymentRefund.update({ where: { id: refund.id }, data: { status: "FAILED", completedAt: new Date(), failureCode: "TEST_REFUND_FAILED" } }),
+    db.cancellationRequest.update({ where: { id: cancellation.id }, data: { status: "REJECTED" } }),
+  ]);
+  await Promise.all([
+    syncReferralRewardLifecycleForPayment(f.payment.id, `refund:${refund.id}:FAILED`, `REFUND_FAILED:${refund.id}`),
+    syncReferralRewardLifecycleForPayment(f.payment.id, `cancellation:${cancellation.id}:REJECTED`, `CANCELLATION_REJECTED:${cancellation.id}`),
+  ]);
+  await syncReferralRewardLifecycleForPayment(f.payment.id, `lifecycle:${referral.id}:settled`, `REFUND_FAILED:${refund.id}`);
+
+  coupons = await db.discountCoupon.findMany({ where: { referralId: referral.id } });
+  assert.ok(coupons.every((coupon) => coupon.status === "ACTIVE"));
+  const rewardIds = (await db.referralReward.findMany({ where: { referralId: referral.id }, select: { id: true } })).map((reward) => reward.id);
+  assert.equal(
+    await db.referralRewardLifecycleEvent.count({ where: { referralRewardId: { in: rewardIds }, eventType: "REWARD_REACTIVATED" } }),
+    2,
+  );
+});
+
 after(async () => {
+  if (couponRedemptionIds.length) await db.couponRedemption.deleteMany({ where: { id: { in: couponRedemptionIds } } });
   if (referralIds.length) {
     const rewardIds = (await db.referralReward.findMany({ where: { referralId: { in: referralIds } }, select: { id: true } })).map((reward) => reward.id);
     if (rewardIds.length) await db.referralRewardLifecycleEvent.deleteMany({ where: { referralRewardId: { in: rewardIds } } });
