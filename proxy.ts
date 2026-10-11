@@ -27,7 +27,7 @@ function contentSecurityPolicy(nonce: string): string {
 
 export function proxy(request: NextRequest) {
   const nonce = Buffer.from(globalThis.crypto.randomUUID()).toString("base64");
-  const csp = process.env.NODE_ENV === "production" ? contentSecurityPolicy(nonce) : null;
+  // The PayU redirect endpoint emits standalone HTML with its own matching nonce/CSP.\n  // Do not add a second, independently-nonced policy that would block its form-submit script.\n  const isPayURedirect = request.nextUrl.pathname === "/api/payments/payu/redirect";\n  const csp = process.env.NODE_ENV === "production" && !isPayURedirect ? contentSecurityPolicy(nonce) : null;
   const requestId = resolveRequestId(request.headers.get(REQUEST_ID_HEADER));
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-nonce", nonce);
