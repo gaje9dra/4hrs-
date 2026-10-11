@@ -8,5 +8,6 @@ export const metadata: Metadata = { title: "4HRS — Fashion by Design", descrip
 export default async function HomePage() {
   const locale = await resolveRequestLocale();
   const { data, editorialSections } = await getCachedHomepageData(locale);
+
   return <Homepage data={data} editorialSections={editorialSections} />;
 }
