@@ -1,6 +1,7 @@
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { randomBytes, randomUUID } from "node:crypto";
 import { db } from "@/lib/db/client";
+import { enqueueNotificationEvent } from "@/lib/notifications/service";
 
 export type CustomerRepositoryClient = PrismaClient | Prisma.TransactionClient;
 
@@ -176,6 +177,13 @@ export function createCustomerRepository(client?: CustomerRepositoryClient): Cus
         });
         await database.referralReward.create({
           data: { id: randomUUID(), referralId: referral.id, recipientCustomerId, couponId: coupon.id, type: "REGISTRATION_14", reason: "New referral registration reward." },
+        });
+        await enqueueNotificationEvent(database, {
+          customerId: recipientCustomerId,
+          type: "REFERRAL_REGISTRATION_REWARD",
+          payload: { couponCode: coupon.code, discountPercent: 14 },
+          idempotencyKey: `referral-reward:${referral.id}:${recipientCustomerId}:REGISTRATION_14`,
+          correlationId: referral.id,
         });
       }
     },
