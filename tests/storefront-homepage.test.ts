@@ -9,6 +9,7 @@ const read = (path: string) => readFileSync(resolve(root, path), "utf8");
 test("homepage is a server-rendered storefront route with SEO metadata", () => {
   const source = read("app/(storefront)/page.tsx");
   assert.doesNotMatch(source, /"use client"/);
+  assert.doesNotMatch(source, /Date\\.now\\(|performance\\.now\\(/, "route rendering must remain deterministic");
   assert.match(source, /getCachedHomepageData/);
   const homepageData = read("lib/storefront/homepage-data.ts");
   assert.match(homepageData, /getStorefrontHomeCatalogData/);
