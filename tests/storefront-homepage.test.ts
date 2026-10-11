@@ -9,7 +9,9 @@ const read = (path: string) => readFileSync(resolve(root, path), "utf8");
 test("homepage is a server-rendered storefront route with SEO metadata", () => {
   const source = read("app/(storefront)/page.tsx");
   assert.doesNotMatch(source, /"use client"/);
-  assert.match(source, /getStorefrontHomeCatalogData/);
+  assert.match(source, /getCachedHomepageData/);
+  const homepageData = read("lib/storefront/homepage-data.ts");
+  assert.match(homepageData, /getStorefrontHomeCatalogData/);
   assert.match(source, /alternates:\s*\{\s*canonical:\s*["']/);
   assert.match(source, /robots:\s*\{\s*index:\s*true,\s*follow:\s*true/);
 });
