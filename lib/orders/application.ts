@@ -182,6 +182,13 @@ export function createOrderApplication(
             if (checkout.couponCode) {
               await finalizeCouponRedemption({ checkoutReference: checkout.checkoutReference, customerId: customer!.id, orderId: created.id, database: tx });
             }
+            const referral = await tx.referral.findUnique({ where: { invitedCustomerId: customer!.id } });
+            if (referral && !referral.qualifyingOrderId && ["REGISTERED", "AWAITING_ORDER"].includes(referral.status) && created.createdAt >= referral.registeredAt) {
+              await tx.referral.update({
+                where: { id: referral.id },
+                data: { status: "AWAITING_DELIVERY", qualifyingOrderId: created.id, paymentVerifiedAt: payment.completedAt ?? new Date() },
+              });
+            }
             return toResult(created);
           });
 

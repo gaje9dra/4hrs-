@@ -2,40 +2,37 @@
 
 ## Status
 
-**INCOMPLETE — NOT READY TO MERGE OR CLAIM PRODUCTION-READY.**
+**INCOMPLETE — DO NOT MERGE OR DESCRIBE AS PRODUCTION-READY YET.**
 
-This branch adds the initial durable referral data model and migration, plus a server-side coupon-recipient ownership check. It is scaffolding for Phase 17.3, not the completed Refer & Earn product.
+This increment now includes referral attribution at registration, customer tracking UI, admin referral reporting, and reward processing hooks. The critical remaining external dependency is real trusted delivery status: the existing Qikink adapter explicitly declares tracking lookup and webhooks unavailable. The reward processor only reacts to a persisted shipment in `DELIVERED` state and verified successful payment; it does not fabricate a delivery event.
 
 ## Implemented in this increment
 
-- Durable unique referral profiles/codes, single-invite attribution, qualifying-order linkage, and reward issuance audit records in Prisma.
-- Forward-only migration adding referral status/reward enums, tables, uniqueness constraints, indexes, and foreign keys.
-- Referral coupon recipient binding fields on the existing `DiscountCoupon` model.
-- Coupon redemption now rejects a referral coupon when the authenticated customer does not match its assigned recipient.
+- Referral profile codes and first-touch referral attribution through a secure HTTP-only referral cookie.
+- New-account registration creates the referred relationship and one single-use 14% coupon for each recipient in the same registration transaction.
+- Referral coupon ownership is enforced by the existing coupon reservation service.
+- Customer Refer & Earn page displays link, referral statuses, progress counts, and own referral coupons, without exposing invitee emails or order identifiers.
+- Admin Refer & Earn page and API allow permission-gated search/filter/reporting of referral, payment, delivery, and coupon state.
+- When a successful verified payment creates an eligible referred order, the referral is moved to awaiting delivery and bound to that order.
+- Persisted trusted shipment delivery state is checked against the current verified payment state before a transaction issues the 25% coupon pair idempotently.
+- Dedicated referral permissions are granted to SUPER_ADMIN by a forward-only migration.
 
-## Existing architecture inspected
+## Business rules
 
-- Customer registration is handled by `app/api/auth/register/route.ts` and `lib/auth/service.ts`.
-- PayU callback verifies successful payments through the existing provider verification before processing the payment event.
-- Orders are created from verified payments.
-- Shipping models record `ShipmentStatus.DELIVERED` and `deliveredAt`, and the shipping application accepts normalized/provider tracking events.
-- The Qikink fulfillment integration is not, by itself, proof of delivery; referral rewards must wait for a trusted delivery status persisted by the shipping integration.
+- New registrations only can be attributed. Existing customer login does not issue referral rewards.
+- Visiting a referral URL is not sufficient to issue coupons.
+- Both referrer and invitee receive one 14% coupon after a valid new registration.
+- Both receive one 25% coupon only after the qualifying order's payment is verified as SUCCEEDED and the persisted shipment state is DELIVERED.
+- Coupons are assigned to recipient accounts and each is limited to one redemption.
+- Coupon expiry defaults to 365 days and can be configured using `REFERRAL_COUPON_TTL_DAYS` (bounded to 1–3650; invalid values fall back to 365).
+- A unique referral relationship per invited account and unique reward constraints prevent duplicate attribution/reward issuance.
 
-## Outstanding critical work
+## Delivery and financial lifecycle blockers
 
-- Generate and maintain referral profiles/codes for eligible customers and build secure, persistent attribution through navigation and authentication redirects.
-- Atomically attribute genuinely new registrations and issue exactly one unique 14% coupon to each recipient; make both visible in customer accounts.
-- Add a customer Refer & Earn dashboard and privacy-safe referral list.
-- Add an RBAC-protected admin referral management view and audited operational actions.
-- Connect the first eligible referral order to verified payment and persisted trusted delivery status, then issue exactly one 25% coupon to each recipient.
-- Implement retry-safe reward processing, delivery-before-payment ordering, and explicit cancellation/refund/chargeback policy.
-- Add end-to-end, concurrency, authorization, coupon ownership, payment/delivery prerequisite, and recovery tests.
-- Validate the migration against the actual CI database and run all required CI checks.
+The Qikink adapter currently has `createShipment: false`, `trackingLookup: false`, and `webhooks: false`. Therefore it cannot reliably emit machine-to-machine delivery state in this repository today. The 25% reward path is safely gated but will not run for Qikink orders unless a trusted existing or future shipment integration records a real `DELIVERED` state. Do not manually create fake provider tracking events.
 
-## Payment and delivery prerequisites
+Cancellation, refund, chargeback, reservation-expiry/recovery and post-reward refund handling still require dedicated lifecycle policy and tests. If payment is no longer SUCCEEDED when delivery is processed, no 25% reward is issued. Those exceptional states and recovery behavior must be addressed before calling the whole phase production-ready.
 
-A browser redirect, order creation, fulfillment submission, or payment initiation is not a delivery confirmation. A 25% reward must not be issued until both the existing verified-payment state and a trusted persisted `DELIVERED` shipment state are established server-side. Any unsupported delivery-provider capability remains a blocker and must not be simulated.
+## Verification requirements
 
-## Required verification
-
-The required checks are defined by the repository's package scripts and CI workflows. The phase must remain unmerged until Prisma validation/migration checks, lint, typecheck, tests, build, and every other required CI check pass on the final commit. Results must be updated here only after they are observed.
+Check the current branch's GitHub Actions results after each complete increment. Required checks include the repository's actual lint, typecheck, test, build, Prisma validation, migration, and recovery checks. The phase stays a draft/unmerged while any required test fails or while the real delivery contract and refund/recovery behavior remain unresolved.
