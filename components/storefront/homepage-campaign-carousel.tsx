@@ -96,7 +96,7 @@ export function HomepageCampaignCarousel() {
             fill
             priority={activeIndex === 0}
             sizes="100vw"
-            className={`object-contain object-center ${slideAnimation}`}
+            className={`${activeIndex === 1 ? "object-cover object-top" : "object-contain object-center"} ${slideAnimation}`}
           />
         </Link>
 
