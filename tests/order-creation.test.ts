@@ -246,7 +246,8 @@ test("approved cancellation deactivates unused referral coupons and rejection re
   await syncReferralRewardLifecycleForPayment(f.payment.id, `cancellation:${cancellation.id}:REJECTED`, `CANCELLATION_REJECTED:${cancellation.id}:REJECTED`);
   coupons = await db.discountCoupon.findMany({ where: { referralId: referral.id } });
   assert.ok(coupons.every((coupon) => coupon.status === "ACTIVE"));
-  assert.equal(await db.referralRewardLifecycleEvent.count({ where: { referralRewardId: { in: (await db.referralReward.findMany({ where: { referralId: referral.id }, select: { id: true } })).map((reward) => reward.id }, eventType: "REWARD_REACTIVATED" } }), 2);
+  const rewardIds = (await db.referralReward.findMany({ where: { referralId: referral.id }, select: { id: true } })).map((reward) => reward.id);
+  assert.equal(await db.referralRewardLifecycleEvent.count({ where: { referralRewardId: { in: rewardIds }, eventType: "REWARD_REACTIVATED" } }), 2);
 });
 test("rejects a missing or non-successful Payment", async () => {
   const f = await fixture({ status: "FAILED" });
