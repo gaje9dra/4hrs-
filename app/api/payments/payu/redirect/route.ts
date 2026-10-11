@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { cookies } from "next/headers";
 import { db } from "@/lib/db/client";
 import { CUSTOMER_SESSION_COOKIE, hashSessionToken } from "@/lib/auth/session";
@@ -5,7 +6,7 @@ import { buildPayUHostedCheckoutFields, payUHostedCheckoutUrl } from "@/lib/paym
 
 function firstName(displayName: string | null, email: string): string {
   const value = displayName?.trim() || email.split("@")[0] || "Customer";
-  return value.split(/\s+/)[0].slice(0, 60) || "Customer";
+  return value.split(/\\s+/)[0].slice(0, 60) || "Customer";
 }
 
 function escapeHtml(value: string): string {
@@ -58,20 +59,27 @@ export async function GET(request: Request) {
     `<input type="hidden" name="${escapeHtml(name)}" value="${escapeHtml(value)}">`,
   ).join("");
   const action = escapeHtml(payUHostedCheckoutUrl());
-  // proxy.ts supplies a per-request nonce used by the production CSP. The
-  // hosted-checkout form's auto-submit script must carry that nonce or CSP blocks it.
-  const suppliedNonce = request.headers.get("x-nonce")?.trim() ?? "";
-  const nonce = /^[A-Za-z0-9+/=_-]{16,128}$/.test(suppliedNonce) ? suppliedNonce : "";
-  const script = nonce
-    ? `<script nonce="${nonce}">document.getElementById("payu").submit()</script>`
-    : `<script>document.getElementById("payu").submit()</script>`;
-  const html = `<!doctype html><html><head><meta charset="utf-8"><title>Redirecting to PayU</title></head><body><p>Redirecting to secure payment…</p><form id="payu" method="post" action="${action}">${inputs}</form>${script}</body></html>`;
+
+  // This route returns a standalone HTML response, so it must own the nonce
+  // and CSP together. Request headers are not a reliable source of a nonce
+  // after the Netlify/Next.js proxy boundary; a missing or mismatched nonce
+  // leaves customers stuck on this page instead of posting to PayU.
+  const nonce = randomBytes(18).toString("base64");
+  const script = `<script nonce="${nonce}">document.getElementById("payu").submit()</script>`;
+  const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Redirecting to PayU</title></head><body><p>Redirecting to secure payment…</p><form id="payu" method="post" action="${action}">${inputs}</form>${script}</body></html>`;
   const headers = new Headers({
     "Content-Type": "text/html; charset=utf-8",
     "Cache-Control": "no-store",
+    "Content-Security-Policy": [
+      "default-src 'none'",
+      `script-src 'nonce-${nonce}'`,
+      "form-action 'self' https://test.payu.in https://secure.payu.in",
+      "base-uri 'none'",
+      "frame-ancestors 'none'",
+      "object-src 'none'",
+    ].join("; "),
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "no-referrer",
   });
-  // Keep the same nonce-based policy on this hand-built HTML response.
-  const contentSecurityPolicy = request.headers.get("Content-Security-Policy");
-  if (contentSecurityPolicy) headers.set("Content-Security-Policy", contentSecurityPolicy);
   return new Response(html, { headers });
 }
