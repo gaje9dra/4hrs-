@@ -174,11 +174,19 @@ export async function processReferralDeliveryReward(shipmentId: string): Promise
   const shipment = await db.shipment.findUnique({
     where: { id: shipmentId },
     select: {
-      id: true, status: true, deliveredAt: true, orderId: true,
+      id: true, status: true, deliveredAt: true, orderId: true, providerId: true,
+      trackingEvents: { where: { normalizedStatus: "DELIVERED", source: { in: ["WEBHOOK", "POLLING", "PROVIDER"] } }, select: { providerId: true, eventTimestamp: true }, orderBy: { eventTimestamp: "desc" }, take: 5 },
       order: { select: { id: true, customerId: true, createdAt: true, status: true, payment: { select: { status: true, completedAt: true, refunds: { select: { status: true, amount: true } } } } } },
     },
   });
   if (!shipment || shipment.status !== "DELIVERED" || !shipment.deliveredAt) return { rewarded: false };
+  // A status field alone is not delivery evidence. Require a persisted non-manual provider event
+  // for this exact shipping provider and a timestamp no later than the delivered state.
+  const trustedDeliveryEvent = shipment.trackingEvents.some((event) =>
+    event.providerId.toLowerCase() === shipment.providerId.toLowerCase() &&
+    event.eventTimestamp.getTime() <= shipment.deliveredAt!.getTime()
+  );
+  if (!trustedDeliveryEvent) return { rewarded: false };
   if (shipment.order.status !== "CONFIRMED" || shipment.order.payment.status !== "SUCCEEDED" || !shipment.order.payment.completedAt) return { rewarded: false };
   // Any initiated/ambiguous/succeeded refund makes the qualifying order ineligible.
   // This intentionally errs on the side of withholding a reward until financial reconciliation is complete.
@@ -205,8 +213,19 @@ export async function processReferralDeliveryReward(shipmentId: string): Promise
         where: { id: shipment.orderId },
         select: { id: true, customerId: true, createdAt: true, status: true, payment: { select: { status: true, completedAt: true, refunds: { select: { status: true, amount: true } } } } },
       });
-      const currentShipment = await tx.shipment.findUnique({ where: { id: shipment.id }, select: { status: true, deliveredAt: true, orderId: true } });
+      const currentShipment = await tx.shipment.findUnique({
+        where: { id: shipment.id },
+        select: {
+          status: true, deliveredAt: true, orderId: true, providerId: true,
+          trackingEvents: { where: { normalizedStatus: "DELIVERED", source: { in: ["WEBHOOK", "POLLING", "PROVIDER"] } }, select: { providerId: true, eventTimestamp: true }, orderBy: { eventTimestamp: "desc" }, take: 5 },
+        },
+      });
+      const currentTrustedDeliveryEvent = currentShipment?.trackingEvents.some((event) =>
+        event.providerId.toLowerCase() === currentShipment.providerId.toLowerCase() &&
+        event.eventTimestamp.getTime() <= (currentShipment.deliveredAt?.getTime() ?? 0)
+      ) ?? false;
       if (!order || !currentShipment || currentShipment.status !== "DELIVERED" || !currentShipment.deliveredAt ||
+          !currentTrustedDeliveryEvent ||
           order.status !== "CONFIRMED" || order.customerId !== referral.invitedCustomerId || order.createdAt < referral.registeredAt ||
           order.payment.status !== "SUCCEEDED" || !order.payment.completedAt ||
           order.payment.refunds.some((refund) => refund.status !== "FAILED") ||
