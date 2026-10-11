@@ -25,6 +25,7 @@ const getCachedHomepageData = unstable_cache(
   { revalidate: 30, tags: ["storefront-homepage"] },
 );
 
+// Keep the server-rendered route deterministic; collect elapsed-time metrics in request instrumentation.
 export default async function HomePage() {
   const locale = await resolveRequestLocale();
   const { data, editorialSections } = await getCachedHomepageData(locale);
