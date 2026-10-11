@@ -320,6 +320,9 @@ async function measureHomepageOperation<T>(
     return result;
   } catch (error) {
     const durationMs = Date.now() - startedAt;
+    if (error instanceof Error && /\bP2024\b/.test(error.message)) {
+      void logPrismaPoolMetrics("P2024-homepage-operation:" + operation);
+    }
     if (durationMs >= 250) {
       logger.error("storefront.homepage.operation.failed_slow", {
         resourceType: "database",
