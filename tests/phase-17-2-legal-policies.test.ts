@@ -27,6 +27,7 @@ test("all Phase 17.2 public policy routes exist and provide route-specific metad
   assert.match(page, /openGraph:/);
   assert.match(page, /aria-labelledby/);
   assert.match(page, /Related policy pages/);
+  assert.match(page, /href="mailto:thebunniestd@gmail\.com"/);
 });
 
 test("refund and replacement policy preserves the defect-only standard without extinguishing statutory rights", () => {
