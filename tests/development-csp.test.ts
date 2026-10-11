@@ -7,7 +7,7 @@ test("development proxy does not emit CSP that blocks React eval", async () => {
 
   assert.match(
     source,
-    /process\.env\.NODE_ENV\s*===\s*"production"\s*\?\s*contentSecurityPolicy\(nonce\)\s*:\s*null/,
+    /process\.env\.NODE_ENV\s*===\s*"production"\s*&&\s*!isPayURedirect\s*\?\s*contentSecurityPolicy\(nonce\)\s*:\s*null/,
   );
   assert.match(source, /if \(csp\) requestHeaders\.set\("Content-Security-Policy", csp\)/);
   assert.match(source, /if \(csp\) response\.headers\.set\("Content-Security-Policy", csp\)/);
