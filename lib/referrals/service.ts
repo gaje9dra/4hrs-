@@ -135,10 +135,31 @@ export async function syncReferralRewardLifecycleInTransaction(
   }
 }
 
+function isRetryableReferralTransactionConflict(error: unknown): boolean {
+  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034";
+}
+
+async function withReferralTransactionRetry<T>(operation: () => Promise<T>): Promise<T> {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      return await operation();
+    } catch (error) {
+      if (!isRetryableReferralTransactionConflict(error) || attempt === 2) throw error;
+    }
+  }
+  throw new Error("Referral transaction retry exhausted.");
+}
+
 export async function syncReferralRewardLifecycleForPayment(paymentId: string, eventKey: string, reason: string): Promise<void> {
   const order = await db.order.findUnique({ where: { paymentId }, select: { id: true } });
   if (!order) return;
-  await db.$transaction((tx) => syncReferralRewardLifecycleInTransaction(tx, order.id, eventKey, reason), { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, maxWait: 5000, timeout: 15000 });
+  await withReferralTransactionRetry(() =>
+    db.$transaction((tx) => syncReferralRewardLifecycleInTransaction(tx, order.id, eventKey, reason), {
+      isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      maxWait: 5000,
+      timeout: 15000,
+    }),
+  );
 }
 export async function processReferralPaymentReward(orderId: string): Promise<{ rewarded: boolean; referralId?: string }> {
   return db.$transaction((tx) => processReferralPaymentRewardInTransaction(tx, orderId), { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, maxWait: 5000, timeout: 15000 });
