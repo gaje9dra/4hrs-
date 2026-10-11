@@ -19,6 +19,7 @@ import type { NormalizedPaymentEvent, PaymentProviderAdapter, PaymentProviderRes
 import { normalizeClientAction } from "@/lib/payments/client-action";
 import { getPaymentProviderRegistry } from "@/lib/payments/registry";
 import { createPaymentProviderResolver } from "@/lib/payments/resolver";
+import { syncReferralRewardLifecycleForPayment } from "@/lib/referrals/service";
 
 export type ValidatedCheckoutPaymentContext = {
   customerId: string;
@@ -300,7 +301,8 @@ export function createPaymentApplication(
       if (existingKey.requestFingerprint !== [input.paymentId,input.amount,input.currency,input.reason].join("|")) throw new PaymentError("IDEMPOTENCY_CONFLICT", "The idempotency key was already used for a different refund request.");
       const refund = await repository.getRefundByIdempotencyKey(input.idempotencyKey);
       if (!refund) throw new PaymentError("PAYMENT_INTERNAL_ERROR", "Refund idempotency record could not be resolved.");
-      return { refundId: refund.id, status: refund.status, payment: toPaymentDto(payment), amount: { value: refund.amount.toFixed(2), currency: refund.currency }, currency: refund.currency, providerReference: refund.providerReference, failureCode: refund.failureCode };
+      await syncReferralRewardLifecycleForPayment(payment.id, `refund:${refund.id}:${refund.status}`, `${refund.status === "FAILED" ? "REFUND_FAILED" : refund.status === "SUCCEEDED" ? "REFUND_SUCCEEDED" : refund.status === "AMBIGUOUS" ? "REFUND_AMBIGUOUS" : "REFUND_PENDING"}:${refund.id}`);
+      return { refundId: refund.id, status: refund.status, payment: toPaymentDto(payment), amount: { value: refund.amount.toFixed(2), currency: refund.currency }, currency: payment.currency, providerReference: refund.providerReference, failureCode: refund.failureCode };
     }
 
     if (payment.status !== "SUCCEEDED" && payment.status !== "PARTIALLY_REFUNDED") throw new PaymentError("INVALID_STATE_TRANSITION", "Payment is not eligible for refund.");
@@ -320,13 +322,17 @@ export function createPaymentApplication(
       return created;
     });
 
+    await syncReferralRewardLifecycleForPayment(payment.id, `refund:${refund.id}:PENDING`, `REFUND_PENDING:${refund.id}`);
+
     if (!payment.providerId || !payment.providerReference) {
       refund = await repository.updatePaymentRefund({ id: refund.id, status: PaymentRefundStatus.FAILED, failureCode: "PROVIDER_REFERENCE_MISSING" });
+      await syncReferralRewardLifecycleForPayment(payment.id, `refund:${refund.id}:FAILED`, `REFUND_FAILED:${refund.id}`);
       throw new PaymentError("PROVIDER_UNAVAILABLE", "Payment provider reference is unavailable; no refund was executed.");
     }
     const adapter = providerResolver.resolve({ customerId: payment.customerId, checkoutReference: payment.checkoutReference, currency: payment.currency, providerId: payment.providerId });
     if (!adapter || !adapter.capabilities.refunds || !adapter.refundPayment) {
       refund = await repository.updatePaymentRefund({ id: refund.id, status: "FAILED", failureCode: "REFUND_UNSUPPORTED" });
+      await syncReferralRewardLifecycleForPayment(payment.id, `refund:${refund.id}:FAILED`, `REFUND_FAILED:${refund.id}`);
       throw new PaymentError("PROVIDER_UNAVAILABLE", "The configured payment provider does not support refunds.");
     }
     let providerConfirmed = false;
@@ -343,20 +349,25 @@ export function createPaymentApplication(
     } catch (error) {
       if (providerConfirmed) {
         refund = await repository.updatePaymentRefund({ id: refund.id, status: PaymentRefundStatus.AMBIGUOUS, failureCode: "LOCAL_FINALIZATION_FAILED" });
+        await syncReferralRewardLifecycleForPayment(payment.id, `refund:${refund.id}:AMBIGUOUS`, `REFUND_AMBIGUOUS:${refund.id}`);
         throw new PaymentError("PAYMENT_INTERNAL_ERROR", "The provider accepted the refund but local state could not be finalized; reconcile the payment before retrying.", { cause: error });
       }
       if (error instanceof PaymentError) {
         refund = await repository.updatePaymentRefund({ id: refund.id, status: "FAILED", failureCode: error.code });
+        await syncReferralRewardLifecycleForPayment(payment.id, `refund:${refund.id}:FAILED`, `REFUND_FAILED:${refund.id}`);
         throw error;
       }
       const category = adapter.normalizeError(error);
       if (category === "PROVIDER_TIMEOUT" || category === "PROVIDER_NETWORK_ERROR") {
         refund = await repository.updatePaymentRefund({ id: refund.id, status: "AMBIGUOUS", failureCode: category });
+        await syncReferralRewardLifecycleForPayment(payment.id, `refund:${refund.id}:AMBIGUOUS`, `REFUND_AMBIGUOUS:${refund.id}`);
         throw new PaymentError("PROVIDER_TIMEOUT", "Refund outcome is ambiguous; reconcile the payment before retrying.", { cause: error });
       }
       refund = await repository.updatePaymentRefund({ id: refund.id, status: "FAILED", failureCode: category });
+      await syncReferralRewardLifecycleForPayment(payment.id, `refund:${refund.id}:FAILED`, `REFUND_FAILED:${refund.id}`);
       throw new PaymentError("PROVIDER_REJECTED", "The payment provider rejected the refund.", { cause: error });
     }
+    await syncReferralRewardLifecycleForPayment(payment.id, `refund:${refund.id}:${refund.status}`, `${refund.status === "FAILED" ? "REFUND_FAILED" : refund.status === "SUCCEEDED" ? "REFUND_SUCCEEDED" : refund.status === "AMBIGUOUS" ? "REFUND_AMBIGUOUS" : "REFUND_PENDING"}:${refund.id}`);
     const refreshed = await repository.getPaymentForAdmin(payment.id);
     if (!refreshed) throw new PaymentError("PAYMENT_INTERNAL_ERROR", "Payment could not be reloaded after refund.");
     return { refundId: refund.id, status: refund.status, payment: toPaymentDto(refreshed), amount: { value: refund.amount.toFixed(2), currency: refund.currency }, currency: refund.currency, providerReference: refund.providerReference, failureCode: refund.failureCode };
