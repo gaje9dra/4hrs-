@@ -77,7 +77,8 @@ export function HomepageCampaignCarousel() {
             src={activeBanner.src}
             alt={activeBanner.alt}
             fill
-            priority={activeIndex === 0}
+            loading="eager"
+            fetchPriority="high"
             sizes="100vw"
             className={`object-cover object-center ${slideAnimation}`}
           />
@@ -94,7 +95,8 @@ export function HomepageCampaignCarousel() {
             src={activeBanner.src}
             alt={activeBanner.alt}
             fill
-            priority={activeIndex === 0}
+            loading="eager"
+            fetchPriority="high"
             sizes="100vw"
             className={`${activeIndex === 1 ? "object-cover object-top" : "object-contain object-center"} ${slideAnimation}`}
           />
