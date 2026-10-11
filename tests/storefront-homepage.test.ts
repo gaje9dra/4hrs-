@@ -17,7 +17,9 @@ test("homepage is a server-rendered storefront route with SEO metadata", () => {
 test("homepage data uses public catalog services and bounded discovery sets", () => {
   const source = read("lib/storefront/catalog.ts");
   assert.match(source, /export type StorefrontHomeData/);
-  assert.match(source, /getStorefrontProducts\(\{ pageSize: 8, sort: "newest" \}\)/);
+  assert.match(source, /getStorefrontProducts\(\{ page: 1, pageSize: 12, sort: "newest" \}\)/);
+  assert.match(source, /newArrivals: heroFirstPage\.items\.filter/);
+  assert.doesNotMatch(source, /getStorefrontProducts\(\{ pageSize: 8, sort: "newest" \}\)/);
   assert.match(source, /getStorefrontCollectionProducts/);
   assert.match(source, /listActiveCategoriesWithPublishedProducts/);
   assert.match(source, /listActiveCollectionsWithPublishedProducts/);
