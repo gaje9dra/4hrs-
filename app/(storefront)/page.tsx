@@ -15,7 +15,7 @@ const getCachedHomepageData = unstable_cache(
     // This callback runs when the shared homepage cache is populated or refreshed,
     // so these timings describe cache-fill work, not cache-hit request latency.
     const fillStartedAt = Date.now();
-    const measureFillOperation = async <T>(
+    const measureFillOperation = async <T,>(
       operation: "catalog" | "editorial_content" | "promotional_banners",
       run: () => Promise<T>,
     ): Promise<T> => {
@@ -37,7 +37,7 @@ const getCachedHomepageData = unstable_cache(
           resourceType: "database",
           outcome: "failure",
           durationMs,
-          errorCode: error instanceof Error && /\\bP2024\\b/.test(error.message)
+          errorCode: error instanceof Error && /\bP2024\b/.test(error.message)
             ? "P2024"
             : "HOMEPAGE_DATA_LOAD_FAILED",
         }, { operation });
