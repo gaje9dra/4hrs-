@@ -37,9 +37,9 @@ async function issueRewardPair(
   reason: string,
 ) {
   for (const recipientCustomerId of [referral.referrerCustomerId, referral.invitedCustomerId]) {
-    const existing = await tx.referralReward.findUnique({
-      where: { referralId_recipientCustomerId_type: { referralId: referral.id, recipientCustomerId, type } },
-    });
+    const existing = percent === 25
+      ? await tx.referralReward.findFirst({ where: { referralId: referral.id, recipientCustomerId, type: { in: ["DELIVERED_ORDER_25", "PAID_ORDER_25"] } } })
+      : await tx.referralReward.findUnique({ where: { referralId_recipientCustomerId_type: { referralId: referral.id, recipientCustomerId, type } } });
     if (existing) continue;
     const coupon = await tx.discountCoupon.create({
       data: {
