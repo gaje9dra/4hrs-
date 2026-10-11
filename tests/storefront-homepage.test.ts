@@ -17,8 +17,8 @@ test("homepage is a server-rendered storefront route with SEO metadata", () => {
 test("homepage data uses public catalog services and bounded discovery sets", () => {
   const source = read("lib/storefront/catalog.ts");
   assert.match(source, /export type StorefrontHomeData/);
-  assert.match(source, /getStorefrontProducts\(\{ page: 1, pageSize: 12, sort: "newest" \}\)/);
-  assert.match(source, /newArrivals: heroFirstPage\.items\.filter/);
+  assert.match(source, /getStorefrontHomeProducts\(12\)/);
+  assert.match(source, /newArrivals: heroProductSlice\.filter/);
   assert.doesNotMatch(source, /getStorefrontProducts\(\{ pageSize: 8, sort: "newest" \}\)/);
   assert.match(source, /getStorefrontCollectionProducts/);
   assert.match(source, /listActiveCategoriesWithPublishedProducts/);
@@ -86,7 +86,7 @@ test("homepage hero rotates through product primary images and links to the acti
 test("homepage hero data loads a bounded set of recent products", () => {
   const source = read("lib/storefront/catalog.ts");
   assert.match(source, /heroProducts: StorefrontProductCard\[\]/);
-  assert.match(source, /getStorefrontProducts\(\{ page: 1, pageSize: 12, sort: "newest" \}\)/);
+  assert.match(source, /getStorefrontHomeProducts\(12\)/);
   assert.match(source, /\.filter\(\(product\) => product\.image !== null\)/);
   assert.doesNotMatch(source, /heroFirstPage\.pagination\.totalPages/);
   assert.doesNotMatch(source, /page: index \+ 2, pageSize: 100, sort: "newest"/);
