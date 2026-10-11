@@ -27,7 +27,7 @@ From a machine with Node.js 24+ and network access, run:
 SITE_URL="https://YOUR_PRODUCTION_HOST/" HOMEPAGE_TTFB_SAMPLES=8 node scripts/homepage-ttfb-check.mjs
 ```
 
-The script sends eight sequential anonymous GETs with 250 ms between requests and reports per-request status, time-to-response-headers (TTFB approximation), total response time, any exposed cache header, and p50/p95 summaries. It does not purge or bypass the server's Next.js data cache. Run it after deployment and correlate the timestamps with Netlify function logs and the new structured events. Compare before/after samples under similar conditions; do not treat a single request as a benchmark.
+The script sends eight sequential anonymous GETs with 250 ms between requests and reports per-request status, time-to-response-headers (TTFB approximation), total response time, any exposed cache header, and p50/p95 summaries. It does not purge or bypass the server's Next.js data cache. Run it after deployment and correlate the timestamps with Netlify function logs and the new structured events. Compare before/after samples under similar conditions; keep the sample count constant and do not treat a single request as a benchmark. The first request after deployment may include cold-start effects, so compare it separately from warmed requests.
 
 ## Index review evidence
 
