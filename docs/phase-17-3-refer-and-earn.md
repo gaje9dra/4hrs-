@@ -4,7 +4,7 @@
 
 **INCOMPLETE — KEEP PR #278 DRAFT AND UNMERGED.**
 
-The verified-payment 25% reward path is implemented in the verified order-creation transaction. The full post-issuance refund/cancellation lifecycle, broader failure-injection coverage, and final CI verification remain completion gates.
+The verified-payment 25% reward path and audited post-issuance refund/cancellation transitions are implemented. Concurrent lifecycle synchronization now retries PostgreSQL serializable-transaction conflicts up to three attempts, and tests cover ambiguous/successful partial-refund suppression plus concurrent idempotent lifecycle synchronization. Transaction-failure injection coverage and final CI verification on the exact current head remain completion gates.
 
 ## Business rules
 
