@@ -22,7 +22,12 @@ test("checkout bootstrap returns saved addresses without a duplicate initial req
   const checkoutContracts = read("lib/checkout/contracts.ts");
   const checkoutPage = read("components/storefront/checkout-page.tsx");
 
-  assert.match(checkoutService, /addresses = await dependencies\.listAddresses/);
+  // Checkout bootstrap must return addresses in its own response and avoid
+  // a second client request. Cart and address reads should also overlap so
+  // initial checkout latency is not the sum of both database paths.
+  assert.match(checkoutService, /const cartPromise = dependencies\.getCart\(\)/);
+  assert.match(checkoutService, /const addressPromise = \(addressId[\s\S]*?dependencies\.listAddresses\(dependencies\.customer\.id\)/);
+  assert.match(checkoutService, /const addressResult = await addressPromise/);
   assert.match(checkoutService, /\.\.\.\(addresses \? \{ addresses \} : \{\}\)/);
   assert.match(checkoutContracts, /addresses\?: CustomerAddressDto\[\]/);
   assert.match(checkoutPage, /checkoutRequest\("GET"\)[\s\S]*?const nextAddresses = nextCheckout\.addresses \?\? \[\]/);
