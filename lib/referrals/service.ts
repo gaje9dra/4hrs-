@@ -170,6 +170,19 @@ export async function listAdminReferrals(query: AdminReferralQuery) {
   };
 }
 
+export function hasTrustedDeliveryEvidence(input: {
+  shipmentProviderId: string;
+  deliveredAt: Date;
+  events: ReadonlyArray<{ providerId: string; eventTimestamp: Date; source: "WEBHOOK" | "POLLING" | "PROVIDER" | "MANUAL" }>;
+}): boolean {
+  return input.events.some((event) =>
+    event.source !== "MANUAL" &&
+    event.providerId.trim().toLowerCase() === input.shipmentProviderId.trim().toLowerCase() &&
+    Number.isFinite(event.eventTimestamp.getTime()) &&
+    event.eventTimestamp.getTime() <= input.deliveredAt.getTime()
+  );
+}
+
 export async function processReferralDeliveryReward(shipmentId: string): Promise<{ rewarded: boolean; referralId?: string }> {
   const shipment = await db.shipment.findUnique({
     where: { id: shipmentId },
@@ -182,10 +195,11 @@ export async function processReferralDeliveryReward(shipmentId: string): Promise
   if (!shipment || shipment.status !== "DELIVERED" || !shipment.deliveredAt) return { rewarded: false };
   // A status field alone is not delivery evidence. Require a persisted non-manual provider event
   // for this exact shipping provider and a timestamp no later than the delivered state.
-  const trustedDeliveryEvent = shipment.trackingEvents.some((event) =>
-    event.providerId.toLowerCase() === shipment.providerId.toLowerCase() &&
-    event.eventTimestamp.getTime() <= shipment.deliveredAt!.getTime()
-  );
+  const trustedDeliveryEvent = hasTrustedDeliveryEvidence({
+    shipmentProviderId: shipment.providerId,
+    deliveredAt: shipment.deliveredAt,
+    events: shipment.trackingEvents,
+  });
   if (!trustedDeliveryEvent) return { rewarded: false };
   if (shipment.order.status !== "CONFIRMED" || shipment.order.payment.status !== "SUCCEEDED" || !shipment.order.payment.completedAt) return { rewarded: false };
   // Any initiated/ambiguous/succeeded refund makes the qualifying order ineligible.
@@ -220,10 +234,13 @@ export async function processReferralDeliveryReward(shipmentId: string): Promise
           trackingEvents: { where: { normalizedStatus: "DELIVERED", source: { in: ["WEBHOOK", "POLLING", "PROVIDER"] } }, select: { providerId: true, eventTimestamp: true }, orderBy: { eventTimestamp: "desc" }, take: 5 },
         },
       });
-      const currentTrustedDeliveryEvent = currentShipment?.trackingEvents.some((event) =>
-        event.providerId.toLowerCase() === currentShipment.providerId.toLowerCase() &&
-        event.eventTimestamp.getTime() <= (currentShipment.deliveredAt?.getTime() ?? 0)
-      ) ?? false;
+      const currentTrustedDeliveryEvent = currentShipment?.deliveredAt
+        ? hasTrustedDeliveryEvidence({
+            shipmentProviderId: currentShipment.providerId,
+            deliveredAt: currentShipment.deliveredAt,
+            events: currentShipment.trackingEvents,
+          })
+        : false;
       if (!order || !currentShipment || currentShipment.status !== "DELIVERED" || !currentShipment.deliveredAt ||
           !currentTrustedDeliveryEvent ||
           order.status !== "CONFIRMED" || order.customerId !== referral.invitedCustomerId || order.createdAt < referral.registeredAt ||
