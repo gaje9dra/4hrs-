@@ -346,6 +346,26 @@ export async function queryPublishedCatalogProducts(
   return { items, total, limit, offset, hasNextPage: offset + items.length < total };
 }
 
+/**
+ * Fetch the small newest-product slice used by the homepage without running a
+ * separate COUNT(*) query. The homepage renders a fixed-size selection and does
+ * not use pagination totals, so counting the entire matching catalog is wasted
+ * work on every homepage cache fill.
+ */
+export async function queryHomepageCatalogProducts(
+  limit = 12,
+  client?: CatalogRepositoryClient,
+): Promise<PublicCatalogProductListRecord[]> {
+  const repository = clientOrDefault(client);
+  const safeLimit = clampLimit(limit);
+  return repository.product.findMany({
+    where: publishedProductWhere,
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    take: safeLimit,
+    select: publicCatalogListSelect,
+  });
+}
+
 export type RepositoryCatalogSearchMode = "PUBLIC" | "INTERNAL";
 
 export type CatalogSearchRepositoryOptions = CatalogQueryRepositoryOptions & {
