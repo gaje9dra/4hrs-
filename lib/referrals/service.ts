@@ -175,11 +175,14 @@ export async function processReferralDeliveryReward(shipmentId: string): Promise
     where: { id: shipmentId },
     select: {
       id: true, status: true, deliveredAt: true, orderId: true,
-      order: { select: { id: true, customerId: true, createdAt: true, payment: { select: { status: true, completedAt: true } } } },
+      order: { select: { id: true, customerId: true, createdAt: true, status: true, payment: { select: { status: true, completedAt: true, refunds: { select: { status: true, amount: true } } } } } },
     },
   });
   if (!shipment || shipment.status !== "DELIVERED" || !shipment.deliveredAt) return { rewarded: false };
-  if (shipment.order.payment.status !== "SUCCEEDED" || !shipment.order.payment.completedAt) return { rewarded: false };
+  if (shipment.order.status !== "CONFIRMED" || shipment.order.payment.status !== "SUCCEEDED" || !shipment.order.payment.completedAt) return { rewarded: false };
+  // Any initiated/ambiguous/succeeded refund makes the qualifying order ineligible.
+  // This intentionally errs on the side of withholding a reward until financial reconciliation is complete.
+  if (shipment.order.payment.refunds.some((refund) => refund.status !== "FAILED")) return { rewarded: false };
 
   const candidate = await db.referral.findFirst({
     where: {
@@ -200,12 +203,14 @@ export async function processReferralDeliveryReward(shipmentId: string): Promise
 
       const order = await tx.order.findUnique({
         where: { id: shipment.orderId },
-        select: { id: true, customerId: true, createdAt: true, payment: { select: { status: true, completedAt: true } } },
+        select: { id: true, customerId: true, createdAt: true, status: true, payment: { select: { status: true, completedAt: true, refunds: { select: { status: true, amount: true } } } } },
       });
       const currentShipment = await tx.shipment.findUnique({ where: { id: shipment.id }, select: { status: true, deliveredAt: true, orderId: true } });
       if (!order || !currentShipment || currentShipment.status !== "DELIVERED" || !currentShipment.deliveredAt ||
-          order.customerId !== referral.invitedCustomerId || order.createdAt < referral.registeredAt ||
-          order.payment.status !== "SUCCEEDED" || !order.payment.completedAt || currentShipment.orderId !== order.id) return { rewarded: false };
+          order.status !== "CONFIRMED" || order.customerId !== referral.invitedCustomerId || order.createdAt < referral.registeredAt ||
+          order.payment.status !== "SUCCEEDED" || !order.payment.completedAt ||
+          order.payment.refunds.some((refund) => refund.status !== "FAILED") ||
+          currentShipment.orderId !== order.id) return { rewarded: false };
 
       await issueRewardPair(tx, referral, 25, "DELIVERED_ORDER_25", "First referred order verified paid and delivered.");
       await tx.referral.update({
