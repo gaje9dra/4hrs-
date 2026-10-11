@@ -148,6 +148,7 @@ export function createCheckoutService(dependencies: CheckoutDependencies) {
       if (staleIssue) issues.unshift(staleIssue);
 
       let address: CustomerAddressDto | null = null;
+      let addresses: CustomerAddressDto[] | undefined;
       const addressId = input.selectedAddressId?.trim() || null;
 
       if (addressId) {
@@ -157,7 +158,7 @@ export function createCheckoutService(dependencies: CheckoutDependencies) {
           issues.push(mapAddressError(error));
         }
       } else {
-        const addresses = await dependencies.listAddresses(dependencies.customer.id);
+        addresses = await dependencies.listAddresses(dependencies.customer.id);
         address = addresses.find((candidate) => candidate.isDefault) ?? null;
         if (!address && addresses.length > 0) {
           issues.push(issue("INCOMPLETE_CHECKOUT", "Select a delivery address before continuing."));
@@ -217,6 +218,7 @@ export function createCheckoutService(dependencies: CheckoutDependencies) {
       const checkoutReference = createCheckoutPaymentReference(dependencies.customer.id, result);
       return {
         ...result,
+        ...(addresses ? { addresses } : {}),
         ...(coupon ? { coupon } : { coupon: null }),
         validation: { state: finalValidationState, issues },
         payment: {

@@ -1,0 +1,30 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import test from "node:test";
+
+const read = (path: string) => readFileSync(resolve(process.cwd(), path), "utf8");
+
+test("cart resolves unique product details in a bounded batch", () => {
+  const service = read("lib/cart/service.ts");
+  const catalogRepository = read("lib/catalog/repository.ts");
+  const catalogQuery = read("lib/catalog/query.ts");
+
+  assert.match(service, /new Set\(cart\.items\.map\(\(item\) => item\.productId\)\)/);
+  assert.match(service, /getPublishedProductDetailsByIds/);
+  assert.match(catalogRepository, /getPublishedProductDetailsByIds[\s\S]*?product\.findMany\([\s\S]*?id: \{ in: uniqueIds \}/);
+  assert.match(catalogQuery, /async getPublishedProductDetailsByIds\(ids: string\[\]\)/);
+  assert.doesNotMatch(service, /cart\.items\.map\(resolveLine\)/);
+});
+
+test("checkout bootstrap returns saved addresses without a duplicate initial request", () => {
+  const checkoutService = read("lib/checkout/service.ts");
+  const checkoutContracts = read("lib/checkout/contracts.ts");
+  const checkoutPage = read("components/storefront/checkout-page.tsx");
+
+  assert.match(checkoutService, /addresses = await dependencies\.listAddresses/);
+  assert.match(checkoutService, /\.\.\.\(addresses \? \{ addresses \} : \{\}\)/);
+  assert.match(checkoutContracts, /addresses\?: CustomerAddressDto\[\]/);
+  assert.match(checkoutPage, /checkoutRequest\("GET"\)[\s\S]*?const nextAddresses = nextCheckout\.addresses \?\? \[\]/);
+  assert.doesNotMatch(checkoutPage, /Promise\.all\(\[checkoutRequest\("GET"\), addressRequest\(\)\]\)/);
+});

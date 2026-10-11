@@ -146,6 +146,7 @@ type QueryRepository = {
   queryHomepageCatalogProducts: typeof repository.queryHomepageCatalogProducts;
   getPublishedProductBySlug: typeof repository.getPublishedProductBySlug;
   getPublishedProductDetailsBySlug: typeof repository.getPublishedProductDetailsBySlug;
+  getPublishedProductDetailsByIds: typeof repository.getPublishedProductDetailsByIds;
   getCategoryBySlug: typeof repository.getCategoryBySlug;
   listActiveCategories: typeof repository.listActiveCategories;
   listActiveCategoriesWithPublishedProducts: typeof repository.listActiveCategoriesWithPublishedProducts;
@@ -162,6 +163,7 @@ const defaultRepository: QueryRepository = {
   queryHomepageCatalogProducts: repository.queryHomepageCatalogProducts,
   getPublishedProductBySlug: repository.getPublishedProductBySlug,
   getPublishedProductDetailsBySlug: repository.getPublishedProductDetailsBySlug,
+  getPublishedProductDetailsByIds: repository.getPublishedProductDetailsByIds,
   getCategoryBySlug: repository.getCategoryBySlug,
   listActiveCategories: repository.listActiveCategories,
   listActiveCategoriesWithPublishedProducts: repository.listActiveCategoriesWithPublishedProducts,
@@ -451,139 +453,9 @@ function validateVariantMatrix(
   }
 }
 
-export function createCatalogQueryService(customRepository: Partial<QueryRepository> = {}) {
-  const repo = { ...defaultRepository, ...customRepository };
+type ProductDetailsRecord = NonNullable<Awaited<ReturnType<typeof repository.getPublishedProductDetailsBySlug>>>;
 
-  return {
-    async listHomepageProducts(limit = 12): Promise<CatalogListItem[]> {
-      const records = await repo.queryHomepageCatalogProducts(limit);
-      return records.map((record) => {
-        try {
-          return mapProduct(record);
-        } catch (error) {
-          throw new CatalogServiceError(
-            "CATALOG_DATA_INTEGRITY_ERROR",
-            "Homepage catalog data could not be rendered safely.",
-            error,
-          );
-        }
-      });
-    },
-
-    async listPublishedProducts(query: CatalogQuery = {}, observation?: { surface: CatalogSurface }): Promise<CatalogListResult> {
-      const startedAt = Date.now();
-      let appliedQuery: CatalogAppliedQuery | undefined;
-
-      try {
-        appliedQuery = normalizeCatalogQuery(query);
-
-        const [category, collection, tags] = await Promise.all([
-          appliedQuery.category ? repo.getCategoryBySlug(appliedQuery.category) : Promise.resolve(null),
-          appliedQuery.collection ? repo.getCollectionBySlug(appliedQuery.collection) : Promise.resolve(null),
-          appliedQuery.tags.length ? repo.getTagsBySlugs(appliedQuery.tags) : Promise.resolve([]),
-        ]);
-
-        if (
-          appliedQuery.category &&
-          (!category || (category as { status?: string }).status !== "ACTIVE")
-        ) {
-          throw new CatalogServiceError("CATEGORY_NOT_FOUND", "Category was not found.");
-        }
-        if (
-          appliedQuery.collection &&
-          (!collection || (collection as { status?: string }).status !== "ACTIVE")
-        ) {
-          throw new CatalogServiceError("COLLECTION_NOT_FOUND", "Collection was not found.");
-        }
-        if (tags.length !== appliedQuery.tags.length) {
-          const found = new Set(tags.map((tag) => tag.slug));
-          const missingTag = appliedQuery.tags.find((tag) => !found.has(tag));
-          throw new CatalogServiceError("TAG_NOT_FOUND", "Tag was not found: " + missingTag + ".");
-        }
-
-        const sort = SORT_MAP[appliedQuery.sort];
-        const offset = (appliedQuery.page - 1) * appliedQuery.pageSize;
-        if (!Number.isSafeInteger(offset)) {
-          throw new CatalogServiceError("INVALID_PAGE", "Requested page is too large.");
-        }
-
-        const result = await repo.queryPublishedCatalogProducts({
-          filters: {
-            categorySlug: appliedQuery.category,
-            collectionSlug: appliedQuery.collection,
-            tagSlugs: appliedQuery.tags,
-            tagMode: appliedQuery.tagMode,
-            minPrice: appliedQuery.minPrice,
-            maxPrice: appliedQuery.maxPrice,
-            inStock: appliedQuery.inStock,
-          },
-          sortBy: sort.sortBy,
-          sortDirection: sort.sortDirection,
-          limit: appliedQuery.pageSize,
-          offset,
-        });
-
-        const calculatedTotalPages = result.total === 0 ? 0 : Math.ceil(result.total / appliedQuery.pageSize);
-        const totalPages = Math.min(calculatedTotalPages, CATALOG_QUERY_PAGE_NUMBER_MAX);
-        const isOutOfRange = result.total > 0 && appliedQuery.page > totalPages;
-        const items = result.items.map((item) => {
-          try {
-            return mapProduct(item);
-          } catch (error) {
-            throw new CatalogServiceError(
-              "CATALOG_DATA_INTEGRITY_ERROR",
-              "Catalog data could not be rendered safely.",
-              error,
-            );
-          }
-        });
-
-        return {
-          items,
-          pagination: {
-            page: appliedQuery.page,
-            pageSize: appliedQuery.pageSize,
-            total: result.total,
-            totalPages,
-            hasNextPage: result.hasNextPage && appliedQuery.page < totalPages,
-            isOutOfRange,
-          },
-          appliedQuery,
-        };
-      } catch (error) {
-        const classification =
-          error instanceof CatalogServiceError
-            ? error.code === "CATEGORY_NOT_FOUND" || error.code === "COLLECTION_NOT_FOUND" || error.code === "TAG_NOT_FOUND"
-              ? "not_found"
-              : error.code.startsWith("INVALID_")
-                ? "invalid_query"
-                : error.code === "CATALOG_DATABASE_ERROR"
-                  ? "database_failure"
-                  : error.code === "CATALOG_DATA_INTEGRITY_ERROR"
-                    ? "catalog_data_integrity"
-                    : "unexpected_application_failure"
-            : "database_failure";
-
-        if (observation) {
-          logCatalogObservation({
-            surface: observation.surface,
-            operation: "listPublishedProducts",
-            classification,
-            durationMs: Date.now() - startedAt,
-            query: appliedQuery,
-          });
-        }
-
-        if (error instanceof CatalogServiceError) throw error;
-        throw new CatalogServiceError("CATALOG_DATABASE_ERROR", "Catalog data could not be loaded.", error);
-      }
-    },
-
-    async getPublishedProductDetailsBySlug(slug: string): Promise<PublishedProductDetailResult> {
-      const normalizedSlug = normalizeSlug(slug, "slug");
-      const product = await repo.getPublishedProductDetailsBySlug(normalizedSlug);
-      if (!product) throw new CatalogServiceError("PRODUCT_NOT_FOUND", "Published product was not found.");
-
+function mapPublishedProductDetails(product: ProductDetailsRecord): PublishedProductDetailResult {
       const variants = product.variants.map((variant) => {
         const effectivePrice = variant.price ?? product.price;
         return {
@@ -835,9 +707,161 @@ export function createCatalogQueryService(customRepository: Partial<QueryReposit
         tags: product.tags.map(({ tag }) => tag),
         availability: availableVariant?.availability ?? { state: "OUT_OF_STOCK", availableQuantity: 0 },
       };
+}
+
+export function createCatalogQueryService(customRepository: Partial<QueryRepository> = {}) {
+  const repo = { ...defaultRepository, ...customRepository };
+
+  return {
+    async listHomepageProducts(limit = 12): Promise<CatalogListItem[]> {
+      const records = await repo.queryHomepageCatalogProducts(limit);
+      return records.map((record) => {
+        try {
+          return mapProduct(record);
+        } catch (error) {
+          throw new CatalogServiceError(
+            "CATALOG_DATA_INTEGRITY_ERROR",
+            "Homepage catalog data could not be rendered safely.",
+            error,
+          );
+        }
+      });
     },
 
-    async getPublishedProductBySlug(slug: string): Promise<PublishedProductResult> {
+    async listPublishedProducts(query: CatalogQuery = {}, observation?: { surface: CatalogSurface }): Promise<CatalogListResult> {
+      const startedAt = Date.now();
+      let appliedQuery: CatalogAppliedQuery | undefined;
+
+      try {
+        appliedQuery = normalizeCatalogQuery(query);
+
+        const [category, collection, tags] = await Promise.all([
+          appliedQuery.category ? repo.getCategoryBySlug(appliedQuery.category) : Promise.resolve(null),
+          appliedQuery.collection ? repo.getCollectionBySlug(appliedQuery.collection) : Promise.resolve(null),
+          appliedQuery.tags.length ? repo.getTagsBySlugs(appliedQuery.tags) : Promise.resolve([]),
+        ]);
+
+        if (
+          appliedQuery.category &&
+          (!category || (category as { status?: string }).status !== "ACTIVE")
+        ) {
+          throw new CatalogServiceError("CATEGORY_NOT_FOUND", "Category was not found.");
+        }
+        if (
+          appliedQuery.collection &&
+          (!collection || (collection as { status?: string }).status !== "ACTIVE")
+        ) {
+          throw new CatalogServiceError("COLLECTION_NOT_FOUND", "Collection was not found.");
+        }
+        if (tags.length !== appliedQuery.tags.length) {
+          const found = new Set(tags.map((tag) => tag.slug));
+          const missingTag = appliedQuery.tags.find((tag) => !found.has(tag));
+          throw new CatalogServiceError("TAG_NOT_FOUND", "Tag was not found: " + missingTag + ".");
+        }
+
+        const sort = SORT_MAP[appliedQuery.sort];
+        const offset = (appliedQuery.page - 1) * appliedQuery.pageSize;
+        if (!Number.isSafeInteger(offset)) {
+          throw new CatalogServiceError("INVALID_PAGE", "Requested page is too large.");
+        }
+
+        const result = await repo.queryPublishedCatalogProducts({
+          filters: {
+            categorySlug: appliedQuery.category,
+            collectionSlug: appliedQuery.collection,
+            tagSlugs: appliedQuery.tags,
+            tagMode: appliedQuery.tagMode,
+            minPrice: appliedQuery.minPrice,
+            maxPrice: appliedQuery.maxPrice,
+            inStock: appliedQuery.inStock,
+          },
+          sortBy: sort.sortBy,
+          sortDirection: sort.sortDirection,
+          limit: appliedQuery.pageSize,
+          offset,
+        });
+
+        const calculatedTotalPages = result.total === 0 ? 0 : Math.ceil(result.total / appliedQuery.pageSize);
+        const totalPages = Math.min(calculatedTotalPages, CATALOG_QUERY_PAGE_NUMBER_MAX);
+        const isOutOfRange = result.total > 0 && appliedQuery.page > totalPages;
+        const items = result.items.map((item) => {
+          try {
+            return mapProduct(item);
+          } catch (error) {
+            throw new CatalogServiceError(
+              "CATALOG_DATA_INTEGRITY_ERROR",
+              "Catalog data could not be rendered safely.",
+              error,
+            );
+          }
+        });
+
+        return {
+          items,
+          pagination: {
+            page: appliedQuery.page,
+            pageSize: appliedQuery.pageSize,
+            total: result.total,
+            totalPages,
+            hasNextPage: result.hasNextPage && appliedQuery.page < totalPages,
+            isOutOfRange,
+          },
+          appliedQuery,
+        };
+      } catch (error) {
+        const classification =
+          error instanceof CatalogServiceError
+            ? error.code === "CATEGORY_NOT_FOUND" || error.code === "COLLECTION_NOT_FOUND" || error.code === "TAG_NOT_FOUND"
+              ? "not_found"
+              : error.code.startsWith("INVALID_")
+                ? "invalid_query"
+                : error.code === "CATALOG_DATABASE_ERROR"
+                  ? "database_failure"
+                  : error.code === "CATALOG_DATA_INTEGRITY_ERROR"
+                    ? "catalog_data_integrity"
+                    : "unexpected_application_failure"
+            : "database_failure";
+
+        if (observation) {
+          logCatalogObservation({
+            surface: observation.surface,
+            operation: "listPublishedProducts",
+            classification,
+            durationMs: Date.now() - startedAt,
+            query: appliedQuery,
+          });
+        }
+
+        if (error instanceof CatalogServiceError) throw error;
+        throw new CatalogServiceError("CATALOG_DATABASE_ERROR", "Catalog data could not be loaded.", error);
+      }
+    },
+
+    async getPublishedProductDetailsBySlug(slug: string): Promise<PublishedProductDetailResult> {
+      const normalizedSlug = normalizeSlug(slug, "slug");
+      const product = await repo.getPublishedProductDetailsBySlug(normalizedSlug);
+      if (!product) throw new CatalogServiceError("PRODUCT_NOT_FOUND", "Published product was not found.");
+      return mapPublishedProductDetails(product);
+    },
+
+    async getPublishedProductDetailsByIds(ids: string[]): Promise<Map<string, PublishedProductDetailResult | CatalogServiceError>> {
+      const products = await repo.getPublishedProductDetailsByIds([...new Set(ids)]);
+      const mapped = new Map<string, PublishedProductDetailResult | CatalogServiceError>();
+      for (const product of products) {
+        try {
+          mapped.set(product.id, mapPublishedProductDetails(product));
+        } catch (error) {
+          if (error instanceof CatalogServiceError) {
+            mapped.set(product.id, error);
+            continue;
+          }
+          throw error;
+        }
+      }
+      return mapped;
+    },
+
+        async getPublishedProductBySlug(slug: string): Promise<PublishedProductResult> {
       const normalizedSlug = normalizeSlug(slug, "slug");
       const product = await repo.getPublishedProductBySlug(normalizedSlug);
       if (!product) throw new CatalogServiceError("PRODUCT_NOT_FOUND", "Published product was not found.");

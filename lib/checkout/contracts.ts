@@ -34,6 +34,7 @@ export type CheckoutDto = {
   customer: { id: string; email: string; displayName: string | null } | null;
   cart: { id: string; items: CheckoutItemDto[] };
   address: CustomerAddressDto | null;
+  addresses?: CustomerAddressDto[];
   totals: CheckoutTotals;
   revision: CheckoutRevision;
   validation: { state: CheckoutValidationState; issues: CheckoutIssue[] };

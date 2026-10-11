@@ -154,14 +154,15 @@ export function CheckoutPage({ customer }: { customer: CustomerDto }) {
 
   useEffect(() => {
     const version = ++requestVersion.current;
-    Promise.all([checkoutRequest("GET"), addressRequest()])
-      .then(([nextCheckout, nextAddresses]) => {
+    checkoutRequest("GET")
+      .then((nextCheckout) => {
         if (version !== requestVersion.current) return;
         setCheckout(nextCheckout);
         appliedCouponRef.current = nextCheckout.coupon?.code ?? null;
         setCouponInput(nextCheckout.coupon?.code ?? "");
         setCouponError(nextCheckout.validation.issues.find((item) => item.code === "COUPON_INVALID")?.message ?? null);
         revisionRef.current = nextCheckout.revision;
+        const nextAddresses = nextCheckout.addresses ?? [];
         setAddresses(nextAddresses);
         const serverAddress = nextCheckout.address?.id ?? null;
         const nextSelected = selectedAddressRef.current && nextAddresses.some((item) => item.id === selectedAddressRef.current)

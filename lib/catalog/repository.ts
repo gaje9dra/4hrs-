@@ -994,6 +994,20 @@ export async function getPublishedProductDetailsBySlug(slug: string, client?: Ca
   });
 }
 
+/**
+ * Resolve the current published details for several cart products in one
+ * database round trip. This keeps price and inventory data live while avoiding
+ * per-line product lookups on cart and checkout reads.
+ */
+export async function getPublishedProductDetailsByIds(ids: string[], client?: CatalogRepositoryClient) {
+  const uniqueIds = [...new Set(ids)];
+  if (uniqueIds.length === 0) return [];
+  return clientOrDefault(client).product.findMany({
+    where: { ...publishedProductWhere, id: { in: uniqueIds } },
+    select: publicProductDetailSelect,
+  });
+}
+
 export async function getCategoryBySlug(slug: string, client?: CatalogRepositoryClient) {
   return clientOrDefault(client).category.findUnique({
     where: { slug },
