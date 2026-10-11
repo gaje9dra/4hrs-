@@ -35,16 +35,14 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  const requestHeaders = await headers()
-  const locale = await resolveRequestLocale()
+  // These operations are independent. Awaiting the locale before navigation
+  // unnecessarily adds database latency to every route using the root layout.
+  const [requestHeaders, locale, navigation] = await Promise.all([
+    headers(),
+    resolveRequestLocale(),
+    getStorefrontNavigation().catch(() => FALLBACK_NAVIGATION),
+  ])
   const nonce = requestHeaders.get('x-nonce')
-
-  let navigation = FALLBACK_NAVIGATION
-  try {
-    navigation = await getStorefrontNavigation()
-  } catch {
-    // Keep public/authentication pages renderable when catalog navigation is unavailable.
-  }
 
   const footerGroups = storefrontNavigationToFooterGroups(navigation)
   const identityJsonLd = process.env.NEXT_PUBLIC_SITE_URL ? [organizationJsonLd(), websiteJsonLd()] : []

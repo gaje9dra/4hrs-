@@ -23,8 +23,11 @@ export async function generateMetadata({ params, searchParams }: { params: Param
 }
 export default async function CategoryPage({ params, searchParams }: { params: Params; searchParams: Promise<StorefrontSearchParams> }) {
   const { slug } = await params; const paramsObject = await searchParams; const category = await loadCategory(slug); const query = catalogQueryFromSearchParams({ ...paramsObject, category: category.slug });
-  const [products, filters] = await Promise.all([getStorefrontCategoryProducts(category.slug, query), getStorefrontListingFilters("category")]);
-  const locale = await resolveRequestLocale();
+  const [products, filters, locale] = await Promise.all([
+    getStorefrontCategoryProducts(category.slug, query),
+    getStorefrontListingFilters("category"),
+    resolveRequestLocale(),
+  ]);
   const editorial = await listPublishedEditorialForReference("CATEGORY_EDITORIAL", "CATEGORY", category.id, locale);
   const editorialSections = await resolvePublishedContentPresentation(editorial);
   const categoryParams: StorefrontSearchParams = { ...paramsObject, category: category.slug };

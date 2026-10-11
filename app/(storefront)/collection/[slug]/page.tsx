@@ -23,8 +23,11 @@ export async function generateMetadata({ params, searchParams }: { params: Param
 }
 export default async function CollectionPage({ params, searchParams }: { params: Params; searchParams: Promise<StorefrontSearchParams> }) {
   const { slug } = await params; const paramsObject = await searchParams; const collection = await loadCollection(slug); const query = catalogQueryFromSearchParams({ ...paramsObject, collection: collection.slug });
-  const [products, filters] = await Promise.all([getStorefrontCollectionProducts(collection.slug, query), getStorefrontListingFilters("collection")]);
-  const locale = await resolveRequestLocale();
+  const [products, filters, locale] = await Promise.all([
+    getStorefrontCollectionProducts(collection.slug, query),
+    getStorefrontListingFilters("collection"),
+    resolveRequestLocale(),
+  ]);
   const editorial = await listPublishedEditorialForReference("COLLECTION_PAGE", "COLLECTION", collection.id, locale);
   const editorialSections = await resolvePublishedContentPresentation(editorial);
   const collectionParams: StorefrontSearchParams = { ...paramsObject, collection: collection.slug };

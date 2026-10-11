@@ -16,9 +16,8 @@ test("root shell wraps storefront content with skip link, main and footer", () =
 
 test("storefront navigation uses the public catalog service and canonical routes", () => {
   const source = read("lib/storefront/navigation.ts");
-  assert.match(source, /createCatalogQueryService/);
-  assert.match(source, /listActiveCategories/);
-  assert.match(source, /listActiveCollections/);
+  assert.match(source, /getStorefrontNavigationTaxonomy/);
+  assert.doesNotMatch(source, /createCatalogQueryService|catalog\.listActiveCategories|catalog\.listActiveCollections/);
   assert.match(source, /categoryPath/);
   assert.match(source, /collectionPath/);
   assert.doesNotMatch(source, /PrismaClient|provider|qikink|printful|printrove|printify/i);
