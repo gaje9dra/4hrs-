@@ -5,6 +5,7 @@ import { createCatalogSearchService, type CatalogSearchQuery } from "@/lib/catal
 import { productPath } from "@/lib/catalog/routes";
 import { CatalogServiceError } from "@/lib/catalog/errors";
 import { logCatalogObservation, type CatalogSurface } from "@/lib/catalog/observability";
+import { logger } from "@/lib/observability/logger";
 
 const catalog = createCatalogQueryService();
 const search = createCatalogSearchService();
@@ -290,32 +291,73 @@ export type StorefrontHomeData = {
   collections: Array<{ id: string; name: string; slug: string; description: string | null }>;
 };
 
+async function measureHomepageOperation<T>(
+  operation: "hero_products" | "active_categories" | "populated_collections" | "featured_collection_products",
+  run: () => Promise<T>,
+): Promise<T> {
+  const startedAt = Date.now();
+  try {
+    const result = await run();
+    const durationMs = Date.now() - startedAt;
+    if (durationMs >= 250) {
+      logger.warn("storefront.homepage.operation.slow", {
+        resourceType: "database",
+        outcome: "success",
+        durationMs,
+      }, { operation, thresholdMs: 250 });
+    }
+    return result;
+  } catch (error) {
+    const durationMs = Date.now() - startedAt;
+    if (durationMs >= 250) {
+      logger.error("storefront.homepage.operation.failed_slow", {
+        resourceType: "database",
+        outcome: "failure",
+        durationMs,
+        errorCode: error instanceof Error && /\\bP2024\\b/.test(error.message) ? "P2024" : "DATABASE_OPERATION_FAILED",
+      }, { operation });
+    }
+    throw error;
+  }
+}
+
 export async function getStorefrontHomeCatalogData(): Promise<StorefrontHomeData> {
   const startedAt = Date.now();
   // The homepage needs a small, representative set for its hero carousel.
   // Loading every catalog page here makes homepage latency and database work grow
   // with the entire inventory, even though only a few products are displayed.
   const [heroFirstPage, categories, collections] = await Promise.all([
-    getStorefrontProducts({ page: 1, pageSize: 12, sort: "newest" }),
-    getActiveCategories(),
-    getActiveCollectionsWithPublishedProducts(),
+    measureHomepageOperation("hero_products", () =>
+      getStorefrontProducts({ page: 1, pageSize: 12, sort: "newest" })),
+    measureHomepageOperation("active_categories", () => getActiveCategories()),
+    measureHomepageOperation("populated_collections", () => getActiveCollectionsWithPublishedProducts()),
   ]);
 
   const heroProducts = heroFirstPage.items.filter((product) => product.image !== null);
 
   const featuredCollection = collections[0] ?? null;
   const featuredResult = featuredCollection
-    ? await getStorefrontCollectionProducts(featuredCollection.slug, {
-        pageSize: 4,
-        sort: "merchandising",
-      })
+    ? await measureHomepageOperation("featured_collection_products", () =>
+        getStorefrontCollectionProducts(featuredCollection.slug, {
+          pageSize: 4,
+          sort: "merchandising",
+        }))
     : null;
 
   const featuredSlugs = new Set(featuredResult?.items.map((product) => product.slug) ?? []);
 
   const durationMs = Date.now() - startedAt;
-  if (durationMs >= 500) {
-    console.warn(JSON.stringify({ event: "storefront.home-catalog.fetch.slow", durationMs, heroCount: heroProducts.length, featuredCount: featuredResult?.items.length ?? 0 }));
+  if (durationMs >= 250) {
+    logger.warn("storefront.home-catalog.fetch.slow", {
+      resourceType: "database",
+      outcome: "success",
+      durationMs,
+    }, {
+      heroCount: heroProducts.length,
+      featuredCount: featuredResult?.items.length ?? 0,
+      featuredCollectionPresent: featuredCollection !== null,
+      thresholdMs: 250,
+    });
   }
 
   return {
