@@ -36,7 +36,7 @@ for (let index = 0; index < requestedSamples; index += 1) {
   let response;
   try {
     response = await fetch(url, {
-      redirect: "manual",
+      redirect: "follow",
       headers: { "user-agent": "4hrs-homepage-ttfb-check/1.0" },
     });
     const headersAt = performance.now();
@@ -45,6 +45,7 @@ for (let index = 0; index < requestedSamples; index += 1) {
     const sample = {
       sample: index + 1,
       status: response.status,
+      redirected: response.redirected,
       ttfbMs: round(headersAt - startedAt),
       totalMs: round(completedAt - startedAt),
       cacheHeader: response.headers.get("x-nf-cache")
