@@ -40,7 +40,7 @@ export function HomepageCampaignCarousel() {
     touchStart.current = { x: touch.clientX, y: touch.clientY };
   };
 
-  const handleTouchEnd = (event: React.TouchEvent<HTMLDivElement>) => {
+  const handleTouchEnd = (event: TouchEvent<HTMLDivElement>) => {
     const start = touchStart.current;
     touchStart.current = null;
     if (!start) return;
@@ -96,7 +96,7 @@ export function HomepageCampaignCarousel() {
             fill
             priority={activeIndex === 0}
             sizes="100vw"
-            className={`${activeIndex === 1 ? "object-cover object-center" : "object-contain"} ${slideAnimation}`}
+            className={`object-contain object-center ${slideAnimation}`}
           />
         </Link>
 
