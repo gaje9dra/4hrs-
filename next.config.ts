@@ -28,6 +28,13 @@ const nextConfig: NextConfig = {
       {
         pathname: '/images/**',
       },
+      {
+        // Next.js 16 requires an explicit search pattern for local image URLs
+        // that include query strings. Keep this cache-busting banner URL valid
+        // without allowing arbitrary query parameters on local assets.
+        pathname: '/images/homepage-banners/4hrs-men-banner.png',
+        search: '?v=20261009-2',
+      },
     ],
   },
   async headers() {
