@@ -131,7 +131,7 @@ export async function syncReferralRewardLifecycleInTransaction(
     }
     if (coupon.status === "INACTIVE" && (!coupon.expiresAt || coupon.expiresAt > now) && !redeemed) {
       const latestDeactivation = await tx.referralRewardLifecycleEvent.findFirst({ where: { referralRewardId: reward.id, eventType: "REWARD_DEACTIVATED" }, orderBy: [{ createdAt: "desc" }, { id: "desc" }] });
-      if (latestDeactivation && /^(REFUND_PENDING|REFUND_AMBIGUOUS|CANCELLATION_ACTIVE|CHARGEBACK_OPEN|CHARGEBACK_UNKNOWN):/.test(latestDeactivation.reason)) {
+      if (latestDeactivation && /^(REFUND_PENDING|REFUND_AMBIGUOUS|CANCELLATION_ACTIVE|CHARGEBACK_OPEN|CHARGEBACK_UNKNOWN|CHARGEBACK_LOST):/.test(latestDeactivation.reason)) {
         await tx.discountCoupon.update({ where: { id: coupon.id }, data: { status: "ACTIVE" } });
         const key = `${eventKey}:reward:${reward.id}:reactivated`;
         await tx.referralRewardLifecycleEvent.upsert({ where: { eventKey: key }, create: { id: randomUUID(), referralRewardId: reward.id, eventKey: key, eventType: "REWARD_REACTIVATED", reason, previousCouponStatus: "INACTIVE", nextCouponStatus: "ACTIVE" }, update: {} });
