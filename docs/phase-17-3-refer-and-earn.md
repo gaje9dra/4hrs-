@@ -49,6 +49,7 @@ Therefore these public sources are insufficient to implement a secure Qikink del
 - Reward processing now requires a persisted non-manual delivery tracking event whose provider identity matches the shipment provider and whose timestamp is not later than the recorded delivery timestamp. A shipment `DELIVERED` flag by itself is not enough.
 - Deterministic tests cover matching provider evidence and reject manual, mismatched-provider, future-dated, or absent events.
 - This evidence gate intentionally means current Qikink orders cannot earn 25% delivery rewards: Qikink's adapter declares tracking lookup and webhooks unavailable, and there is no supported trusted event path.
+- Referral reward emails use the existing notification event/delivery infrastructure. Registration and delivered-order coupon notifications are enqueued with stable idempotency keys inside the same database transaction as reward creation, so a rolled-back reward cannot send a notification.
 
 ## Refund/reversal policy decision (implementation still required)
 
