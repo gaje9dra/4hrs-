@@ -6,7 +6,6 @@ import { productPath } from "@/lib/catalog/routes";
 import { CatalogServiceError } from "@/lib/catalog/errors";
 import { logCatalogObservation, type CatalogSurface } from "@/lib/catalog/observability";
 import { logger } from "@/lib/observability/logger";
-import { logPrismaPoolMetrics } from "@/lib/db/client";
 
 const catalog = createCatalogQueryService();
 const search = createCatalogSearchService();
@@ -309,7 +308,6 @@ async function measureHomepageOperation<T>(
   try {
     const result = await run();
     const durationMs = Date.now() - startedAt;
-    if (durationMs >= 1000) await logPrismaPoolMetrics("homepage-operation:" + operation);
     if (durationMs >= 250) {
       logger.warn("storefront.homepage.operation.slow", {
         resourceType: "database",
@@ -320,9 +318,6 @@ async function measureHomepageOperation<T>(
     return result;
   } catch (error) {
     const durationMs = Date.now() - startedAt;
-    if (error instanceof Error && /\bP2024\b/.test(error.message)) {
-      await logPrismaPoolMetrics("P2024-homepage-operation:" + operation);
-    }
     if (durationMs >= 250) {
       logger.error("storefront.homepage.operation.failed_slow", {
         resourceType: "database",
