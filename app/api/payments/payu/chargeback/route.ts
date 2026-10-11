@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isTrustedStateChangingRequest } from "@/lib/security/request";
 import {
   parsePayUChargebackPayload,
   processPayUChargebackEvent,
@@ -11,6 +12,12 @@ import {
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
+  // Browser-origin protection is an additional boundary; PayU callbacks without
+  // browser Origin headers still require and undergo the provider signature check below.
+  if (!isTrustedStateChangingRequest(request)) {
+    return NextResponse.json({ error: { code: "UNTRUSTED_ORIGIN", message: "Chargeback webhook request origin is not trusted." } }, { status: 403 });
+  }
+
   const contentLength = Number(request.headers.get("content-length") ?? "0");
   if (Number.isFinite(contentLength) && contentLength > 64 * 1024) {
     return NextResponse.json({ error: { code: "PAYLOAD_TOO_LARGE", message: "Chargeback webhook payload is too large." } }, { status: 413 });
