@@ -6,6 +6,7 @@ import { db } from "@/lib/db/client";
 import { createOrderApplication } from "@/lib/orders/application";
 import { OrderDomainError } from "@/lib/orders/errors";
 import { createCheckoutPaymentReference } from "@/lib/payments/checkout";
+import { syncReferralRewardLifecycleForPayment } from "@/lib/referrals/service";
 
 const customers: string[] = [];
 const addresses: string[] = [];
@@ -204,6 +205,28 @@ test("pending refund blocks referral rewards and failed-refund retry recovers th
   assert.equal((await db.referral.findUniqueOrThrow({ where: { id: referral.id } })).status, "REWARDED");
   assert.equal(await db.referralReward.count({ where: { referralId: referral.id } }), 2);
 });
+test("post-issuance pending refund deactivates unused referral coupons and failed refund restores them with audit", async () => {
+  const f = await fixture();
+  const referrer = await db.customer.create({ data: { email: `${randomUUID()}@referral-lifecycle.invalid` } });
+  customers.push(referrer.id);
+  const referral = await db.referral.create({ data: { referrerCustomerId: referrer.id, invitedCustomerId: f.customer.id, referralCodeSnapshot: `TEST-${randomUUID().replaceAll("-", "").slice(0, 16)}`, status: "AWAITING_ORDER" } });
+  referralIds.push(referral.id);
+  const result = await appFor(f.customer.id).createOrderFromVerifiedPayment({ paymentId: f.payment.id });
+  orders.push(result.id);
+  const rewards = await db.referralReward.findMany({ where: { referralId: referral.id }, include: { coupon: true } });
+  assert.equal(rewards.length, 2);
+  const refund = await db.paymentRefund.create({ data: { paymentId: f.payment.id, idempotencyKey: `referral-lifecycle-${randomUUID()}`, amount: new Prisma.Decimal("10.00"), currency: f.payment.currency, reason: "CUSTOMER_REQUEST", status: "PENDING" } });
+  refundIds.push(refund.id);
+  await syncReferralRewardLifecycleForPayment(f.payment.id, `refund:${refund.id}:PENDING`, `REFUND_PENDING:${refund.id}`);
+  let coupons = await db.discountCoupon.findMany({ where: { referralId: referral.id } });
+  assert.ok(coupons.every((coupon) => coupon.status === "INACTIVE"));
+  assert.equal(await db.referralRewardLifecycleEvent.count({ where: { referralRewardId: { in: rewards.map((reward) => reward.id) }, eventType: "REWARD_DEACTIVATED" } }), 2);
+  await db.paymentRefund.update({ where: { id: refund.id }, data: { status: "FAILED", completedAt: new Date(), failureCode: "TEST_REFUND_FAILED" } });
+  await syncReferralRewardLifecycleForPayment(f.payment.id, `refund:${refund.id}:FAILED`, `REFUND_FAILED:${refund.id}`);
+  coupons = await db.discountCoupon.findMany({ where: { referralId: referral.id } });
+  assert.ok(coupons.every((coupon) => coupon.status === "ACTIVE"));
+  assert.equal(await db.referralRewardLifecycleEvent.count({ where: { referralRewardId: { in: rewards.map((reward) => reward.id) }, eventType: "REWARD_REACTIVATED" } }), 2);
+});
 test("rejects a missing or non-successful Payment", async () => {
   const f = await fixture({ status: "FAILED" });
   const app = appFor(f.customer.id);
@@ -350,6 +373,8 @@ test("browser-side commercial values are not part of the creation contract", asy
 
 after(async () => {
   if (referralIds.length) {
+    const rewardIds = (await db.referralReward.findMany({ where: { referralId: { in: referralIds } }, select: { id: true } })).map((reward) => reward.id);
+    if (rewardIds.length) await db.referralRewardLifecycleEvent.deleteMany({ where: { referralRewardId: { in: rewardIds } } });
     await db.referralReward.deleteMany({ where: { referralId: { in: referralIds } } });
     await db.discountCoupon.deleteMany({ where: { referralId: { in: referralIds } } });
     await db.referral.deleteMany({ where: { id: { in: referralIds } } });
