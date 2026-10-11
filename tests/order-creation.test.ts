@@ -7,6 +7,7 @@ import { createOrderApplication } from "@/lib/orders/application";
 import { OrderDomainError } from "@/lib/orders/errors";
 import { createCheckoutPaymentReference } from "@/lib/payments/checkout";
 import { syncReferralRewardLifecycleForPayment } from "@/lib/referrals/service";
+import { parsePayUChargebackPayload, processPayUChargebackEvent } from "@/lib/payments/payu-chargebacks";
 
 const customers: string[] = [];
 const addresses: string[] = [];
@@ -21,6 +22,7 @@ const referralIds: string[] = [];
 const refundIds: string[] = [];
 const cancellationIds: string[] = [];
 const couponRedemptionIds: string[] = [];
+const paymentDisputeIds: string[] = [];
 
 function digest(value: string): string {
   return createHash("sha256").update(value).digest("hex");
@@ -635,7 +637,70 @@ test("concurrent refund and cancellation resolution restores coupons only after 
   );
 });
 
+test("verified PayU chargeback updates block referral coupons and merchant-favour closure safely restores them", async () => {
+  const f = await fixture();
+  await db.payment.update({ where: { id: f.payment.id }, data: { providerId: "payu" } });
+  const referrer = await db.customer.create({ data: { email: `${randomUUID()}@referral-chargeback.invalid` } });
+  customers.push(referrer.id);
+  const referral = await db.referral.create({
+    data: {
+      referrerCustomerId: referrer.id,
+      invitedCustomerId: f.customer.id,
+      referralCodeSnapshot: `TEST-${randomUUID().replaceAll("-", "").slice(0, 16)}`,
+      status: "AWAITING_ORDER",
+    },
+  });
+  referralIds.push(referral.id);
+  const order = await appFor(f.customer.id).createOrderFromVerifiedPayment({ paymentId: f.payment.id });
+  orders.push(order.id);
+  const rewards = await db.referralReward.findMany({ where: { referralId: referral.id } });
+  assert.equal(rewards.length, 2);
+
+  const disputeId = `CB-${randomUUID().replaceAll("-", "").slice(0, 20)}`;
+  const makeEvent = (status: string, updatedAt: string) => parsePayUChargebackPayload({
+    type: "payments",
+    event: "dispute",
+    mid: "test-merchant",
+    txn_id: f.payment.internalReference,
+    cb_id: disputeId,
+    cb_type: "Card-Not-Present",
+    cb_amount: "10.00",
+    cb_status: status,
+    reason_code: "Fraud",
+    created_at: "2026-10-11T10:00:00.000Z",
+    updated_at: updatedAt,
+    due_date: "2026-10-20",
+  });
+
+  const opened = await processPayUChargebackEvent(makeEvent("Pending Response", "2026-10-11T10:01:00.000Z"));
+  paymentDisputeIds.push(opened.disputeId);
+  assert.equal(opened.status, "OPEN");
+  let coupons = await db.discountCoupon.findMany({ where: { referralId: referral.id } });
+  assert.ok(coupons.every((coupon) => coupon.status === "INACTIVE"));
+
+  const duplicate = await processPayUChargebackEvent(makeEvent("Pending Response", "2026-10-11T10:01:00.000Z"));
+  assert.equal(duplicate.duplicate, true);
+  assert.equal(duplicate.disputeId, opened.disputeId);
+
+  const lost = await processPayUChargebackEvent(makeEvent("Closed Customer Favour", "2026-10-11T10:02:00.000Z"));
+  assert.equal(lost.status, "CLOSED_CUSTOMER_FAVOUR");
+  coupons = await db.discountCoupon.findMany({ where: { referralId: referral.id } });
+  assert.ok(coupons.every((coupon) => coupon.status === "INACTIVE"));
+
+  const merchantWon = await processPayUChargebackEvent(makeEvent("Closed in Merchant Favour", "2026-10-11T10:03:00.000Z"));
+  assert.equal(merchantWon.status, "CLOSED_MERCHANT_FAVOUR");
+  coupons = await db.discountCoupon.findMany({ where: { referralId: referral.id } });
+  assert.ok(coupons.every((coupon) => coupon.status === "ACTIVE"));
+
+  const stale = await processPayUChargebackEvent(makeEvent("Pending Response", "2026-10-11T10:01:00.000Z"));
+  assert.equal(stale.duplicate, true);
+  assert.equal(stale.status, "CLOSED_MERCHANT_FAVOUR");
+  coupons = await db.discountCoupon.findMany({ where: { referralId: referral.id } });
+  assert.ok(coupons.every((coupon) => coupon.status === "ACTIVE"));
+});
+
 after(async () => {
+  if (paymentDisputeIds.length) await db.paymentDispute.deleteMany({ where: { id: { in: paymentDisputeIds } } });
   if (couponRedemptionIds.length) await db.couponRedemption.deleteMany({ where: { id: { in: couponRedemptionIds } } });
   if (referralIds.length) {
     const rewardIds = (await db.referralReward.findMany({ where: { referralId: { in: referralIds } }, select: { id: true } })).map((reward) => reward.id);
