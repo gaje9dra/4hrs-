@@ -9,9 +9,14 @@ export const metadata: Metadata = { title: "4HRS — Fashion by Design", descrip
 
 export default async function HomePage() {
   const locale = await resolveRequestLocale();
-  let data; try { data = await getStorefrontHomeCatalogData(); } catch (error) { if (error instanceof CatalogServiceError) throw error; throw new Error("Homepage catalog data could not be loaded.", { cause: error }); }
-  const editorial = await listPublishedContentByType("HOMEPAGE_SECTION", locale);
-  const banners = await listPublishedContentByType("PROMOTIONAL_BANNER", locale);
+  const [data, editorial, banners] = await Promise.all([
+    getStorefrontHomeCatalogData().catch((error: unknown) => {
+      if (error instanceof CatalogServiceError) throw error;
+      throw new Error("Homepage catalog data could not be loaded.", { cause: error });
+    }),
+    listPublishedContentByType("HOMEPAGE_SECTION", locale),
+    listPublishedContentByType("PROMOTIONAL_BANNER", locale),
+  ]);
   const editorialSections = await resolvePublishedContentPresentation([...editorial, ...banners]);
   return <Homepage data={data} editorialSections={editorialSections} />;
 }
