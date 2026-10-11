@@ -33,6 +33,34 @@ The Qikink adapter currently has `createShipment: false`, `trackingLookup: false
 
 Cancellation, refund, chargeback, reservation-expiry/recovery and post-reward refund handling still require dedicated lifecycle policy and tests. If payment is no longer SUCCEEDED when delivery is processed, no 25% reward is issued. Those exceptional states and recovery behavior must be addressed before calling the whole phase production-ready.
 
+## Delivery contract investigation (2026-10-11)
+
+Reviewed Qikink's official public documentation:
+
+- The [Qikink API documentation](https://admins.qikink.com/api-docs) documents creating an order with `POST /erp2/index.php/api/createOrder` and returns an order identifier. The documented operation does not define an authenticated tracking-status lookup endpoint, a delivery webhook, a webhook signature scheme, or a polling contract.
+- Qikink's [tracking guide](https://qikink.com/help/orders/how-to-track-an-order/) describes checking the tracking ID and live shipment information through the merchant dashboard.
+- Qikink's [shipment-status guide](https://qikink.com/help/orders/shipping-statuses/) lists statuses such as `Delivered`, but does not document a machine-to-machine event transport or signature contract for this integration.
+
+Therefore these public sources are insufficient to implement a secure Qikink delivery webhook or polling adapter. Do not infer a private endpoint from dashboard behavior. A written, versioned API contract from Qikink (including authentication/signatures, event identifiers, timestamps, status semantics, retry behavior, and order/tracking identifiers) or a separately approved tracking provider is required before delivery-based rewards can be enabled in production.
+
+## Additional safety hardening in this increment
+
+- Reward processing re-reads the order and payment inside the serializable transaction, requires a confirmed order and successful payment, and rejects any payment with a pending, ambiguous, or successful refund record.
+- Reward processing now requires a persisted non-manual delivery tracking event whose provider identity matches the shipment provider and whose timestamp is not later than the recorded delivery timestamp. A shipment `DELIVERED` flag by itself is not enough.
+- Deterministic tests cover matching provider evidence and reject manual, mismatched-provider, future-dated, or absent events.
+- This evidence gate intentionally means current Qikink orders cannot earn 25% delivery rewards: Qikink's adapter declares tracking lookup and webhooks unavailable, and there is no supported trusted event path.
+
+## Refund/reversal policy decision (implementation still required)
+
+The qualifying order becomes ineligible for a new 25% reward if any refund is pending, ambiguous, or successful, or if payment is no longer `SUCCEEDED`. This is a conservative issuance gate, not a complete post-issuance reversal workflow. If a refund/cancellation is recorded after reward issuance, the existing coupon audit history must be retained; unused coupons should be deactivated through a dedicated idempotent audited operation, while already redeemed coupons must not be retroactively changed into fake financial reversals. That post-issuance operation and its integration into all refund/cancellation outcomes remain incomplete and block production completion.
+
+## Operational recovery
+
+1. Do not manually set a shipment to `DELIVERED` to trigger a reward.
+2. If delivery evidence is missing or provider identity/timestamps do not match, leave the referral awaiting delivery and investigate the provider's official records.
+3. Do not retry a reward by editing coupon or referral rows manually. Re-run the supported idempotent reward processor only after verified payment and trusted delivery evidence exist.
+4. For any reward already issued before a later refund/reversal, preserve the original referral/coupon rows and use the approved audited correction process once implemented. Until that process exists, escalate for a recorded administrative decision and do not claim automated reversal support.
+
 ## Verification requirements
 
 Check the current branch's GitHub Actions results after each complete increment. Required checks include the repository's actual lint, typecheck, test, build, Prisma validation, migration, and recovery checks. The phase stays a draft/unmerged while any required test fails or while the real delivery contract and refund/recovery behavior remain unresolved.
