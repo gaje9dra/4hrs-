@@ -637,6 +637,44 @@ test("concurrent refund and cancellation resolution restores coupons only after 
   );
 });
 
+test("an already-open PayU dispute prevents initial referral reward issuance", async () => {
+  const f = await fixture();
+  await db.payment.update({ where: { id: f.payment.id }, data: { providerId: "payu" } });
+  const referrer = await db.customer.create({ data: { email: `${randomUUID()}@referral-open-chargeback.invalid` } });
+  customers.push(referrer.id);
+  const referral = await db.referral.create({
+    data: {
+      referrerCustomerId: referrer.id,
+      invitedCustomerId: f.customer.id,
+      referralCodeSnapshot: `TEST-${randomUUID().replaceAll("-", "").slice(0, 16)}`,
+      status: "AWAITING_ORDER",
+    },
+  });
+  referralIds.push(referral.id);
+  const dispute = await db.paymentDispute.create({
+    data: {
+      paymentId: f.payment.id,
+      providerId: "payu",
+      providerDisputeId: `CB-${randomUUID().replaceAll("-", "").slice(0, 20)}`,
+      transactionReference: f.payment.internalReference,
+      amount: new Prisma.Decimal("10.00"),
+      currency: "INR",
+      disputeType: "Card-Not-Present",
+      reasonCode: "Fraud",
+      providerStatus: "Pending Response",
+      status: "OPEN",
+      providerCreatedAt: new Date(),
+      providerUpdatedAt: new Date(),
+    },
+  });
+  paymentDisputeIds.push(dispute.id);
+
+  const order = await appFor(f.customer.id).createOrderFromVerifiedPayment({ paymentId: f.payment.id });
+  orders.push(order.id);
+  assert.equal(await db.referralReward.count({ where: { referralId: referral.id } }), 0);
+  assert.equal((await db.referral.findUniqueOrThrow({ where: { id: referral.id } })).status, "AWAITING_PAYMENT_REVIEW");
+});
+
 test("verified PayU chargeback updates block referral coupons and merchant-favour closure safely restores them", async () => {
   const f = await fixture();
   await db.payment.update({ where: { id: f.payment.id }, data: { providerId: "payu" } });
