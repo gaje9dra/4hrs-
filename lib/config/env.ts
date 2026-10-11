@@ -76,6 +76,10 @@ function validateProviderConfiguration(nodeEnv: EnvironmentName): void {
     if (nodeEnv === "production" && payment.enabled && payment.id === "controlled-sandbox") {
       throw new Error("The controlled-sandbox payment provider cannot be enabled in production.");
     }
+
+    if (payment.enabled && payment.id === "payu" && !nonEmpty("PAYU_MERCHANT_ID", process.env.PAYU_MERCHANT_ID)) {
+      throw new Error("PAYU_MERCHANT_ID is required when PayU is enabled so signed chargeback webhooks can be bound to the configured merchant.");
+    }
   }
 }
 
