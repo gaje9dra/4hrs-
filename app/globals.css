@@ -638,3 +638,15 @@ code {
     animation: none;
   }
 }
+
+
+/* Smoothly animate the carousel frame between banner aspect ratios. */
+.homepage-banner-frame {
+  transition: aspect-ratio 650ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .homepage-banner-frame {
+    transition: none;
+  }
+}
