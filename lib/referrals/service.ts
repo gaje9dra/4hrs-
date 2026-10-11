@@ -111,22 +111,27 @@ export async function syncReferralRewardLifecycleInTransaction(
     const redeemed = coupon.redemptions.some((redemption) => redemption.status === "REDEEMED");
     const reserved = coupon.redemptions.some((redemption) => redemption.status === "RESERVED");
     if (disqualified) {
-      if (redeemed || reserved) {
-        const redemptionStatus = redeemed ? "REDEEMED" : "RESERVED";
+      if (redeemed) {
         const key = `${eventKey}:reward:${reward.id}:existing-redemption`;
-        await tx.referralRewardLifecycleEvent.upsert({ where: { eventKey: key }, create: { id: randomUUID(), referralRewardId: reward.id, eventKey: key, eventType: redeemed ? "DISQUALIFIED_AFTER_REDEMPTION" : "DISQUALIFIED_WITH_RESERVED_REDEMPTION", reason, previousCouponStatus: coupon.status, nextCouponStatus: coupon.status, redemptionStatus }, update: {} });
+        await tx.referralRewardLifecycleEvent.upsert({ where: { eventKey: key }, create: { id: randomUUID(), referralRewardId: reward.id, eventKey: key, eventType: "DISQUALIFIED_AFTER_REDEMPTION", reason, previousCouponStatus: coupon.status, nextCouponStatus: coupon.status, redemptionStatus: "REDEEMED" }, update: {} });
         continue;
       }
+      // Disable future reservations immediately, including when a checkout already holds a reservation.
+      // finalizeCouponRedemption honors the persisted reservation snapshot and does not reprice the in-flight checkout.
       if (coupon.status === "ACTIVE") {
         await tx.discountCoupon.update({ where: { id: coupon.id }, data: { status: "INACTIVE" } });
         const key = `${eventKey}:reward:${reward.id}:deactivated`;
         await tx.referralRewardLifecycleEvent.upsert({ where: { eventKey: key }, create: { id: randomUUID(), referralRewardId: reward.id, eventKey: key, eventType: "REWARD_DEACTIVATED", reason, previousCouponStatus: coupon.status, nextCouponStatus: "INACTIVE" }, update: {} });
       }
+      if (reserved) {
+        const key = `${eventKey}:reward:${reward.id}:reserved-checkout`;
+        await tx.referralRewardLifecycleEvent.upsert({ where: { eventKey: key }, create: { id: randomUUID(), referralRewardId: reward.id, eventKey: key, eventType: "DISQUALIFIED_WITH_RESERVED_REDEMPTION", reason, previousCouponStatus: coupon.status, nextCouponStatus: coupon.status === "ACTIVE" ? "INACTIVE" : coupon.status, redemptionStatus: "RESERVED" }, update: {} });
+      }
       continue;
     }
-    if (coupon.status === "INACTIVE" && (!coupon.expiresAt || coupon.expiresAt > now) && !redeemed && !reserved) {
-      const latest = await tx.referralRewardLifecycleEvent.findFirst({ where: { referralRewardId: reward.id }, orderBy: [{ createdAt: "desc" }, { id: "desc" }] });
-      if (latest?.eventType === "REWARD_DEACTIVATED" && /^(REFUND_PENDING|REFUND_AMBIGUOUS|CANCELLATION_ACTIVE):/.test(latest.reason)) {
+    if (coupon.status === "INACTIVE" && (!coupon.expiresAt || coupon.expiresAt > now) && !redeemed) {
+      const latestDeactivation = await tx.referralRewardLifecycleEvent.findFirst({ where: { referralRewardId: reward.id, eventType: "REWARD_DEACTIVATED" }, orderBy: [{ createdAt: "desc" }, { id: "desc" }] });
+      if (latestDeactivation && /^(REFUND_PENDING|REFUND_AMBIGUOUS|CANCELLATION_ACTIVE):/.test(latestDeactivation.reason)) {
         await tx.discountCoupon.update({ where: { id: coupon.id }, data: { status: "ACTIVE" } });
         const key = `${eventKey}:reward:${reward.id}:reactivated`;
         await tx.referralRewardLifecycleEvent.upsert({ where: { eventKey: key }, create: { id: randomUUID(), referralRewardId: reward.id, eventKey: key, eventType: "REWARD_REACTIVATED", reason, previousCouponStatus: "INACTIVE", nextCouponStatus: "ACTIVE" }, update: {} });
