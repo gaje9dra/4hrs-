@@ -73,17 +73,6 @@ export function HomepageCampaignCarousel() {
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
-        {/* Preload the next campaign too; the carousel may advance before LCP is measured. */}
-        <Image
-          src={banners[1].src}
-          alt=""
-          width={1600}
-          height={500}
-          sizes="100vw"
-          preload
-          aria-hidden="true"
-          className="hidden"
-        />
 
         {/* Mobile: give the artwork the entire carousel area; no headline or CTA overlay. */}
         <Link
@@ -98,7 +87,7 @@ export function HomepageCampaignCarousel() {
             fill
             loading="eager"
             fetchPriority="high"
-            sizes="100vw"
+            sizes="(max-width: 640px) 100vw, 640px"
             className={`object-cover object-center ${slideAnimation}`}
           />
         </Link>
@@ -116,7 +105,7 @@ export function HomepageCampaignCarousel() {
             fill
             loading="eager"
             fetchPriority="high"
-            sizes="100vw"
+            sizes="(max-width: 1507px) 100vw, 1507px"
             className={`${activeIndex === 1 ? "object-cover object-top" : "object-contain object-center"} ${slideAnimation}`}
           />
         </Link>
