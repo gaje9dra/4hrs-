@@ -9,12 +9,16 @@ test("production CSP permits only the official PayU hosted checkout form targets
   const proxy = source("proxy.ts");
   assert.match(proxy, /form-action 'self' https:\/\/test\.payu\.in https:\/\/secure\.payu\.in/);
   assert.doesNotMatch(proxy, /form-action\s+[^;]*https:\/\/[^;]*(?:\*|payu\.com)/);
+  assert.match(proxy, /isPayURedirect/);
+  assert.match(proxy, /process\.env\.NODE_ENV === "production" && !isPayURedirect/);
 });
 
-test("PayU redirect auto-submit script uses the request CSP nonce", () => {
+test("PayU redirect response owns a matching nonce and CSP for auto-submit", () => {
   const route = source("app/api/payments/payu/redirect/route.ts");
-  assert.match(route, /request\.headers\.get\("x-nonce"\)/);
+  assert.match(route, /randomBytes\(18\)\.toString\("base64"\)/);
   assert.match(route, /<script nonce="\$\{nonce\}">document\.getElementById\("payu"\)\.submit\(\)<\/script>/);
-  assert.match(route, /headers\.set\("Content-Security-Policy", contentSecurityPolicy\)/);
+  assert.match(route, /\`script-src 'nonce-\$\{nonce\}'\`/);
+  assert.match(route, /form-action 'self' https:\/\/test\.payu\.in https:\/\/secure\.payu\.in/);
+  assert.doesNotMatch(route, /request\.headers\.get\("x-nonce"\)/);
   assert.match(route, /Cache-Control.*no-store/);
 });
