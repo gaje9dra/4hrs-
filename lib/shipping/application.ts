@@ -176,7 +176,7 @@ export function createShippingApplication(
     try {
       for (let attempt = 0; attempt < 8; attempt += 1) {
         try {
-          const processedShipment = await database.$transaction(async (tx) => {
+          return await database.$transaction(async (tx) => {
         const txRepository = createShippingRepository(tx);
         const raced = await txRepository.getShipmentByCreationIdempotencyKey(idempotencyKey);
         if (raced) {
