@@ -322,7 +322,11 @@ export function createPaymentApplication(
       return created;
     });
 
-    await syncReferralRewardLifecycleForPayment(payment.id, `refund:${refund.id}:PENDING`, `REFUND_PENDING:${refund.id}`);
+    try {
+      await syncReferralRewardLifecycleForPayment(payment.id, `refund:${refund.id}:PENDING`, `REFUND_PENDING:${refund.id}`);
+    } catch {
+      // Continue the provider operation; the final-state synchronization and idempotent retry recover the audit transition.
+    }
 
     if (!payment.providerId || !payment.providerReference) {
       refund = await repository.updatePaymentRefund({ id: refund.id, status: PaymentRefundStatus.FAILED, failureCode: "PROVIDER_REFERENCE_MISSING" });

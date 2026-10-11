@@ -379,6 +379,8 @@ after(async () => {
     await db.discountCoupon.deleteMany({ where: { referralId: { in: referralIds } } });
     await db.referral.deleteMany({ where: { id: { in: referralIds } } });
   }
+  await db.notificationDelivery.deleteMany({ where: { customerId: { in: customers } } });
+  await db.notificationEvent.deleteMany({ where: { customerId: { in: customers } } });
   if (orders.length) await db.order.deleteMany({ where: { id: { in: orders } } });
   if (cartItems.length) await db.cartItem.deleteMany({ where: { id: { in: cartItems } } });
   if (carts.length) await db.cart.deleteMany({ where: { id: { in: carts } } });
