@@ -65,7 +65,7 @@ export function createAuthenticationService(dependencies: AuthDependencies = {})
   const repository = dependencies.repository ?? createCustomerRepository();
   const now = dependencies.now ?? (() => new Date());
 
-  async function register(input: { email: string; password: string }, abuseKey: string): Promise<AuthSessionResult> {
+  async function register(input: { email: string; password: string; referralCode?: string | null }, abuseKey: string): Promise<AuthSessionResult> {
     checkRateLimit(dependencies.rateLimiter, abuseKey, REGISTRATION_LIMIT, REGISTRATION_WINDOW_MS);
     const email = normalizeEmail(input.email);
     const passwordHash = await hashPassword(input.password);
@@ -83,6 +83,15 @@ export function createAuthenticationService(dependencies: AuthDependencies = {})
         const created = await tx.createCustomer({ email, status: "ACTIVE" });
         await tx.createCredential({ customerId: created.id, passwordHash });
         await tx.createSession({ customerId: created.id, sessionTokenHash, expiresAt });
+        if (tx.createReferralRegistration) {
+          const configuredDays = Number(process.env.REFERRAL_COUPON_TTL_DAYS ?? "365");
+          const expiryDays = Number.isSafeInteger(configuredDays) && configuredDays >= 1 && configuredDays <= 3650 ? configuredDays : 365;
+          await tx.createReferralRegistration({
+            customerId: created.id,
+            referralCode: input.referralCode ?? null,
+            couponExpiresAt: new Date(now().getTime() + expiryDays * 24 * 60 * 60 * 1000),
+          });
+        }
         return created;
       });
 
