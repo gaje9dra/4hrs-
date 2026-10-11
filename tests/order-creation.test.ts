@@ -393,6 +393,84 @@ test("browser-side commercial values are not part of the creation contract", asy
   assert.equal("status" in input, false);
 });
 
+test("ambiguous and successful partial refunds suppress the initial 25% reward", async () => {
+  for (const refundStatus of ["AMBIGUOUS", "SUCCEEDED"] as const) {
+    const f = await fixture();
+    const referrer = await db.customer.create({ data: { email: `${randomUUID()}@referral-refund-gate.invalid` } });
+    customers.push(referrer.id);
+    const referral = await db.referral.create({
+      data: {
+        referrerCustomerId: referrer.id,
+        invitedCustomerId: f.customer.id,
+        referralCodeSnapshot: `TEST-${randomUUID().replaceAll("-", "").slice(0, 16)}`,
+        status: "AWAITING_ORDER",
+      },
+    });
+    referralIds.push(referral.id);
+    const refund = await db.paymentRefund.create({
+      data: {
+        paymentId: f.payment.id,
+        idempotencyKey: `referral-refund-gate-${randomUUID()}`,
+        amount: new Prisma.Decimal("10.00"),
+        currency: f.payment.currency,
+        reason: "CUSTOMER_REQUEST",
+        status: refundStatus,
+      },
+    });
+    refundIds.push(refund.id);
+
+    const order = await appFor(f.customer.id).createOrderFromVerifiedPayment({ paymentId: f.payment.id });
+    orders.push(order.id);
+    assert.equal(await db.referralReward.count({ where: { referralId: referral.id } }), 0, `${refundStatus} refund must suppress rewards`);
+    assert.equal((await db.referral.findUniqueOrThrow({ where: { id: referral.id } })).status, "AWAITING_PAYMENT_REVIEW");
+  }
+});
+
+test("concurrent refund lifecycle synchronization retries serialization conflicts without duplicate audit events", async () => {
+  const f = await fixture();
+  const referrer = await db.customer.create({ data: { email: `${randomUUID()}@referral-refund-concurrency.invalid` } });
+  customers.push(referrer.id);
+  const referral = await db.referral.create({
+    data: {
+      referrerCustomerId: referrer.id,
+      invitedCustomerId: f.customer.id,
+      referralCodeSnapshot: `TEST-${randomUUID().replaceAll("-", "").slice(0, 16)}`,
+      status: "AWAITING_ORDER",
+    },
+  });
+  referralIds.push(referral.id);
+  const order = await appFor(f.customer.id).createOrderFromVerifiedPayment({ paymentId: f.payment.id });
+  orders.push(order.id);
+  const refund = await db.paymentRefund.create({
+    data: {
+      paymentId: f.payment.id,
+      idempotencyKey: `referral-refund-concurrency-${randomUUID()}`,
+      amount: new Prisma.Decimal("10.00"),
+      currency: f.payment.currency,
+      reason: "CUSTOMER_REQUEST",
+      status: "PENDING",
+    },
+  });
+  refundIds.push(refund.id);
+
+  const eventKey = `refund:${refund.id}:PENDING`;
+  await Promise.all([
+    syncReferralRewardLifecycleForPayment(f.payment.id, eventKey, `REFUND_PENDING:${refund.id}`),
+    syncReferralRewardLifecycleForPayment(f.payment.id, eventKey, `REFUND_PENDING:${refund.id}`),
+  ]);
+
+  const coupons = await db.discountCoupon.findMany({ where: { referralId: referral.id } });
+  assert.equal(coupons.length, 2);
+  assert.ok(coupons.every((coupon) => coupon.status === "INACTIVE"));
+  const rewardIds = (await db.referralReward.findMany({ where: { referralId: referral.id }, select: { id: true } })).map((reward) => reward.id);
+  assert.equal(
+    await db.referralRewardLifecycleEvent.count({
+      where: { referralRewardId: { in: rewardIds }, eventKey: { startsWith: eventKey } },
+    }),
+    2,
+  );
+});
+
 after(async () => {
   if (referralIds.length) {
     const rewardIds = (await db.referralReward.findMany({ where: { referralId: { in: referralIds } }, select: { id: true } })).map((reward) => reward.id);
