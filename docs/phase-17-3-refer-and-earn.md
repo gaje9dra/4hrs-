@@ -4,7 +4,7 @@
 
 **INCOMPLETE — KEEP PR #278 DRAFT AND UNMERGED.**
 
-The verified-payment 25% reward path and audited post-issuance refund/cancellation transitions are implemented. Concurrent lifecycle synchronization retries PostgreSQL serializable-transaction conflicts up to three attempts. Tests now include transaction rollback under an injected audit-write constraint failure, concurrent refund/cancellation state resolution, and reserved-coupon lifecycle behavior. Final CI verification on the exact current head remains a completion gate.
+The verified-payment 25% reward path and audited post-issuance refund/cancellation transitions are implemented. Concurrent lifecycle synchronization retries PostgreSQL serializable-transaction conflicts up to three attempts. Tests now include transaction rollback under an injected audit-write constraint failure, concurrent refund/cancellation state resolution, reserved-coupon lifecycle behavior, PayU signature validation, and database-backed chargeback status transitions. Final CI verification on the exact current head remains a completion gate.
 
 ## Business rules
 
@@ -25,13 +25,13 @@ The verified-payment 25% reward path and audited post-issuance refund/cancellati
 - Retrying order creation for an already-persisted order re-runs the idempotent reward processor, providing a recovery path for referrals awaiting the previous delivery-triggered reward.
 - If coupon creation or notification enqueueing fails, the transaction rolls back the order/referral reward changes together; retry the verified order-creation flow after the underlying failure is corrected.
 
-## Refund, cancellation, and reversal lifecycle — remaining blocker
+## Refund, cancellation, reversal, and chargeback lifecycle
 
 The payment model represents refund states `PENDING`, `SUCCEEDED`, `FAILED`, and `AMBIGUOUS`, including partial/full refund outcomes through payment status and refund amounts. At issuance time, pending, ambiguous, or successful refunds block the 25% pair. Failed refunds do not block issuance.
 
 Implemented lifecycle policy: pending, ambiguous, or successful refunds and active cancellation requests deactivate 25% coupons for any new reservations and create idempotent `ReferralRewardLifecycleEvent` audit rows. A previously reserved checkout retains its persisted discount snapshot and may finalize under the original terms; deactivating the coupon does not rewrite that reservation. If a refund fails or a cancellation is rejected, an unexpired coupon can reactivate only when no other disqualifying refund/cancellation remains. A still-active reservation continues to consume coupon capacity, so reactivation cannot exceed the single-redemption limit. Partial and full successful refunds both disqualify rewards. Already `REDEEMED` coupons retain their true history and are audited without attempting to reverse the completed transaction. Repeated events use stable keys and do not duplicate lifecycle transitions. Tests inject an audit-write constraint failure to verify transaction rollback and exercise concurrent refund/cancellation resolution.
 
-The repository still has no verified external chargeback/dispute event source or provider contract that can safely authenticate such events. Do not synthesize chargeback events from browser requests, admin-entered payment statuses, or unverified callbacks. Automated chargeback handling remains an external integration blocker until the payment provider supplies a documented, authenticated event or reconciliation API and that integration is implemented and tested.
+A dedicated `POST /api/payments/payu/chargeback` endpoint now accepts PayU dispute webhooks only when the V2 SHA-512 signature validates against the configured merchant key/salt and the payload MID matches `PAYU_MERCHANT_ID`. It persists the dispute with a unique provider/dispute identity, ignores stale provider updates, and synchronizes reward coupon availability in the same serializable transaction. Open, unknown, and customer-favour outcomes block/deactivate unused rewards; merchant-favour and fraud-liability closure can restore unexpired rewards if no refund or cancellation blocker remains. Already redeemed rewards retain their true history. Do not accept unsigned dispute webhooks. Production activation still requires setting `PAYU_MERCHANT_ID`, enabling signed dispute webhooks with PayU (V2 SHA-512), and configuring PayU to POST to the deployed `/api/payments/payu/chargeback` URL. These dashboard/environment steps cannot be performed from this repository.
 
 ## Notifications and interfaces
 
@@ -41,15 +41,17 @@ The repository still has no verified external chargeback/dispute event source or
 
 ## Migration and shipping boundaries
 
-- New enum values are introduced with a forward-only migration; existing delivery reward enum values and historical records are retained for compatibility.
+- New enum values and the `PaymentDispute` table are introduced with forward-only migrations; existing delivery reward enum values and historical records are retained for compatibility.
+- `PAYU_MERCHANT_ID` is required for chargeback webhook validation. Configure signed PayU dispute webhooks using the V2 SHA-512 signature header; unsigned events are rejected.
 - Shipping/tracking validation and the Qikink adapter are unchanged. This phase does not invent Qikink tracking capabilities or modify shipment state.
 - Verify migration deployment from a clean PostgreSQL database and run all repository CI, recovery, architecture, security, reconciliation, and production-certification checks on the final head SHA.
 
 ## Operational recovery
 
-1. Confirm the provider payment is server-verified and persisted payment/order amount, currency, customer, and checkout reference match.
-2. Confirm no refund is pending, ambiguous, or successful.
-3. Retry the existing verified order-creation path for the persisted payment. The reward processor is idempotent and rechecks referral and financial records.
-4. Retry the refund operation with the same idempotency key to re-run audited referral lifecycle synchronization after a post-persistence processing failure. Review `ReferralRewardLifecycleEvent` before manual intervention.
-5. Inspect the referral’s qualifying order, reward rows, coupon ownership/status, lifecycle events, and notification outbox records before any manual intervention.
-6. Do not manually create shipment/tracking events or edit payment state to force a referral reward.
+1. For PayU chargeback events, confirm the deployed endpoint, `PAYU_MERCHANT_ID`, merchant key/salt, and signed V2 dispute webhook configuration are active.
+2. Confirm the provider payment is server-verified and persisted payment/order amount, currency, customer, and checkout reference match.
+3. Confirm no refund is pending, ambiguous, or successful and no open/unknown/merchant-loss chargeback dispute remains.
+4. Retry the existing verified order-creation path for the persisted payment. The reward processor is idempotent and rechecks referral and financial records.
+5. Retry the refund operation with the same idempotency key to re-run audited referral lifecycle synchronization after a post-persistence processing failure. For a failed chargeback webhook delivery, let PayU retry the same signed event; event identity and provider timestamps make processing idempotent. Review `ReferralRewardLifecycleEvent` before manual intervention.
+6. Inspect the persisted dispute, referral qualifying order, reward rows, coupon ownership/status, lifecycle events, and notification outbox records before any manual intervention.
+7. Do not manually create shipment/tracking events or edit payment state to force a referral reward.
