@@ -49,6 +49,14 @@ export function PolicyPage({ slug }: { slug: string }) {
               {section.bullets ? <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-7 text-foreground/90 sm:text-base">{section.bullets.map((item) => <li key={item}>{item}</li>)}</ul> : null}
             </section>
           ))}
+          {slug === "contact" ? (
+            <div className="border-2 border-border bg-white p-5 sm:p-6">
+              <h2 className="text-sm font-900 uppercase tracking-[0.12em]">Email customer support</h2>
+              <p className="mt-2 text-sm leading-6 text-foreground/90">For order, delivery, refund, or privacy questions, email our support team.</p>
+              <a href="mailto:thebunniestd@gmail.com" className="motion-link mt-3 inline-flex min-h-11 items-center font-800 underline underline-offset-4 hover:bg-primary-yellow focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-blue">thebunniestd@gmail.com</a>
+              <p className="mt-2 text-xs leading-5 text-foreground/70">Never email passwords, one-time passwords, or payment credentials.</p>
+            </div>
+          ) : null}
           {slug === "contact" || slug === "refund-replacement" || slug === "cancellation" || slug === "shipping" || slug === "faq" ? (
             <div className="border-4 border-border bg-primary-yellow p-5 shadow-hard-sm sm:p-7">
               <p className="text-xs font-900 uppercase tracking-[0.18em]">Need help with an order?</p>
