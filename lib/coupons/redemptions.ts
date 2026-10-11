@@ -54,6 +54,9 @@ export async function reserveCouponForCheckout(input: {
       return await database.$transaction(async (tx) => {
         const coupon = await tx.discountCoupon.findUnique({ where: { code } });
         if (!coupon) throw new CouponRedemptionError("COUPON_INVALID", "This coupon code is not valid.");
+        if (coupon.recipientCustomerId && coupon.recipientCustomerId !== input.customerId) {
+          throw new CouponRedemptionError("COUPON_INVALID", "This coupon is assigned to a different customer account.");
+        }
         await tx.$queryRaw`SELECT "id" FROM "DiscountCoupon" WHERE "id" = ${coupon.id}::uuid FOR UPDATE`;
         const now = new Date();
         await expireSafeReservations(tx, coupon.id, now);
