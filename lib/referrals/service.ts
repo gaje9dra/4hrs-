@@ -96,7 +96,7 @@ export async function getReferralDashboard(customerId: string) {
   const [total, awaitingOrder, awaitingPaymentReview, rewarded, referrals, incomingReferral, coupons] = await Promise.all([
     db.referral.count({ where: { referrerCustomerId: customerId } }),
     db.referral.count({ where: { referrerCustomerId: customerId, status: { in: ["REGISTERED", "AWAITING_ORDER"] } } }),
-    db.referral.count({ where: { referrerCustomerId: customerId, status: "AWAITING_PAYMENT_REVIEW" } }),
+    db.referral.count({ where: { referrerCustomerId: customerId, status: { in: ["AWAITING_PAYMENT_REVIEW", "AWAITING_DELIVERY"] } } }),
     db.referral.count({ where: { referrerCustomerId: customerId, status: "REWARDED" } }),
     db.referral.findMany({
       where: { referrerCustomerId: customerId },

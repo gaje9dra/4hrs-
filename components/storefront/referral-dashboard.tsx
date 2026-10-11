@@ -18,7 +18,7 @@ type Dashboard = {
 function date(value: string | null) {
   return value ? new Date(value).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "—";
 }
-function title(value: string) { return value.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase()); }
+function title(value: string) { if (value === "AWAITING_DELIVERY") return "Payment reward pending"; return value.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase()); }
 
 export function ReferralDashboard({ dashboard, referralUrl }: { dashboard: Dashboard; referralUrl: string }) {
   const [notice, setNotice] = useState("");

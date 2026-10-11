@@ -181,6 +181,9 @@ test("verified first eligible referred payment issues two 25% coupons without a 
   assert.deepEqual(rewards.map((reward) => reward.coupon.discountPercent).sort(), [25, 25]);
   assert.ok(rewards.every((reward) => reward.coupon.maxRedemptions === 1 && reward.coupon.recipientCustomerId === reward.recipientCustomerId));
   assert.equal(await db.shipment.count({ where: { orderId: result.id } }), 0);
+  const retried = await appFor(f.customer.id).createOrderFromVerifiedPayment({ paymentId: f.payment.id });
+  assert.equal(retried.id, result.id);
+  assert.equal(await db.referralReward.count({ where: { referralId: referral.id } }), 2);
 });
 test("pending refund blocks referral rewards and failed-refund retry recovers them", async () => {
   const f = await fixture();

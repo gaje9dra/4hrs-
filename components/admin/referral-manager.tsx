@@ -15,7 +15,7 @@ async function loadData(url: string): Promise<Result> {
   if (!response.ok) throw new Error(body?.error?.message ?? "Referral data could not be loaded.");
   return body as Result;
 }
-function nice(value: string) { return value.replaceAll("_", " "); }
+function nice(value: string) { return value === "AWAITING_DELIVERY" ? "Payment reward pending (legacy)" : value.replaceAll("_", " "); }
 export function ReferralManager() {
   const [search,setSearch]=useState("");
   const [status,setStatus]=useState("");
