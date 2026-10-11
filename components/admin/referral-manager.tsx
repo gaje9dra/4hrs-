@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 type Referral = {
   id: string; referralCode: string; status: string; registeredAt: string; paymentVerifiedAt: string | null; deliveredAt: string | null; rewardIssuedAt: string | null;
@@ -21,9 +21,24 @@ export function ReferralManager() {
   const [status,setStatus]=useState("");
   const [data,setData]=useState<Result|null>(null);
   const [error,setError]=useState("");
-  const [loading,setLoading]=useState(false);
-  const load=useCallback(async()=>{setLoading(true);setError("");try{const q=new URLSearchParams();if(search.trim())q.set("search",search.trim());if(status)q.set("status",status);setData(await loadData("/api/admin/referrals?"+q.toString()));}catch(e){setError(e instanceof Error?e.message:"Could not load referral records.");}finally{setLoading(false);}},[search,status]);
-  useEffect(()=>{void load();},[load]);
+  const [loading,setLoading]=useState(true);
+  useEffect(() => {
+    let cancelled = false;
+    const query = new URLSearchParams();
+    if (search.trim()) query.set("search", search.trim());
+    if (status) query.set("status", status);
+    loadData("/api/admin/referrals?" + query.toString())
+      .then((result) => {
+        if (!cancelled) { setData(result); setError(""); }
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) setError(error instanceof Error ? error.message : "Could not load referral records.");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [search, status]);
   return <div className="space-y-5">
     <div className="flex flex-col gap-3 sm:flex-row">
       <label className="grid flex-1 gap-1 text-sm font-bold uppercase">Search<input className="border-2 border-black bg-white p-3" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Referral code, customer, or order"/></label>
