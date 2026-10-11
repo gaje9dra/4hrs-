@@ -383,10 +383,7 @@ model Customer {
   referralsSent Referral[] @relation("ReferralReferrer")
   referralReceived Referral? @relation("ReferralInvitee")
   referralCoupons DiscountCoupon[] @relation("ReferralCouponRecipient")
-  referralProfile ReferralProfile?
-  referralsSent Referral[] @relation("ReferralReferrer")
-  referralReceived Referral? @relation("ReferralInvitee")
-  referralCoupons DiscountCoupon[] @relation("ReferralCouponRecipient")
+  referralRewards ReferralReward[]
   cancellationRequests CancellationRequest[]
   returnRequests ReturnRequest[]
   cases Case[]
@@ -532,6 +529,7 @@ model Order {
   payment          Payment     @relation(fields: [paymentId], references: [id], onDelete: Restrict)
   items            OrderItem[]
   couponRedemption CouponRedemption?
+  referralQualifyingOrder Referral?
   shippingAddress  OrderAddressSnapshot?
   fulfillment      Fulfillment?
   shipments        Shipment[]
