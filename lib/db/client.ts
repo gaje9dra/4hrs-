@@ -4,13 +4,13 @@ import { logger } from "@/lib/observability/logger";
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
 /**
- * Supabase's transaction-mode pooler (port 6543) multiplexes many logical
- * clients over backend PostgreSQL connections. Disable Prisma's named
- * prepared statements for this specific pooler to avoid Postgres 42P05
- * ("prepared statement already exists") when a backend connection is reused.
+ * Supabase's pooler can route application queries through shared backend
+ * connections. Disable Prisma's named prepared statements for Supabase pooler
+ * URLs to avoid PostgreSQL 42P05 ("prepared statement already exists") when
+ * pooled connections are reused. This applies to both transaction- and
+ * session-mode pooler endpoints; direct database URLs remain unchanged.
  *
- * Keep the rest of the connection URL intact, including schema and pool
- * settings. Session-pooler/direct URLs are intentionally left unchanged.
+ * Preserve the rest of the URL, including schema and pool settings.
  */
 function getRuntimeDatasourceUrl(): string | undefined {
   const configuredUrl = process.env.DATABASE_URL;
@@ -18,10 +18,7 @@ function getRuntimeDatasourceUrl(): string | undefined {
 
   try {
     const url = new URL(configuredUrl);
-    if (
-      url.hostname.endsWith(".pooler.supabase.com") &&
-      url.port === "6543"
-    ) {
+    if (url.hostname.endsWith(".pooler.supabase.com")) {
       url.searchParams.set("pgbouncer", "true");
     }
     return url.toString();
