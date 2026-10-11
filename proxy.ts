@@ -35,6 +35,16 @@ export function proxy(request: NextRequest) {
   const response = NextResponse.next({ request: { headers: requestHeaders } });
   if (csp) response.headers.set("Content-Security-Policy", csp);
   response.headers.set(REQUEST_ID_HEADER, requestId);
+  const candidate = request.nextUrl.searchParams.get("ref")?.trim().toUpperCase();
+  if (candidate && /^[A-Z0-9_-]{3,32}$/.test(candidate) && !request.cookies.has("4hrs_referral_code")) {
+    response.cookies.set("4hrs_referral_code", candidate, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 30 * 24 * 60 * 60,
+    });
+  }
   return response;
 }
 
