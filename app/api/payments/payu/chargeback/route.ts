@@ -11,6 +11,10 @@ import {
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
+  const contentLength = Number(request.headers.get("content-length") ?? "0");
+  if (Number.isFinite(contentLength) && contentLength > 64 * 1024) {
+    return NextResponse.json({ error: { code: "PAYLOAD_TOO_LARGE", message: "Chargeback webhook payload is too large." } }, { status: 413 });
+  }
   const body = await request.text();
   if (body.length > 64 * 1024) {
     return NextResponse.json({ error: { code: "PAYLOAD_TOO_LARGE", message: "Chargeback webhook payload is too large." } }, { status: 413 });
