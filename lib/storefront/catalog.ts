@@ -132,6 +132,10 @@ export async function getStorefrontProducts(query: CatalogQuery = {}, surface: C
   const startedAt = Date.now();
   try {
     const result = await catalog.listPublishedProducts(query, { surface });
+    const durationMs = Date.now() - startedAt;
+    if (durationMs >= 500) {
+      console.warn(JSON.stringify({ event: "storefront.catalog.fetch.slow", surface, operation: "listPublishedProducts", durationMs, page: query.page ?? 1, pageSize: query.pageSize ?? 24 }));
+    }
     return {
       items: result.items.map(toProductCard),
       pagination: result.pagination,
@@ -151,7 +155,12 @@ export async function getStorefrontProducts(query: CatalogQuery = {}, surface: C
 }
 
 export async function getStorefrontProduct(slug: string): Promise<StorefrontProductDetail> {
+  const startedAt = Date.now();
   const product = await catalog.getPublishedProductDetailsBySlug(slug);
+  const durationMs = Date.now() - startedAt;
+  if (durationMs >= 500) {
+    console.warn(JSON.stringify({ event: "storefront.product-detail.fetch.slow", durationMs }));
+  }
   return {
     ...product,
     availability: { state: product.availability.state },
@@ -282,6 +291,7 @@ export type StorefrontHomeData = {
 };
 
 export async function getStorefrontHomeCatalogData(): Promise<StorefrontHomeData> {
+  const startedAt = Date.now();
   // The homepage needs a small, representative set for its hero carousel.
   // Loading every catalog page here makes homepage latency and database work grow
   // with the entire inventory, even though only a few products are displayed.
@@ -302,6 +312,11 @@ export async function getStorefrontHomeCatalogData(): Promise<StorefrontHomeData
     : null;
 
   const featuredSlugs = new Set(featuredResult?.items.map((product) => product.slug) ?? []);
+
+  const durationMs = Date.now() - startedAt;
+  if (durationMs >= 500) {
+    console.warn(JSON.stringify({ event: "storefront.home-catalog.fetch.slow", durationMs, heroCount: heroProducts.length, featuredCount: featuredResult?.items.length ?? 0 }));
+  }
 
   return {
     heroProducts,
