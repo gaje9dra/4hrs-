@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { unstable_cache } from "next/cache";
-import { logger } from "@/lib/observability/logger";
 import { CatalogServiceError } from "@/lib/catalog/errors";
 import { getStorefrontHomeCatalogData } from "@/lib/storefront/catalog";
 import { resolveRequestLocale } from "@/lib/i18n/resolution";
@@ -27,27 +26,8 @@ const getCachedHomepageData = unstable_cache(
 );
 
 export default async function HomePage() {
-  const requestStartedAt = Date.now();
-  const localeStartedAt = Date.now();
   const locale = await resolveRequestLocale();
-  const localeDurationMs = Date.now() - localeStartedAt;
-
-  const dataStartedAt = Date.now();
   const { data, editorialSections } = await getCachedHomepageData(locale);
-  const dataDurationMs = Date.now() - dataStartedAt;
-
-  logger.info("storefront.homepage.render.prepare", {
-    resourceType: "http_request",
-    outcome: "success",
-    durationMs: Date.now() - requestStartedAt,
-  }, {
-    route: "/",
-    locale,
-    localeResolutionMs: localeDurationMs,
-    cachedHomepageDataMs: dataDurationMs,
-    productCount: data.heroProducts.length + data.featuredProducts.length + data.newArrivals.length,
-    editorialSectionCount: editorialSections.length,
-  });
 
   return <Homepage data={data} editorialSections={editorialSections} />;
 }
