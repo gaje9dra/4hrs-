@@ -10,7 +10,7 @@ test("production CSP permits only the official PayU hosted checkout form targets
   assert.match(proxy, /form-action 'self' https:\/\/test\.payu\.in https:\/\/secure\.payu\.in/);
   assert.doesNotMatch(proxy, /form-action\s+[^;]*https:\/\/[^;]*(?:\*|payu\.com)/);
   assert.match(proxy, /isPayURedirect/);
-  assert.match(proxy, /process\\.env\\.NODE_ENV === "production" && !isPayURedirect/);
+  assert.match(proxy, /process\.env\.NODE_ENV === "production" && !isPayURedirect/);
 });
 
 test("PayU redirect response owns a matching nonce and CSP for auto-submit", () => {
