@@ -612,3 +612,29 @@ code {
   opacity: 1;
 }
 
+
+/* Homepage campaign banners: animated slide transitions for swipe, arrows, and autoplay. */
+@keyframes homepage-banner-swipe-left {
+  from { opacity: 0.72; transform: translateX(5%); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes homepage-banner-swipe-right {
+  from { opacity: 0.72; transform: translateX(-5%); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.homepage-banner-swipe-in-left {
+  animation: homepage-banner-swipe-left 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.homepage-banner-swipe-in-right {
+  animation: homepage-banner-swipe-right 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .homepage-banner-swipe-in-left,
+  .homepage-banner-swipe-in-right {
+    animation: none;
+  }
+}

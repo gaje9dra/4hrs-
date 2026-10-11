@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { type TouchEvent, useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const banners = [
@@ -10,20 +10,62 @@ const banners = [
   { src: "/images/homepage-banners/4hrs-men-banner.png?v=20261009-2", alt: "Shop men's streetwear", href: "/category/men", eyebrow: "THE MEN'S EDIT", title: "Built for everyday.", accent: "everyday." },
 ];
 
+type SlideDirection = "left" | "right";
+
 export function HomepageCampaignCarousel() {
   const [activeIndex, setActiveIndex] = useState(0);
+  const [slideDirection, setSlideDirection] = useState<SlideDirection>("left");
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
+
   useEffect(() => {
-    const timer = window.setInterval(() => setActiveIndex((current) => (current + 1) % banners.length), 4000);
+    const timer = window.setInterval(() => {
+      setSlideDirection("left");
+      setActiveIndex((current) => (current + 1) % banners.length);
+    }, 4000);
     return () => window.clearInterval(timer);
   }, []);
 
   const activeBanner = banners[activeIndex];
-  const showPrevious = () => setActiveIndex((current) => (current - 1 + banners.length) % banners.length);
-  const showNext = () => setActiveIndex((current) => (current + 1) % banners.length);
+  const showPrevious = () => {
+    setSlideDirection("right");
+    setActiveIndex((current) => (current - 1 + banners.length) % banners.length);
+  };
+  const showNext = () => {
+    setSlideDirection("left");
+    setActiveIndex((current) => (current + 1) % banners.length);
+  };
+
+  const handleTouchStart = (event: TouchEvent<HTMLDivElement>) => {
+    const touch = event.touches[0];
+    touchStart.current = { x: touch.clientX, y: touch.clientY };
+  };
+
+  const handleTouchEnd = (event: React.TouchEvent<HTMLDivElement>) => {
+    const start = touchStart.current;
+    touchStart.current = null;
+    if (!start) return;
+
+    const touch = event.changedTouches[0];
+    const deltaX = touch.clientX - start.x;
+    const deltaY = touch.clientY - start.y;
+
+    // Only treat a clear horizontal gesture as a banner swipe; preserve vertical page scrolling.
+    if (Math.abs(deltaX) < 45 || Math.abs(deltaX) <= Math.abs(deltaY) * 1.2) return;
+    if (deltaX < 0) showNext();
+    else showPrevious();
+  };
+
+  const slideAnimation = slideDirection === "left"
+    ? "homepage-banner-swipe-in-left"
+    : "homepage-banner-swipe-in-right";
 
   return (
     <section aria-label="Featured 4HRS+ campaigns" className="hidden w-full border-b-2 border-border bg-[#f5f1e8] lg:border-b-4 sm:block">
-      <div className="relative w-full overflow-hidden bg-[#f5f1e8] sm:aspect-[1507/404]">
+      <div
+        className="relative w-full touch-pan-y overflow-hidden bg-[#f5f1e8] sm:aspect-[1507/404]"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
         {/* Mobile: give the artwork the entire carousel area; no headline or CTA overlay. */}
         <Link
           href={activeBanner.href}
@@ -37,7 +79,7 @@ export function HomepageCampaignCarousel() {
             fill
             priority={activeIndex === 0}
             sizes="100vw"
-            className="object-cover object-center"
+            className={`object-cover object-center ${slideAnimation}`}
           />
         </Link>
 
@@ -54,7 +96,7 @@ export function HomepageCampaignCarousel() {
             fill
             priority={activeIndex === 0}
             sizes="100vw"
-            className={activeIndex === 1 ? "object-cover object-center" : "object-contain"}
+            className={`${activeIndex === 1 ? "object-cover object-center" : "object-contain"} ${slideAnimation}`}
           />
         </Link>
 
@@ -67,7 +109,7 @@ export function HomepageCampaignCarousel() {
 
         <div className="absolute bottom-2 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1.5 border border-border/70 bg-white/90 px-2 py-1 shadow-hard-sm sm:bottom-4 sm:gap-2 sm:border-2 sm:px-3 sm:py-2">
           {banners.map((banner, index) => (
-            <button key={banner.src} type="button" onClick={() => setActiveIndex(index)} aria-label={`Show campaign ${index + 1}: ${banner.alt}`} aria-current={index === activeIndex ? "true" : undefined} className={`h-1.5 transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-blue sm:h-2.5 ${index === activeIndex ? "w-5 bg-primary-red sm:w-7" : "w-1.5 bg-primary-blue/40 hover:bg-primary-blue sm:w-2.5"}`} />
+            <button key={banner.src} type="button" onClick={() => { setSlideDirection(index > activeIndex ? "left" : "right"); setActiveIndex(index); }} aria-label={`Show campaign ${index + 1}: ${banner.alt}`} aria-current={index === activeIndex ? "true" : undefined} className={`h-1.5 transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-blue sm:h-2.5 ${index === activeIndex ? "w-5 bg-primary-red sm:w-7" : "w-1.5 bg-primary-blue/40 hover:bg-primary-blue sm:w-2.5"}`} />
           ))}
         </div>
       </div>
