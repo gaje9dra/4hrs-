@@ -6,7 +6,7 @@ import { buildPayUHostedCheckoutFields, payUHostedCheckoutUrl } from "@/lib/paym
 
 function firstName(displayName: string | null, email: string): string {
   const value = displayName?.trim() || email.split("@")[0] || "Customer";
-  return value.split(/\\s+/)[0].slice(0, 60) || "Customer";
+  return value.split(/\s+/)[0].slice(0, 60) || "Customer";
 }
 
 function escapeHtml(value: string): string {
