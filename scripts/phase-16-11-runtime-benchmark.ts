@@ -164,26 +164,14 @@ async function main() {
   let serverRssKb: number | null = null;
 
   try {
-    // Warm up auth, cart creation, and checkout reads outside measured samples.
-    for (const endpoint of ["/api/cart", "/api/checkout"]) {
-      const response = await fetch(new URL(endpoint, baseUrl), {
-        cache: "no-store",
-        headers: { Cookie: fixture.cookie, "cache-control": "no-cache" },
-      });
-      await response.arrayBuffer();
-      if (!response.ok) throw new Error(`Warm-up for ${endpoint} returned HTTP ${response.status}`);
-    }
-    const cart = await db.cart.findUnique({ where: { customerId: fixture.customerId }, select: { id: true } });
-    if (!cart) throw new Error("Warm-up did not create the authenticated test cart.");
+    // Populate a representative customer cart directly so the first API read
+    // measures the real product/variant/inventory lookup without an artificial
+    // cart-creation write on the critical path.
+    const cart = await db.cart.create({ data: { customerId: fixture.customerId } });
     await db.cartItem.create({
       data: { cartId: cart.id, productId: fixture.productId, variantId: fixture.variantId, quantity: 1 },
     });
 
-    const scenarios = [
-      { name: "normal", requests: 20, concurrency: 2 },
-      { name: "elevated", requests: 60, concurrency: 5 },
-      { name: "spike", requests: 40, concurrency: 10 },
-    ] as const;
     const endpoints = [
       { path: "/", auth: false },
       { path: "/cart", auth: true },
@@ -192,7 +180,18 @@ async function main() {
       { path: "/api/cart", auth: true },
       { path: "/api/checkout", auth: true },
     ];
+    // Measure first use of the actual storefront routes before repeated runs
+    // warm their route modules and database path. This is not a Netlify cold start.
+    for (const endpoint of endpoints.filter((item) => ["/cart", "/checkout", "/api/cart", "/api/checkout"].includes(item.path))) {
+      const result = await run(baseUrl, endpoint.path, 1, 1, endpoint.auth ? fixture.cookie : undefined);
+      samples.push({ endpoint: endpoint.path, scenario: "first-use", ...result });
+    }
 
+    const scenarios = [
+      { name: "normal", requests: 20, concurrency: 2 },
+      { name: "elevated", requests: 60, concurrency: 5 },
+      { name: "spike", requests: 40, concurrency: 10 },
+    ] as const;
     for (const endpoint of endpoints) {
       for (const scenario of scenarios) {
         const result = await run(baseUrl, endpoint.path, scenario.requests, scenario.concurrency, endpoint.auth ? fixture.cookie : undefined);
@@ -225,7 +224,7 @@ async function main() {
   const overThreeSeconds = critical.filter((sample) => (sample.p95Ms ?? Infinity) > 3000);
   const report = {
     generatedAt: new Date().toISOString(),
-    environment: "isolated CI PostgreSQL + local Next.js production server",
+    environment: "isolated CI PostgreSQL + local Next.js production server; first-use is local route-first-access, not a Netlify cold start",
     productionTraffic: false,
     scenarios: samples,
     criticalPathAcceptance: {
