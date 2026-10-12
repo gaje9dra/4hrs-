@@ -25,7 +25,7 @@ test("Phase 16.11 runtime benchmark is isolated to safe application endpoints", 
   assert.match(source, /localBaseUrl/);
   assert.match(source, /\/api\/ready/);
   assert.match(source, /\/api\/readiness/);
-  assert.match(source, /"\/"\]/);
+  assert.match(source, /path:\s*"\/"/);
   assert.doesNotMatch(source, /qikink/i);
   assert.doesNotMatch(source, /payment.*mutation|create.*payment/i);
 });
