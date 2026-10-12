@@ -170,7 +170,15 @@ export function createCartApplication(options: {
     // queried the cart ID, then rechecked ownership, then fetched the same cart
     // with all its items, adding serial database round trips to every cart open.
     if (!options.resolveRequestContext) {
+      const authStartedAt = Date.now();
       const current = await resolveCurrentCustomer(request);
+      if (process.env.NODE_ENV !== "test") {
+        console.info("[cart.auth.performance]", {
+          operation: "getCurrentCart",
+          durationMs: Date.now() - authStartedAt,
+          outcome: current ? "success" : "unauthenticated",
+        });
+      }
       if (!current) {
         throw new CartServiceError("CART_UNAUTHORIZED", "Authentication is required to access this Cart.");
       }
