@@ -19,6 +19,10 @@ test("Phase 16.11 performance certification refuses fabricated runtime evidence"
 test("Phase 16.11 runtime benchmark is isolated to safe application endpoints", async () => {
   const source = await readFile("scripts/phase-16-11-runtime-benchmark.ts", "utf8");
   assert.match(source, /\/api\/health/);
+  assert.match(source, /\/api\/cart/);
+  assert.match(source, /\/api\/checkout/);
+  assert.match(source, /criticalPathAcceptance/);
+  assert.match(source, /localBaseUrl/);
   assert.match(source, /\/api\/ready/);
   assert.match(source, /\/api\/readiness/);
   assert.match(source, /"\/"\]/);
