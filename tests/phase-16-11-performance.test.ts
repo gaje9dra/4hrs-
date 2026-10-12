@@ -19,15 +19,25 @@ test("Phase 16.11 performance certification refuses fabricated runtime evidence"
 test("Phase 16.11 runtime benchmark is isolated to safe application endpoints", async () => {
   const source = await readFile("scripts/phase-16-11-runtime-benchmark.ts", "utf8");
   assert.match(source, /\/api\/health/);
+  assert.match(source, /\/api\/cart/);
+  assert.match(source, /\/api\/checkout/);
+  assert.match(source, /criticalPathAcceptance/);
+  assert.match(source, /scenario: "first-use"/);
+  assert.match(source, /localBaseUrl/);
+  assert.match(source, /DATABASE_URL/);
+  assert.match(source, /DIRECT_URL/);
+  assert.match(source, /Phase 16\.11 Performance Fixture/);
+  assert.match(source, /inventory:\s*\{/);
+  assert.match(source, /db\.cartItem\.create/);
   assert.match(source, /\/api\/ready/);
   assert.match(source, /\/api\/readiness/);
-  assert.match(source, /"\/"\]/);
+  assert.match(source, /path:\s*"\/"/);
   assert.doesNotMatch(source, /qikink/i);
   assert.doesNotMatch(source, /payment.*mutation|create.*payment/i);
 });
 
 test("Phase 16.11 keeps load testing out of production", async () => {
   const source = await readFile("scripts/phase-16-11-runtime-benchmark.ts", "utf8");
-  assert.match(source, /productionTraffic:false/);
+  assert.match(source, /productionTraffic:\s*false/);
   assert.match(source, /isolated CI PostgreSQL \+ local Next\.js production server/);
 });
