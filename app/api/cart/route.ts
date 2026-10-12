@@ -8,10 +8,23 @@ export const revalidate = 0;
 const application = createCartApplication();
 
 export async function GET(request: Request) {
+  const startedAt = Date.now();
   try {
-    return cartJson(await application.getCurrentCart(request));
+    const response = cartJson(await application.getCurrentCart(request));
+    console.info("[cart] request completed", {
+      operation: "getCurrentCartHttp",
+      durationMs: Date.now() - startedAt,
+      status: response.status,
+    });
+    return response;
   } catch (error) {
-    return cartErrorResponse(error, "getCurrentCart");
+    const response = cartErrorResponse(error, "getCurrentCart");
+    console.warn("[cart] request failed", {
+      operation: "getCurrentCartHttp",
+      durationMs: Date.now() - startedAt,
+      status: response.status,
+    });
+    return response;
   }
 }
 
