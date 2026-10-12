@@ -7,6 +7,7 @@ import { ReturnDomainError } from "@/lib/returns/errors";
 import { cancellationEligibility, returnEligibility, assertCancellationTransition, assertReturnTransition, validateReturnQuantity, validateInspection, type ReturnReason, type CancellationLifecycle, type ReturnLifecycle } from "@/lib/returns/domain";
 import { createReturnsRepository, type ReturnsOrder } from "@/lib/returns/repository";
 import { toCancellationDto, toReturnDto } from "@/lib/returns/dto";
+import { syncReferralRewardLifecycleInTransaction } from "@/lib/referrals/service";
 import type { CancellationDto, ReturnDto, ExceptionSummary } from "@/lib/returns/contracts";
 
 const ACTIVE_RETURN_STATUSES: ReadonlySet<string> = new Set(["REQUESTED","UNDER_REVIEW","APPROVED","RETURN_IN_TRANSIT","RETURN_RECEIVED","INSPECTION_PENDING","INSPECTED","RESOLUTION_PENDING"]);
@@ -57,7 +58,7 @@ export function createReturnsApplication(dependencies:ReturnsApplicationDependen
       const created=await tx.cancellationRequest.create({data:{cancellationReference:ref("CAN-"),customerId:c.id,orderId:order.id,status:"REQUESTED",reason,customerDescription:description}});
       await repo.audit({actorType:"CUSTOMER",actorId:c.id,action:"CANCELLATION_REQUESTED",previousState:null,newState:"REQUESTED",reason,orderId:order.id,cancellationRequestId:created.id});
       await repo.notify({customerId:c.id,orderId:order.id,type:"CANCELLATION_REQUESTED",idempotencyKey:`CANCELLATION_REQUESTED:${created.cancellationReference}`,payload:{orderNumber:order.orderNumber,cancellationReference:created.cancellationReference}});
-      {assertCancellationTransition("REQUESTED",status);await tx.cancellationRequest.update({where:{id:created.id},data:{status,reviewedAt:new Date()}});await repo.audit({actorType:"SYSTEM",action:"CANCELLATION_APPROVED",previousState:"REQUESTED",newState:status,reason:eligibility==="eligible"?"commercially_eligible":"operational_review_required",orderId:order.id,cancellationRequestId:created.id});}
+      {assertCancellationTransition("REQUESTED",status);await tx.cancellationRequest.update({where:{id:created.id},data:{status,reviewedAt:new Date()}});await repo.audit({actorType:"SYSTEM",action:"CANCELLATION_APPROVED",previousState:"REQUESTED",newState:status,reason:eligibility==="eligible"?"commercially_eligible":"operational_review_required",orderId:order.id,cancellationRequestId:created.id});await syncReferralRewardLifecycleInTransaction(tx,order.id,`cancellation:${created.id}:${status}`,`CANCELLATION_ACTIVE:${created.id}:${status}`);}
       return tx.cancellationRequest.findUnique({where:{id:created.id},include:{order:true}});
     }));
     return toCancellationDto(result, input.orderNumber);
@@ -78,6 +79,7 @@ export function createReturnsApplication(dependencies:ReturnsApplicationDependen
       if(row.status===next) return row;
       assertCancellationTransition(row.status as CancellationLifecycle,next);
       await tx.cancellationRequest.update({where:{id:row.id},data:{status:next,reviewedAt:new Date(),operationalReason:reason}});
+      await syncReferralRewardLifecycleInTransaction(tx,row.orderId,`cancellation:${row.id}:${next}`,`${next === "REJECTED" ? "CANCELLATION_REJECTED" : "CANCELLATION_ACTIVE"}:${row.id}:${next}`);
       await tx.commerceExceptionAuditEvent.create({data:{actorType:"ADMIN",actorId:admin.customer.id,action:input.decision==="APPROVE"?"CANCELLATION_APPROVED":"CANCELLATION_REJECTED",previousState:row.status,newState:next,reason,orderId:row.orderId,cancellationRequestId:row.id,correlationId:input.idempotencyKey}});
       await createReturnsRepository(tx).notify({customerId:row.customerId,orderId:row.orderId,type:input.decision==="APPROVE"?"CANCELLATION_APPROVED":"CANCELLATION_REJECTED",idempotencyKey:input.idempotencyKey??`${input.decision}:${row.cancellationReference}`,correlationId:input.idempotencyKey,payload:{orderNumber:row.order.orderNumber,cancellationReference:row.cancellationReference}});
       return tx.cancellationRequest.findUnique({where:{id:row.id},include:{order:true}});

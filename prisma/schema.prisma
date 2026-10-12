@@ -381,6 +381,11 @@ model Customer {
   paymentIdempotencyRecords PaymentIdempotency[]
   orders          Order[]
   couponRedemptions CouponRedemption[]
+  referralProfile ReferralProfile?
+  referralsSent Referral[] @relation("ReferralReferrer")
+  referralReceived Referral? @relation("ReferralInvitee")
+  referralCoupons DiscountCoupon[] @relation("ReferralCouponRecipient")
+  referralRewards ReferralReward[]
   cancellationRequests CancellationRequest[]
   returnRequests ReturnRequest[]
   cases Case[]
@@ -501,6 +506,14 @@ enum PaymentRefundReason {
   OTHER
 }
 
+enum PaymentDisputeStatus {
+  OPEN
+  CLOSED_CUSTOMER_FAVOUR
+  CLOSED_MERCHANT_FAVOUR
+  CLOSED_FRAUD_LIABILITY
+  UNKNOWN
+}
+
 
 enum OrderStatus {
   PENDING
@@ -526,6 +539,7 @@ model Order {
   payment          Payment     @relation(fields: [paymentId], references: [id], onDelete: Restrict)
   items            OrderItem[]
   couponRedemption CouponRedemption?
+  referralQualifyingOrder Referral?
   shippingAddress  OrderAddressSnapshot?
   fulfillment      Fulfillment?
   shipments        Shipment[]
@@ -725,6 +739,7 @@ model Payment {
   events             PaymentEvent[]
   idempotencyRecords PaymentIdempotency[]
   refunds          PaymentRefund[]
+  disputes         PaymentDispute[]
   order            Order?
   cases            Case[]
 
@@ -825,6 +840,31 @@ model PaymentRefund {
   @@index([paymentId, createdAt])
   @@index([paymentId, status, createdAt])
   @@index([providerId, providerReference])
+}
+
+model PaymentDispute {
+  id                   String              @id @default(uuid()) @db.Uuid
+  paymentId            String              @db.Uuid
+  providerId           String              @db.VarChar(64)
+  providerDisputeId    String              @db.VarChar(128)
+  transactionReference String              @db.VarChar(64)
+  amount               Decimal             @db.Decimal(12, 2)
+  currency             String              @db.VarChar(3)
+  disputeType          String              @db.VarChar(120)
+  reasonCode           String?             @db.VarChar(255)
+  providerStatus       String              @db.VarChar(120)
+  status               PaymentDisputeStatus
+  providerCreatedAt    DateTime?
+  providerUpdatedAt    DateTime
+  lastReceivedAt       DateTime            @default(now())
+  metadata             Json?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  payment              Payment             @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+
+  @@unique([providerId, providerDisputeId])
+  @@index([paymentId, status, providerUpdatedAt])
+  @@index([providerUpdatedAt])
 }
 
 model PaymentAttempt {
@@ -1056,6 +1096,9 @@ enum NotificationEventType {
   REFUND_INITIATED
   REFUND_COMPLETED
   REFUND_FAILED
+  REFERRAL_REGISTRATION_REWARD
+  REFERRAL_DELIVERY_REWARD
+  REFERRAL_PAYMENT_REWARD
   SECURITY_PASSWORD_CHANGED
   SECURITY_SESSIONS_REVOKED
 }
@@ -7241,6 +7284,83 @@ enum CouponRedemptionStatus {
   EXPIRED
 }
 
+enum ReferralStatus {
+  REGISTERED
+  AWAITING_ORDER
+  AWAITING_DELIVERY
+  AWAITING_PAYMENT_REVIEW
+  REWARDED
+  INELIGIBLE
+  CANCELLED
+}
+
+enum ReferralRewardType {
+  REGISTRATION_14
+  DELIVERED_ORDER_25
+  PAID_ORDER_25
+}
+
+model ReferralProfile {
+  id         String   @id @default(uuid()) @db.Uuid
+  customerId String   @unique @db.Uuid
+  code       String   @unique @db.VarChar(32)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Restrict)
+}
+
+model Referral {
+  id                     String         @id @default(uuid()) @db.Uuid
+  referrerCustomerId     String         @db.Uuid
+  invitedCustomerId      String         @unique @db.Uuid
+  referralCodeSnapshot   String         @db.VarChar(32)
+  status                 ReferralStatus @default(REGISTERED)
+  qualifyingOrderId      String?        @unique @db.Uuid
+  registeredAt           DateTime       @default(now())
+  paymentVerifiedAt      DateTime?
+  deliveredAt            DateTime?
+  rewardIssuedAt         DateTime?
+  ineligibleReason       String?        @db.VarChar(500)
+  createdAt              DateTime       @default(now())
+  updatedAt              DateTime       @updatedAt
+  referrer               Customer       @relation("ReferralReferrer", fields: [referrerCustomerId], references: [id], onDelete: Restrict)
+  invited                Customer       @relation("ReferralInvitee", fields: [invitedCustomerId], references: [id], onDelete: Restrict)
+  qualifyingOrder        Order?         @relation(fields: [qualifyingOrderId], references: [id], onDelete: Restrict)
+  coupons                DiscountCoupon[] @relation("ReferralCoupon")
+  rewards                ReferralReward[]
+  @@index([referrerCustomerId, registeredAt])
+  @@index([status, registeredAt])
+}
+
+model ReferralReward {
+  id                 String             @id @default(uuid()) @db.Uuid
+  referralId         String             @db.Uuid
+  recipientCustomerId String            @db.Uuid
+  couponId           String             @unique @db.Uuid
+  type               ReferralRewardType
+  reason             String             @db.VarChar(500)
+  issuedAt           DateTime           @default(now())
+  referral           Referral           @relation(fields: [referralId], references: [id], onDelete: Restrict)
+  recipient          Customer           @relation(fields: [recipientCustomerId], references: [id], onDelete: Restrict)
+  coupon             DiscountCoupon     @relation(fields: [couponId], references: [id], onDelete: Restrict)
+  lifecycleEvents    ReferralRewardLifecycleEvent[]
+  @@unique([referralId, recipientCustomerId, type])
+  @@index([recipientCustomerId, issuedAt])
+}
+
+model ReferralRewardLifecycleEvent {
+  id                   String                   @id @default(uuid()) @db.Uuid
+  referralRewardId     String                   @db.Uuid
+  eventKey             String                   @unique @db.VarChar(255)
+  eventType            String                   @db.VarChar(80)
+  reason               String                   @db.VarChar(500)
+  previousCouponStatus CouponStatus?
+  nextCouponStatus     CouponStatus?
+  redemptionStatus     CouponRedemptionStatus?
+  createdAt            DateTime                 @default(now())
+  referralReward       ReferralReward           @relation(fields: [referralRewardId], references: [id], onDelete: Restrict)
+  @@index([referralRewardId, createdAt])
+}
 model DiscountCoupon {
   id                    String        @id @default(uuid()) @db.Uuid
   code                  String        @unique @db.VarChar(64)
@@ -7259,6 +7379,12 @@ model DiscountCoupon {
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
   redemptions           CouponRedemption[]
+  recipientCustomerId   String? @db.Uuid
+  referralId            String? @db.Uuid
+  referralRewardType    ReferralRewardType?
+  recipient              Customer? @relation("ReferralCouponRecipient", fields: [recipientCustomerId], references: [id], onDelete: Restrict)
+  referral               Referral? @relation("ReferralCoupon", fields: [referralId], references: [id], onDelete: Restrict)
+  referralRewards        ReferralReward[]
   @@index([status, startsAt, expiresAt])
   @@index([createdAt])
 }

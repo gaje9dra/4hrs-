@@ -73,3 +73,39 @@ test("PostgreSQL coupon reservation enforces per-customer usage limits", { skip:
     await db.customer.delete({ where: { id: customer.id } });
   }
 });
+
+
+test("referral-bound coupon cannot be reserved by a different customer", { skip: !safeTestDatabase }, async () => {
+  const recipient = await db.customer.create({ data: { email: "referral-recipient-" + randomUUID() + "@example.test" } });
+  const other = await db.customer.create({ data: { email: "referral-other-" + randomUUID() + "@example.test" } });
+  const coupon = await db.discountCoupon.create({
+    data: {
+      code: "R" + randomUUID().replaceAll("-", "").slice(0, 15).toUpperCase(),
+      discountPercent: 14,
+      maxRedemptions: 1,
+      perCustomerLimit: 1,
+      recipientCustomerId: recipient.id,
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      status: "ACTIVE",
+    },
+  });
+  try {
+    await assert.rejects(
+      () => reserveCouponForCheckout({
+        customerId: other.id,
+        checkoutReference: "referral-owner-" + randomUUID(),
+        code: coupon.code,
+        eligibleSubtotal: "100.00",
+        currency: "INR",
+      }),
+      /assigned to a different customer account/,
+    );
+    const reservations = await db.couponRedemption.count({ where: { couponId: coupon.id } });
+    assert.equal(reservations, 0, "unauthorized attempts must not create a reservation");
+  } finally {
+    await db.couponRedemption.deleteMany({ where: { couponId: coupon.id } });
+    await db.discountCoupon.delete({ where: { id: coupon.id } });
+    await db.customer.delete({ where: { id: other.id } });
+    await db.customer.delete({ where: { id: recipient.id } });
+  }
+});

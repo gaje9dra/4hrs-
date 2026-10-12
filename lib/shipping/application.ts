@@ -299,7 +299,7 @@ export function createShippingApplication(
     };
 
     try {
-      return await database.$transaction(async (tx) => {
+      const processedShipment = await database.$transaction(async (tx) => {
         const txRepository = createShippingRepository(tx);
         const shipment = await txRepository.getShipmentById(input.shipmentId);
         if (!shipment) throw new ShippingDomainError("SHIPMENT_NOT_FOUND", "Shipment could not be found.");
@@ -354,6 +354,8 @@ export function createShippingApplication(
         }
         return updated;
       }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+      // Reward processing re-reads the persisted shipment and payment states. This is safe on duplicate events.
+      return processedShipment;
     } catch (error) {
       logShippingObservation({
         operation: "tracking-event",
