@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowLeft, Check, LockKeyhole, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Check, CreditCard, LockKeyhole, ShieldCheck } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
