@@ -41,3 +41,26 @@ test("Phase 16.11 keeps load testing out of production", async () => {
   assert.match(source, /productionTraffic:\s*false/);
   assert.match(source, /isolated CI PostgreSQL \+ local Next\.js production server/);
 });
+
+test("cart and product nested reads use PostgreSQL relation joins", async () => {
+  const schema = await readFile("prisma/schema.prisma", "utf8");
+  const cartRepository = await readFile("lib/cart/repository.ts", "utf8");
+  const catalogRepository = await readFile("lib/catalog/repository.ts", "utf8");
+
+  assert.match(schema, /previewFeatures\s*=\s*\[[^\]]*["']relationJoins["']/);
+  assert.match(cartRepository, /findCartById\(cartId: string\)[\s\S]*?relationLoadStrategy:\s*"join"/);
+  assert.match(cartRepository, /findCartByCustomerId\(customerId: string\)[\s\S]*?relationLoadStrategy:\s*"join"/);
+  assert.match(catalogRepository, /getPublishedProductDetailsBySlug\(slug: string[\s\S]*?relationLoadStrategy:\s*"join"/);
+  assert.match(catalogRepository, /getPublishedProductDetailsByIds\(ids: string\[\][\s\S]*?relationLoadStrategy:\s*"join"/);
+  assert.match(catalogRepository, /getPublishedCartProductDetailsByIds\(ids: string\[\][\s\S]*?relationLoadStrategy:\s*"join"/);
+});
+
+test("controlled benchmark covers the incident cart size, a larger cart, and product-detail reads", async () => {
+  const source = await readFile("scripts/phase-16-11-runtime-benchmark.ts", "utf8");
+  assert.match(source, /setCartSize\(2\)/);
+  assert.match(source, /setCartSize\(5\)/);
+  assert.match(source, /productDetailPath\s*=\s*"\/product\/"\s*\+\s*fixture\.products\[0\]\.productSlug/);
+  assert.match(source, /scenario\.name \+ "-5-item"/);
+  assert.match(source, /criticalEndpoints[\s\S]*?productDetailPath/);
+  assert.match(source, /localBaseUrl/);
+});
