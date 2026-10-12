@@ -407,16 +407,14 @@ export function createCartService(dependencies: CartServiceDependencies = {}) {
       const productIds = [...new Set(cart.items.map((item) => item.productId))];
       let items: CartLine[];
       if (typeof catalog.getPublishedCartProductDetailsByIds === "function") {
-        // Keep the normal cart and checkout bootstrap on the same lightweight
-        // projection. Full product-detail queries include SEO, taxonomy, option
-        // metadata and the complete variant matrix, none of which the cart UI
-        // renders. Loading those relations on every cart open needlessly expands
-        // database work and Prisma payload size.
+        // Checkout must use the same narrow, batched product projection as the
+        // cart page. The full catalog detail projection loads unrelated taxonomy
+        // and option data that checkout never renders.
         const products = await catalog.getPublishedCartProductDetailsByIds(productIds);
         const prefetchedProducts = new Map(products.map((product) => [product.id, product]));
         items = cart.items.map((item) => resolveCartLine(item, prefetchedProducts));
       } else {
-        // Preserve injected catalog query doubles and the established test seam.
+        // Preserve compatibility with injected repository/query doubles.
         const getDetailsByIds = catalogQuery.getPublishedProductDetailsByIds;
         const prefetchedProducts = typeof getDetailsByIds === "function"
           ? await getDetailsByIds(productIds)
