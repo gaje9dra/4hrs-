@@ -4,7 +4,8 @@ import { db } from "@/lib/db/client";
 import { createSessionToken, hashSessionToken } from "@/lib/auth/session";
 
 type Sample = { endpoint: string; scenario: string; requests: number; concurrency: number; errors: number; errorRate: number; p50Ms: number | null; p95Ms: number | null; p99Ms: number | null; throughputRps: number; };
-type SessionFixture = { customerId: string; cookie: string; productId: string; variantId: string };
+type BenchmarkProduct = { productId: string; productSlug: string; variantId: string };
+type SessionFixture = { customerId: string; cookie: string; products: BenchmarkProduct[] };
 
 function percentile(values: number[], p: number) {
   if (!values.length) return null;
@@ -38,10 +39,12 @@ function localBaseUrl(): URL {
 }
 
 async function createSessionFixture(): Promise<SessionFixture> {
-  const email = `phase-16-11-perf-${randomUUID()}@example.test`;
+  const email = \`phase-16-11-perf-\${randomUUID()}@example.test\`;
   const token = createSessionToken();
   const customer = await db.customer.create({ data: { email, status: "ACTIVE" } });
-  let productId: string | null = null;
+  const productIds: string[] = [];
+  const products: BenchmarkProduct[] = [];
+
   try {
     await db.customerSession.create({
       data: {
@@ -51,49 +54,58 @@ async function createSessionFixture(): Promise<SessionFixture> {
         lastUsedAt: new Date(),
       },
     });
-    const suffix = randomUUID().replaceAll("-", "");
-    const product = await db.product.create({
-      data: {
-        title: "Phase 16.11 Performance Fixture",
-        slug: `phase-16-11-benchmark-${suffix}`,
-        shortDescription: "Synthetic performance fixture.",
-        description: "Disposable CI-only cart benchmark product.",
-        price: "499.00",
-        currency: "INR",
-        status: "ACTIVE",
-        variants: {
-          create: {
-            sku: `PHASE-16-11-${suffix.slice(0, 16)}`,
-            displayName: "Synthetic / M",
-            size: "M",
-            color: "Synthetic",
-            status: "ACTIVE",
-            inventory: {
-              create: { trackingEnabled: true, onHand: 10, reserved: 0 },
+
+    // Five independently published products let this benchmark exercise both
+    // the original two-product cart and a representative larger cart.
+    const sizes = ["S", "M", "L", "XL", "XXL"] as const;
+    for (let index = 0; index < sizes.length; index += 1) {
+      const suffix = randomUUID().replaceAll("-", "");
+      const product = await db.product.create({
+        data: {
+          title: \`Phase 16.11 Performance Fixture \${index + 1}\`,
+          slug: \`phase-16-11-benchmark-\${suffix}\`,
+          shortDescription: "Synthetic performance fixture.",
+          description: "Disposable CI-only cart benchmark product.",
+          price: "499.00",
+          currency: "INR",
+          status: "ACTIVE",
+          variants: {
+            create: {
+              sku: \`PHASE-16-11-\${suffix.slice(0, 16)}\`,
+              displayName: \`Synthetic / \${sizes[index]}\`,
+              size: sizes[index],
+              color: "Synthetic",
+              status: "ACTIVE",
+              inventory: {
+                create: { trackingEnabled: true, onHand: 10, reserved: 0 },
+              },
             },
           },
         },
-      },
-      include: { variants: { select: { id: true } } },
-    });
-    productId = product.id;
-    const variant = product.variants[0];
-    if (!variant) throw new Error("Could not create the local performance fixture variant.");
+        include: { variants: { select: { id: true } } },
+      });
+      productIds.push(product.id);
+      const variant = product.variants[0];
+      if (!variant) throw new Error("Could not create a local performance fixture variant.");
+      products.push({ productId: product.id, productSlug: product.slug, variantId: variant.id });
+    }
+
     return {
       customerId: customer.id,
-      cookie: `customer_session=${token}`,
-      productId: product.id,
-      variantId: variant.id,
+      cookie: \`customer_session=\${token}\`,
+      products,
     };
   } catch (error) {
-    if (productId) {
-      const variantIds = await db.productVariant.findMany({ where: { productId }, select: { id: true } })
-        .then((variants) => variants.map((variant) => variant.id))
-        .catch(() => []);
+    if (productIds.length) {
+      const variants = await db.productVariant.findMany({
+        where: { productId: { in: productIds } },
+        select: { id: true },
+      }).catch(() => []);
+      const variantIds = variants.map((variant) => variant.id);
       if (variantIds.length) {
         await db.inventory.deleteMany({ where: { variantId: { in: variantIds } } }).catch(() => undefined);
       }
-      await db.product.delete({ where: { id: productId } }).catch(() => undefined);
+      await db.product.deleteMany({ where: { id: { in: productIds } } }).catch(() => undefined);
     }
     await db.customer.delete({ where: { id: customer.id } }).catch(() => undefined);
     throw error;
@@ -101,10 +113,12 @@ async function createSessionFixture(): Promise<SessionFixture> {
 }
 
 async function cleanupSessionFixture(fixture: SessionFixture) {
-  // Remove all references before deleting the fixture catalog row.
+  // Remove all references before deleting fixture catalog rows.
   await db.cart.deleteMany({ where: { customerId: fixture.customerId } });
-  await db.inventory.deleteMany({ where: { variantId: fixture.variantId } });
-  await db.product.delete({ where: { id: fixture.productId } });
+  const variantIds = fixture.products.map((product) => product.variantId);
+  const productIds = fixture.products.map((product) => product.productId);
+  await db.inventory.deleteMany({ where: { variantId: { in: variantIds } } });
+  await db.product.deleteMany({ where: { id: { in: productIds } } });
   await db.customer.delete({ where: { id: fixture.customerId } });
 }
 
@@ -168,14 +182,28 @@ async function main() {
     // measures the real product/variant/inventory lookup without an artificial
     // cart-creation write on the critical path.
     const cart = await db.cart.create({ data: { customerId: fixture.customerId } });
-    await db.cartItem.create({
-      data: { cartId: cart.id, productId: fixture.productId, variantId: fixture.variantId, quantity: 1 },
-    });
+    async function setCartSize(size: number) {
+      const selected = fixture.products.slice(0, size);
+      if (selected.length !== size || size < 1) throw new Error("Invalid benchmark cart size.");
+      await db.cartItem.deleteMany({ where: { cartId: cart.id } });
+      await db.cartItem.createMany({
+        data: selected.map((product) => ({
+          cartId: cart.id,
+          productId: product.productId,
+          variantId: product.variantId,
+          quantity: 1,
+        })),
+      });
+    }
+    // Reproduce the incident's two-unique-product baseline first.
+    await setCartSize(2);
+    const productDetailPath = "/product/" + fixture.products[0].productSlug;
 
     const endpoints = [
       { path: "/", auth: false },
       { path: "/cart", auth: true },
       { path: "/checkout", auth: true },
+      { path: productDetailPath, auth: false },
       { path: "/api/health", auth: false },
       { path: "/api/ready", auth: false },
       { path: "/api/readiness", auth: false },
@@ -184,7 +212,7 @@ async function main() {
     ];
     // Measure first use of the actual storefront routes before repeated runs
     // warm their route modules and database path. This is not a Netlify cold start.
-    for (const endpoint of endpoints.filter((item) => ["/cart", "/checkout", "/api/cart", "/api/checkout"].includes(item.path))) {
+    for (const endpoint of endpoints.filter((item) => ["/cart", "/checkout", "/api/cart", "/api/checkout", productDetailPath].includes(item.path))) {
       const result = await run(baseUrl, endpoint.path, 1, 1, endpoint.auth ? fixture.cookie : undefined);
       samples.push({ endpoint: endpoint.path, scenario: "first-use", ...result });
     }
@@ -194,10 +222,22 @@ async function main() {
       { name: "elevated", requests: 60, concurrency: 5 },
       { name: "spike", requests: 40, concurrency: 10 },
     ] as const;
+    // All base scenarios use two items, matching the production incident evidence.
     for (const endpoint of endpoints) {
       for (const scenario of scenarios) {
         const result = await run(baseUrl, endpoint.path, scenario.requests, scenario.concurrency, endpoint.auth ? fixture.cookie : undefined);
         samples.push({ endpoint: endpoint.path, scenario: scenario.name, ...result });
+      }
+    }
+
+    // Also test a larger five-item cart under the same normal/elevated/spike
+    // concurrency profiles. Product detail is included to measure the slow
+    // product projection that shares this repository path.
+    await setCartSize(5);
+    for (const endpoint of endpoints.filter((item) => ["/cart", "/checkout", "/api/cart", "/api/checkout", productDetailPath].includes(item.path))) {
+      for (const scenario of scenarios) {
+        const result = await run(baseUrl, endpoint.path, scenario.requests, scenario.concurrency, endpoint.auth ? fixture.cookie : undefined);
+        samples.push({ endpoint: endpoint.path, scenario: scenario.name + "-5-item", ...result });
       }
     }
 
@@ -219,10 +259,11 @@ async function main() {
     await cleanupSessionFixture(fixture);
   }
 
-  const critical = samples.filter((sample) => ["/api/cart", "/api/checkout", "/cart", "/checkout"].includes(sample.endpoint) && sample.scenario !== "soak");
+  const criticalEndpoints = ["/api/cart", "/api/checkout", "/cart", "/checkout", "/product/" + fixture.products[0].productSlug];
+  const critical = samples.filter((sample) => criticalEndpoints.includes(sample.endpoint) && sample.scenario !== "soak");
   const failures = samples.filter((sample) => sample.errors > 0 || sample.errorRate > 0);
   const overFourSeconds = critical.filter((sample) => (sample.p95Ms ?? Infinity) > 4000);
-  const normalOverThreeSeconds = critical.filter((sample) => sample.scenario === "normal" && (sample.p95Ms ?? Infinity) > 3000);
+  const normalOverThreeSeconds = critical.filter((sample) => sample.scenario.startsWith("normal") && (sample.p95Ms ?? Infinity) > 3000);
   const overThreeSeconds = critical.filter((sample) => (sample.p95Ms ?? Infinity) > 3000);
   const report = {
     generatedAt: new Date().toISOString(),
@@ -230,7 +271,7 @@ async function main() {
     productionTraffic: false,
     scenarios: samples,
     criticalPathAcceptance: {
-      endpoints: ["/cart", "/checkout", "/api/cart", "/api/checkout"],
+      endpoints: ["/cart", "/checkout", "/api/cart", "/api/checkout", productDetailPath],
       samples: critical.length,
       scenariosOver3sP95: overThreeSeconds.map((x) => ({ endpoint: x.endpoint, scenario: x.scenario, p95Ms: x.p95Ms })),
       normalScenariosOver3sP95: normalOverThreeSeconds.map((x) => ({ endpoint: x.endpoint, scenario: x.scenario, p95Ms: x.p95Ms })),
