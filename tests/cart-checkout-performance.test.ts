@@ -15,6 +15,9 @@ test("cart resolves unique product details in a bounded batch", () => {
 
   assert.match(service, /new Set\(cart\.items\.map\(\(item\) => item\.productId\)\)/);
   assert.match(service, /getPublishedProductDetailsByIds/);
+  // Checkout uses getCartForCustomer rather than getCart; both paths must use
+  // the lightweight batched projection so the checkout bootstrap is optimized.
+  assert.match(service, /async function getCartForCustomer[\s\S]*?getPublishedCartProductDetailsByIds/);
   assert.match(catalogRepository, /getPublishedProductDetailsByIds[\s\S]*?product\.findMany\([\s\S]*?id: \{ in: uniqueIds \}/);
   assert.match(catalogQuery, /async getPublishedProductDetailsByIds\(ids: string\[\]\)/);
   assert.doesNotMatch(service, /cart\.items\.map\(resolveLine\)/);
@@ -41,6 +44,7 @@ test("checkout bootstrap returns saved addresses without a duplicate initial req
   assert.match(checkoutService, /\.\.\.\(addresses \? \{ addresses \} : \{\}\)/);
   assert.match(checkoutContracts, /addresses\?: CustomerAddressDto\[\]/);
   assert.match(checkoutPage, /checkoutRequest\("GET"\)[\s\S]*?const nextAddresses = nextCheckout\.addresses \?\? \[\]/);
+  assert.match(checkoutPage, /Loading secure checkout details/);
   assert.doesNotMatch(checkoutPage, /Promise\.all\(\[checkoutRequest\("GET"\), addressRequest\(\)\]\)/);
   assert.doesNotMatch(checkoutRoute, /await resolveCurrentCustomer/);
   assert.match(checkoutPage, /checkout\?\.customer\?\.email/);

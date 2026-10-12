@@ -5,20 +5,35 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 const application = createCheckoutApplication();
 
+function withCheckoutTiming(response: Response, startedAt: number, method: "GET" | "POST"): Response {
+  const durationMs = Date.now() - startedAt;
+  const headers = new Headers(response.headers);
+  headers.set("Server-Timing", `checkout;dur=${durationMs}`);
+  headers.set("X-Checkout-Duration-Ms", String(durationMs));
+  if (process.env.NODE_ENV !== "test") {
+    const event = { scope: "checkout", operation: method.toLowerCase(), durationMs, status: response.status };
+    if (durationMs >= 1000) console.warn("[checkout.request.slow]", event);
+    else console.info("[checkout.request]", event);
+  }
+  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+}
+
 export async function POST(request: Request) {
+  const startedAt = Date.now();
   try {
     const input = await application.readRequest(request);
-    return checkoutJson(await application.validate(request, input));
+    return withCheckoutTiming(checkoutJson(await application.validate(request, input)), startedAt, "POST");
   } catch (error) {
-    return checkoutErrorResponse(error, "validate");
+    return withCheckoutTiming(checkoutErrorResponse(error, "validate"), startedAt, "POST");
   }
 }
 
 export async function GET(request: Request) {
+  const startedAt = Date.now();
   try {
-    return checkoutJson(await application.validate(request, {}));
+    return withCheckoutTiming(checkoutJson(await application.validate(request, {})), startedAt, "GET");
   } catch (error) {
-    return checkoutErrorResponse(error, "validate");
+    return withCheckoutTiming(checkoutErrorResponse(error, "validate"), startedAt, "GET");
   }
 }
 

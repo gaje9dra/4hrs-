@@ -301,7 +301,47 @@ export function CheckoutPage() {
   const affectedItems = new Set(issues.flatMap((item) => item.itemId ? [item.itemId] : []));
   const canContinue = state === "valid" && Boolean(checkout?.address) && !pending;
 
-  if (state === "loading") return <div className="border-4 border-border bg-white p-6 shadow-hard-md" aria-busy="true" aria-live="polite"><p className="text-xs font-900 uppercase tracking-[.25em] text-primary-blue">Checkout</p><h1 className="mt-3">Loading Checkout</h1></div>;
+  if (state === "loading" && !checkout) return (
+    <div aria-busy="true" aria-live="polite" role="status" className="animate-pulse">
+      <span className="sr-only">Loading secure checkout details</span>
+      <header className="border-b-4 border-border pb-6">
+        <p className="text-xs font-900 uppercase tracking-[.25em] text-primary-blue">4HRS+ / Secure payment</p>
+        <div className="mt-3 h-10 w-56 bg-muted" />
+        <div className="mt-4 h-4 max-w-2xl bg-muted" />
+        <div className="mt-2 h-4 max-w-xl bg-muted" />
+        <div className="mt-6 grid gap-2 sm:grid-cols-3">
+          {["cart", "address", "payment"].map((step) => <div key={step} className="h-9 border-2 border-border bg-muted" />)}
+        </div>
+      </header>
+      <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
+        <div className="grid gap-6">
+          <section className="border-2 border-border bg-white p-5 shadow-hard-sm">
+            <div className="h-3 w-24 bg-muted" />
+            <div className="mt-4 h-7 w-52 bg-muted" />
+            <div className="mt-3 h-4 w-64 max-w-full bg-muted" />
+          </section>
+          <section className="grid gap-4">
+            <div><div className="h-3 w-24 bg-muted" /><div className="mt-3 h-8 w-60 bg-muted" /></div>
+            {[0, 1].map((item) => <div key={item} className="border-2 border-border bg-white p-5"><div className="h-4 w-32 bg-muted" /><div className="mt-3 h-4 w-48 max-w-full bg-muted" /><div className="mt-2 h-4 w-40 max-w-full bg-muted" /></div>)}
+            <div className="h-14 border-2 border-border bg-muted" />
+          </section>
+          <section className="border-4 border-border bg-white p-5">
+            <div className="h-3 w-28 bg-muted" /><div className="mt-3 h-7 w-56 bg-muted" /><div className="mt-3 h-4 max-w-xl bg-muted" />
+          </section>
+        </div>
+        <aside className="border-4 border-border bg-primary-yellow p-5 shadow-hard-md">
+          <div className="h-7 w-44 bg-muted" />
+          {[0, 1].map((item) => <div key={item} className="mt-5 flex gap-3 border-2 border-border bg-white p-3"><div className="size-16 shrink-0 bg-muted" /><div className="flex-1"><div className="h-4 w-32 bg-muted" /><div className="mt-3 h-3 w-20 bg-muted" /></div></div>)}
+          <div className="mt-6 h-px bg-border" />
+          <div className="mt-5 h-4 w-36 bg-muted" />
+          <div className="mt-3 h-10 bg-muted" />
+          <div className="mt-6 h-4 w-full bg-muted" />
+          <div className="mt-3 h-8 w-full bg-muted" />
+          <div className="mt-5 h-12 w-full border-2 border-border bg-muted" />
+        </aside>
+      </div>
+    </div>
+  );
   if (state === "session_expired") return <section aria-labelledby="session-expired"><p className="text-xs font-900 uppercase tracking-[.25em] text-primary-red">Checkout</p><h1 id="session-expired" className="mt-3">Session expired</h1><Alert variant="error" title="Sign in again" className="mt-6">Your secure session expired. Sign in to continue Checkout.</Alert><div className="mt-6"><Button href="/login?next=%2Fcheckout">Sign in</Button></div></section>;
   if (!checkout) return <section aria-labelledby="checkout-server-error"><h1 id="checkout-server-error">Checkout unavailable</h1><Alert variant="error" title="Please try again" className="mt-6">{error || "Checkout is temporarily unavailable."}</Alert><div className="mt-6 flex gap-3"><Button onClick={() => void load(false)}>Try again</Button><Button href="/cart" variant="yellow">Return to Cart</Button></div></section>;
 
