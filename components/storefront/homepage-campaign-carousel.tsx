@@ -6,8 +6,8 @@ import { type TouchEvent, useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const banners = [
-  { src: "/images/homepage-banners/4hrs-hero-banner.png", alt: "4HRS+ premium streetwear campaign", href: "/shop", eyebrow: "4HRS+ / NEW SEASON", title: "Streetwear, redefined.", accent: "redefined." },
-  { src: "/images/homepage-banners/4hrs-men-banner.png?v=20261009-2", alt: "Shop men's streetwear", href: "/category/men", eyebrow: "THE MEN'S EDIT", title: "Built for everyday.", accent: "everyday." },
+  { src: "/images/homepage-banners/4hrs-hero-banner.png", width: 1507, height: 404, alt: "4HRS+ premium streetwear campaign", href: "/shop", eyebrow: "4HRS+ / NEW SEASON", title: "Streetwear, redefined.", accent: "redefined." },
+  { src: "/images/homepage-banners/4hrs-men-banner.png?v=20261009-2", width: 1600, height: 500, alt: "Shop men's streetwear", href: "/category/men", eyebrow: "THE MEN'S EDIT", title: "Built for everyday.", accent: "everyday." },
 ];
 
 type SlideDirection = "left" | "right";
@@ -69,7 +69,7 @@ export function HomepageCampaignCarousel() {
   return (
     <section aria-label="Featured 4HRS+ campaigns" className="hidden w-full border-b-2 border-border bg-[#f5f1e8] lg:border-b-4 sm:block">
       <div
-        className={`homepage-banner-frame relative w-full touch-pan-y overflow-hidden bg-[#f5f1e8] ${activeIndex === 1 ? "sm:aspect-[16/5]" : "sm:aspect-[1507/404]"}`}
+        className="homepage-banner-frame relative w-full touch-pan-y overflow-hidden bg-[#f5f1e8]"
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
@@ -96,17 +96,19 @@ export function HomepageCampaignCarousel() {
         <Link
           href={activeBanner.href}
           aria-label={activeBanner.alt}
-          className="group absolute inset-0 hidden focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-primary-blue sm:block"
+          className="relative hidden w-full focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-primary-blue sm:block"
         >
           <Image
             key={activeBanner.src}
             src={activeBanner.src}
             alt={activeBanner.alt}
-            fill
+            width={activeBanner.width}
+            height={activeBanner.height}
             loading="eager"
             fetchPriority="high"
-            sizes="(max-width: 1507px) 100vw, 1507px"
-            className={`${activeIndex === 1 ? "object-cover object-top" : "object-cover object-center"} ${slideAnimation}`}
+            sizes="100vw"
+            className={`block h-auto w-full max-w-none ${slideAnimation}`}
+            style={{ display: "block", width: "100%", height: "auto", maxWidth: "none" }}
           />
         </Link>
 
