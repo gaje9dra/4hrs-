@@ -147,7 +147,7 @@ async function main() {
     if (serverPid) {
       try {
         const proc = await readFile("/proc/" + serverPid + "/status", "utf8");
-        serverRssKb = Number(/VmRSS:\\s+(\\d+)/.exec(proc)?.[1] ?? "0") || null;
+        serverRssKb = Number(/VmRSS:\s+(\d+)/.exec(proc)?.[1] ?? "0") || null;
       } catch {}
     }
   } finally {
