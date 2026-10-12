@@ -177,6 +177,8 @@ async function main() {
       { path: "/cart", auth: true },
       { path: "/checkout", auth: true },
       { path: "/api/health", auth: false },
+      { path: "/api/ready", auth: false },
+      { path: "/api/readiness", auth: false },
       { path: "/api/cart", auth: true },
       { path: "/api/checkout", auth: true },
     ];
