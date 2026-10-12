@@ -541,6 +541,7 @@ export function createCartService(dependencies: CartServiceDependencies = {}) {
   return {
     createCart,
     getCart,
+    getCartForCustomer,
     addItem,
     updateItemQuantity,
     removeItem,
