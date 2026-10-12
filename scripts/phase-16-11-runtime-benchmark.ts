@@ -39,7 +39,7 @@ function localBaseUrl(): URL {
 }
 
 async function createSessionFixture(): Promise<SessionFixture> {
-  const email = \`phase-16-11-perf-\${randomUUID()}@example.test\`;
+  const email = `phase-16-11-perf-${randomUUID()}@example.test`;
   const token = createSessionToken();
   const customer = await db.customer.create({ data: { email, status: "ACTIVE" } });
   const productIds: string[] = [];
@@ -62,8 +62,8 @@ async function createSessionFixture(): Promise<SessionFixture> {
       const suffix = randomUUID().replaceAll("-", "");
       const product = await db.product.create({
         data: {
-          title: \`Phase 16.11 Performance Fixture \${index + 1}\`,
-          slug: \`phase-16-11-benchmark-\${suffix}\`,
+          title: `Phase 16.11 Performance Fixture ${index + 1}`,
+          slug: `phase-16-11-benchmark-${suffix}`,
           shortDescription: "Synthetic performance fixture.",
           description: "Disposable CI-only cart benchmark product.",
           price: "499.00",
@@ -71,8 +71,8 @@ async function createSessionFixture(): Promise<SessionFixture> {
           status: "ACTIVE",
           variants: {
             create: {
-              sku: \`PHASE-16-11-\${suffix.slice(0, 16)}\`,
-              displayName: \`Synthetic / \${sizes[index]}\`,
+              sku: `PHASE-16-11-${suffix.slice(0, 16)}`,
+              displayName: `Synthetic / ${sizes[index]}`,
               size: sizes[index],
               color: "Synthetic",
               status: "ACTIVE",
@@ -92,7 +92,7 @@ async function createSessionFixture(): Promise<SessionFixture> {
 
     return {
       customerId: customer.id,
-      cookie: \`customer_session=\${token}\`,
+      cookie: `customer_session=${token}`,
       products,
     };
   } catch (error) {
