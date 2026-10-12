@@ -105,8 +105,8 @@ export function HomepageCampaignCarousel() {
             fill
             loading="eager"
             fetchPriority="high"
-            sizes="(max-width: 1507px) 100vw, 1507px"
-            className={`${activeIndex === 1 ? "object-cover object-top" : "object-cover object-center"} ${slideAnimation}`}
+            sizes="100vw"
+            className={`homepage-banner-desktop-image !absolute !inset-0 !h-full !w-full !max-w-none ${activeIndex === 1 ? "object-cover object-top" : "object-cover object-center"} ${slideAnimation}`}
           />
         </Link>
 
