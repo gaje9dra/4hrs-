@@ -990,6 +990,7 @@ export type PublicCatalogProductDetailRecord = Prisma.ProductGetPayload<{
 export async function getPublishedProductDetailsBySlug(slug: string, client?: CatalogRepositoryClient) {
   return clientOrDefault(client).product.findFirst({
     where: { ...publishedProductWhere, slug },
+    relationLoadStrategy: "join",
     select: publicProductDetailSelect,
   });
 }
@@ -1004,6 +1005,7 @@ export async function getPublishedProductDetailsByIds(ids: string[], client?: Ca
   if (uniqueIds.length === 0) return [];
   return clientOrDefault(client).product.findMany({
     where: { ...publishedProductWhere, id: { in: uniqueIds } },
+    relationLoadStrategy: "join",
     select: publicProductDetailSelect,
   });
 }
@@ -1050,6 +1052,7 @@ export async function getPublishedCartProductDetailsByIds(ids: string[], client?
   if (uniqueIds.length === 0) return [];
   return clientOrDefault(client).product.findMany({
     where: { ...publishedProductWhere, id: { in: uniqueIds } },
+    relationLoadStrategy: "join",
     select: publishedCartProductSelect,
   });
 }
