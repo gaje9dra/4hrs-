@@ -7,10 +7,18 @@ export const revalidate = 0;
 
 const application = createCartApplication();
 
+function withCartTiming(response: Response, startedAt: number): Response {
+  const durationMs = Date.now() - startedAt;
+  const headers = new Headers(response.headers);
+  headers.set("Server-Timing", `cart;dur=${durationMs}`);
+  headers.set("X-Cart-Duration-Ms", String(durationMs));
+  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+}
+
 export async function GET(request: Request) {
   const startedAt = Date.now();
   try {
-    const response = cartJson(await application.getCurrentCart(request));
+    const response = withCartTiming(cartJson(await application.getCurrentCart(request)), startedAt);
     console.info("[cart] request completed", {
       operation: "getCurrentCartHttp",
       durationMs: Date.now() - startedAt,
@@ -18,7 +26,7 @@ export async function GET(request: Request) {
     });
     return response;
   } catch (error) {
-    const response = cartErrorResponse(error, "getCurrentCart");
+    const response = withCartTiming(cartErrorResponse(error, "getCurrentCart"), startedAt);
     console.warn("[cart] request failed", {
       operation: "getCurrentCartHttp",
       durationMs: Date.now() - startedAt,
