@@ -32,6 +32,6 @@ test("Phase 16.11 runtime benchmark is isolated to safe application endpoints", 
 
 test("Phase 16.11 keeps load testing out of production", async () => {
   const source = await readFile("scripts/phase-16-11-runtime-benchmark.ts", "utf8");
-  assert.match(source, /productionTraffic:false/);
+  assert.match(source, /productionTraffic:\s*false/);
   assert.match(source, /isolated CI PostgreSQL \+ local Next\.js production server/);
 });
