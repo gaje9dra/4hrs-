@@ -108,6 +108,7 @@ export function HomepageCampaignCarousel() {
             fetchPriority="high"
             sizes="100vw"
             className={`block h-auto w-full max-w-none ${slideAnimation}`}
+            style={{ display: "block", width: "100%", height: "auto", maxWidth: "none" }}
           />
         </Link>
 
