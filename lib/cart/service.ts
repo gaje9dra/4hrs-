@@ -284,6 +284,108 @@ export function createCartService(dependencies: CartServiceDependencies = {}) {
     };
   }
 
+  async function resolveLine(
+    line: { id: string; productId: string; variantId: string | null; quantity: number },
+    prefetchedProducts?: Map<string, PublishedProductDetailResult | CatalogServiceError>,
+  ): Promise<CartLine> {
+    try {
+      let prefetchedProduct: PublishedProductDetailResult | undefined;
+      if (prefetchedProducts) {
+        const prefetched = prefetchedProducts.get(line.productId);
+        if (!prefetched) throw new CartServiceError("PRODUCT_NOT_FOUND", "Product was not found.");
+        if (prefetched instanceof CatalogServiceError) {
+          throw new CartServiceError("PRODUCT_UNAVAILABLE", "Product is not currently purchasable.", undefined, prefetched);
+        }
+        prefetchedProduct = prefetched;
+      }
+      const resolved = await resolveSelection(line.productId, line.variantId, prefetchedProduct);
+      const availableQuantity = resolved.availableQuantity;
+      const state: CartLineState =
+        resolved.variant?.availability.state === "OUT_OF_STOCK" ||
+        resolved.product.availability.state === "OUT_OF_STOCK"
+          ? "INSUFFICIENT_AVAILABILITY"
+          : availableQuantity !== null && line.quantity > availableQuantity
+            ? "INSUFFICIENT_AVAILABILITY"
+            : "AVAILABLE";
+      const subtotal = money(resolved.unitPrice).mul(line.quantity).toFixed(2);
+      return {
+        id: line.id,
+        productId: line.productId,
+        variantId: line.variantId,
+        quantity: line.quantity,
+        state,
+        product: {
+          id: resolved.product.id,
+          title: resolved.product.title,
+          slug: resolved.product.slug,
+          media: primaryMedia(resolved.product),
+        },
+        variant: resolved.variant
+          ? {
+              id: resolved.variant.id,
+              displayName: resolved.variant.displayName,
+              size: resolved.variant.size,
+              color: resolved.variant.color,
+            }
+          : null,
+        unitPrice: resolved.unitPrice,
+        currency: resolved.currency,
+        subtotal,
+        availableQuantity,
+      };
+    } catch (error) {
+      if (error instanceof CartServiceError && error.code === "PRODUCT_NOT_FOUND") {
+        return {
+          id: line.id,
+          productId: line.productId,
+          variantId: line.variantId,
+          quantity: line.quantity,
+          state: "PRODUCT_UNAVAILABLE",
+          product: null,
+          variant: null,
+          unitPrice: null,
+          currency: null,
+          subtotal: null,
+          availableQuantity: null,
+        };
+      }
+      if (
+        error instanceof CartServiceError &&
+        (error.code === "PRODUCT_UNAVAILABLE" || error.code === "INVALID_VARIANT" || error.code === "VARIANT_NOT_FOUND")
+      ) {
+        return {
+          id: line.id,
+          productId: line.productId,
+          variantId: line.variantId,
+          quantity: line.quantity,
+          state: error.code === "PRODUCT_UNAVAILABLE" ? "PRODUCT_UNAVAILABLE" : "VARIANT_UNAVAILABLE",
+          product: null,
+          variant: null,
+          unitPrice: null,
+          currency: null,
+          subtotal: null,
+          availableQuantity: null,
+        };
+      }
+      if (error instanceof CartServiceError && error.code === "INSUFFICIENT_AVAILABILITY") {
+        return {
+          id: line.id,
+          productId: line.productId,
+          variantId: line.variantId,
+          quantity: line.quantity,
+          state: "INSUFFICIENT_AVAILABILITY",
+          product: null,
+          variant: null,
+          unitPrice: null,
+          currency: null,
+          subtotal: null,
+          availableQuantity: null,
+        };
+      }
+      throw error;
+    }
+  }
+
   async function getCart(cartId: string, owner: CartOwnerContext): Promise<CartView> {
     const startedAt = Date.now();
     try {
@@ -292,9 +394,24 @@ export function createCartService(dependencies: CartServiceDependencies = {}) {
       if (!cart) throw new CartServiceError("CART_NOT_FOUND", "Cart was not found.");
 
       const productIds = [...new Set(cart.items.map((item) => item.productId))];
-      const products = await catalog.getPublishedCartProductDetailsByIds(productIds);
-      const prefetchedProducts = new Map(products.map((product) => [product.id, product]));
-      const items = cart.items.map((item) => resolveCartLine(item, prefetchedProducts));
+      let items: CartLine[];
+      if (typeof catalog.getPublishedCartProductDetailsByIds === "function") {
+        // Production repository path: fetch only cart display, price, variant,
+        // and inventory fields in one bounded query.
+        const products = await catalog.getPublishedCartProductDetailsByIds(productIds);
+        const prefetchedProducts = new Map(products.map((product) => [product.id, product]));
+        items = cart.items.map((item) => resolveCartLine(item, prefetchedProducts));
+      } else {
+        // Preserve injected repository/query doubles used by domain tests and
+        // consumers that provide only the established catalog query contract.
+        const getDetailsByIds = catalogQuery.getPublishedProductDetailsByIds;
+        const prefetchedProducts = typeof getDetailsByIds === "function"
+          ? await getDetailsByIds(productIds)
+          : undefined;
+        items = await Promise.all(
+          cart.items.map((item) => resolveLine(item, prefetchedProducts)),
+        );
+      }
       const availableItems = items.filter((item) => item.state === "AVAILABLE");
       const currency = availableItems[0]?.currency ?? items.find((item) => item.currency)?.currency ?? null;
       const subtotal = availableItems
