@@ -172,8 +172,9 @@ export function createCartApplication(options: {
   // Checkout has already authenticated the request. Reuse that verified
   // customer identity rather than hashing and querying the same session twice.
   async function getCurrentCartForCustomer(customerId: string): Promise<CartDto> {
-    const context = await contextForCustomer(customerId);
-    return toCartDto(await service.getCart(context.cartId, context.owner));
+    // customerId is derived from the authenticated checkout session. The cart
+    // query itself is customer-scoped, so no second ownership lookup is needed.
+    return toCartDto(await service.getCartForCustomer(customerId));
   }
 
   async function addItem(request: Request): Promise<CartDto> {

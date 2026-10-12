@@ -386,6 +386,43 @@ export function createCartService(dependencies: CartServiceDependencies = {}) {
     }
   }
 
+  // Checkout already has a server-verified customer ID. Query the customer's cart
+  // together with its lines in one database round trip, avoiding the previous
+  // customerCart lookup followed by a second cart-by-ID lookup.
+  async function getCartForCustomer(customerId: string): Promise<CartView> {
+    const startedAt = Date.now();
+    try {
+      let cart = await repository.findCartByCustomerId(customerId);
+      if (!cart) {
+        try {
+          await repository.createCart(customerId);
+        } catch (error) {
+          // A parallel first request may have created the unique customer cart.
+          if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2002") throw error;
+        }
+        cart = await repository.findCartByCustomerId(customerId);
+      }
+      if (!cart) throw new CartServiceError("CART_NOT_FOUND", "Cart could not be initialized.");
+
+      const productIds = [...new Set(cart.items.map((item) => item.productId))];
+      const getDetailsByIds = catalogQuery.getPublishedProductDetailsByIds;
+      const prefetchedProducts = typeof getDetailsByIds === "function"
+        ? await getDetailsByIds(productIds)
+        : undefined;
+      const items = await Promise.all(cart.items.map((item) => resolveLine(item, prefetchedProducts)));
+      const availableItems = items.filter((item) => item.state === "AVAILABLE");
+      const currency = availableItems[0]?.currency ?? items.find((item) => item.currency)?.currency ?? null;
+      const subtotal = availableItems.reduce((total, item) => total.add(money(item.subtotal!)), new Prisma.Decimal(0)).toFixed(2);
+      return { id: cart.id, items, subtotal, currency, hasUnavailableItems: items.some((item) => item.state !== "AVAILABLE") };
+    } catch (error) {
+      const classification = error instanceof CartServiceError && error.code.endsWith("DATABASE_ERROR")
+        ? "persistence_failure"
+        : error instanceof CartServiceError ? "domain_failure" : "unexpected_failure";
+      logCartObservation({ operation: "getCartForCustomer", classification, durationMs: Date.now() - startedAt, errorCode: error instanceof CartServiceError ? error.code : undefined });
+      throw error;
+    }
+  }
+
   async function getCart(cartId: string, owner: CartOwnerContext): Promise<CartView> {
     const startedAt = Date.now();
     try {
@@ -581,6 +618,7 @@ export function createCartService(dependencies: CartServiceDependencies = {}) {
   return {
     createCart,
     getCart,
+    getCartForCustomer,
     addItem,
     updateItemQuantity,
     removeItem,

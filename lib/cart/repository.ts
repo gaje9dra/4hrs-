@@ -10,6 +10,8 @@ export type CartRepository = {
   withTransaction<T>(work: (transactionRepository: CartRepository) => Promise<T>, options?: CartRepositoryTransactionOptions): Promise<T>;
   createCart(customerId?: string): Promise<Prisma.CartGetPayload<Record<string, never>>>;
   findCartById(cartId: string): Promise<CartRecord | null>;
+  /** Customer-scoped cart read for authenticated checkout bootstrap. */
+  findCartByCustomerId(customerId: string): Promise<CartRecord | null>;
   /** Lightweight ownership check that avoids loading CartItem rows. */
   findCartOwner?(cartId: string): Promise<{ customerId: string | null } | null>;
   createCartItem(input: CreateCartItemInput): Promise<CartItemRecord>;
@@ -74,6 +76,13 @@ export function createCartRepository(client?: CartRepositoryClient): CartReposit
             orderBy: [{ createdAt: "asc" }, { id: "asc" }],
           },
         },
+      });
+    },
+
+    findCartByCustomerId(customerId: string) {
+      return database.cart.findUnique({
+        where: { customerId },
+        include: { items: { orderBy: [{ createdAt: "asc" }, { id: "asc" }] } },
       });
     },
 
