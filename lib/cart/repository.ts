@@ -71,6 +71,7 @@ export function createCartRepository(client?: CartRepositoryClient): CartReposit
     findCartById(cartId: string) {
       return database.cart.findUnique({
         where: { id: cartId },
+        relationLoadStrategy: "join",
         include: {
           items: {
             orderBy: [{ createdAt: "asc" }, { id: "asc" }],
@@ -82,6 +83,7 @@ export function createCartRepository(client?: CartRepositoryClient): CartReposit
     findCartByCustomerId(customerId: string) {
       return database.cart.findUnique({
         where: { customerId },
+        relationLoadStrategy: "join",
         include: { items: { orderBy: [{ createdAt: "asc" }, { id: "asc" }] } },
       });
     },
