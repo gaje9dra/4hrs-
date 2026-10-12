@@ -41,6 +41,7 @@ async function createSessionFixture(): Promise<SessionFixture> {
   const email = `phase-16-11-perf-${randomUUID()}@example.test`;
   const token = createSessionToken();
   const customer = await db.customer.create({ data: { email, status: "ACTIVE" } });
+  let productId: string | null = null;
   try {
     await db.customerSession.create({
       data: {
@@ -75,6 +76,7 @@ async function createSessionFixture(): Promise<SessionFixture> {
       },
       include: { variants: { select: { id: true } } },
     });
+    productId = product.id;
     const variant = product.variants[0];
     if (!variant) throw new Error("Could not create the local performance fixture variant.");
     return {
@@ -84,6 +86,15 @@ async function createSessionFixture(): Promise<SessionFixture> {
       variantId: variant.id,
     };
   } catch (error) {
+    if (productId) {
+      const variantIds = await db.productVariant.findMany({ where: { productId }, select: { id: true } })
+        .then((variants) => variants.map((variant) => variant.id))
+        .catch(() => []);
+      if (variantIds.length) {
+        await db.inventory.deleteMany({ where: { variantId: { in: variantIds } } }).catch(() => undefined);
+      }
+      await db.product.delete({ where: { id: productId } }).catch(() => undefined);
+    }
     await db.customer.delete({ where: { id: customer.id } }).catch(() => undefined);
     throw error;
   }
