@@ -18,6 +18,9 @@ test("cart resolves unique product details in a bounded batch", () => {
   // Checkout uses getCartForCustomer rather than getCart; both paths must use
   // the lightweight batched projection so the checkout bootstrap is optimized.
   assert.match(service, /async function getCartForCustomer[\s\S]*?getPublishedCartProductDetailsByIds/);
+  assert.match(service, /\[cart\.performance\]/);
+  assert.match(service, /cartLookupDurationMs/);
+  assert.match(service, /productLookupDurationMs/);
   assert.match(catalogRepository, /getPublishedProductDetailsByIds[\s\S]*?product\.findMany\([\s\S]*?id: \{ in: uniqueIds \}/);
   assert.match(catalogQuery, /async getPublishedProductDetailsByIds\(ids: string\[\]\)/);
   assert.doesNotMatch(service, /cart\.items\.map\(resolveLine\)/);
@@ -39,6 +42,9 @@ test("checkout bootstrap returns saved addresses without a duplicate initial req
   // a second client request. Cart and address reads should also overlap so
   // initial checkout latency is not the sum of both database paths.
   assert.match(checkoutService, /const cartPromise = dependencies\.getCart\(\)/);
+  assert.match(checkoutService, /\[checkout\.performance\]/);
+  assert.match(checkoutService, /cartDurationMs/);
+  assert.match(checkoutService, /addressDurationMs/);
   assert.match(checkoutService, /const addressPromise = \(addressId[\s\S]*?dependencies\.listAddresses\(dependencies\.customer\.id\)/);
   assert.match(checkoutService, /const addressResult = await addressPromise/);
   assert.match(checkoutService, /\.\.\.\(addresses \? \{ addresses \} : \{\}\)/);
