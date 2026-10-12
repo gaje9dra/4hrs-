@@ -22,6 +22,8 @@ test("PayU redirect response owns a matching nonce and CSP for auto-submit", () 
   assert.doesNotMatch(route, /request\.headers\.get\("x-nonce"\)/);
   assert.match(route, /Continue to secure payment/);
   assert.match(route, /<button type="submit">/);
+  assert.match(route, /class="payu-redirect-card"/);
+  assert.doesNotMatch(route, /<main\b/i, "standalone PayU HTML must not create a second document main landmark");
   assert.match(route, /<noscript>/);
   assert.match(route, /Cache-Control.*no-store/);
 });
