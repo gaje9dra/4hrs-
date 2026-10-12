@@ -165,6 +165,20 @@ export function createCartApplication(options: {
   const resolveRequestContext = options.resolveRequestContext ?? authenticatedRequestContext;
 
   async function getCurrentCart(request: Request): Promise<CartDto> {
+    // The normal GET path is read-only: authenticate once, then load the cart
+    // and its lines with a single customer-scoped query. The previous flow first
+    // queried the cart ID, then rechecked ownership, then fetched the same cart
+    // with all its items, adding serial database round trips to every cart open.
+    if (!options.resolveRequestContext) {
+      const current = await resolveCurrentCustomer(request);
+      if (!current) {
+        throw new CartServiceError("CART_UNAUTHORIZED", "Authentication is required to access this Cart.");
+      }
+      return toCartDto(await service.getCartForCustomer(current.customer.id));
+    }
+
+    // Preserve injectable request-context behavior for isolated tests and custom
+    // application integrations.
     const context = await resolveRequestContext(request);
     return toCartDto(await service.getCart(context.cartId, context.owner));
   }
