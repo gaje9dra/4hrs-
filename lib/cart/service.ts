@@ -261,9 +261,7 @@ export function createCartService(dependencies: CartServiceDependencies = {}) {
       ? "INSUFFICIENT_AVAILABILITY"
       : "AVAILABLE";
     const unitPrice = new Prisma.Decimal(variant?.price ?? product.price).toFixed(2);
-    const subtotal = state === "AVAILABLE"
-      ? money(unitPrice).mul(line.quantity).toFixed(2)
-      : null;
+    const subtotal = money(unitPrice).mul(line.quantity).toFixed(2);
     const image = product.images.find((item) => item.isPrimary) ?? product.images[0] ?? null;
 
     return {
