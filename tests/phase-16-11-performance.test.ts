@@ -22,7 +22,9 @@ test("Phase 16.11 runtime benchmark is isolated to safe application endpoints", 
   assert.match(source, /\/api\/cart/);
   assert.match(source, /\/api\/checkout/);
   assert.match(source, /criticalPathAcceptance/);
-  assert.match(source, /localBaseUrl/);\n  assert.match(source, /requires a local \\${variable}/);
+  assert.match(source, /localBaseUrl/);
+  assert.match(source, /DATABASE_URL/);
+  assert.match(source, /DIRECT_URL/);
   assert.match(source, /\/api\/ready/);
   assert.match(source, /\/api\/readiness/);
   assert.match(source, /path:\s*"\/"/);
