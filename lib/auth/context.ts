@@ -13,9 +13,25 @@ export async function resolveCurrentCustomer(request?: Request) {
     : (await cookies()).get(CUSTOMER_SESSION_COOKIE)?.value;
   if (!token) return null;
 
+  const startedAt = Date.now();
   try {
-    return await createAuthenticationService().resolveSession(token);
+    const current = await createAuthenticationService().resolveSession(token);
+    if (process.env.NODE_ENV !== "test") {
+      console.info("[auth.performance]", {
+        operation: "resolveCurrentCustomer",
+        durationMs: Date.now() - startedAt,
+        outcome: "success",
+      });
+    }
+    return current;
   } catch (error) {
+    if (process.env.NODE_ENV !== "test") {
+      console.info("[auth.performance]", {
+        operation: "resolveCurrentCustomer",
+        durationMs: Date.now() - startedAt,
+        outcome: error instanceof AuthenticationError ? "rejected" : "error",
+      });
+    }
     if (error instanceof AuthenticationError && (error.code === "SESSION_INVALID" || error.code === "SESSION_EXPIRED")) {
       return null;
     }
