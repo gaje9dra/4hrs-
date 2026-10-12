@@ -106,7 +106,7 @@ export function HomepageCampaignCarousel() {
             loading="eager"
             fetchPriority="high"
             sizes="(max-width: 1507px) 100vw, 1507px"
-            className={`${activeIndex === 1 ? "object-cover object-top" : "object-contain object-center"} ${slideAnimation}`}
+            className={`${activeIndex === 1 ? "object-cover object-top" : "object-cover object-center"} ${slideAnimation}`}
           />
         </Link>
 
