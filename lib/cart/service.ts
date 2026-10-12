@@ -218,6 +218,72 @@ export function createCartService(dependencies: CartServiceDependencies = {}) {
     };
   }
 
+  function unavailableCartLine(
+    line: { id: string; productId: string; variantId: string | null; quantity: number },
+    state: CartLineState,
+  ): CartLine {
+    return {
+      id: line.id,
+      productId: line.productId,
+      variantId: line.variantId,
+      quantity: line.quantity,
+      state,
+      product: null,
+      variant: null,
+      unitPrice: null,
+      currency: null,
+      subtotal: null,
+      availableQuantity: null,
+    };
+  }
+
+  function resolveCartLine(
+    line: { id: string; productId: string; variantId: string | null; quantity: number },
+    products: Map<string, catalogRepository.PublishedCartProductRecord>,
+  ): CartLine {
+    const product = products.get(line.productId);
+    if (!product) return unavailableCartLine(line, "PRODUCT_UNAVAILABLE");
+
+    const variant = line.variantId
+      ? product.variants.find((candidate) => candidate.id === line.variantId)
+      : null;
+    if ((line.variantId && !variant) || (!line.variantId && product.variants.length > 0)) {
+      return unavailableCartLine(line, "VARIANT_UNAVAILABLE");
+    }
+
+    const inventory = variant?.inventory ?? null;
+    const availableQuantity = inventory?.trackingEnabled
+      ? inventory.onHand - inventory.reserved
+      : null;
+    const outOfStock = Boolean(inventory?.trackingEnabled && availableQuantity === 0);
+    const state: CartLineState = outOfStock ||
+      (availableQuantity !== null && line.quantity > availableQuantity)
+      ? "INSUFFICIENT_AVAILABILITY"
+      : "AVAILABLE";
+    const unitPrice = new Prisma.Decimal(variant?.price ?? product.price).toFixed(2);
+    const subtotal = money(unitPrice).mul(line.quantity).toFixed(2);
+    const image = product.images.find((item) => item.isPrimary) ?? product.images[0] ?? null;
+
+    return {
+      id: line.id,
+      productId: line.productId,
+      variantId: line.variantId,
+      quantity: line.quantity,
+      state,
+      product: { id: product.id, title: product.title, slug: product.slug, media: image ? { url: image.url, altText: image.altText } : null },
+      variant: variant ? {
+        id: variant.id,
+        displayName: variant.displayName,
+        size: variant.size,
+        color: variant.color,
+      } : null,
+      unitPrice,
+      currency: product.currency,
+      subtotal,
+      availableQuantity,
+    };
+  }
+
   async function resolveLine(
     line: { id: string; productId: string; variantId: string | null; quantity: number },
     prefetchedProducts?: Map<string, PublishedProductDetailResult | CatalogServiceError>,
@@ -328,13 +394,24 @@ export function createCartService(dependencies: CartServiceDependencies = {}) {
       if (!cart) throw new CartServiceError("CART_NOT_FOUND", "Cart was not found.");
 
       const productIds = [...new Set(cart.items.map((item) => item.productId))];
-      const getDetailsByIds = catalogQuery.getPublishedProductDetailsByIds;
-      const prefetchedProducts = typeof getDetailsByIds === "function"
-        ? await getDetailsByIds(productIds)
-        : undefined;
-      const items = await Promise.all(
-        cart.items.map((item) => resolveLine(item, prefetchedProducts)),
-      );
+      let items: CartLine[];
+      if (typeof catalog.getPublishedCartProductDetailsByIds === "function") {
+        // Production repository path: fetch only cart display, price, variant,
+        // and inventory fields in one bounded query.
+        const products = await catalog.getPublishedCartProductDetailsByIds(productIds);
+        const prefetchedProducts = new Map(products.map((product) => [product.id, product]));
+        items = cart.items.map((item) => resolveCartLine(item, prefetchedProducts));
+      } else {
+        // Preserve injected repository/query doubles used by domain tests and
+        // consumers that provide only the established catalog query contract.
+        const getDetailsByIds = catalogQuery.getPublishedProductDetailsByIds;
+        const prefetchedProducts = typeof getDetailsByIds === "function"
+          ? await getDetailsByIds(productIds)
+          : undefined;
+        items = await Promise.all(
+          cart.items.map((item) => resolveLine(item, prefetchedProducts)),
+        );
+      }
       const availableItems = items.filter((item) => item.state === "AVAILABLE");
       const currency = availableItems[0]?.currency ?? items.find((item) => item.currency)?.currency ?? null;
       const subtotal = availableItems

@@ -1008,6 +1008,52 @@ export async function getPublishedProductDetailsByIds(ids: string[], client?: Ca
   });
 }
 
+const publishedCartProductSelect = {
+  id: true,
+  title: true,
+  slug: true,
+  price: true,
+  currency: true,
+  status: true,
+  images: {
+    where: { productId: { not: null } },
+    orderBy: [{ isPrimary: "desc" as const }, { sortOrder: "asc" as const }, { id: "asc" as const }],
+    select: { url: true, altText: true, isPrimary: true },
+  },
+  variants: {
+    where: { status: "ACTIVE" as const },
+    orderBy: [{ createdAt: "asc" as const }, { id: "asc" as const }],
+    select: {
+      id: true,
+      displayName: true,
+      size: true,
+      color: true,
+      price: true,
+      inventory: {
+        select: { trackingEnabled: true, onHand: true, reserved: true, lowStockThreshold: true },
+      },
+    },
+  },
+} satisfies Prisma.ProductSelect;
+
+export type PublishedCartProductRecord = Prisma.ProductGetPayload<{
+  select: typeof publishedCartProductSelect;
+}>;
+
+/**
+ * Cart reads need only the purchasable identity, display image, variant price,
+ * and inventory. Avoid loading descriptions, SEO, categories, collections,
+ * tags, and option metadata on every cart open.
+ */
+export async function getPublishedCartProductDetailsByIds(ids: string[], client?: CatalogRepositoryClient) {
+  const uniqueIds = [...new Set(ids)];
+  if (uniqueIds.length === 0) return [];
+  return clientOrDefault(client).product.findMany({
+    where: { ...publishedProductWhere, id: { in: uniqueIds } },
+    select: publishedCartProductSelect,
+  });
+}
+
 export async function getCategoryBySlug(slug: string, client?: CatalogRepositoryClient) {
   return clientOrDefault(client).category.findUnique({
     where: { slug },
