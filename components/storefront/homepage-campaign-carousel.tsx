@@ -6,8 +6,8 @@ import { type TouchEvent, useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const banners = [
-  { src: "/images/homepage-banners/4hrs-hero-banner.png", alt: "4HRS+ premium streetwear campaign", href: "/shop", eyebrow: "4HRS+ / NEW SEASON", title: "Streetwear, redefined.", accent: "redefined." },
-  { src: "/images/homepage-banners/4hrs-men-banner.png?v=20261009-2", alt: "Shop men's streetwear", href: "/category/men", eyebrow: "THE MEN'S EDIT", title: "Built for everyday.", accent: "everyday." },
+  { src: "/images/homepage-banners/4hrs-hero-banner.png", width: 1507, height: 404, alt: "4HRS+ premium streetwear campaign", href: "/shop", eyebrow: "4HRS+ / NEW SEASON", title: "Streetwear, redefined.", accent: "redefined." },
+  { src: "/images/homepage-banners/4hrs-men-banner.png?v=20261009-2", width: 1600, height: 500, alt: "Shop men's streetwear", href: "/category/men", eyebrow: "THE MEN'S EDIT", title: "Built for everyday.", accent: "everyday." },
 ];
 
 type SlideDirection = "left" | "right";
@@ -102,8 +102,8 @@ export function HomepageCampaignCarousel() {
             key={activeBanner.src}
             src={activeBanner.src}
             alt={activeBanner.alt}
-            width={1507}
-            height={404}
+            width={activeBanner.width}
+            height={activeBanner.height}
             loading="eager"
             fetchPriority="high"
             sizes="100vw"
