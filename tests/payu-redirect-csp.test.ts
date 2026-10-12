@@ -20,5 +20,5 @@ test("PayU redirect response owns a matching nonce and CSP for auto-submit", () 
   assert.match(route, /\`script-src 'nonce-\$\{nonce\}'\`/);
   assert.match(route, /form-action 'self' https:\/\/test\.payu\.in https:\/\/secure\.payu\.in/);
   assert.doesNotMatch(route, /request\.headers\.get\("x-nonce"\)/);
-  assert.match(route, /Cache-Control.*no-store/);
+  assert.match(route, /Continue to secure payment/);\n  assert.match(route, /<button type="submit">/);\n  assert.match(route, /<noscript>/);\n  assert.match(route, /Cache-Control.*no-store/);
 });
