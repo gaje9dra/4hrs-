@@ -12,6 +12,8 @@ test("cart resolves unique product details in a bounded batch", () => {
   const cartRepository = read("lib/cart/repository.ts");
   const cartOwnership = read("lib/cart/auth-ownership.ts");
   const cartApi = read("lib/cart/api.ts");
+  const authContext = read("lib/auth/context.ts");
+  assert.match(authContext, /\[auth\.performance\]/);
 
   assert.match(service, /new Set\(cart\.items\.map\(\(item\) => item\.productId\)\)/);
   assert.match(service, /getPublishedProductDetailsByIds/);
@@ -37,6 +39,8 @@ test("checkout bootstrap returns saved addresses without a duplicate initial req
   const checkoutRoute = read("app/(storefront)/checkout/page.tsx");
   const checkoutApi = read("lib/checkout/api.ts");
   const cartApi = read("lib/cart/api.ts");
+  const authContext = read("lib/auth/context.ts");
+  assert.match(authContext, /\[auth\.performance\]/);
 
   // Checkout bootstrap must return addresses in its own response and avoid
   // a second client request. Cart and address reads should also overlap so
