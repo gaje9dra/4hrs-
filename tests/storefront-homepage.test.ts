@@ -190,3 +190,15 @@ test("homepage shows New Arrivals before the Shop by Category discovery section"
   assert.ok(newArrivalsIndex > curatedPicksIndex);
   assert.ok(categoryDiscoveryIndex > newArrivalsIndex);
 });
+
+test("desktop campaign banner uses intrinsic ratio and fills the responsive viewport width", () => {
+  const carousel = read("components/storefront/homepage-campaign-carousel.tsx");
+  assert.match(carousel, /homepage-banner-frame relative w-full touch-pan-y overflow-hidden/);
+  assert.doesNotMatch(carousel, /homepage-banner-frame[^\n]*sm:aspect-/);
+  const desktop = carousel.split("/* Desktop keeps the original panoramic artwork intact. */")[1] ?? "";
+  assert.match(desktop, /className="relative hidden w-full[\s\S]*?sm:block"/);
+  assert.match(desktop, /width=\{1507\}[\s\S]*?height=\{404\}/);
+  assert.match(desktop, /sizes="100vw"/);
+  assert.match(desktop, /width: "100%"[\s\S]*?height: "auto"[\s\S]*?maxWidth: "none"/);
+  assert.doesNotMatch(desktop, /\n\s*fill\n/);
+});
