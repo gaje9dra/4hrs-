@@ -334,6 +334,9 @@ jobs:
       - name: Run Phase 16.11 controlled runtime benchmark
         env:
           PERF_BASE_URL: http://127.0.0.1:3000
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/fourhrs_build?schema=public
+          DIRECT_URL: postgresql://postgres:postgres@localhost:5432/fourhrs_build?schema=public
+          NODE_ENV: test
         run: |
           export NEXT_SERVER_PID=$(cat /tmp/next-performance.pid)
           npm run performance:benchmark:phase-16-11
