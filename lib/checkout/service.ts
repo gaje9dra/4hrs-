@@ -145,13 +145,20 @@ export function createCheckoutService(dependencies: CheckoutDependencies) {
 
       // Cart and address reads are independent. Start both together so checkout
       // latency is bounded by the slower read rather than their sum.
-      const cartPromise = dependencies.getCart();
+      let cartDurationMs = 0;
+      let addressDurationMs = 0;
+      const cartStartedAt = Date.now();
+      const cartPromise = dependencies.getCart().then((value) => {
+        cartDurationMs = Date.now() - cartStartedAt;
+        return value;
+      });
+      const addressStartedAt = Date.now();
       const addressPromise = (addressId
         ? dependencies.getAddress(dependencies.customer.id, addressId)
         : dependencies.listAddresses(dependencies.customer.id)
       ).then(
-        (value) => ({ value, error: null as unknown }),
-        (error: unknown) => ({ value: null, error }),
+        (value) => ({ value, error: null as unknown, durationMs: Date.now() - addressStartedAt }),
+        (error: unknown) => ({ value: null, error, durationMs: Date.now() - addressStartedAt }),
       );
 
       const cart = await cartPromise;
@@ -163,6 +170,7 @@ export function createCheckoutService(dependencies: CheckoutDependencies) {
       let address: CustomerAddressDto | null = null;
       let addresses: CustomerAddressDto[] | undefined;
       const addressResult = await addressPromise;
+      addressDurationMs = addressResult.durationMs;
 
       if (addressId) {
         if (addressResult.error) {
@@ -231,6 +239,17 @@ export function createCheckoutService(dependencies: CheckoutDependencies) {
         discountTotal: coupon?.discountAmount ?? "0.00",
       };
       const checkoutReference = createCheckoutPaymentReference(dependencies.customer.id, result);
+      if (process.env.NODE_ENV !== "test") {
+        console.info("[checkout.performance]", {
+          operation: "validate",
+          durationMs: Date.now() - startedAt,
+          cartDurationMs,
+          addressDurationMs,
+          itemCount: cart.items.length,
+          addressCount: addresses?.length ?? (address ? 1 : 0),
+          couponPresent: Boolean(input.couponCode),
+        });
+      }
       return {
         ...result,
         ...(addresses ? { addresses } : {}),

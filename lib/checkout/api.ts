@@ -102,7 +102,27 @@ export function createCheckoutApplication(dependencies: Partial<CheckoutApplicat
   const listAddresses = dependencies.listAddresses ?? ((customerId: string) => addressService.listAddresses(customerId));
 
   async function validate(request: Request, input: CheckoutRequest = {}) {
-    const customer = await resolveCustomer(request);
+    const authStartedAt = Date.now();
+    let customer: Awaited<ReturnType<typeof resolveCustomer>> = null;
+    try {
+      customer = await resolveCustomer(request);
+    } catch (error) {
+      if (process.env.NODE_ENV !== "test") {
+        console.info("[checkout.auth.performance]", {
+          operation: "validate",
+          durationMs: Date.now() - authStartedAt,
+          outcome: "error",
+        });
+      }
+      throw error;
+    }
+    if (process.env.NODE_ENV !== "test") {
+      console.info("[checkout.auth.performance]", {
+        operation: "validate",
+        durationMs: Date.now() - authStartedAt,
+        outcome: customer ? "success" : "unauthenticated",
+      });
+    }
     if (!customer) throw new AuthenticationError("SESSION_INVALID", "Authentication is required.");
     return createCheckoutService({
       customer,

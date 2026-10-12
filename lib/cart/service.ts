@@ -391,7 +391,10 @@ export function createCartService(dependencies: CartServiceDependencies = {}) {
   // customerCart lookup followed by a second cart-by-ID lookup.
   async function getCartForCustomer(customerId: string): Promise<CartView> {
     const startedAt = Date.now();
+    let cartLookupDurationMs = 0;
+    let productLookupDurationMs = 0;
     try {
+      const cartLookupStartedAt = Date.now();
       let cart = await repository.findCartByCustomerId(customerId);
       if (!cart) {
         try {
@@ -403,8 +406,10 @@ export function createCartService(dependencies: CartServiceDependencies = {}) {
         cart = await repository.findCartByCustomerId(customerId);
       }
       if (!cart) throw new CartServiceError("CART_NOT_FOUND", "Cart could not be initialized.");
+      cartLookupDurationMs = Date.now() - cartLookupStartedAt;
 
       const productIds = [...new Set(cart.items.map((item) => item.productId))];
+      const productLookupStartedAt = Date.now();
       let items: CartLine[];
       if (typeof catalog.getPublishedCartProductDetailsByIds === "function") {
         // Checkout must use the same narrow, batched product projection as the
@@ -423,7 +428,19 @@ export function createCartService(dependencies: CartServiceDependencies = {}) {
       }
       const availableItems = items.filter((item) => item.state === "AVAILABLE");
       const currency = availableItems[0]?.currency ?? items.find((item) => item.currency)?.currency ?? null;
+      productLookupDurationMs = Date.now() - productLookupStartedAt;
       const subtotal = availableItems.reduce((total, item) => total.add(money(item.subtotal!)), new Prisma.Decimal(0)).toFixed(2);
+      if (process.env.NODE_ENV !== "test") {
+        // Include connection acquisition and network time around each Prisma operation.
+        console.info("[cart.performance]", {
+          operation: "getCartForCustomer",
+          durationMs: Date.now() - startedAt,
+          cartLookupDurationMs,
+          productLookupDurationMs,
+          itemCount: cart.items.length,
+          uniqueProductCount: productIds.length,
+        });
+      }
       return { id: cart.id, items, subtotal, currency, hasUnavailableItems: items.some((item) => item.state !== "AVAILABLE") };
     } catch (error) {
       const classification = error instanceof CartServiceError && error.code.endsWith("DATABASE_ERROR")
