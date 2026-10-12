@@ -45,7 +45,7 @@ test("checkout bootstrap returns saved addresses without a duplicate initial req
   // Checkout bootstrap must return addresses in its own response and avoid
   // a second client request. Cart and address reads should also overlap so
   // initial checkout latency is not the sum of both database paths.
-  assert.match(checkoutService, /const cartPromise = dependencies\.getCart\(\)/);
+  assert.match(checkoutService, /const cartPromise = dependencies\.getCart\(\)\.then/);
   assert.match(checkoutService, /\[checkout\.performance\]/);
   assert.match(checkoutService, /cartDurationMs/);
   assert.match(checkoutService, /addressDurationMs/);
