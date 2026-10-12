@@ -52,6 +52,7 @@ async function cleanupSessionFixture(fixture: SessionFixture) {
 
 async function run(baseUrl: URL, endpoint: string, requests: number, concurrency: number, cookie?: string): Promise<Omit<Sample, "endpoint" | "scenario">> {
   const durations: number[] = [];
+  const batchStarted = performance.now();
   let errors = 0;
   let cursor = 0;
 
@@ -84,7 +85,7 @@ async function run(baseUrl: URL, endpoint: string, requests: number, concurrency
   }
 
   await Promise.all(Array.from({ length: Math.min(concurrency, requests) }, () => worker()));
-  const longestMs = Math.max(...durations, 1);
+  const elapsedMs = Math.max(performance.now() - batchStarted, 1);
   return {
     requests,
     concurrency,
@@ -93,7 +94,7 @@ async function run(baseUrl: URL, endpoint: string, requests: number, concurrency
     p50Ms: percentile(durations, 50),
     p95Ms: percentile(durations, 95),
     p99Ms: percentile(durations, 99),
-    throughputRps: Number((requests / (longestMs / 1000)).toFixed(2)),
+    throughputRps: Number((requests / (elapsedMs / 1000)).toFixed(2)),
   };
 }
 
@@ -157,6 +158,7 @@ async function main() {
   const critical = samples.filter((sample) => ["/api/cart", "/api/checkout", "/cart", "/checkout"].includes(sample.endpoint) && sample.scenario !== "soak");
   const failures = samples.filter((sample) => sample.errors > 0 || sample.errorRate > 0);
   const overFourSeconds = critical.filter((sample) => (sample.p95Ms ?? Infinity) > 4000);
+  const normalOverThreeSeconds = critical.filter((sample) => sample.scenario === "normal" && (sample.p95Ms ?? Infinity) > 3000);
   const overThreeSeconds = critical.filter((sample) => (sample.p95Ms ?? Infinity) > 3000);
   const report = {
     generatedAt: new Date().toISOString(),
@@ -167,6 +169,7 @@ async function main() {
       endpoints: ["/cart", "/checkout", "/api/cart", "/api/checkout"],
       samples: critical.length,
       scenariosOver3sP95: overThreeSeconds.map((x) => ({ endpoint: x.endpoint, scenario: x.scenario, p95Ms: x.p95Ms })),
+      normalScenariosOver3sP95: normalOverThreeSeconds.map((x) => ({ endpoint: x.endpoint, scenario: x.scenario, p95Ms: x.p95Ms })),
       scenariosOver4sP95: overFourSeconds.map((x) => ({ endpoint: x.endpoint, scenario: x.scenario, p95Ms: x.p95Ms })),
       failedScenarios: critical.filter((x) => x.errors > 0).map((x) => ({ endpoint: x.endpoint, scenario: x.scenario, errors: x.errors })),
     },
@@ -180,11 +183,12 @@ async function main() {
     totalFailedSamples: failures.length,
     criticalPathSamples: critical.length,
     criticalOver3sP95: overThreeSeconds.length,
+    normalOver3sP95: normalOverThreeSeconds.length,
     criticalOver4sP95: overFourSeconds.length,
     soakRequests,
     serverRssKb,
   }));
-  if (failures.length || overFourSeconds.length) process.exit(1);
+  if (failures.length || normalOverThreeSeconds.length || overFourSeconds.length) process.exit(1);
 }
 
 main().catch((error) => {
