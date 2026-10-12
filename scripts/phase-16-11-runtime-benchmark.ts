@@ -21,6 +21,19 @@ function localBaseUrl(): URL {
   if (!["localhost", "127.0.0.1", "::1"].includes(url.hostname)) {
     throw new Error("Phase 16.11 authenticated benchmark is restricted to localhost/127.0.0.1; refusing remote fixture creation.");
   }
+  // Guard the database too: a local HTTP target must never make this script
+  // write synthetic customer/session rows to a remote production database.
+  for (const variable of ["DATABASE_URL", "DIRECT_URL"] as const) {
+    const configured = process.env[variable];
+    if (!configured) {
+      if (variable === "DATABASE_URL") throw new Error("DATABASE_URL is required for the local performance fixture.");
+      continue;
+    }
+    const database = new URL(configured);
+    if (!["localhost", "127.0.0.1", "::1"].includes(database.hostname)) {
+      throw new Error(`Phase 16.11 authenticated benchmark requires a local ${variable}; refusing remote fixture creation.`);
+    }
+  }
   return url;
 }
 
