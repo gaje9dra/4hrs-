@@ -405,11 +405,22 @@ export function createCartService(dependencies: CartServiceDependencies = {}) {
       if (!cart) throw new CartServiceError("CART_NOT_FOUND", "Cart could not be initialized.");
 
       const productIds = [...new Set(cart.items.map((item) => item.productId))];
-      const getDetailsByIds = catalogQuery.getPublishedProductDetailsByIds;
-      const prefetchedProducts = typeof getDetailsByIds === "function"
-        ? await getDetailsByIds(productIds)
-        : undefined;
-      const items = await Promise.all(cart.items.map((item) => resolveLine(item, prefetchedProducts)));
+      let items: CartLine[];
+      if (typeof catalog.getPublishedCartProductDetailsByIds === "function") {
+        // Checkout must use the same narrow, batched product projection as the
+        // cart page. The full catalog detail projection loads unrelated taxonomy
+        // and option data that checkout never renders.
+        const products = await catalog.getPublishedCartProductDetailsByIds(productIds);
+        const prefetchedProducts = new Map(products.map((product) => [product.id, product]));
+        items = cart.items.map((item) => resolveCartLine(item, prefetchedProducts));
+      } else {
+        // Preserve compatibility with injected repository/query doubles.
+        const getDetailsByIds = catalogQuery.getPublishedProductDetailsByIds;
+        const prefetchedProducts = typeof getDetailsByIds === "function"
+          ? await getDetailsByIds(productIds)
+          : undefined;
+        items = await Promise.all(cart.items.map((item) => resolveLine(item, prefetchedProducts)));
+      }
       const availableItems = items.filter((item) => item.state === "AVAILABLE");
       const currency = availableItems[0]?.currency ?? items.find((item) => item.currency)?.currency ?? null;
       const subtotal = availableItems.reduce((total, item) => total.add(money(item.subtotal!)), new Prisma.Decimal(0)).toFixed(2);
