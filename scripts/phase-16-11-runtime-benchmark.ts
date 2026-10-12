@@ -259,7 +259,8 @@ async function main() {
     await cleanupSessionFixture(fixture);
   }
 
-  const criticalEndpoints = ["/api/cart", "/api/checkout", "/cart", "/checkout", "/product/" + fixture.products[0].productSlug];
+  const productDetailPath = "/product/" + fixture.products[0].productSlug;
+  const criticalEndpoints = ["/api/cart", "/api/checkout", "/cart", "/checkout", productDetailPath];
   const critical = samples.filter((sample) => criticalEndpoints.includes(sample.endpoint) && sample.scenario !== "soak");
   const failures = samples.filter((sample) => sample.errors > 0 || sample.errorRate > 0);
   const overFourSeconds = critical.filter((sample) => (sample.p95Ms ?? Infinity) > 4000);
