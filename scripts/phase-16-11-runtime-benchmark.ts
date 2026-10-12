@@ -4,7 +4,7 @@ import { db } from "@/lib/db/client";
 import { createSessionToken, hashSessionToken } from "@/lib/auth/session";
 
 type Sample = { endpoint: string; scenario: string; requests: number; concurrency: number; errors: number; errorRate: number; p50Ms: number | null; p95Ms: number | null; p99Ms: number | null; throughputRps: number; };
-type SessionFixture = { customerId: string; cookie: string };
+type SessionFixture = { customerId: string; cookie: string; productId: string; variantId: string };
 
 function percentile(values: number[], p: number) {
   if (!values.length) return null;
@@ -50,7 +50,39 @@ async function createSessionFixture(): Promise<SessionFixture> {
         lastUsedAt: new Date(),
       },
     });
-    return { customerId: customer.id, cookie: `customer_session=${token}` };
+    const suffix = randomUUID().replaceAll("-", "");
+    const product = await db.product.create({
+      data: {
+        title: "Phase 16.11 Performance Fixture",
+        slug: `phase-16-11-benchmark-${suffix}`,
+        shortDescription: "Synthetic performance fixture.",
+        description: "Disposable CI-only cart benchmark product.",
+        price: "499.00",
+        currency: "INR",
+        status: "ACTIVE",
+        variants: {
+          create: {
+            sku: `PHASE-16-11-${suffix.slice(0, 16)}`,
+            displayName: "Synthetic / M",
+            size: "M",
+            color: "Synthetic",
+            status: "ACTIVE",
+            inventory: {
+              create: { trackingEnabled: true, onHand: 10, reserved: 0 },
+            },
+          },
+        },
+      },
+      include: { variants: { select: { id: true } } },
+    });
+    const variant = product.variants[0];
+    if (!variant) throw new Error("Could not create the local performance fixture variant.");
+    return {
+      customerId: customer.id,
+      cookie: `customer_session=${token}`,
+      productId: product.id,
+      variantId: variant.id,
+    };
   } catch (error) {
     await db.customer.delete({ where: { id: customer.id } }).catch(() => undefined);
     throw error;
@@ -58,8 +90,10 @@ async function createSessionFixture(): Promise<SessionFixture> {
 }
 
 async function cleanupSessionFixture(fixture: SessionFixture) {
-  // Cart customer relation is restrictive, so remove its cart before customer.
+  // Remove all references before deleting the fixture catalog row.
   await db.cart.deleteMany({ where: { customerId: fixture.customerId } });
+  await db.inventory.deleteMany({ where: { variantId: fixture.variantId } });
+  await db.product.delete({ where: { id: fixture.productId } });
   await db.customer.delete({ where: { id: fixture.customerId } });
 }
 
@@ -128,6 +162,11 @@ async function main() {
       await response.arrayBuffer();
       if (!response.ok) throw new Error(`Warm-up for ${endpoint} returned HTTP ${response.status}`);
     }
+    const cart = await db.cart.findUnique({ where: { customerId: fixture.customerId }, select: { id: true } });
+    if (!cart) throw new Error("Warm-up did not create the authenticated test cart.");
+    await db.cartItem.create({
+      data: { cartId: cart.id, productId: fixture.productId, variantId: fixture.variantId, quantity: 1 },
+    });
 
     const scenarios = [
       { name: "normal", requests: 20, concurrency: 2 },
