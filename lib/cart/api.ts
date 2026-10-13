@@ -199,11 +199,25 @@ export function createCartApplication(options: {
     return toCartDto(await service.getCartForCustomer(customerId));
   }
 
+  // Cart mutations already resolve and verify the authenticated customer's cart.
+  // Do not resolve the same session a second time just to return the updated cart.
+  // Keep the fallback for injected/custom context resolvers, whose owner shape is
+  // intentionally opaque and must continue through the full authorization path.
+  async function getCartAfterMutation(request: Request, context: CartRequestContext): Promise<CartDto> {
+    if (!options.resolveRequestContext && context.owner && typeof context.owner === "object") {
+      const customerId = (context.owner as { customerId?: unknown }).customerId;
+      if (typeof customerId === "string" && customerId.length > 0) {
+        return getCurrentCartForCustomer(customerId);
+      }
+    }
+    return getCurrentCart(request);
+  }
+
   async function addItem(request: Request): Promise<CartDto> {
     const input = parseAddCartItemInput(await readJsonBody(request));
     const context = await resolveRequestContext(request);
     await service.addItem(context.cartId, input, context.owner);
-    return getCurrentCart(request);
+    return getCartAfterMutation(request, context);
   }
 
   async function updateItem(request: Request, cartItemId: string): Promise<CartDto> {
@@ -211,20 +225,20 @@ export function createCartApplication(options: {
     const input = parseUpdateCartItemInput(await readJsonBody(request));
     const context = await resolveRequestContext(request);
     await service.updateItemQuantity(context.cartId, itemId, input.quantity, context.owner);
-    return getCurrentCart(request);
+    return getCartAfterMutation(request, context);
   }
 
   async function removeItem(request: Request, cartItemId: string): Promise<CartDto> {
     const itemId = assertCartItemId(cartItemId);
     const context = await resolveRequestContext(request);
     await service.removeItem(context.cartId, itemId, context.owner);
-    return getCurrentCart(request);
+    return getCartAfterMutation(request, context);
   }
 
   async function clearCart(request: Request): Promise<CartDto> {
     const context = await resolveRequestContext(request);
     await service.clearCart(context.cartId, context.owner);
-    return getCurrentCart(request);
+    return getCartAfterMutation(request, context);
   }
 
   return { getCurrentCart, getCurrentCartForCustomer, addItem, updateItem, removeItem, clearCart };

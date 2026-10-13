@@ -29,6 +29,12 @@ test("cart resolves unique product details in a bounded batch", () => {
   assert.match(cartOwnership, /repository\.findCartOwner[\s\S]*?await repository\.findCartById/);
   assert.match(cartOwnership, /verifiedCartId === cartId/);
   assert.match(cartApi, /owner: \{ customerId, verifiedCartId: cart\.id \}/);
+  // Mutations already have a verified customer context; their response read
+  // must not authenticate the same session a second time. Custom injected
+  // contexts retain the conservative full-auth fallback.
+  assert.match(cartApi, /async function getCartAfterMutation[\s\S]*?return getCurrentCartForCustomer\(customerId\)/);
+  assert.match(cartApi, /return getCartAfterMutation\(request, context\)/g);
+  assert.match(cartApi, /if \(!options\.resolveRequestContext && context\.owner && typeof context\.owner === "object"\)/);
 });
 
 test("checkout bootstrap returns saved addresses without a duplicate initial request", () => {
