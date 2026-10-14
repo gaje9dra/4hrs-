@@ -107,23 +107,26 @@ export function CatalogFilters({
     "min-h-12 w-full border-2 border-border bg-white px-3 py-2.5 text-sm font-700 transition-[border-color,box-shadow] duration-(--motion-fast) hover:border-primary-blue focus:border-primary-blue focus:outline-none focus:ring-2 focus:ring-primary-blue";
 
   return (
-    <section
+    <details
       aria-label="Filter and sort products"
-      className="border-2 border-border bg-white shadow-hard-sm sm:border-4 sm:shadow-hard-md"
+      className="group border-2 border-border bg-white shadow-hard-sm sm:border-4 sm:shadow-hard-md"
     >
-      <div className="flex flex-col gap-2 border-b-2 border-border bg-foreground px-4 py-4 text-white sm:flex-row sm:items-end sm:justify-between sm:px-5">
+      <summary className="flex cursor-pointer list-none flex-col gap-2 border-b-2 border-border bg-foreground px-4 py-4 text-white marker:content-none sm:flex-row sm:items-end sm:justify-between sm:px-5 [&::-webkit-details-marker]:hidden">
         <div>
           <p className="text-[0.68rem] font-900 uppercase tracking-[0.2em] text-primary-yellow">Product discovery</p>
           <h2 className="mt-1 text-xl font-900 uppercase tracking-tight text-white">Filter &amp; sort</h2>
         </div>
-        {activeFilters.length ? (
-          <p className="text-xs font-700 uppercase tracking-wider text-white/70">
-            {activeFilters.length} {activeFilters.length === 1 ? "filter" : "filters"} applied
-          </p>
-        ) : (
-          <p className="text-xs font-700 uppercase tracking-wider text-white/70">Refine the catalog</p>
-        )}
-      </div>
+        <div className="flex items-center justify-between gap-4 sm:justify-end">
+          {activeFilters.length ? (
+            <p className="text-xs font-700 uppercase tracking-wider text-white/70">
+              {activeFilters.length} {activeFilters.length === 1 ? "filter" : "filters"} applied
+            </p>
+          ) : (
+            <p className="text-xs font-700 uppercase tracking-wider text-white/70">Refine the catalog</p>
+          )}
+          <span aria-hidden="true" className="text-2xl leading-none transition-transform duration-(--motion-fast) group-open:rotate-180">⌄</span>
+        </div>
+      </summary>
 
       <form method="get" action={pathname} className="p-4 sm:p-5 lg:p-6">
         {preservedQuery ? <input type="hidden" name="q" value={preservedQuery} /> : null}
@@ -270,6 +273,6 @@ export function CatalogFilters({
           </div>
         </div>
       ) : null}
-    </section>
+    </details>
   );
 }
