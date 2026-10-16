@@ -286,7 +286,7 @@ export function CheckoutPage() {
           target.hash ||
           !paymentReference ||
           paymentReference.length > 128 ||
-          (method !== null && !["upi", "cards", "netbanking"].includes(method))
+          (method !== null && !new Set<string>(["upi", "cards", "netbanking"]).has(method))
         ) {
           throw new Error("Payment provider returned an invalid checkout destination.");
         }
