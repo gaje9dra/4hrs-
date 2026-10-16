@@ -32,5 +32,5 @@ test("checkout accepts only the same-origin PayU handoff route", () => {
   assert.match(checkout, /target\.origin !== window\.location\.origin/);
   assert.match(checkout, /target\.pathname !== "\/api\/payments\/payu\/redirect"/);
   assert.match(checkout, /paymentReference\.length > 128/);
-  assert.match(checkout, /\["upi", "cards", "netbanking"\]\.includes\(method\)/);
+  assert.match(checkout, /new Set<string>\(\["upi", "cards", "netbanking"\]\)\.has\(method\)/);
 });
