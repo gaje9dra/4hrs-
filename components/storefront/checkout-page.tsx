@@ -274,7 +274,23 @@ export function CheckoutPage() {
 
       const payment = body as { status?: string; nextAction?: { type?: string; redirectUrl?: string } | null };
       if (payment.nextAction?.type === "REDIRECT" && payment.nextAction.redirectUrl) {
-        window.location.assign(payment.nextAction.redirectUrl);
+        // Only allow the server-generated same-origin PayU handoff endpoint.
+        // The handoff route creates the signed PayU form POST; never navigate
+        // directly to an arbitrary URL returned in a payment response.
+        const target = new URL(payment.nextAction.redirectUrl, window.location.origin);
+        const paymentReference = target.searchParams.get("payment")?.trim() ?? "";
+        const method = target.searchParams.get("method");
+        if (
+          target.origin !== window.location.origin ||
+          target.pathname !== "/api/payments/payu/redirect" ||
+          target.hash ||
+          !paymentReference ||
+          paymentReference.length > 128 ||
+          (method !== null && !new Set<string>(["upi", "cards", "netbanking"]).has(method))
+        ) {
+          throw new Error("Payment provider returned an invalid checkout destination.");
+        }
+        window.location.assign(target.pathname + target.search);
         return;
       }
       if (payment.status === "SUCCEEDED") {

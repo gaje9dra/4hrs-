@@ -66,8 +66,9 @@ export async function GET(request: Request) {
   // leaves customers stuck on this page instead of posting to PayU.
   const nonce = randomBytes(18).toString("base64");
   const script = `<script nonce="${nonce}">(()=>{const form=document.getElementById("payu");if(form instanceof HTMLFormElement){form.submit();}})()</script>`;
-  // Fallback for browsers or hosting layers that block automatic form submission.
-  const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Redirecting to PayU</title><style>body{font:16px system-ui,sans-serif;margin:2rem;color:#111}.payu-redirect-card{max-width:32rem;margin:10vh auto;padding:1.5rem;border:1px solid #ddd;border-radius:.5rem}button{margin-top:1rem;padding:.85rem 1.1rem;background:#111;color:#fff;border:0;font:inherit;cursor:pointer}p{line-height:1.5}</style></head><body><div class="payu-redirect-card"><p>Redirecting to PayU secure payment…</p><form id="payu" method="post" action="${action}">${inputs}<noscript><p>Automatic redirect is unavailable. Continue securely to PayU below.</p></noscript><button type="submit">Continue to secure payment</button></form></div>${script}</body></html>`;
+  // This endpoint must complete the signed cross-origin POST automatically.
+  // Do not add a manual payment button: checkout submission is the customer's only action.
+  const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Redirecting to PayU</title></head><body><p role="status">Redirecting to PayU secure payment…</p><form id="payu" method="post" action="${action}">${inputs}</form>${script}<noscript><p>JavaScript must be enabled to continue to secure payment. Return to checkout and try again with JavaScript enabled.</p></noscript></body></html>`;
   const headers = new Headers({
     "Content-Type": "text/html; charset=utf-8",
     "Cache-Control": "no-store",
