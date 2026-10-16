@@ -20,10 +20,17 @@ test("PayU redirect response owns a matching nonce and CSP for auto-submit", () 
   assert.match(route, /\`script-src 'nonce-\$\{nonce\}'\`/);
   assert.match(route, /form-action 'self' https:\/\/test\.payu\.in https:\/\/secure\.payu\.in/);
   assert.doesNotMatch(route, /request\.headers\.get\("x-nonce"\)/);
-  assert.match(route, /Continue to secure payment/);
-  assert.match(route, /<button type="submit">/);
-  assert.match(route, /class="payu-redirect-card"/);
-  assert.doesNotMatch(route, /<main\b/i, "standalone PayU HTML must not create a second document main landmark");
+  assert.doesNotMatch(route, /<button\b/i, "PayU handoff must not require a second customer click");
+  assert.doesNotMatch(route, /Continue to secure payment/);
   assert.match(route, /<noscript>/);
+  assert.match(route, /JavaScript must be enabled/);
   assert.match(route, /Cache-Control.*no-store/);
+});
+
+test("checkout accepts only the same-origin PayU handoff route", () => {
+  const checkout = source("components/storefront/checkout-page.tsx");
+  assert.match(checkout, /target\.origin !== window\.location\.origin/);
+  assert.match(checkout, /target\.pathname !== "\/api\/payments\/payu\/redirect"/);
+  assert.match(checkout, /paymentReference\.length > 128/);
+  assert.match(checkout, /\["upi", "cards", "netbanking"\]\.includes\(method\)/);
 });
