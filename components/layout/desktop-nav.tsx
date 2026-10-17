@@ -45,7 +45,7 @@ export function DesktopNav({ items }: DesktopNavProps) {
                     active ? 'border-border bg-white text-foreground after:absolute after:bottom-[-2px] after:left-2 after:right-2 after:h-1 after:bg-primary-red' : '',
                   ].filter(Boolean).join(' ')}
                 >
-                  {item.label}
+                  <span>{item.label}</span>
                 </Link>
               ) : (
                 <span
