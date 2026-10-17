@@ -167,6 +167,45 @@ a {
   color: var(--foreground);
 }
 
+/* Header navigation label lift and underline; keep the Bauhaus border and active-route marker. */
+.nav-text-link {
+  position: relative;
+  isolation: isolate;
+}
+
+.nav-text-link > span:first-child {
+  transition: transform var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease);
+}
+
+.nav-text-link::before {
+  position: absolute;
+  right: 0.5rem;
+  bottom: 0.3rem;
+  left: 0.5rem;
+  height: 2px;
+  background: currentColor;
+  content: "";
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform var(--motion-standard) cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
+}
+
+.nav-text-link:hover > span:first-child,
+.nav-text-link:focus-visible > span:first-child {
+  transform: translateY(-1px);
+}
+
+.nav-text-link:hover::before,
+.nav-text-link:focus-visible::before {
+  transform: scaleX(1);
+}
+
+.nav-text-link[aria-current="page"]::before {
+  background: var(--primary-red);
+  transform: scaleX(1);
+}
+
 .motion-link:active {
   transform: translateY(1px);
 }
@@ -473,6 +512,15 @@ code {
   .motion-lift,
   .motion-icon {
     transition-duration: 0.01ms !important;
+  }
+
+  .nav-text-link > span:first-child {
+    transform: none !important;
+    transition: none !important;
+  }
+
+  .nav-text-link::before {
+    transition: none !important;
   }
 
   .motion-link:active,
