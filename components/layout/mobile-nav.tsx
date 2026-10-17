@@ -140,7 +140,7 @@ export function MobileNav({ items }: MobileNavProps) {
                             'text-lg font-900 uppercase tracking-[0.06em]',
                             index % 3 === 0 ? 'text-primary-red' : '',
                             index % 3 === 1 ? 'text-primary-blue' : '',
-                            'motion-link hover:bg-primary-yellow hover:text-foreground',
+                            'motion-link nav-text-link focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-red hover:bg-primary-yellow hover:text-foreground',
                             active ? 'bg-white text-foreground' : '',
                           ].join(' ')}
                         >
@@ -173,7 +173,7 @@ export function MobileNav({ items }: MobileNavProps) {
                                   className={[
                                     'flex min-h-12 items-center px-3 py-2 no-underline',
                                     'text-sm font-700 uppercase tracking-[0.08em]',
-                                    'motion-link hover:bg-primary-yellow hover:text-foreground',
+                                    'motion-link nav-text-link focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-red hover:bg-primary-yellow hover:text-foreground',
                                     childActive ? 'bg-white text-foreground' : '',
                                   ].join(' ')}
                                 >

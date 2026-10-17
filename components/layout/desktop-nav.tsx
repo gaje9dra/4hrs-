@@ -41,11 +41,11 @@ export function DesktopNav({ items }: DesktopNavProps) {
                   className={[
                     'relative inline-flex min-h-11 items-center border-2 border-transparent px-3 py-2',
                     'text-[0.7rem] font-700 uppercase tracking-[0.1em] no-underline',
-                    'motion-link hover:border-border hover:bg-primary-yellow hover:text-foreground',
+                    'motion-link nav-text-link focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-red hover:border-border hover:bg-primary-yellow hover:text-foreground',
                     active ? 'border-border bg-white text-foreground after:absolute after:bottom-[-2px] after:left-2 after:right-2 after:h-1 after:bg-primary-red' : '',
                   ].filter(Boolean).join(' ')}
                 >
-                  {item.label}
+                  <span>{item.label}</span>
                 </Link>
               ) : (
                 <span
@@ -82,7 +82,7 @@ export function DesktopNav({ items }: DesktopNavProps) {
                           className={[
                             'flex min-h-11 items-center border-2 border-transparent px-3 py-2',
                             'text-xs font-700 uppercase tracking-[0.1em] no-underline',
-                            'motion-link hover:border-border hover:bg-primary-yellow hover:text-foreground',
+                            'motion-link nav-text-link focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-red hover:border-border hover:bg-primary-yellow hover:text-foreground',
                             childActive ? 'border-border bg-white' : '',
                           ].join(' ')}
                         >

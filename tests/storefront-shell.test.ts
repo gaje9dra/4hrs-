@@ -42,6 +42,23 @@ test("desktop and mobile navigation expose route-aware active states", () => {
   }
 });
 
+test("header navigation includes reduced-motion-aware animated hover and keyboard focus styling", () => {
+  const desktop = read("components/layout/desktop-nav.tsx");
+  const mobile = read("components/layout/mobile-nav.tsx");
+  const css = read("app/globals.css");
+
+  for (const source of [desktop, mobile]) {
+    assert.match(source, /nav-text-link/);
+    assert.match(source, /focus-visible:outline/);
+  }
+
+  assert.match(desktop, /<span>\{item\.label\}<\/span>/);
+  assert.match(css, /\.nav-text-link:hover::before/);
+  assert.match(css, /translateY\(-1px\)/);
+  assert.match(css, /\.nav-text-link\[aria-current="page"\]::before/);
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.nav-text-link > span:first-child/);
+});
+
 test("mobile navigation implements Escape, focus return and focus containment", () => {
   const source = read("components/layout/mobile-nav.tsx");
   assert.match(source, /event\.key === 'Escape'/);
